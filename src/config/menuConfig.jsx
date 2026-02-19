@@ -32,7 +32,7 @@ export const MENU_STRUCTURE = [
   { name: 'Planificación - Habilidades', icon: Award, path: '/PlanificacionSkills', category: 'Planificación' },
 
   // Fabricación
-  { name: 'Empleados Personal de Producción', icon: Briefcase, path: '/EmployeesShiftManager', category: 'Fabricación' },
+  { name: 'Empleados producción', icon: Briefcase, path: '/EmployeesShiftManager', category: 'Fabricación' },
   { name: 'Jefes de Turno', icon: Users, path: '/ShiftManagers', category: 'Fabricación' },
   { name: 'Asignación de Turno', icon: Users, path: '/ShiftAssignmentsPage', category: 'Fabricación' },
   { name: 'Consulta Máquinas', icon: Wrench, path: '/MachineManagement', category: 'Fabricación' },

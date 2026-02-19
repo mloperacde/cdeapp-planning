@@ -306,11 +306,11 @@ export function ModulesWidget({ lockersWithoutNumber, setActiveView }) {
     const modules = [
         {
             id: "employeesManagement",
-            title: "Empleados",
+            title: "Empleados producción",
             icon: Users,
             url: createPageUrl("EmployeesShiftManager"),
             color: "teal",
-            description: "Personal fabricación"
+            description: "Gestión de empleados de producción"
         },
         {
             id: "machineAssignments",
