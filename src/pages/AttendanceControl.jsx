@@ -159,8 +159,9 @@ export default function AttendanceControl() {
     if (idxHora === -1) missing.push("Hora");
     if (missing.length > 0) throw new Error(`Faltan columnas obligatorias: ${missing.join(", ")}`);
 
+    // Filtrar filas vacías pero permitir ID=0 (número)
     const dataRows = rows.slice(headerRowIdx + 1).filter(
-      (row) => row && row[idxId] !== null && row[idxId] !== undefined && row[idxEmpleado]
+      (row) => row && (row[idxId] !== null && row[idxId] !== undefined && row[idxId] !== "") && row[idxEmpleado]
     );
     if (dataRows.length === 0) throw new Error("No se encontraron filas de datos en el archivo.");
 
@@ -174,7 +175,7 @@ export default function AttendanceControl() {
       const rawHora = idxHora !== -1 ? row[idxHora] : null;
       const rawSentido = idxSentido !== -1 ? row[idxSentido] : null;
 
-      const employeeId = rawId !== null ? String(rawId).trim() : null;
+      const employeeId = (rawId !== null && rawId !== undefined) ? String(rawId).trim() : null;
       const employeeName = rawEmpleado ? String(rawEmpleado).trim() : null;
       const fechaStr = parseFecha(rawFecha);
       const horaStr = parseHora(rawHora);
