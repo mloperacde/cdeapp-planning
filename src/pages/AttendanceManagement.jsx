@@ -173,7 +173,7 @@ export default function AttendanceManagementPage() {
 
           {/* Nueva pestaña Configuración */}
           <TabsContent value="config" className="m-0 space-y-4">
-            <AttendanceConfig />
+            <AttendanceConfigWrapper />
           </TabsContent>
         </div>
       </Tabs>
