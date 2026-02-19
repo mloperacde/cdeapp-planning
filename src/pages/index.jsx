@@ -89,6 +89,7 @@ const PAGES = {
   AdvancedHRDashboard: AdvancedHRDashboard,
   ArticleManagement: ArticleManagement,
   AttendanceManagement: AttendanceManagement,
+  AttendanceControl: AttendanceControl,
   BrandingConfig: BrandingConfig,
   CommitteeManagement: CommitteeManagement,
   Configuration: Configuration,
