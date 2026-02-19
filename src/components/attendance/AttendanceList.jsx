@@ -84,14 +84,16 @@ export default function AttendanceList({ selectedDate, onDateChange }) {
       const entrada = sorted[0]; // primer registro
       const salida = sorted.length > 1 ? sorted[sorted.length - 1] : null; // último registro
       const intermedios = sorted.slice(1, sorted.length - 1); // los del medio
-      const minutosPresencia = calcularPresencia(sorted);
+      const minutosTotal = calcularPresenciaTotal(sorted);
+      const minutosEfectiva = calcularPresenciaEfectiva(sorted);
 
       return {
         ...emp,
         entrada,
         salida,
         intermedios,
-        minutosPresencia,
+        minutosTotal,
+        minutosEfectiva,
         totalMarcajes: sorted.length,
       };
     }).sort((a, b) => a.employee_name.localeCompare(b.employee_name));
