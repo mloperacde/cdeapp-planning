@@ -1,318 +1,266 @@
-import React, { useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table.jsx";
-import { 
-  CheckCircle2, 
-  Clock, 
-  UserX, 
-  AlertTriangle,
-  Edit,
-  Search,
-  Filter
-} from "lucide-react";
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
-import { toast } from "sonner";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { LogIn, LogOut, Clock, Search, ArrowRightLeft, Timer } from "lucide-react";
+
+// Calcular minutos totales de presencia a partir de pares entrada/salida
+function calcularPresencia(registros) {
+  // ordenar por hora
+  const sorted = [...registros].sort((a, b) => a.record_time.localeCompare(b.record_time));
+  let minutos = 0;
+  let entradaActual = null;
+
+  for (const r of sorted) {
+    if (r.direction === "E") {
+      entradaActual = r.record_time;
+    } else if (r.direction === "S" && entradaActual) {
+      const [hE, mE] = entradaActual.split(":").map(Number);
+      const [hS, mS] = r.record_time.split(":").map(Number);
+      const diff = (hS * 60 + mS) - (hE * 60 + mE);
+      if (diff > 0) minutos += diff;
+      entradaActual = null;
+    }
+  }
+  return minutos;
+}
+
+function formatHoras(minutos) {
+  if (!minutos || minutos <= 0) return "—";
+  const h = Math.floor(minutos / 60);
+  const m = minutos % 60;
+  return `${h}h ${String(m).padStart(2, "0")}m`;
+}
 
 export default function AttendanceList({ selectedDate, onDateChange }) {
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterStatus, setFilterStatus] = useState("all");
   const [filterDept, setFilterDept] = useState("all");
-  const [editingRecord, setEditingRecord] = useState(null);
-  const queryClient = useQueryClient();
 
-  const { data: attendanceRecords } = useQuery({
-    queryKey: ['attendanceRecords'],
-    queryFn: () => base44.entities.AttendanceRecord.list('-fecha'),
-    initialData: [],
+  const { data: rawRecords = [], isLoading } = useQuery({
+    queryKey: ["attendanceRecords", selectedDate],
+    queryFn: () => base44.entities.AttendanceRecord.filter({ record_date: selectedDate }, "record_time", 2000),
+    staleTime: 0,
+    enabled: !!selectedDate,
   });
 
-  const { data: employees } = useQuery({
-    queryKey: ['employees'],
-    queryFn: () => base44.entities.EmployeeMasterDatabase.list(),
-    initialData: [],
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.AttendanceRecord.update(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['attendanceRecords'] });
-      toast.success("Registro actualizado");
-      setEditingRecord(null);
-    },
-  });
-
+  // Departamentos únicos para filtro
   const departments = useMemo(() => {
-    const depts = new Set();
-    employees.forEach(emp => {
-      if (emp.departamento) depts.add(emp.departamento);
-    });
+    const depts = new Set(rawRecords.map(r => r.department).filter(Boolean));
     return Array.from(depts).sort();
-  }, [employees]);
+  }, [rawRecords]);
 
-  const filteredRecords = useMemo(() => {
-    return attendanceRecords.filter(record => {
-      if (record.fecha !== selectedDate) return false;
-
-      const employee = employees.find(e => e.id === record.employee_id);
-      if (!employee) return false;
-
-      const matchesSearch = employee.nombre?.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesStatus = filterStatus === "all" || record.estado === filterStatus;
-      const matchesDept = filterDept === "all" || employee.departamento === filterDept;
-
-      return matchesSearch && matchesStatus && matchesDept;
-    });
-  }, [attendanceRecords, selectedDate, searchTerm, filterStatus, filterDept, employees]);
-
-  const getEmployeeName = (empId) => {
-    return employees.find(e => e.id === empId)?.nombre || "Desconocido";
-  };
-
-  const getEmployeeDept = (empId) => {
-    return employees.find(e => e.id === empId)?.departamento || "";
-  };
-
-  const getStatusBadge = (estado) => {
-    const styles = {
-      "A tiempo": "bg-green-100 text-green-800",
-      "Presente": "bg-green-100 text-green-800",
-      "Retraso": "bg-amber-100 text-amber-800",
-      "Ausencia": "bg-red-100 text-red-800",
-      "Salida anticipada": "bg-orange-100 text-orange-800"
-    };
-    return <Badge className={styles[estado] || "bg-slate-100"}>{estado}</Badge>;
-  };
-
-  const handleJustify = (record) => {
-    setEditingRecord(record);
-  };
-
-  const handleSaveJustification = () => {
-    if (!editingRecord) return;
-    
-    updateMutation.mutate({
-      id: editingRecord.id,
-      data: {
-        justificado: true,
-        motivo_justificacion: editingRecord.motivo_justificacion || "Justificado por supervisor"
+  // Agrupar registros por empleado
+  const employeeRows = useMemo(() => {
+    const map = {};
+    for (const r of rawRecords) {
+      const key = r.employee_id;
+      if (!map[key]) {
+        map[key] = {
+          employee_id: r.employee_id,
+          employee_name: r.employee_name,
+          department: r.department || "—",
+          registros: [],
+        };
       }
+      map[key].registros.push(r);
+    }
+
+    return Object.values(map).map(emp => {
+      const sorted = [...emp.registros].sort((a, b) => a.record_time.localeCompare(b.record_time));
+      const entrada = sorted[0]; // primer registro
+      const salida = sorted.length > 1 ? sorted[sorted.length - 1] : null; // último registro
+      const intermedios = sorted.slice(1, sorted.length - 1); // los del medio
+      const minutosPresencia = calcularPresencia(sorted);
+
+      return {
+        ...emp,
+        entrada,
+        salida,
+        intermedios,
+        minutosPresencia,
+        totalMarcajes: sorted.length,
+      };
+    }).sort((a, b) => a.employee_name.localeCompare(b.employee_name));
+  }, [rawRecords]);
+
+  // Filtrar
+  const filtered = useMemo(() => {
+    return employeeRows.filter(emp => {
+      const matchSearch = !searchTerm ||
+        emp.employee_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        emp.employee_id.includes(searchTerm);
+      const matchDept = filterDept === "all" || emp.department === filterDept;
+      return matchSearch && matchDept;
     });
-  };
+  }, [employeeRows, searchTerm, filterDept]);
 
   return (
-    <div className="space-y-6">
-      <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-        <CardHeader className="border-b border-slate-100">
-          <div className="flex justify-between items-center">
-            <CardTitle>Registros de Presencia</CardTitle>
-            <Input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => onDateChange(e.target.value)}
-              className="w-48"
-            />
-          </div>
+    <div className="space-y-4 p-4">
+      {/* Filtros */}
+      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+        <div className="flex items-center gap-2">
+          <label className="text-sm font-medium text-slate-600 dark:text-slate-300">Fecha:</label>
+          <Input
+            type="date"
+            value={selectedDate}
+            onChange={e => onDateChange(e.target.value)}
+            className="w-40"
+          />
+        </div>
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <Input
+            placeholder="Buscar empleado o ID..."
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <Select value={filterDept} onValueChange={setFilterDept}>
+          <SelectTrigger className="w-48">
+            <SelectValue placeholder="Departamento" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos los departamentos</SelectItem>
+            {departments.map(d => (
+              <SelectItem key={d} value={d}>{d}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <span className="text-xs text-slate-500">{filtered.length} empleados</span>
+      </div>
+
+      {/* Tabla */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">
+            Registros del {selectedDate}
+          </CardTitle>
         </CardHeader>
-        <CardContent className="p-6 space-y-4">
-          {/* Filtros */}
-          <div className="flex gap-4 flex-wrap">
-            <div className="flex-1 min-w-64">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <Input
-                  placeholder="Buscar empleado..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
+        <CardContent className="p-0">
+          {isLoading ? (
+            <div className="flex justify-center py-10 text-slate-400">Cargando...</div>
+          ) : filtered.length === 0 ? (
+            <div className="text-center py-10 text-slate-400">
+              <Clock className="w-8 h-8 mx-auto mb-2 opacity-40" />
+              <p>No hay registros para esta fecha.</p>
             </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-50 dark:bg-slate-800">
+                  <tr>
+                    <th className="text-left px-4 py-2 font-medium text-slate-600 dark:text-slate-300 w-16">ID</th>
+                    <th className="text-left px-4 py-2 font-medium text-slate-600 dark:text-slate-300">Empleado</th>
+                    <th className="text-left px-4 py-2 font-medium text-slate-600 dark:text-slate-300 w-32">
+                      <div className="flex items-center gap-1"><LogIn className="w-3.5 h-3.5 text-green-600" /> Entrada</div>
+                    </th>
+                    <th className="text-left px-4 py-2 font-medium text-slate-600 dark:text-slate-300 w-32">
+                      <div className="flex items-center gap-1"><LogOut className="w-3.5 h-3.5 text-red-500" /> Salida</div>
+                    </th>
+                    <th className="text-left px-4 py-2 font-medium text-slate-600 dark:text-slate-300">
+                      <div className="flex items-center gap-1"><ArrowRightLeft className="w-3.5 h-3.5 text-blue-500" /> Marcajes intermedios</div>
+                    </th>
+                    <th className="text-left px-4 py-2 font-medium text-slate-600 dark:text-slate-300 w-28">
+                      <div className="flex items-center gap-1"><Timer className="w-3.5 h-3.5 text-purple-500" /> Presencia</div>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                  {filtered.map(emp => (
+                    <tr key={emp.employee_id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                      {/* ID */}
+                      <td className="px-4 py-2 text-slate-400 text-xs">{emp.employee_id}</td>
 
-            <Select value={filterDept} onValueChange={setFilterDept}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="Departamento" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                {departments.map(dept => (
-                  <SelectItem key={dept} value={dept}>{dept}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                      {/* Nombre + Dept */}
+                      <td className="px-4 py-2">
+                        <div className="font-medium text-slate-800 dark:text-slate-100">{emp.employee_name}</div>
+                        <div className="text-xs text-slate-400">{emp.department}</div>
+                      </td>
 
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="Estado" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="A tiempo">A tiempo</SelectItem>
-                <SelectItem value="Retraso">Retrasos</SelectItem>
-                <SelectItem value="Ausencia">Ausencias</SelectItem>
-                <SelectItem value="Salida anticipada">Salida anticipada</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Tabla */}
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-slate-50">
-                  <TableHead>Empleado</TableHead>
-                  <TableHead>Departamento</TableHead>
-                  <TableHead>Turno</TableHead>
-                  <TableHead>Entrada</TableHead>
-                  <TableHead>Salida</TableHead>
-                  <TableHead>Estado</TableHead>
-                  <TableHead>Horas</TableHead>
-                  <TableHead className="text-right">Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredRecords.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-slate-500">
-                      No hay registros para esta fecha
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredRecords.map((record) => (
-                    <TableRow key={record.id} className={record.estado === "Ausencia" ? "bg-red-50" : ""}>
-                      <TableCell>
-                        <div>
-                          <div className="font-semibold">{getEmployeeName(record.employee_id)}</div>
-                          {record.justificado && (
-                            <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700">
-                              Justificado
+                      {/* Entrada */}
+                      <td className="px-4 py-2">
+                        {emp.entrada ? (
+                          <div>
+                            <Badge className="bg-green-100 text-green-800 text-xs font-semibold">
+                              <LogIn className="w-3 h-3 mr-1" />{emp.entrada.record_time}
                             </Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>{getEmployeeDept(record.employee_id)}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{record.turno_programado}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm">
-                          <div className="text-slate-500">{record.hora_entrada_programada}</div>
-                          <div className={`font-semibold ${
-                            record.minutos_retraso_entrada > 0 ? "text-red-700" : "text-green-700"
-                          }`}>
-                            {record.hora_entrada_real || "—"}
-                            {record.minutos_retraso_entrada > 0 && (
-                              <span className="text-xs ml-1">(+{record.minutos_retraso_entrada}m)</span>
-                            )}
+                            <div className="text-[10px] text-slate-400 mt-0.5 truncate max-w-[120px]">
+                              {emp.entrada.direction === "E" ? "Entrada" : "Salida"} · {emp.entrada.device || "—"}
+                            </div>
                           </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm">
-                          <div className="text-slate-500">{record.hora_salida_programada}</div>
-                          <div className="font-semibold">{record.hora_salida_real || "—"}</div>
-                        </div>
-                      </TableCell>
-                      <TableCell>{getStatusBadge(record.estado)}</TableCell>
-                      <TableCell>
-                        {record.horas_trabajadas ? `${record.horas_trabajadas.toFixed(1)}h` : "—"}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {!record.justificado && (record.estado === "Retraso" || record.estado === "Ausencia") && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleJustify(record)}
-                          >
-                            <Edit className="w-4 h-4 mr-1" />
-                            Justificar
-                          </Button>
+                        ) : <span className="text-slate-300">—</span>}
+                      </td>
+
+                      {/* Salida */}
+                      <td className="px-4 py-2">
+                        {emp.salida && emp.salida.record_time !== emp.entrada?.record_time ? (
+                          <div>
+                            <Badge className="bg-orange-100 text-orange-800 text-xs font-semibold">
+                              <LogOut className="w-3 h-3 mr-1" />{emp.salida.record_time}
+                            </Badge>
+                            <div className="text-[10px] text-slate-400 mt-0.5 truncate max-w-[120px]">
+                              {emp.salida.direction === "S" ? "Salida" : "Entrada"} · {emp.salida.device || "—"}
+                            </div>
+                          </div>
+                        ) : (
+                          <Badge className="bg-blue-100 text-blue-700 text-xs">En planta</Badge>
                         )}
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                      </td>
+
+                      {/* Intermedios */}
+                      <td className="px-4 py-2">
+                        {emp.intermedios.length === 0 ? (
+                          <span className="text-slate-300 text-xs">—</span>
+                        ) : (
+                          <div className="flex flex-wrap gap-1">
+                            {emp.intermedios.map((r, i) => (
+                              <div key={i} className="flex items-center gap-0.5">
+                                <Badge
+                                  className={`text-[10px] px-1.5 py-0 ${
+                                    r.direction === "E"
+                                      ? "bg-green-50 text-green-700 border border-green-200"
+                                      : "bg-red-50 text-red-700 border border-red-200"
+                                  }`}
+                                >
+                                  {r.direction === "E" ? <LogIn className="w-2.5 h-2.5 mr-0.5 inline" /> : <LogOut className="w-2.5 h-2.5 mr-0.5 inline" />}
+                                  {r.record_time}
+                                </Badge>
+                                {r.incident && r.incident !== "N/A" && (
+                                  <span className="text-[9px] text-slate-400 italic max-w-[80px] truncate">
+                                    {r.incident}
+                                  </span>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </td>
+
+                      {/* Saldo presencia */}
+                      <td className="px-4 py-2">
+                        <span className={`font-semibold text-sm ${
+                          emp.minutosPresencia >= 420
+                            ? "text-green-700"
+                            : emp.minutosPresencia > 0
+                            ? "text-amber-600"
+                            : "text-slate-400"
+                        }`}>
+                          {formatHoras(emp.minutosPresencia)}
+                        </span>
+                        <div className="text-[10px] text-slate-400">{emp.totalMarcajes} marcajes</div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </CardContent>
       </Card>
-
-      {/* Dialog para justificar */}
-      {editingRecord && (
-        <Dialog open={true} onOpenChange={() => setEditingRecord(null)}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Justificar Incidencia</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <p className="text-sm text-slate-600">Empleado:</p>
-                <p className="font-semibold">{getEmployeeName(editingRecord.employee_id)}</p>
-              </div>
-              <div>
-                <p className="text-sm text-slate-600">Incidencia:</p>
-                <Badge className={
-                  editingRecord.estado === "Ausencia" ? "bg-red-600" : "bg-amber-600"
-                }>
-                  {editingRecord.estado}
-                  {editingRecord.minutos_retraso_entrada > 0 && ` - ${editingRecord.minutos_retraso_entrada} min`}
-                </Badge>
-              </div>
-              <div className="space-y-2">
-                <Label>Motivo de Justificación</Label>
-                <Textarea
-                  value={editingRecord.motivo_justificacion || ""}
-                  onChange={(e) => setEditingRecord({
-                    ...editingRecord,
-                    motivo_justificacion: e.target.value
-                  })}
-                  rows={3}
-                  placeholder="Explica el motivo..."
-                />
-              </div>
-              <div className="flex justify-end gap-3">
-                <Button variant="outline" onClick={() => setEditingRecord(null)}>
-                  Cancelar
-                </Button>
-                <Button 
-                  onClick={handleSaveJustification}
-                  disabled={updateMutation.isPending}
-                >
-                  Guardar Justificación
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
     </div>
   );
 }
