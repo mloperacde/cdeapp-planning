@@ -209,15 +209,22 @@ Deno.serve(async (req) => {
     }
 
     // ── 2. Empleados SIN fichaje (ausentes) ──────────────────────────────────
+    // Solo se consideran ausentes los empleados cuyo turno REAL esta semana ya debería haber empezado.
+    // Empleados rotativos del equipo de Tarde no se marcan como ausentes en la auditoría de Mañana.
     const fichajesIds = new Set(Object.keys(fichajesMap));
     const sinRegistro = masterEmployees
       .filter(m => {
         if (!m.codigo_empleado || m.estado_empleado !== "Alta") return false;
         if (fichajesIds.has(String(m.codigo_empleado))) return false;
-        const { horaEntrada } = getHorarioEsperado(m, turno);
-        return !!horaEntrada;
+        const { horaEntrada, turnoReal } = getHorarioEsperado(m, teamScheduleMap);
+        if (!horaEntrada) return false;
+        // Si el empleado cubre turno de Tarde esta semana, no se incluye como ausente
+        // (su hora de entrada es posterior, no ha debido fichar aún)
+        if (turnoReal === "Tarde") return false;
+        return true;
       })
       .map(m => {
+        const { horaEntrada, turnoReal } = getHorarioEsperado(m, teamScheduleMap);
         const ausencia = ausenciasMap[String(m.codigo_empleado)] || null;
         return {
           id: m.id,
@@ -226,6 +233,8 @@ Deno.serve(async (req) => {
           departamento: m.departamento,
           equipo: m.equipo,
           tipo_turno: m.tipo_turno,
+          turnoReal: turnoReal || m.tipo_turno,
+          horaEntradaEsperada: horaEntrada,
           horario_manana_inicio: m.horario_manana_inicio,
           horario_tarde_inicio: m.horario_tarde_inicio,
           turno_partido_entrada1: m.turno_partido_entrada1,
