@@ -192,6 +192,7 @@ Deno.serve(async (req) => {
         tipoTurno,
         horaEsperada,
         horaFinEsperada,
+        turnoReal: turnoReal || tipoTurno,
         primerMarcaje: primerRegistro.record_time,
         ultimoMarcaje: ultimoRegistro.record_time,
         totalMarcajes: sorted.length,
