@@ -50,14 +50,31 @@ export default function AttendanceConfig({ config }) {
 
   const saveMutation = useMutation({
     mutationFn: async (data) => {
+      // Si ya tiene ID (config existente), actualizar directamente
       if (config?.id) {
-        return base44.entities.AttendanceConfig.update(config.id, data);
+        return base44.entities.AttendanceConfig.update(config.id, { ...data, activo: true });
       }
-      return base44.entities.AttendanceConfig.create(data);
+
+      // Si no hay config existente, comprobar si existe alguna en BD
+      const existing = await base44.entities.AttendanceConfig.list();
+      if (existing.length > 0) {
+        // Desactivar todas las demás y actualizar la primera activa (o la primera que exista)
+        const activeConfig = existing.find(c => c.activo) || existing[0];
+        // Desactivar el resto
+        await Promise.all(
+          existing
+            .filter(c => c.id !== activeConfig.id)
+            .map(c => base44.entities.AttendanceConfig.update(c.id, { activo: false }))
+        );
+        return base44.entities.AttendanceConfig.update(activeConfig.id, { ...data, activo: true });
+      }
+
+      // No existe ninguna: crear
+      return base44.entities.AttendanceConfig.create({ ...data, activo: true });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['attendanceConfig'] });
-      toast.success("Configuración guardada");
+      toast.success("Configuración guardada correctamente");
     },
   });
 
