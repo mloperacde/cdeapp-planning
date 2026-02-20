@@ -9,8 +9,8 @@ Deno.serve(async (req) => {
 
   // Fetch all departments and employees
   const [departments, employees] = await Promise.all([
-    base44.asServiceRole.entities.Department.list(),
-    base44.asServiceRole.entities.EmployeeMasterDatabase.list(undefined, 5000),
+    base44.asServiceRole.entities.Department.list(undefined, 200),
+    base44.asServiceRole.entities.EmployeeMasterDatabase.list(undefined, 2000),
   ]);
 
   // Build lookup map: normalized department name → department record
