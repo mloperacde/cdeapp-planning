@@ -254,6 +254,8 @@ Deno.serve(async (req) => {
       toleranciaEntrada,
       toleranciaReducida,
       departamentosEstrictos,
+      weekStart,
+      teamScheduleMap,
     });
 
   } catch (error) {
