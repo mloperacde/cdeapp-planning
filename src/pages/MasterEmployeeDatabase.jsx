@@ -101,9 +101,13 @@ const SORT_OPTIONS = [
   { field: 'departamento', label: 'Departamento' },
   { field: 'puesto', label: 'Puesto' },
   { field: 'estado_empleado', label: 'Estado' },
-  { field: 'estado_sincronizacion', label: 'Estado Sincronización' },
+  { field: 'tipo_jornada', label: 'Tipo de jornada' },
+  { field: 'tipo_turno', label: 'Turno' },
+  { field: 'equipo', label: 'Equipo' },
+  { field: 'disponibilidad', label: 'Disponibilidad' },
+  { field: 'categoria', label: 'Categoría' },
+  { field: 'tipo_contrato', label: 'Tipo de contrato' },
   { field: 'fecha_alta', label: 'Fecha Alta' },
-  { field: 'ultimo_sincronizado', label: 'Última Sincronización' },
 ];
 
 const TARGET_DEPARTMENTS = [
@@ -430,7 +434,12 @@ export default function MasterEmployeeDatabasePage() {
     const departamentos = [...new Set(masterEmployees.map(e => e.departamento).filter(Boolean))].sort();
     const puestos = [...new Set(masterEmployees.map(e => e.puesto).filter(Boolean))].sort();
     const estados = [...new Set(masterEmployees.map(e => e.estado_empleado).filter(Boolean))].sort();
-    const estadosSinc = [...new Set(masterEmployees.map(e => e.estado_sincronizacion).filter(Boolean))].sort();
+    const equipos = [...new Set(masterEmployees.map(e => e.equipo).filter(Boolean))].sort();
+    const tiposTurno = [...new Set(masterEmployees.map(e => e.tipo_turno).filter(Boolean))].sort();
+    const tiposJornada = [...new Set(masterEmployees.map(e => e.tipo_jornada).filter(Boolean))].sort();
+    const disponibilidades = [...new Set(masterEmployees.map(e => e.disponibilidad).filter(Boolean))].sort();
+    const categorias = [...new Set(masterEmployees.map(e => e.categoria).filter(Boolean))].sort();
+    const tiposContrato = [...new Set(masterEmployees.map(e => e.tipo_contrato).filter(Boolean))].sort();
 
     return {
       departamento: {
@@ -445,10 +454,30 @@ export default function MasterEmployeeDatabasePage() {
         label: 'Estado Empleado',
         options: estados.map(e => ({ value: e, label: e }))
       },
-      estado_sincronizacion: {
-        label: 'Estado Sincronización',
-        options: estadosSinc.map(e => ({ value: e, label: e }))
-      }
+      equipo: {
+        label: 'Equipo',
+        options: equipos.map(e => ({ value: e, label: e }))
+      },
+      tipo_turno: {
+        label: 'Turno',
+        options: tiposTurno.map(t => ({ value: t, label: t }))
+      },
+      tipo_jornada: {
+        label: 'Tipo de Jornada',
+        options: tiposJornada.map(t => ({ value: t, label: t }))
+      },
+      disponibilidad: {
+        label: 'Disponibilidad',
+        options: disponibilidades.map(d => ({ value: d, label: d }))
+      },
+      categoria: {
+        label: 'Categoría',
+        options: categorias.map(c => ({ value: c, label: c }))
+      },
+      tipo_contrato: {
+        label: 'Tipo de Contrato',
+        options: tiposContrato.map(t => ({ value: t, label: t }))
+      },
     };
   }, [masterEmployees]);
 
@@ -472,10 +501,36 @@ export default function MasterEmployeeDatabasePage() {
       const matchesEstado = !filters.estado_empleado || filters.estado_empleado === 'all' || 
         emp.estado_empleado === filters.estado_empleado;
       
-      const matchesEstadoSinc = !filters.estado_sincronizacion || filters.estado_sincronizacion === 'all' || 
-        emp.estado_sincronizacion === filters.estado_sincronizacion;
+      const matchesEquipo = !filters.equipo || filters.equipo === 'all' ||
+        emp.equipo === filters.equipo;
 
-      return matchesSearch && matchesDept && matchesPuesto && matchesEstado && matchesEstadoSinc;
+      const matchesTurno = !filters.tipo_turno || filters.tipo_turno === 'all' ||
+        emp.tipo_turno === filters.tipo_turno;
+
+      const matchesJornada = !filters.tipo_jornada || filters.tipo_jornada === 'all' ||
+        emp.tipo_jornada === filters.tipo_jornada;
+
+      const matchesDisponibilidad = !filters.disponibilidad || filters.disponibilidad === 'all' ||
+        emp.disponibilidad === filters.disponibilidad;
+
+      const matchesCategoria = !filters.categoria || filters.categoria === 'all' ||
+        emp.categoria === filters.categoria;
+
+      const matchesTipoContrato = !filters.tipo_contrato || filters.tipo_contrato === 'all' ||
+        emp.tipo_contrato === filters.tipo_contrato;
+
+      return (
+        matchesSearch &&
+        matchesDept &&
+        matchesPuesto &&
+        matchesEstado &&
+        matchesEquipo &&
+        matchesTurno &&
+        matchesJornada &&
+        matchesDisponibilidad &&
+        matchesCategoria &&
+        matchesTipoContrato
+      );
     });
 
     if (filters.sortField) {
