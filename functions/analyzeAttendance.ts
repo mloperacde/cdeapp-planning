@@ -75,15 +75,24 @@ Deno.serve(async (req) => {
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-    const { date, turno = "Mañana" } = await req.json();
+    const { date } = await req.json();
     if (!date) return Response.json({ error: "Falta el parámetro date" }, { status: 400 });
 
+    // Calcular el lunes de la semana de la fecha solicitada
+    const dateObj = new Date(date + "T00:00:00");
+    const dayOfWeek = dateObj.getDay(); // 0=Dom, 1=Lun...6=Sab
+    const diffToMonday = (dayOfWeek === 0 ? -6 : 1 - dayOfWeek);
+    const monday = new Date(dateObj);
+    monday.setDate(dateObj.getDate() + diffToMonday);
+    const weekStart = monday.toISOString().split("T")[0];
+
     // Fetch en paralelo con paginación explícita
-    const [rawRecords, masterEmployees, ausencias, configs] = await Promise.all([
+    const [rawRecords, masterEmployees, ausencias, configs, weekSchedules] = await Promise.all([
       base44.entities.AttendanceRecord.filter({ record_date: date }, "record_time", 2000),
       base44.entities.EmployeeMasterDatabase.list("nombre", 1000),
       base44.entities.Absence.list("-fecha_inicio", 1000),
       base44.entities.AttendanceConfig.list("nombre_configuracion", 10),
+      base44.entities.TeamWeekSchedule.filter({ fecha_inicio_semana: weekStart }, "team_key", 10),
     ]);
 
     const config = configs.find(c => c.activo) || {};
