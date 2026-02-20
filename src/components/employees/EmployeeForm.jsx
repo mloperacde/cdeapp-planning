@@ -132,6 +132,12 @@ export default function EmployeeForm({ employee, machines, onClose }) {
     staleTime: 15 * 60 * 1000,
   });
 
+  const { data: departments = [] } = useQuery({
+    queryKey: ['departments'],
+    queryFn: () => base44.entities.Department.list('name', 200),
+    staleTime: 15 * 60 * 1000,
+  });
+
   const { data: allMachines = [] } = useQuery({
     queryKey: ['machines'],
     queryFn: async () => {
