@@ -26,6 +26,7 @@ export default function AttendanceMonitor() {
   const [searchEmp, setSearchEmp] = useState("");
   const [filterDpto, setFilterDpto] = useState("__all__");
   const [filterEquipo, setFilterEquipo] = useState("__all__");
+  const [filterTurno, setFilterTurno] = useState("__all__");
 
   const handleConsultar = async () => {
     setIsLoading(true);
