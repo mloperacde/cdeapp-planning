@@ -7,39 +7,30 @@ Deno.serve(async (req) => {
     return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
   }
 
-  // Fetch all departments and employees
-  const [departments, employees] = await Promise.all([
-    base44.asServiceRole.entities.Department.list(undefined, 200),
-    base44.asServiceRole.entities.EmployeeMasterDatabase.list(undefined, 2000),
-  ]);
+  const body = await req.json().catch(() => ({}));
+  const offset = body.offset || 0;
+  const batchSize = 50;
 
-  // Build lookup map: normalized department name → department record
+  // Fetch departments once
+  const departments = await base44.asServiceRole.entities.Department.list(undefined, 200);
   const deptMap = {};
   for (const dept of departments) {
     const key = (dept.name || '').trim().toUpperCase();
     if (key) deptMap[key] = dept;
   }
 
+  // Fetch a batch of employees without department_id
+  const employees = await base44.asServiceRole.entities.EmployeeMasterDatabase.list(undefined, batchSize, offset);
+
   let updated = 0;
   let skipped = 0;
-  let notFound = [];
+  const notFound = [];
 
   for (const emp of employees) {
+    if (emp.department_id) { skipped++; continue; }
+
     const deptName = (emp.departamento || '').trim().toUpperCase();
-
-    // Skip if already has correct department_id
-    if (emp.department_id) {
-      const dept = departments.find(d => d.id === emp.department_id);
-      if (dept) {
-        skipped++;
-        continue;
-      }
-    }
-
-    if (!deptName) {
-      skipped++;
-      continue;
-    }
+    if (!deptName) { skipped++; continue; }
 
     const matchedDept = deptMap[deptName];
     if (!matchedDept) {
@@ -49,17 +40,18 @@ Deno.serve(async (req) => {
 
     await base44.asServiceRole.entities.EmployeeMasterDatabase.update(emp.id, {
       department_id: matchedDept.id,
-      departamento: matchedDept.name // normalize to official name
+      departamento: matchedDept.name
     });
     updated++;
   }
 
   return Response.json({
     success: true,
-    total: employees.length,
+    batch: { offset, size: employees.length },
     updated,
     skipped,
     not_found: notFound,
-    message: `Migración completada: ${updated} empleados actualizados, ${skipped} sin cambios, ${notFound.length} sin departamento coincidente.`
+    has_more: employees.length === batchSize,
+    message: `Lote procesado (offset ${offset}): ${updated} actualizados, ${skipped} sin cambios, ${notFound.length} sin coincidencia.`
   });
 });
