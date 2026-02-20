@@ -62,6 +62,7 @@ import CommitteeManagement from './pages/CommitteeManagement';
 import Configuration from './pages/Configuration';
 import DailyProductionPlanningPage from './pages/DailyProductionPlanningPage';
 import Dashboard from './pages/Dashboard';
+import DataModelView from './pages/DataModelView';
 import DireccionSkills from './pages/DireccionSkills';
 import DocumentManagement from './pages/DocumentManagement';
 import ETTTemporaryEmployees from './pages/ETTTemporaryEmployees';
@@ -108,7 +109,6 @@ import WorkCalendarConfig from './pages/WorkCalendarConfig';
 import index from './pages/index';
 import ArticleManagement from './pages/ArticleManagement';
 import OrderImport from './pages/OrderImport';
-import DataModelView from './pages/DataModelView';
 import __Layout from './Layout.jsx';
 
 
@@ -128,6 +128,7 @@ export const PAGES = {
     "Configuration": Configuration,
     "DailyProductionPlanningPage": DailyProductionPlanningPage,
     "Dashboard": Dashboard,
+    "DataModelView": DataModelView,
     "DireccionSkills": DireccionSkills,
     "DocumentManagement": DocumentManagement,
     "ETTTemporaryEmployees": ETTTemporaryEmployees,
@@ -174,7 +175,6 @@ export const PAGES = {
     "index": index,
     "ArticleManagement": ArticleManagement,
     "OrderImport": OrderImport,
-    "DataModelView": DataModelView,
 }
 
 export const pagesConfig = {

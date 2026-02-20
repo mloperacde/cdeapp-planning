@@ -51,6 +51,7 @@ import WorkCalendarConfig from "./WorkCalendarConfig";
 import Breaks from "./Breaks";
 import MachinePlanning from "./MachineDailyPlanning";
 
+import DataModelView from "./DataModelView";
 import MessagingConfiguration from "./MessagingConfiguration";
 import RulesAndTemplates from "./RulesAndTemplates";
 import OrganizationalStructure from "./OrganizationalStructure";
