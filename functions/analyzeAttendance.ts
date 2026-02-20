@@ -100,6 +100,12 @@ Deno.serve(async (req) => {
     const departamentosEstrictos = config.departamentos_estrictos || [];
     const toleranciaReducida = config.tolerancia_reducida_minutos ?? 5;
 
+    // Mapa team_key → turno para la semana: { "team_1": "Mañana", "team_2": "Tarde" }
+    const teamScheduleMap = {};
+    for (const ws of weekSchedules) {
+      teamScheduleMap[ws.team_key] = ws.turno;
+    }
+
     // Mapa codigo_empleado → master
     const masterMapByCodigo = {};
     for (const emp of masterEmployees) {
