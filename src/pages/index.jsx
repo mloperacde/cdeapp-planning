@@ -133,6 +133,7 @@ const PAGES = {
   WorkCalendarConfig: WorkCalendarConfig,
   Breaks: Breaks,
   MachinePlanning: MachinePlanning,
+  DataModelView: DataModelView,
 
   DireccionSkills: DireccionSkills,
   PlanificacionSkills: PlanificacionSkills,
