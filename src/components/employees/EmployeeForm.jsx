@@ -558,11 +558,31 @@ export default function EmployeeForm({ employee, machines, onClose }) {
 
                 <div className="space-y-2">
                   <Label htmlFor="departamento">Departamento</Label>
-                  <Input
-                    id="departamento"
-                    value={formData.departamento || ""}
-                    onChange={(e) => setFormData({ ...formData, departamento: e.target.value })}
-                  />
+                  <Select
+                    value={formData.department_id || ""}
+                    onValueChange={(value) => {
+                      const dept = departments.find(d => d.id === value);
+                      setFormData({
+                        ...formData,
+                        department_id: value,
+                        departamento: dept ? dept.name.toUpperCase() : formData.departamento
+                      });
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar departamento" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {departments.map((dept) => (
+                        <SelectItem key={dept.id} value={dept.id}>
+                          {dept.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {formData.departamento && !formData.department_id && (
+                    <p className="text-xs text-amber-600">Valor actual: {formData.departamento} (sin vincular)</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
