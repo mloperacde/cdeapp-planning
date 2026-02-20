@@ -521,17 +521,15 @@ export default function MasterEmployeeDatabasePage() {
   };
 
   const stats = useMemo(() => {
-    if (!masterEmployees) return { total: 0, active: 0, absent: 0, departments: 0, employeesPerDept: [] };
-    
     if (!masterEmployees) {
       return { total: 0, active: 0, absent: 0, departments: 0, employeesPerDept: [] };
     }
+
     const deptCounts = masterEmployees.reduce((acc, emp) => {
+      const dept = emp.departamento || 'Sin Departamento';
       acc[dept] = (acc[dept] || 0) + 1;
       return acc;
     }, {});
-
-    const employeesPerDept = Object.entries(deptCounts)
 
     const employeesPerDept = Object.entries(deptCounts)
       .map(([name, count]) => ({ name, count }))
