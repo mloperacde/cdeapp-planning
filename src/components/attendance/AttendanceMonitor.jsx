@@ -61,6 +61,7 @@ export default function AttendanceMonitor() {
           !emp.employee_id.includes(searchEmp)) return false;
       if (filterDpto !== "__all__" && emp.departamento !== filterDpto) return false;
       if (filterEquipo !== "__all__" && emp.equipo !== filterEquipo) return false;
+      if (filterTurno !== "__all__" && emp.turnoReal !== filterTurno) return false;
       if (filterTab === "retrasos" && !emp.esRetraso) return false;
       if (filterTab === "incongruencias" && emp.incongruencias.length === 0 && !emp.alertaPresenciaConAusencia) return false;
       if (filterTab === "jornada" && !emp.incidenciaJornada) return false;
