@@ -106,6 +106,88 @@ const SORT_OPTIONS = [
   { field: 'ultimo_sincronizado', label: 'Última Sincronización' },
 ];
 
+const TARGET_DEPARTMENTS = [
+  'PRODUCCION',
+  'PRODUCCIÓN',
+  'MANTENIMIENTO',
+  'ALMACEN',
+  'ALMACÉN',
+  'CALIDAD',
+];
+
+function normalizeDepartment(departamento) {
+  if (!departamento) return '';
+  return departamento.toString().trim().toUpperCase();
+}
+
+function isTargetDepartment(departamento) {
+  const normalized = normalizeDepartment(departamento);
+  return TARGET_DEPARTMENTS.includes(normalized);
+}
+
+function buildStandardShiftUpdate(emp) {
+  if (!emp) return {};
+  if (!isTargetDepartment(emp.departamento)) return {};
+  if (emp.estado_empleado && !['Alta', 'Excedencia'].includes(emp.estado_empleado)) return {};
+
+  const tipoJornada = emp.tipo_jornada || '';
+  const tipoTurno = emp.tipo_turno || '';
+
+  const hasMorning =
+    typeof emp.horario_manana_inicio === 'string' &&
+    emp.horario_manana_inicio &&
+    typeof emp.horario_manana_fin === 'string' &&
+    emp.horario_manana_fin;
+
+  const hasAfternoon =
+    typeof emp.horario_tarde_inicio === 'string' &&
+    emp.horario_tarde_inicio &&
+    typeof emp.horario_tarde_fin === 'string' &&
+    emp.horario_tarde_fin;
+
+  const updates = {};
+
+  if (tipoJornada === 'Jornada Completa') {
+    if (['Rotativo', 'Fijo Mañana', 'Fijo Tarde'].includes(tipoTurno)) {
+      if (!hasMorning) {
+        updates.horario_manana_inicio = '07:00';
+        updates.horario_manana_fin = '15:00';
+      }
+      if (!hasAfternoon) {
+        updates.horario_tarde_inicio = '14:00';
+        updates.horario_tarde_fin = '22:00';
+      }
+      if (!emp.num_horas_jornada) {
+        updates.num_horas_jornada = 8;
+      }
+    }
+  } else if (tipoJornada === 'Jornada Parcial') {
+    if (tipoTurno === 'Rotativo') {
+      if (!hasMorning) {
+        updates.horario_manana_inicio = '07:00';
+        updates.horario_manana_fin = '15:00';
+      }
+      if (!hasAfternoon) {
+        updates.horario_tarde_inicio = '15:00';
+        updates.horario_tarde_fin = '22:00';
+      }
+      if (!emp.num_horas_jornada) {
+        updates.num_horas_jornada = 7.5;
+      }
+    } else if (tipoTurno === 'Fijo Tarde') {
+      if (!hasAfternoon) {
+        updates.horario_tarde_inicio = '15:00';
+        updates.horario_tarde_fin = '22:00';
+      }
+      if (!emp.num_horas_jornada) {
+        updates.num_horas_jornada = 7;
+      }
+    }
+  }
+
+  return updates;
+}
+
 export default function MasterEmployeeDatabasePage() {
   const [filters, setFilters] = useState({});
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -441,12 +523,15 @@ export default function MasterEmployeeDatabasePage() {
   const stats = useMemo(() => {
     if (!masterEmployees) return { total: 0, active: 0, absent: 0, departments: 0, employeesPerDept: [] };
     
-    // Calculate employees per department
+    if (!masterEmployees) {
+      return { total: 0, active: 0, absent: 0, departments: 0, employeesPerDept: [] };
+    }
     const deptCounts = masterEmployees.reduce((acc, emp) => {
-      const dept = emp.departamento || 'Sin Departamento';
       acc[dept] = (acc[dept] || 0) + 1;
       return acc;
     }, {});
+
+    const employeesPerDept = Object.entries(deptCounts)
 
     const employeesPerDept = Object.entries(deptCounts)
       .map(([name, count]) => ({ name, count }))
@@ -460,6 +545,44 @@ export default function MasterEmployeeDatabasePage() {
       employeesPerDept
     };
   }, [masterEmployees]);
+
+  const employeesWithShiftGaps = useMemo(() => {
+    if (!masterEmployees) return [];
+    return masterEmployees.filter(emp => {
+      const updates = buildStandardShiftUpdate(emp);
+      return updates && Object.keys(updates).length > 0;
+    });
+  }, [masterEmployees]);
+
+  const handleApplyStandardShiftRules = async () => {
+    if (!employeesWithShiftGaps || employeesWithShiftGaps.length === 0) {
+      toast.info('No hay empleados con horarios incompletos para estas reglas.');
+      return;
+    }
+
+    await toast.promise(
+      (async () => {
+        let updatedCount = 0;
+
+        for (const emp of employeesWithShiftGaps) {
+          const updates = buildStandardShiftUpdate(emp);
+          if (!updates || Object.keys(updates).length === 0) continue;
+          if (!emp.id) continue;
+          await base44.entities.EmployeeMasterDatabase.update(emp.id, updates);
+          updatedCount++;
+        }
+
+        queryClient.invalidateQueries({ queryKey: ['employeeMasterDatabase'] });
+        return updatedCount;
+      })(),
+      {
+        loading: `Aplicando reglas a ${employeesWithShiftGaps.length} empleados...`,
+        success: (updatedCount) => `Actualizados ${updatedCount} empleados`,
+        error: (error) =>
+          error?.message || 'Error al aplicar las reglas de horarios',
+      }
+    );
+  };
 
   if (!isHrModuleAllowed) {
     return (
@@ -495,6 +618,81 @@ export default function MasterEmployeeDatabasePage() {
         </div>
         
       </div>
+
+      {employeesWithShiftGaps.length > 0 && (
+        <Card className="p-3 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm shrink-0">
+          <div className="flex items-center justify-between mb-2">
+            <div>
+              <span className="text-xs text-slate-500 font-medium uppercase tracking-wider">
+                Asistente de Autocompletado de Horarios (Temporal)
+              </span>
+              <p className="text-[11px] text-slate-500">
+                Empleados en Producción, Mantenimiento, Almacén y Calidad con turnos u horarios incompletos.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="flex flex-col items-end mr-2">
+                <span className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                  {employeesWithShiftGaps.length}
+                </span>
+                <span className="text-[10px] text-slate-500">Pendientes de completar</span>
+              </div>
+              <Button
+                size="sm"
+                className="bg-emerald-600 hover:bg-emerald-700 h-9 px-3"
+                onClick={handleApplyStandardShiftRules}
+              >
+                <Users className="w-4 h-4 mr-2" />
+                Aplicar reglas horarios estándar
+              </Button>
+            </div>
+          </div>
+          <div className="mt-2 max-h-52 overflow-auto border border-slate-100 dark:border-slate-800 rounded-md">
+            <Table>
+              <TableHeader className="bg-slate-50 dark:bg-slate-900">
+                <TableRow className="h-7">
+                  <TableHead className="px-3 py-1 text-[10px] font-semibold text-slate-600">
+                    Código
+                  </TableHead>
+                  <TableHead className="px-3 py-1 text-[10px] font-semibold text-slate-600">
+                    Nombre
+                  </TableHead>
+                  <TableHead className="px-3 py-1 text-[10px] font-semibold text-slate-600">
+                    Departamento
+                  </TableHead>
+                  <TableHead className="px-3 py-1 text-[10px] font-semibold text-slate-600">
+                    Jornada
+                  </TableHead>
+                  <TableHead className="px-3 py-1 text-[10px] font-semibold text-slate-600">
+                    Turno
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {employeesWithShiftGaps.slice(0, 50).map((emp) => (
+                  <TableRow key={emp.id} className="h-7">
+                    <TableCell className="px-3 py-1 text-[10px] font-mono text-slate-700">
+                      {emp.codigo_empleado || '-'}
+                    </TableCell>
+                    <TableCell className="px-3 py-1 text-[10px] text-slate-700 truncate max-w-[160px]">
+                      {emp.nombre || '-'}
+                    </TableCell>
+                    <TableCell className="px-3 py-1 text-[10px] text-slate-600 truncate max-w-[140px]">
+                      {emp.departamento || '-'}
+                    </TableCell>
+                    <TableCell className="px-3 py-1 text-[10px] text-slate-600">
+                      {emp.tipo_jornada || '-'}
+                    </TableCell>
+                    <TableCell className="px-3 py-1 text-[10px] text-slate-600">
+                      {emp.tipo_turno || '-'}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </Card>
+      )}
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-2 shrink-0">
