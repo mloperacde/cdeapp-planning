@@ -15,8 +15,12 @@ export default function TeamCompositionConfig() {
   const queryClient = useQueryClient();
 
   const { data: employees = [] } = useQuery({
-    queryKey: ['employees'],
-    queryFn: () => base44.entities.EmployeeMasterDatabase.list(),
+    queryKey: ['employees', selectedTeamKey],
+    queryFn: () => base44.entities.EmployeeMasterDatabase.filter(
+      { team_key: selectedTeamKey, estado_empleado: "Alta" },
+      '-updated_date',
+      500
+    ),
   });
 
   const { data: teams = [] } = useQuery({
