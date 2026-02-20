@@ -19,7 +19,6 @@ function formatMin(min) {
 
 export default function AttendanceMonitor() {
   const [selectedDate, setSelectedDate] = useState(format(new Date(), "yyyy-MM-dd"));
-  const [filterTurno, setFilterTurno] = useState("Mañana");
   const [consulted, setConsulted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState(null);
