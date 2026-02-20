@@ -1,7 +1,10 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, GitBranch } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ArrowLeft, GitBranch, Database } from "lucide-react";
 import DataModelDiagram from "@/components/audit/DataModelDiagram";
+import DepartmentMigrationPanel from "@/components/audit/DepartmentMigrationPanel";
 
 export default function DataModelView() {
   return (
@@ -17,7 +20,7 @@ export default function DataModelView() {
               Modelo de Datos — Relaciones entre Entidades
             </h1>
             <p className="text-[10px] text-slate-500 dark:text-slate-400 hidden sm:block">
-              Fase 1 del Plan de Mejora Arquitectural · employee_id estandarizado
+              Plan de Mejora Arquitectural · Fases 1-3
             </p>
           </div>
         </div>
@@ -29,7 +32,26 @@ export default function DataModelView() {
         </Link>
       </div>
 
-      <DataModelDiagram />
+      <div className="flex-1 p-4">
+        <Tabs defaultValue="diagram">
+          <TabsList className="mb-4">
+            <TabsTrigger value="diagram" className="gap-2">
+              <GitBranch className="w-4 h-4" />
+              Diagrama (Fase 1)
+            </TabsTrigger>
+            <TabsTrigger value="migration" className="gap-2">
+              <Database className="w-4 h-4" />
+              Migración Departamentos (Fase 3)
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="diagram">
+            <DataModelDiagram />
+          </TabsContent>
+          <TabsContent value="migration">
+            <DepartmentMigrationPanel />
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   );
 }
