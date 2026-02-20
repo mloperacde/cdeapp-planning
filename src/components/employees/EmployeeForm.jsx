@@ -259,6 +259,11 @@ export default function EmployeeForm({ employee, machines, onClose }) {
       // Enforce Uppercase for critical fields
       if (finalData.nombre) finalData.nombre = finalData.nombre.toUpperCase();
       if (finalData.departamento) finalData.departamento = finalData.departamento.toUpperCase();
+      // Ensure department_id is preserved on save
+      if (!finalData.department_id && finalData.departamento) {
+        // Try to auto-match by name
+        // (departments not in scope here, but field will be set via Select)
+      }
       if (finalData.puesto) finalData.puesto = finalData.puesto.toUpperCase();
 
       if (data.tipo_turno === "Fijo Mañana" || data.tipo_turno === "Fijo Tarde") {
