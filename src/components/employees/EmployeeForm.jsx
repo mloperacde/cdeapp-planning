@@ -268,6 +268,8 @@ export default function EmployeeForm({ employee, machines, onClose }) {
 
       if (data.tipo_turno === "Fijo Mañana" || data.tipo_turno === "Fijo Tarde") {
         finalData.equipo = "";
+        finalData.team_id = "";
+        finalData.team_key = "";
       }
       
       let savedEmployee;
