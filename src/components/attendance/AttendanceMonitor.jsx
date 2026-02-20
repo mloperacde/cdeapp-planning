@@ -245,7 +245,7 @@ export default function AttendanceMonitor() {
                             <td className="px-3 py-2 font-medium text-slate-800 dark:text-slate-100">{emp.employee_name}</td>
                             <td className="px-3 py-2 text-slate-600">{emp.departamento}</td>
                             <td className="px-3 py-2 text-slate-500">{emp.equipo}</td>
-                            <td className="px-3 py-2 text-slate-500">{emp.tipoTurno}</td>
+                            <td className="px-3 py-2 text-slate-500">{emp.turnoReal || emp.tipoTurno}</td>
                             <td className="px-3 py-2">
                               {emp.horaEsperada
                                 ? <Badge className="bg-slate-100 text-slate-700 font-mono">{emp.horaEsperada}</Badge>
