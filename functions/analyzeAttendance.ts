@@ -173,7 +173,11 @@ Deno.serve(async (req) => {
       let incidenciaJornada = null;
       if (duracionMin && presenciaMin > 0 && sorted.length >= 2) {
         const deficit = duracionMin - presenciaMin;
-        if (deficit > tolerancia + 10) {
+        // Solo marcar jornada incompleta si la hora fin esperada ya ha pasado
+        // (evitar falsos positivos durante la jornada en curso)
+        const horaFinMin = horaFinEsperada ? toMin(horaFinEsperada) : null;
+        const jornadaTerminada = horaFinMin == null || nowMinutes >= horaFinMin;
+        if (deficit > tolerancia + 10 && jornadaTerminada) {
           incidenciaJornada = `Jornada incompleta: ${formatMin(presenciaMin)} de ${formatMin(duracionMin)} esperados (faltan ${deficit} min)`;
         }
       }
