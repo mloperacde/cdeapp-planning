@@ -25,6 +25,7 @@ import AbsenceTypeManager from "../components/absences/AbsenceTypeManager";
 import VacationAccumulationConfig from "../components/absences/VacationAccumulationConfig";
 import AdvancedReportGenerator from "../components/reports/AdvancedReportGenerator";
 import AttendanceAnalyzer from "../components/attendance/AttendanceAnalyzer";
+import VacationWorkCompensationManager from "../components/absences/VacationWorkCompensationManager";
 
 export default function AbsenceManagementPage() {
   const { 
@@ -412,6 +413,7 @@ export default function AbsenceManagementPage() {
           <TabsContent value="config">
             <div className="space-y-6">
               <VacationPendingBalancePanel employees={employees} />
+              <VacationWorkCompensationManager employees={employees} />
               <VacationPendingConsumptionManager employees={employees} />
               <UnpaidLeaveTracker employees={employees} />
             </div>

@@ -230,9 +230,11 @@ export default function VacationPendingBalancePanel({ employees = [], compact = 
                 ¿Qué son las Vacaciones Pendientes?
               </h4>
               <p className="text-sm text-amber-800">
-                Son días de vacaciones colectivas que no fueron disfrutados porque el
-                empleado estaba ausente (ej. baja médica, permiso sin sueldo). Estos días
-                se suman a su saldo anual de vacaciones.
+                Son días de vacaciones que el empleado tiene derecho a disfrutar aparte de su
+                bolsa anual habitual. Se generan cuando no pudo disfrutar vacaciones
+                colectivas por estar ausente (ej. baja médica, permisos que no consumen
+                vacaciones) o cuando trabajó en festivos, fines de semana o días marcados
+                como vacaciones y se acordó su compensación en días libres.
               </p>
             </div>
           </div>
