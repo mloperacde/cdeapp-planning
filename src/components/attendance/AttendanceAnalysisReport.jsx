@@ -30,32 +30,32 @@ export default function AttendanceAnalysisReport() {
 
   const { data: employees } = useQuery({
     queryKey: ['employees'],
-    queryFn: () => base44.entities.EmployeeMasterDatabase.list(),
+    queryFn: () => base44.entities.EmployeeMasterDatabase.list("nombre", 1000),
     initialData: [],
   });
 
   const { data: absences } = useQuery({
     queryKey: ['absences'],
-    queryFn: () => base44.entities.Absence.list(),
+    queryFn: () => base44.entities.Absence.list("-fecha_inicio", 500),
     initialData: [],
   });
 
   const { data: teams } = useQuery({
     queryKey: ['teamConfigs'],
-    queryFn: () => base44.entities.TeamConfig.list(),
+    queryFn: () => base44.entities.TeamConfig.list("team_name", 10),
     initialData: [],
   });
 
   const { data: teamSchedules } = useQuery({
     queryKey: ['teamWeekSchedules'],
-    queryFn: () => base44.entities.TeamWeekSchedule.list(),
+    queryFn: () => base44.entities.TeamWeekSchedule.list("-fecha_inicio_semana", 100),
     initialData: [],
   });
 
   const { data: config } = useQuery({
     queryKey: ['attendanceConfig'],
     queryFn: async () => {
-      const configs = await base44.entities.AttendanceConfig.list();
+      const configs = await base44.entities.AttendanceConfig.list("nombre_configuracion", 10);
       return configs.find(c => c.activo) || null;
     },
   });
