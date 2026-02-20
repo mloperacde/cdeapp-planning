@@ -13,24 +13,39 @@ function formatMin(min) {
   return `${Math.floor(min / 60)}h ${String(min % 60).padStart(2, "0")}m`;
 }
 
-function getHorarioEsperado(master, turno) {
-  if (!master) return { horaEntrada: null, horaFin: null, duracionMin: null };
+// teamScheduleMap: team_key → turno ("Mañana" | "Tarde") para la semana dada
+function getHorarioEsperado(master, teamScheduleMap) {
+  if (!master) return { horaEntrada: null, horaFin: null, duracionMin: null, turnoReal: null };
   const tipo = master.tipo_turno;
-  let horaEntrada = null, horaFin = null;
+  let horaEntrada = null, horaFin = null, turnoReal = null;
 
   if (tipo === "Turno Partido") {
     horaEntrada = master.turno_partido_entrada1 || null;
     horaFin = master.turno_partido_salida2 || null;
-  } else if (tipo === "Fijo Mañana" || (tipo === "Rotativo" && turno === "Mañana") || (!tipo && turno === "Mañana")) {
+    turnoReal = "Partido";
+  } else if (tipo === "Fijo Mañana") {
     horaEntrada = master.horario_manana_inicio || null;
     horaFin = master.horario_manana_fin || null;
-  } else if (tipo === "Fijo Tarde" || (tipo === "Rotativo" && turno === "Tarde") || (!tipo && turno === "Tarde")) {
+    turnoReal = "Mañana";
+  } else if (tipo === "Fijo Tarde") {
     horaEntrada = master.horario_tarde_inicio || null;
     horaFin = master.horario_tarde_fin || null;
+    turnoReal = "Tarde";
+  } else if (tipo === "Rotativo") {
+    // Consultar el turno real del equipo en la semana actual
+    const turnoEquipo = master.team_key ? teamScheduleMap[master.team_key] : null;
+    turnoReal = turnoEquipo || null;
+    if (turnoEquipo === "Mañana") {
+      horaEntrada = master.horario_manana_inicio || null;
+      horaFin = master.horario_manana_fin || null;
+    } else if (turnoEquipo === "Tarde") {
+      horaEntrada = master.horario_tarde_inicio || null;
+      horaFin = master.horario_tarde_fin || null;
+    }
   }
 
   const duracionMin = horaEntrada && horaFin ? toMin(horaFin) - toMin(horaEntrada) : null;
-  return { horaEntrada, horaFin, duracionMin };
+  return { horaEntrada, horaFin, duracionMin, turnoReal };
 }
 
 function detectarIncongruencias(sorted) {
