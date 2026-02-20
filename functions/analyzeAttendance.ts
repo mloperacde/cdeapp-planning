@@ -177,10 +177,11 @@ Deno.serve(async (req) => {
       let incidenciaJornada = null;
       if (duracionMin && presenciaMin > 0 && sorted.length >= 2) {
         const deficit = duracionMin - presenciaMin;
-        // Solo marcar jornada incompleta si la hora fin esperada ya ha pasado
-        // (evitar falsos positivos durante la jornada en curso)
+        // Solo marcar jornada incompleta si la jornada ya ha finalizado.
+        // Si es el día de hoy, comprobamos si la hora fin esperada ha pasado.
+        // Para días pasados, siempre se evalúa.
         const horaFinMin = horaFinEsperada ? toMin(horaFinEsperada) : null;
-        const jornadaTerminada = horaFinMin == null || nowMinutes >= horaFinMin;
+        const jornadaTerminada = !esHoy || horaFinMin == null || nowMinutes >= horaFinMin;
         if (deficit > tolerancia + 10 && jornadaTerminada) {
           incidenciaJornada = `Jornada incompleta: ${formatMin(presenciaMin)} de ${formatMin(duracionMin)} esperados (faltan ${deficit} min)`;
         }
