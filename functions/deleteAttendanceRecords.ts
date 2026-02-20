@@ -13,39 +13,22 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Se requiere record_date o import_batch' }, { status: 400 });
     }
 
-    // Obtener registros de 1 en 1 con pausa larga para evitar rate limit
+    // Obtener todos los registros que coinciden con el filtro (fecha o batch)
     const filter = {};
     if (record_date) filter.record_date = record_date;
     if (import_batch) filter.import_batch = import_batch;
 
-    let allIds = [];
-    let skip = 0;
-    const pageSize = 50;
-
-    while (true) {
-      await new Promise(res => setTimeout(res, 300));
-      let page;
-      try {
-        page = await base44.asServiceRole.entities.AttendanceRecord.filter(filter, 'record_date', pageSize);
-      } catch {
-        break;
-      }
-      if (!page || page.length === 0) break;
-      allIds = allIds.concat(page.map(r => r.id));
-      if (page.length < pageSize) break;
-      skip += pageSize;
-      // Evitar bucle infinito
-      if (allIds.length >= 2000) break;
-    }
+    const pageSize = 2000;
+    const page = await base44.asServiceRole.entities.AttendanceRecord.filter(filter, 'record_date', pageSize);
+    const allIds = (page || []).map(r => r.id);
 
     if (allIds.length === 0) {
       return Response.json({ deleted: 0, message: 'No se encontraron registros' });
     }
 
-    // Eliminar de 1 en 1 con pausa para respetar rate limit
+    // Eliminar de uno en uno (secuencial) para evitar timeouts por exceso de concurrencia
     let deleted = 0;
     for (const id of allIds) {
-      await new Promise(res => setTimeout(res, 100));
       try {
         await base44.asServiceRole.entities.AttendanceRecord.delete(id);
         deleted++;
