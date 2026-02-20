@@ -98,6 +98,7 @@ export default function AttendanceMonitor() {
       if (filterTab === "jornada" && !emp.incidenciaJornada) return false;
       if (filterTab === "ok" && emp.estado !== "ok") return false;
       if (filterTab === "alerta_ausencia" && !emp.alertaPresenciaConAusencia) return false;
+      return true;
     });
   }, [result, baseFilteredRows, filterTab, activeCorte]);
 
