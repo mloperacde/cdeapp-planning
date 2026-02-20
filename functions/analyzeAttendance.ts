@@ -153,7 +153,7 @@ Deno.serve(async (req) => {
       const departamento = master.departamento || "—";
       const equipo = master.equipo || "—";
       const tipoTurno = master.tipo_turno || "—";
-      const { horaEntrada: horaEsperada, horaFin: horaFinEsperada, duracionMin } = getHorarioEsperado(master, turno);
+      const { horaEntrada: horaEsperada, horaFin: horaFinEsperada, duracionMin, turnoReal } = getHorarioEsperado(master, teamScheduleMap);
       const tolerancia = departamentosEstrictos.includes(departamento) ? toleranciaReducida : toleranciaEntrada;
 
       let retrasoMin = 0, esRetraso = false;
