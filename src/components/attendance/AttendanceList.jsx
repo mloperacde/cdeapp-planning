@@ -77,11 +77,6 @@ export default function AttendanceList({ selectedDate, onDateChange }) {
   }, [employees]);
 
   // Departamentos únicos para filtro
-  const departments = useMemo(() => {
-    const depts = new Set(rawRecords.map(r => r.department).filter(Boolean));
-    return Array.from(depts).sort();
-  }, [rawRecords]);
-
   // Agrupar registros por empleado
   const employeeRows = useMemo(() => {
     const map = {};
@@ -107,12 +102,16 @@ export default function AttendanceList({ selectedDate, onDateChange }) {
       const minutosEfectiva = calcularPresenciaEfectiva(sorted);
 
       const em = employeesById.get(String(emp.employee_id));
+      const department = em?.departamento || "—";
+      const employee_name = em?.nombre || emp.employee_name;
       const equipo = em?.equipo || "—";
       const turno = em?.turno || em?.tipo_turno || "—";
       const presentEnPlanta = !(salida && salida.record_time !== entrada?.record_time);
 
       return {
         ...emp,
+        employee_name,
+        department,
         entrada,
         salida,
         intermedios,
@@ -125,6 +124,11 @@ export default function AttendanceList({ selectedDate, onDateChange }) {
       };
     }).sort((a, b) => a.employee_name.localeCompare(b.employee_name));
   }, [rawRecords, employeesById]);
+
+  const departments = useMemo(() => {
+    const depts = new Set(employeeRows.map(r => r.department).filter(Boolean));
+    return Array.from(depts).sort();
+  }, [employeeRows]);
 
   const equipos = useMemo(() => {
     const set = new Set(employeeRows.map(r => r.equipo).filter(e => e && e !== "—"));

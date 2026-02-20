@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -67,6 +67,20 @@ export default function AttendanceControl() {
     staleTime: 0,
   });
 
+  const { data: employees = [] } = useQuery({
+    queryKey: ["employeesMasterForAttendance"],
+    queryFn: () => base44.entities.EmployeeMasterDatabase.list(undefined, 2000),
+    staleTime: 0,
+  });
+
+  const employeesById = useMemo(() => {
+    const map = new Map();
+    employees.forEach(e => {
+      if (e?.id != null) map.set(String(e.id), e);
+    });
+    return map;
+  }, [employees]);
+
   // Batches únicos del día actual (para poder borrar por turno)
   const batches = [...new Set(records.map(r => r.import_batch).filter(Boolean))];
 
@@ -87,10 +101,11 @@ export default function AttendanceControl() {
     records.reduce((acc, r) => {
       const key = r.employee_id;
       if (!acc[key]) {
+        const em = employeesById.get(String(r.employee_id));
         acc[key] = {
           employee_id: r.employee_id,
-          employee_name: r.employee_name,
-          department: r.department,
+          employee_name: em?.nombre || r.employee_name,
+          department: em?.departamento || "—",
           entries: [],
           exits: [],
         };
