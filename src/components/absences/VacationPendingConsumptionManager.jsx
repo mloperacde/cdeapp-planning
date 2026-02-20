@@ -14,6 +14,11 @@ export default function VacationPendingConsumptionManager({ employees = [] }) {
   const queryClient = useQueryClient();
   const [selectedEmployeeId, setSelectedEmployeeId] = useState("");
   const [daysToConsume, setDaysToConsume] = useState("");
+  const [grantedDatesText, setGrantedDatesText] = useState("");
+  const [comment, setComment] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [departmentFilter, setDepartmentFilter] = useState("all");
+  const [minDaysFilter, setMinDaysFilter] = useState("");
 
   const { data: balances = [] } = useQuery({
     queryKey: ["vacationPendingBalances"],
@@ -23,6 +28,7 @@ export default function VacationPendingConsumptionManager({ employees = [] }) {
 
   const employeesWithBalance = useMemo(() => {
     const employeeYearMap = new Map();
+    const extraTotals = new Map(); // balances sin año válido
 
     balances.forEach((balance) => {
       if (!balance || !balance.employee_id) return;
@@ -34,7 +40,13 @@ export default function VacationPendingConsumptionManager({ employees = [] }) {
       const diasConsumidos = balance.dias_consumidos || 0;
       const rawYear = balance.anio;
       const year = typeof rawYear === "number" ? rawYear : parseInt(rawYear || "0", 10);
-      if (!year) return;
+      if (!year) {
+        const totals = extraTotals.get(balance.employee_id) || { p: 0, c: 0 };
+        totals.p += diasPendientes;
+        totals.c += diasConsumidos;
+        extraTotals.set(balance.employee_id, totals);
+        return;
+      }
 
       let yearMap = employeeYearMap.get(balance.employee_id);
       if (!yearMap) {
@@ -76,6 +88,11 @@ export default function VacationPendingConsumptionManager({ employees = [] }) {
         totalPendientes += data.dias_pendientes;
         totalConsumidos += data.dias_consumidos;
       });
+      const extras = extraTotals.get(employeeId);
+      if (extras) {
+        totalPendientes += extras.p;
+        totalConsumidos += extras.c;
+      }
 
       const diasDisponibles = totalPendientes - totalConsumidos;
 
@@ -100,6 +117,24 @@ export default function VacationPendingConsumptionManager({ employees = [] }) {
       .sort((a, b) => b.dias_disponibles - a.dias_disponibles);
   }, [balances, employees]);
 
+  const departments = useMemo(() => {
+    const set = new Set();
+    employees.forEach((e) => e?.departamento && set.add(e.departamento));
+    return ["all", ...Array.from(set).sort((a, b) => (a || "").localeCompare(b || ""))];
+  }, [employees]);
+
+  const filteredEmployeesWithBalance = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+    const min = parseFloat(minDaysFilter) || 0;
+    return employeesWithBalance.filter((b) => {
+      const name = (b.employee?.nombre || b.employee?.full_name || b.employee?.display_name || "").toLowerCase();
+      const matchesName = !term || name.includes(term);
+      const matchesDept = departmentFilter === "all" || (b.employee?.departamento || "") === departmentFilter;
+      const matchesMin = b.dias_disponibles >= min;
+      return matchesName && matchesDept && matchesMin;
+    });
+  }, [employeesWithBalance, searchTerm, departmentFilter, minDaysFilter]);
+
   const selectedBalance = useMemo(() => {
     if (!selectedEmployeeId) return null;
     return employeesWithBalance.find(
@@ -119,6 +154,11 @@ export default function VacationPendingConsumptionManager({ employees = [] }) {
         throw new Error("Introduce un número de días válido");
       }
 
+      const grantedDates = grantedDatesText
+        .split(/[,\\s]+/)
+        .map((s) => s.trim())
+        .filter((s) => /^\d{4}-\d{2}-\d{2}$/.test(s));
+
       const max = selectedBalance.dias_disponibles;
 
       if (amount > max) {
@@ -128,6 +168,7 @@ export default function VacationPendingConsumptionManager({ employees = [] }) {
       }
 
       let remaining = amount;
+      let firstUpdatedBalanceId = null;
 
       const employeeBalances = balances
         .filter((b) => b.employee_id === selectedBalance.employee_id)
@@ -159,7 +200,31 @@ export default function VacationPendingConsumptionManager({ employees = [] }) {
           dias_disponibles: updatedDisponibles,
         });
 
+        if (!firstUpdatedBalanceId) {
+          firstUpdatedBalanceId = balance.id;
+        }
+
         remaining -= toConsume;
+      }
+
+      if (firstUpdatedBalanceId) {
+        try {
+          const target = balances.find((b) => b.id === firstUpdatedBalanceId) || null;
+          const existing = (target && Array.isArray(target.detalle_consumos)) ? target.detalle_consumos : [];
+          const consumoRecord = {
+            id: `CONS-${selectedBalance.employee_id}-${Date.now()}`,
+            fecha_registro: new Date().toISOString(),
+            dias: amount,
+            fechas_concedidas: grantedDates,
+            comentario: comment || "",
+            origen: "consumo_saldo_pendiente",
+          };
+          await base44.entities.VacationPendingBalance.update(firstUpdatedBalanceId, {
+            detalle_consumos: [...existing, consumoRecord],
+          });
+        } catch {
+          // Best effort: si falla guardar detalle, no interrumpimos el flujo principal
+        }
       }
 
       // Sincronizar ficha del empleado
@@ -170,6 +235,8 @@ export default function VacationPendingConsumptionManager({ employees = [] }) {
       queryClient.invalidateQueries({ queryKey: ["employeeMasterDatabase"] });
       toast.success("Consumo de vacaciones pendientes registrado");
       setDaysToConsume("");
+      setGrantedDatesText("");
+      setComment("");
     },
     onError: (error) => {
       toast.error(error?.message || "Error al registrar consumo");
@@ -185,7 +252,36 @@ export default function VacationPendingConsumptionManager({ employees = [] }) {
         </CardTitle>
       </CardHeader>
       <CardContent className="p-6 space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="space-y-2">
+            <Label>Filtrar por nombre</Label>
+            <Input value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Buscar..." />
+          </div>
+          <div className="space-y-2">
+            <Label>Departamento</Label>
+            <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Departamento" />
+              </SelectTrigger>
+              <SelectContent>
+                {departments.map((d) => (
+                  <SelectItem key={d} value={d}>
+                    {d === "all" ? "Todos" : d}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Mín. días</Label>
+            <Input
+              type="number"
+              min={0}
+              step={0.5}
+              value={minDaysFilter}
+              onChange={(e) => setMinDaysFilter(e.target.value)}
+            />
+          </div>
           <div className="space-y-2">
             <Label>Empleado con saldo</Label>
             <Select
@@ -196,7 +292,7 @@ export default function VacationPendingConsumptionManager({ employees = [] }) {
                 <SelectValue placeholder="Seleccionar empleado" />
               </SelectTrigger>
               <SelectContent>
-                {employeesWithBalance.map((b) => (
+                {filteredEmployeesWithBalance.map((b) => (
                   <SelectItem key={b.employee_id} value={b.employee_id}>
                     {b.employee?.nombre} ({b.dias_disponibles} días)
                   </SelectItem>
@@ -223,6 +319,25 @@ export default function VacationPendingConsumptionManager({ employees = [] }) {
               max={selectedBalance ? selectedBalance.dias_disponibles : 0}
               value={daysToConsume}
               onChange={(e) => setDaysToConsume(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="space-y-2">
+            <Label>Fechas concedidas (yyyy-mm-dd, separadas por coma/espacio)</Label>
+            <Input
+              placeholder="2026-05-02, 2026-05-03"
+              value={grantedDatesText}
+              onChange={(e) => setGrantedDatesText(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2 md:col-span-2">
+            <Label>Comentario</Label>
+            <Input
+              placeholder="Observaciones del consumo"
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
             />
           </div>
         </div>

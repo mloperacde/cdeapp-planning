@@ -1,10 +1,12 @@
 
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CalendarDays, TrendingUp, AlertCircle, ChevronRight, RefreshCw } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -39,6 +41,8 @@ export default function VacationPendingBalancePanel({ employees = [], compact = 
 
     const employeeYearMap = new Map();
     const employeeDetailMap = new Map();
+    const extraTotals = new Map(); // balances sin año válido
+    const employeeConsumptionMap = new Map();
 
     balances.forEach((balance) => {
       if (!balance || !balance.employee_id) return;
@@ -50,7 +54,19 @@ export default function VacationPendingBalancePanel({ employees = [], compact = 
       const diasConsumidos = balance.dias_consumidos || 0;
       const rawYear = balance.anio;
       const year = typeof rawYear === "number" ? rawYear : parseInt(rawYear || "0", 10);
-      if (!year) return;
+      if (!year) {
+        const totals = extraTotals.get(balance.employee_id) || { p: 0, c: 0 };
+        totals.p += diasPendientes;
+        totals.c += diasConsumidos;
+        extraTotals.set(balance.employee_id, totals);
+        const existingCons = employeeConsumptionMap.get(balance.employee_id) || [];
+        if (Array.isArray(balance.detalle_consumos) && balance.detalle_consumos.length > 0) {
+          employeeConsumptionMap.set(balance.employee_id, [...existingCons, ...balance.detalle_consumos]);
+        } else if (!employeeConsumptionMap.has(balance.employee_id)) {
+          employeeConsumptionMap.set(balance.employee_id, existingCons);
+        }
+        return;
+      }
 
       let yearMap = employeeYearMap.get(balance.employee_id);
       if (!yearMap) {
@@ -77,6 +93,13 @@ export default function VacationPendingBalancePanel({ employees = [], compact = 
       } else if (!employeeDetailMap.has(balance.employee_id)) {
         employeeDetailMap.set(balance.employee_id, existingDetails);
       }
+
+      const existingCons = employeeConsumptionMap.get(balance.employee_id) || [];
+      if (Array.isArray(balance.detalle_consumos) && balance.detalle_consumos.length > 0) {
+        employeeConsumptionMap.set(balance.employee_id, [...existingCons, ...balance.detalle_consumos]);
+      } else if (!employeeConsumptionMap.has(balance.employee_id)) {
+        employeeConsumptionMap.set(balance.employee_id, existingCons);
+      }
     });
 
     const result = [];
@@ -102,6 +125,11 @@ export default function VacationPendingBalancePanel({ employees = [], compact = 
         totalPendientes += data.dias_pendientes;
         totalConsumidos += data.dias_consumidos;
       });
+      const extras = extraTotals.get(employeeId);
+      if (extras) {
+        totalPendientes += extras.p;
+        totalConsumidos += extras.c;
+      }
 
       const diasDisponibles = totalPendientes - totalConsumidos;
 
@@ -112,6 +140,11 @@ export default function VacationPendingBalancePanel({ employees = [], compact = 
       yearBreakdown.sort((a, b) => a.year - b.year);
 
       const detalleAusencias = employeeDetailMap.get(employeeId) || [];
+      const detalleConsumos = (employeeConsumptionMap.get(employeeId) || []).slice().sort((a, b) => {
+        const da = (a?.fecha_registro || "").toString();
+        const db = (b?.fecha_registro || "").toString();
+        return db.localeCompare(da);
+      });
 
       result.push({
         employee_id: employeeId,
@@ -121,6 +154,7 @@ export default function VacationPendingBalancePanel({ employees = [], compact = 
         dias_disponibles: diasDisponibles,
         year_breakdown: yearBreakdown,
         detalle_ausencias: detalleAusencias,
+        detalle_consumos: detalleConsumos,
       });
     });
 
@@ -129,9 +163,35 @@ export default function VacationPendingBalancePanel({ employees = [], compact = 
       .sort((a, b) => b.dias_disponibles - a.dias_disponibles);
   }, [balances, employees]);
 
+  const [searchTerm, setSearchTerm] = useState("");
+  const [departmentFilter, setDepartmentFilter] = useState("all");
+  const [minDays, setMinDays] = useState("");
+
+  const departments = useMemo(() => {
+    const set = new Set();
+    employees.forEach((e) => {
+      if (e?.departamento) set.add(e.departamento);
+    });
+    return ["all", ...Array.from(set).sort((a, b) => (a || "").localeCompare(b || ""))];
+  }, [employees]);
+
+  const filteredBalances = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+    const min = parseFloat(minDays) || 0;
+    return employeesWithBalance.filter((b) => {
+      const name = (b.employee?.nombre || b.employee?.full_name || b.employee?.display_name || "").toLowerCase();
+      const matchesName = !term || name.includes(term);
+      const matchesDept =
+        departmentFilter === "all" ||
+        (b.employee?.departamento || "") === departmentFilter;
+      const matchesMin = b.dias_disponibles >= min;
+      return matchesName && matchesDept && matchesMin;
+    });
+  }, [employeesWithBalance, searchTerm, departmentFilter, minDays]);
+
   const totalDiasPendientes = useMemo(() => {
-    return employeesWithBalance.reduce((sum, b) => sum + b.dias_disponibles, 0);
-  }, [employeesWithBalance]);
+    return filteredBalances.reduce((sum, b) => sum + b.dias_disponibles, 0);
+  }, [filteredBalances]);
 
   if (compact) {
     return (
@@ -203,7 +263,7 @@ export default function VacationPendingBalancePanel({ employees = [], compact = 
           <div className="flex items-center gap-4">
             <div className="text-right">
               <p className="text-xs text-slate-600">Empleados</p>
-              <p className="text-2xl font-bold text-orange-900">{employeesWithBalance.length}</p>
+              <p className="text-2xl font-bold text-orange-900">{filteredBalances.length}</p>
             </div>
             <div className="text-right">
               <p className="text-xs text-slate-600">Total Días</p>
@@ -222,6 +282,39 @@ export default function VacationPendingBalancePanel({ employees = [], compact = 
         </div>
       </CardHeader>
       <CardContent className="p-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+          <div className="relative">
+            <Input
+              placeholder="Buscar por nombre..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <div>
+            <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Departamento" />
+              </SelectTrigger>
+              <SelectContent>
+                {departments.map((d) => (
+                  <SelectItem key={d} value={d}>
+                    {d === "all" ? "Todos los departamentos" : d}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Input
+              type="number"
+              min={0}
+              step={0.5}
+              placeholder="Mín. días disponibles"
+              value={minDays}
+              onChange={(e) => setMinDays(e.target.value)}
+            />
+          </div>
+        </div>
         <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
           <div className="flex items-start gap-3">
             <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
@@ -240,7 +333,7 @@ export default function VacationPendingBalancePanel({ employees = [], compact = 
           </div>
         </div>
 
-        {employeesWithBalance.length === 0 ? (
+        {filteredBalances.length === 0 ? (
           <div className="text-center py-12">
             <TrendingUp className="w-12 h-12 text-slate-300 mx-auto mb-3" />
             <p className="text-slate-500">
@@ -249,7 +342,7 @@ export default function VacationPendingBalancePanel({ employees = [], compact = 
           </div>
         ) : (
           <div className="space-y-3">
-            {employeesWithBalance.map((balance) => (
+            {filteredBalances.map((balance) => (
               <Card
                 key={balance.employee_id}
                 className="border-2 border-orange-100 hover:border-orange-300 transition-colors"
@@ -327,6 +420,31 @@ export default function VacationPendingBalancePanel({ employees = [], compact = 
                                     • {vac.nombre}
                                   </p>
                                 ))}
+                              </div>
+                            ))}
+                          </div>
+                        </details>
+                      )}
+                      {balance.detalle_consumos?.length > 0 && (
+                        <details className="mt-3">
+                          <summary className="text-xs text-slate-600 cursor-pointer hover:text-slate-900">
+                            Historial de consumos ({balance.detalle_consumos.length})
+                          </summary>
+                          <div className="mt-2 space-y-2 pl-4">
+                            {balance.detalle_consumos.map((cons, idx) => (
+                              <div key={idx} className="text-xs p-2 bg-slate-50 rounded border">
+                                <p className="font-medium">Consumo de {cons.dias} día(s)</p>
+                                <p className="text-slate-600">
+                                  Fecha registro: {(cons.fecha_registro || "").toString().slice(0, 10)}
+                                </p>
+                                {Array.isArray(cons.fechas_concedidas) && cons.fechas_concedidas.length > 0 && (
+                                  <p className="text-slate-600">
+                                    Fechas concedidas: {cons.fechas_concedidas.join(", ")}
+                                  </p>
+                                )}
+                                {cons.comentario && (
+                                  <p className="text-slate-500">{cons.comentario}</p>
+                                )}
                               </div>
                             ))}
                           </div>
