@@ -69,7 +69,7 @@ export default function AttendanceMonitor() {
       if (filterTab === "alerta_ausencia" && !emp.alertaPresenciaConAusencia) return false;
       return true;
     });
-  }, [result, searchEmp, filterDpto, filterEquipo, filterTab]);
+  }, [result, searchEmp, filterDpto, filterEquipo, filterTurno, filterTab]);
 
   const stats = useMemo(() => {
     if (!result) return {};
@@ -87,8 +87,28 @@ export default function AttendanceMonitor() {
     };
   }, [result]);
 
-  const hayFiltrosActivos = searchEmp || filterDpto !== "__all__" || filterEquipo !== "__all__";
-  const clearFiltros = () => { setSearchEmp(""); setFilterDpto("__all__"); setFilterEquipo("__all__"); };
+  const deptCounts = useMemo(() => {
+    if (!result) return [];
+    const m = new Map();
+    for (const e of filteredRows) {
+      const k = e.departamento || "—";
+      m.set(k, (m.get(k) || 0) + 1);
+    }
+    return Array.from(m.entries()).sort((a, b) => b[1] - a[1]);
+  }, [filteredRows]);
+
+  const teamCounts = useMemo(() => {
+    if (!result) return [];
+    const m = new Map();
+    for (const e of filteredRows) {
+      const k = e.equipo || "—";
+      m.set(k, (m.get(k) || 0) + 1);
+    }
+    return Array.from(m.entries()).sort((a, b) => b[1] - a[1]);
+  }, [filteredRows]);
+
+  const hayFiltrosActivos = searchEmp || filterDpto !== "__all__" || filterEquipo !== "__all__" || filterTurno !== "__all__";
+  const clearFiltros = () => { setSearchEmp(""); setFilterDpto("__all__"); setFilterEquipo("__all__"); setFilterTurno("__all__"); };
 
   // helper para horario esperado en tabla sinRegistro
   function getHoraEsperada(emp) {
@@ -114,7 +134,7 @@ export default function AttendanceMonitor() {
         <CardContent className="p-4">
 
           {/* Controles */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mb-3 items-end">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 mb-3 items-end">
             <div className="space-y-1">
               <label className="text-xs font-medium text-slate-600">Fecha</label>
               <Input type="date" value={selectedDate}
@@ -135,6 +155,16 @@ export default function AttendanceMonitor() {
                 <SelectContent>
                   <SelectItem value="__all__">Todos</SelectItem>
                   {dptos.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-slate-600">Equipo</label>
+              <Select value={filterEquipo} onValueChange={setFilterEquipo}>
+                <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">Todos</SelectItem>
+                  {equipos.map(e => <SelectItem key={e} value={e}>{e}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -163,6 +193,41 @@ export default function AttendanceMonitor() {
               </Button>
             )}
           </div>
+
+          {consulted && result && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
+              <div className="flex flex-wrap gap-1 items-center">
+                <span className="text-xs text-slate-600">Con fichaje por departamento:</span>
+                {deptCounts.map(([d, c]) => {
+                  const active = filterDpto !== "__all__" && filterDpto === d;
+                  return (
+                    <Badge
+                      key={d}
+                      onClick={() => setFilterDpto(active ? "__all__" : d)}
+                      className={`bg-slate-100 text-slate-700 cursor-pointer hover:bg-slate-200 ${active ? "ring-2 ring-blue-500 ring-offset-1" : ""}`}
+                    >
+                      {d}: {c}
+                    </Badge>
+                  );
+                })}
+              </div>
+              <div className="flex flex-wrap gap-1 items-center">
+                <span className="text-xs text-slate-600">Con fichaje por equipo:</span>
+                {teamCounts.map(([e, c]) => {
+                  const active = filterEquipo !== "__all__" && filterEquipo === e;
+                  return (
+                    <Badge
+                      key={e}
+                      onClick={() => setFilterEquipo(active ? "__all__" : e)}
+                      className={`bg-slate-100 text-slate-700 cursor-pointer hover:bg-slate-200 ${active ? "ring-2 ring-blue-500 ring-offset-1" : ""}`}
+                    >
+                      {e}: {c}
+                    </Badge>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Resultados */}
           {consulted && result && (
