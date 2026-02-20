@@ -404,8 +404,24 @@ export default function AttendanceMonitor() {
                 </div>
               )}
 
+              {/* Info configuración semanal equipos */}
+              {result.teamScheduleMap && Object.keys(result.teamScheduleMap).length > 0 && (
+                <div className="mt-3 flex items-start gap-2 bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <Info className="w-4 h-4 text-blue-400 mt-0.5 shrink-0" />
+                  <p className="text-[11px] text-blue-700 leading-relaxed">
+                    <strong>Semana {result.weekStart}:</strong>{" "}
+                    {Object.entries(result.teamScheduleMap).map(([k, v]) => (
+                      <span key={k} className="mr-3">
+                        <strong>{k === "team_1" ? "Turno 1" : k === "team_2" ? "Turno 2" : k}</strong>: {v}
+                      </span>
+                    ))}
+                    · Empleados rotativos de turno Tarde <strong>no se muestran como ausentes</strong>.
+                  </p>
+                </div>
+              )}
+
               {/* Nota metodología */}
-              <div className="mt-3 flex items-start gap-2 bg-slate-50 border border-slate-200 rounded-lg p-3">
+              <div className="mt-2 flex items-start gap-2 bg-slate-50 border border-slate-200 rounded-lg p-3">
                 <Info className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" />
                 <p className="text-[11px] text-slate-500 leading-relaxed">
                   <strong>Metodología:</strong> Presencia = primer → último marcaje del día.
