@@ -125,6 +125,10 @@ function isTargetDepartment(departamento) {
   return TARGET_DEPARTMENTS.includes(normalized);
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function buildStandardShiftUpdate(emp) {
   if (!emp) return {};
   if (!isTargetDepartment(emp.departamento)) return {};
@@ -195,6 +199,7 @@ export default function MasterEmployeeDatabasePage() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [employeeToDelete, setEmployeeToDelete] = useState(null);
   const [showFilters, setShowFilters] = useState(true);
+  const [maxEmployeesPerRun, setMaxEmployeesPerRun] = useState(50);
   
   // Bulk actions state
   const [selectedIds, setSelectedIds] = useState(new Set());
@@ -552,8 +557,14 @@ export default function MasterEmployeeDatabasePage() {
     });
   }, [masterEmployees]);
 
+  const employeesToUpdate = useMemo(() => {
+    if (!employeesWithShiftGaps || employeesWithShiftGaps.length === 0) return [];
+    if (!maxEmployeesPerRun || maxEmployeesPerRun <= 0) return employeesWithShiftGaps;
+    return employeesWithShiftGaps.slice(0, maxEmployeesPerRun);
+  }, [employeesWithShiftGaps, maxEmployeesPerRun]);
+
   const handleApplyStandardShiftRules = async () => {
-    if (!employeesWithShiftGaps || employeesWithShiftGaps.length === 0) {
+    if (!employeesToUpdate || employeesToUpdate.length === 0) {
       toast.info('No hay empleados con horarios incompletos para estas reglas.');
       return;
     }
@@ -562,12 +573,16 @@ export default function MasterEmployeeDatabasePage() {
       (async () => {
         let updatedCount = 0;
 
-        for (const emp of employeesWithShiftGaps) {
+        for (let index = 0; index < employeesToUpdate.length; index++) {
+          const emp = employeesToUpdate[index];
           const updates = buildStandardShiftUpdate(emp);
           if (!updates || Object.keys(updates).length === 0) continue;
           if (!emp.id) continue;
           await base44.entities.EmployeeMasterDatabase.update(emp.id, updates);
           updatedCount++;
+          if (index < employeesToUpdate.length - 1) {
+            await sleep(150);
+          }
         }
 
         queryClient.invalidateQueries({ queryKey: ['employeeMasterDatabase'] });
@@ -633,7 +648,29 @@ export default function MasterEmployeeDatabasePage() {
                 <span className="text-2xl font-bold text-slate-900 dark:text-slate-100">
                   {employeesWithShiftGaps.length}
                 </span>
-                <span className="text-[10px] text-slate-500">Pendientes de completar</span>
+                <span className="text-[10px] text-slate-500">Pendientes detectados</span>
+                <div className="flex items-center gap-1 mt-1">
+                  <span className="text-[10px] text-slate-500">Máx. por ejecución:</span>
+                  <Input
+                    type="number"
+                    min={1}
+                    className="h-7 w-16 text-[10px] px-2"
+                    value={maxEmployeesPerRun || ''}
+                    onChange={(e) => {
+                      const value = parseInt(e.target.value, 10);
+                      if (Number.isNaN(value)) {
+                        setMaxEmployeesPerRun(0);
+                      } else {
+                        const max = employeesWithShiftGaps.length || value;
+                        const clamped = Math.min(Math.max(value, 1), max);
+                        setMaxEmployeesPerRun(clamped);
+                      }
+                    }}
+                  />
+                </div>
+                <span className="text-[10px] text-slate-500 mt-0.5">
+                  Esta ejecución afectará a {employeesToUpdate.length} empleados
+                </span>
               </div>
               <Button
                 size="sm"
