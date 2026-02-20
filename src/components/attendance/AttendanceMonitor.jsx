@@ -138,12 +138,14 @@ export default function AttendanceMonitor() {
               </Select>
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-medium text-slate-600">Turno activo</label>
-              <Select value={filterTurno} onValueChange={v => { setFilterTurno(v); setConsulted(false); }}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+              <label className="text-xs font-medium text-slate-600">Filtrar turno</label>
+              <Select value={filterTurno} onValueChange={setFilterTurno}>
+                <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="__all__">Todos los turnos</SelectItem>
                   <SelectItem value="Mañana">Mañana</SelectItem>
                   <SelectItem value="Tarde">Tarde</SelectItem>
+                  <SelectItem value="Partido">Partido</SelectItem>
                 </SelectContent>
               </Select>
             </div>
