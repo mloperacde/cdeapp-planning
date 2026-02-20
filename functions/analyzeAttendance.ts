@@ -24,23 +24,22 @@ function getHorarioEsperado(master, teamScheduleMap) {
     horaFin = master.turno_partido_salida2 || null;
     turnoReal = "Partido";
   } else if (tipo === "Fijo Mañana") {
-    horaEntrada = master.horario_manana_inicio || null;
-    horaFin = master.horario_manana_fin || null;
+    horaEntrada = master.horario_manana_inicio || "07:00";
+    horaFin = master.horario_manana_fin || "15:00";
     turnoReal = "Mañana";
   } else if (tipo === "Fijo Tarde") {
-    horaEntrada = master.horario_tarde_inicio || null;
-    horaFin = master.horario_tarde_fin || null;
+    horaEntrada = master.horario_tarde_inicio || "14:00";
+    horaFin = master.horario_tarde_fin || "22:00";
     turnoReal = "Tarde";
   } else if (tipo === "Rotativo") {
-    // Consultar el turno real del equipo en la semana actual
     const turnoEquipo = master.team_key ? teamScheduleMap[master.team_key] : null;
     turnoReal = turnoEquipo || null;
     if (turnoEquipo === "Mañana") {
-      horaEntrada = master.horario_manana_inicio || null;
-      horaFin = master.horario_manana_fin || null;
+      horaEntrada = master.horario_manana_inicio || "07:00";
+      horaFin = master.horario_manana_fin || "15:00";
     } else if (turnoEquipo === "Tarde") {
-      horaEntrada = master.horario_tarde_inicio || null;
-      horaFin = master.horario_tarde_fin || null;
+      horaEntrada = master.horario_tarde_inicio || "14:00";
+      horaFin = master.horario_tarde_fin || "22:00";
     }
   }
 

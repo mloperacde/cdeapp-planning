@@ -17,6 +17,25 @@ function formatMin(min) {
   return `${Math.floor(min / 60)}h ${String(min % 60).padStart(2, "0")}m`;
 }
 
+function toMin(t) {
+  if (!t) return null;
+  const [h, m] = t.split(":").map(Number);
+  return h * 60 + m;
+}
+
+function isInCorte(emp, target) {
+  if (!emp.horaEsperada || !emp.horaFinEsperada) return false;
+  const targetMin = toMin(target);
+  const start = toMin(emp.horaEsperada);
+  const end = toMin(emp.horaFinEsperada);
+  if (start == null || end == null) return false;
+  if (targetMin < start || targetMin > end) return false;
+  const first = toMin(emp.primerMarcaje);
+  const last = toMin(emp.ultimoMarcaje);
+  if (first == null || last == null) return false;
+  return first <= targetMin && last >= targetMin;
+}
+
 export default function AttendanceMonitor() {
   const [selectedDate, setSelectedDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [consulted, setConsulted] = useState(false);
@@ -27,6 +46,7 @@ export default function AttendanceMonitor() {
   const [filterDpto, setFilterDpto] = useState("__all__");
   const [filterEquipo, setFilterEquipo] = useState("__all__");
   const [filterTurno, setFilterTurno] = useState("__all__");
+  const [activeCorte, setActiveCorte] = useState(null);
 
   const handleConsultar = async () => {
     setIsLoading(true);
@@ -54,7 +74,7 @@ export default function AttendanceMonitor() {
     return Array.from(s).sort();
   }, [result]);
 
-  const filteredRows = useMemo(() => {
+  const baseFilteredRows = useMemo(() => {
     if (!result) return [];
     return result.rows.filter(emp => {
       if (searchEmp && !emp.employee_name.toLowerCase().includes(searchEmp.toLowerCase()) &&
@@ -62,14 +82,24 @@ export default function AttendanceMonitor() {
       if (filterDpto !== "__all__" && emp.departamento !== filterDpto) return false;
       if (filterEquipo !== "__all__" && emp.equipo !== filterEquipo) return false;
       if (filterTurno !== "__all__" && emp.turnoReal !== filterTurno) return false;
+      return true;
+    });
+  }, [result, searchEmp, filterDpto, filterEquipo, filterTurno]);
+
+  const filteredRows = useMemo(() => {
+    if (!result) return [];
+    let base = baseFilteredRows;
+    if (activeCorte) {
+      base = base.filter(emp => isInCorte(emp, activeCorte));
+    }
+    return base.filter(emp => {
       if (filterTab === "retrasos" && !emp.esRetraso) return false;
       if (filterTab === "incongruencias" && emp.incongruencias.length === 0 && !emp.alertaPresenciaConAusencia) return false;
       if (filterTab === "jornada" && !emp.incidenciaJornada) return false;
       if (filterTab === "ok" && emp.estado !== "ok") return false;
       if (filterTab === "alerta_ausencia" && !emp.alertaPresenciaConAusencia) return false;
-      return true;
     });
-  }, [result, searchEmp, filterDpto, filterEquipo, filterTurno, filterTab]);
+  }, [result, baseFilteredRows, filterTab, activeCorte]);
 
   const stats = useMemo(() => {
     if (!result) return {};
@@ -107,8 +137,31 @@ export default function AttendanceMonitor() {
     return Array.from(m.entries()).sort((a, b) => b[1] - a[1]);
   }, [filteredRows]);
 
-  const hayFiltrosActivos = searchEmp || filterDpto !== "__all__" || filterEquipo !== "__all__" || filterTurno !== "__all__";
-  const clearFiltros = () => { setSearchEmp(""); setFilterDpto("__all__"); setFilterEquipo("__all__"); setFilterTurno("__all__"); };
+  const hayFiltrosActivos = searchEmp || filterDpto !== "__all__" || filterEquipo !== "__all__" || filterTurno !== "__all__" || activeCorte;
+  const clearFiltros = () => {
+    setSearchEmp("");
+    setFilterDpto("__all__");
+    setFilterEquipo("__all__");
+    setFilterTurno("__all__");
+    setActiveCorte(null);
+  };
+
+  const cortes = useMemo(() => {
+    if (!result) return { at07: 0, at14: 0, at15: 0 };
+    const list = baseFilteredRows;
+    const compute = (target) => {
+      let count = 0;
+      for (const emp of list) {
+        if (isInCorte(emp, target)) count++;
+      }
+      return count;
+    };
+    return {
+      at07: compute("07:00"),
+      at14: compute("14:00"),
+      at15: compute("15:00"),
+    };
+  }, [result, baseFilteredRows]);
 
   // helper para horario esperado en tabla sinRegistro
   function getHoraEsperada(emp) {
@@ -253,6 +306,42 @@ export default function AttendanceMonitor() {
                     </CardContent>
                   </Card>
                 ))}
+              </div>
+
+              <div className="grid grid-cols-3 gap-2 mb-4">
+                <Card
+                  className={`cursor-pointer transition-all hover:shadow-md ${activeCorte === "07:00" ? "ring-2 ring-offset-1" : ""}`}
+                  onClick={() => setActiveCorte(activeCorte === "07:00" ? null : "07:00")}
+                >
+                  <CardContent className="p-2.5">
+                    <p className="text-[9px] font-semibold uppercase leading-tight mb-1 text-slate-600">
+                      Disponibles 07:00
+                    </p>
+                    <p className="text-xl font-bold text-slate-900">{cortes.at07}</p>
+                  </CardContent>
+                </Card>
+                <Card
+                  className={`cursor-pointer transition-all hover:shadow-md ${activeCorte === "14:00" ? "ring-2 ring-offset-1" : ""}`}
+                  onClick={() => setActiveCorte(activeCorte === "14:00" ? null : "14:00")}
+                >
+                  <CardContent className="p-2.5">
+                    <p className="text-[9px] font-semibold uppercase leading-tight mb-1 text-slate-600">
+                      Disponibles 14:00
+                    </p>
+                    <p className="text-xl font-bold text-slate-900">{cortes.at14}</p>
+                  </CardContent>
+                </Card>
+                <Card
+                  className={`cursor-pointer transition-all hover:shadow-md ${activeCorte === "15:00" ? "ring-2 ring-offset-1" : ""}`}
+                  onClick={() => setActiveCorte(activeCorte === "15:00" ? null : "15:00")}
+                >
+                  <CardContent className="p-2.5">
+                    <p className="text-[9px] font-semibold uppercase leading-tight mb-1 text-slate-600">
+                      Disponibles 15:00
+                    </p>
+                    <p className="text-xl font-bold text-slate-900">{cortes.at15}</p>
+                  </CardContent>
+                </Card>
               </div>
 
               {/* Tabs */}
