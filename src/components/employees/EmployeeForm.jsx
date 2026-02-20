@@ -611,8 +611,16 @@ export default function EmployeeForm({ employee, machines, onClose }) {
                 <div className="space-y-2">
                   <Label htmlFor="equipo">Equipo {isTurnoFijo && "(No aplica para turnos fijos)"}</Label>
                   <Select
-                    value={formData.equipo || ""}
-                    onValueChange={(value) => setFormData({ ...formData, equipo: value })}
+                    value={formData.team_id || ""}
+                    onValueChange={(value) => {
+                      const team = teams.find(t => t.id === value);
+                      setFormData({
+                        ...formData,
+                        team_id: value,
+                        team_key: team?.team_key || "",
+                        equipo: team?.team_name || "",
+                      });
+                    }}
                     disabled={isTurnoFijo}
                   >
                     <SelectTrigger>
@@ -620,12 +628,15 @@ export default function EmployeeForm({ employee, machines, onClose }) {
                     </SelectTrigger>
                     <SelectContent>
                       {teams.map((team) => (
-                        <SelectItem key={team.id} value={team.team_name}>
+                        <SelectItem key={team.id} value={team.id}>
                           {team.team_name}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
+                  {formData.equipo && !formData.team_id && (
+                    <p className="text-xs text-amber-600">Valor actual: {formData.equipo} (sin vincular)</p>
+                  )}
                   {isTurnoFijo && (
                     <p className="text-xs text-blue-600">
                       Los empleados con turno fijo están disponibles para cualquier equipo en su horario
