@@ -78,9 +78,13 @@ Deno.serve(async (req) => {
     const { date } = await req.json();
     if (!date) return Response.json({ error: "Falta el parámetro date" }, { status: 400 });
 
-    // Hora actual en España (UTC+1/UTC+2) — usamos UTC como referencia
+    // Determinar si la fecha analizada es hoy (la jornada podría estar en curso)
+    const todayStr = new Date().toISOString().split("T")[0];
+    const esHoy = date === todayStr;
+
+    // Hora actual UTC+1 (España peninsular, offset mínimo)
     const nowUtc = new Date();
-    const nowMinutes = nowUtc.getUTCHours() * 60 + nowUtc.getUTCMinutes() + 60; // UTC+1 offset mínimo
+    const nowMinutes = nowUtc.getUTCHours() * 60 + nowUtc.getUTCMinutes() + 60;
 
     // Calcular el lunes de la semana de la fecha solicitada
     const dateObj = new Date(date + "T00:00:00");
