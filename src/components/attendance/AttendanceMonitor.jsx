@@ -33,7 +33,6 @@ export default function AttendanceMonitor() {
     try {
       const res = await base44.functions.invoke("analyzeAttendance", {
         date: selectedDate,
-        turno: filterTurno === "__all__" ? "Mañana" : filterTurno,
       });
       setResult(res.data);
       setConsulted(true);
