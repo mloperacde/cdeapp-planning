@@ -194,8 +194,14 @@ export default function OrderImport() {
       else if (response?.data) data = [response.data];
       
       const normalize = (row) => {
+          // Preservar machine_id original (hex de BD) ANTES de normalizar, para no perderlo
+          const originalMachineId = row.machine_id;
           const newRow = { ...row };
           SYSTEM_FIELDS.forEach(field => { const val = extractValue(row, field); if (val !== undefined) newRow[field.key] = val; });
+          // Restaurar machine_id si era un hex de BD válido (24 chars)
+          if (originalMachineId && /^[a-f0-9]{24}$/i.test(String(originalMachineId).trim())) {
+              newRow.machine_id = originalMachineId;
+          }
           newRow.priority = parseInt(newRow.priority) || 0;
           newRow.quantity = parseInt(newRow.quantity) || 0;
           newRow.status = newRow.status || 'Pendiente';
