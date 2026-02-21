@@ -584,8 +584,7 @@ export default function ProductionPlanningPage() {
       toast.success(`Sincronización completada. Creadas: ${created}, Saltadas: ${skipped}`, { id: toastId });
       console.log(`[Sync] Finalizado. Creadas: ${created}, Saltadas: ${skipped}`);
       
-      // RECARGAR DATOS
-      await fetchWorkOrders();
+      await queryClient.invalidateQueries({ queryKey: ['workOrders'] });
       setTimeout(() => window.location.reload(), 2000);
 
     } catch (error) {

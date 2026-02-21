@@ -5,6 +5,28 @@ import { toast } from 'sonner';
 
 const generateId = () => Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
 
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const retryOp = async (operation, maxRetries = 3, delay = 1000) => {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await operation();
+    } catch (error) {
+      const isRateLimit =
+        error?.message?.includes('Rate limit') ||
+        error?.message?.includes('429') ||
+        error?.status === 429;
+
+      if (isRateLimit && i < maxRetries - 1) {
+        await sleep(delay * (i + 1));
+        continue;
+      }
+
+      throw error;
+    }
+  }
+};
+
 export const SyncService = {
   async syncAll(scheduled = false) {
     const log = (msg) => {
@@ -403,10 +425,13 @@ export const SyncService = {
                       await retryOp(() => base44.entities.WorkOrder.update(existing[0].id, payload));
                       updated++;
                       
-                      // Cleanup duplicates
                       if (existing.length > 1) {
                           for (let k = 1; k < existing.length; k++) {
-                             try { await retryOp(() => base44.entities.WorkOrder.delete(existing[k].id)); } catch(e){}
+                            try {
+                              await retryOp(() => base44.entities.WorkOrder.delete(existing[k].id));
+                            } catch (e) {
+                              console.warn("Error deleting duplicate WorkOrder", existing[k].id, e);
+                            }
                           }
                       }
                   } else {

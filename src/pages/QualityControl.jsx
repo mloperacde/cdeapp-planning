@@ -431,6 +431,22 @@ function InspectionFormDialog({ open, onClose, inspection, workOrders, employees
 
   const handleSubmit = (e) => {
     e.preventDefault();
+
+    if (!formData.work_order_id) {
+      toast.error("Selecciona una orden de trabajo");
+      return;
+    }
+
+    if (!formData.inspector_id) {
+      toast.error("Selecciona un inspector");
+      return;
+    }
+
+    if (!formData.inspection_date) {
+      toast.error("Introduce la fecha y hora de inspección");
+      return;
+    }
+
     onSubmit(formData);
   };
 
@@ -504,12 +520,23 @@ function InspectionFormDialog({ open, onClose, inspection, workOrders, employees
                 value={formData.work_order_id} 
                 onValueChange={(val) => {
                   const wo = workOrders.find(w => w.id === val);
-                  setFormData({
-                    ...formData, 
+                  let machineId = formData.machine_id;
+                  let machineName = formData.machine_name;
+
+                  if (wo && wo.machine_id) {
+                    const machine = machines.find(m => m.id === wo.machine_id);
+                    machineId = wo.machine_id;
+                    machineName = machine ? machine.alias : machineName;
+                  }
+
+                  setFormData(prev => ({
+                    ...prev, 
                     work_order_id: val,
                     product_name: wo?.product_name || "",
-                    product_article_code: wo?.product_article_code || ""
-                  });
+                    product_article_code: wo?.product_article_code || "",
+                    machine_id: machineId,
+                    machine_name: machineName
+                  }));
                 }}
               >
                 <SelectTrigger>
