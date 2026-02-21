@@ -353,13 +353,14 @@ export default function OrderImport() {
                   // Prioridad 1: si la orden ya tiene machine_id que sea un ID de BD válido (24 hex)
                   const isDbId = (v) => v && /^[a-f0-9]{24}$/i.test(String(v).trim());
                   let machineId = null;
-                  // Buscar en todos los campos posibles que puedan contener un ID de BD
-                  const candidateDbIds = [row.machine_id, row.machine_id_source, machineIdSource]
+                  // Campos candidatos: el campo machine_id del registro, el id del WorkOrder guardado
+                  const candidateDbIds = [row.machine_id, row._machine_id, row.id && row.machine_id]
                       .map(v => String(v || '').trim())
                       .filter(isDbId);
                   if (candidateDbIds.length > 0) {
                       machineId = candidateDbIds[0];
                   } else {
+                      // machineIdSource puede ser el número externo de CDE (ej: 33)
                       machineId = resolve(machineName, machineIdSource);
                   }
 
