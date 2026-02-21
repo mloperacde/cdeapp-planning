@@ -298,8 +298,8 @@ Ent: ${order.effective_delivery_date || '-'}`;
                         style={{
                           left: `${startIndex * 128 + 4}px`,
                           width: `${durationCols * 128 - 8}px`,
-                          top: `${idx * 56 + 4}px`,
-                          minHeight: '52px',
+                          top: `${idx * 80 + 4}px`,
+                          minHeight: '76px',
                           padding: '4px 8px',
                           overflow: 'hidden',
                           zIndex: 10,
