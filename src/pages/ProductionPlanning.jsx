@@ -118,8 +118,15 @@ export default function ProductionPlanningPage() {
           committed_delivery_date: normDate(merged.committed_delivery_date || merged['Fecha Entrega']),
           new_delivery_date: normDate(merged.new_delivery_date || merged['Nueva Fecha Entrega']),
           planned_end_date: normDate(merged.planned_end_date || merged['Fecha Fin Simple'] || merged['end_date_simple']),
-          effective_start_date: normDate(merged.effective_start_date || merged['modified_start_date'] || merged['start_date_simple']),
-          effective_delivery_date: normDate(merged.effective_delivery_date || merged['new_delivery_date'] || merged['committed_delivery_date'] || merged['Fecha Entrega']),
+          // Inicio vigente: modified_start_date tiene prioridad sobre start_date (igual que en OrderImport)
+          effective_start_date: (() => {
+            const modStart = normDate(merged.effective_start_date || merged.modified_start_date || merged['Fecha Inicio Modificada']);
+            const startLimit = normDate(merged.start_date || merged['Fecha Inicio Limite'] || merged.start_date_simple || merged['start_date_simple']);
+            const result = (modStart && !String(modStart).startsWith('0000')) ? modStart : startLimit;
+            return result || null;
+          })(),
+          // Fecha fin: columna "Fecha Fin" / planned_end_date (no la fecha de entrega)
+          effective_delivery_date: normDate(merged.planned_end_date || merged['Fecha Fin'] || merged.end_date_simple || merged['end_date_simple']),
           // Campos clave del JSON
           product_article_code: merged.product_article_code || merged['Artículo'] || order.product_article_code,
           product_name: merged.product_name || merged['Nombre'] || order.product_name,
