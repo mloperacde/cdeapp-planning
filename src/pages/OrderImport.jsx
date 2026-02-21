@@ -271,6 +271,8 @@ export default function OrderImport() {
           machinesRaw = await base44.entities.MachineMasterDatabase.list(undefined, 1000);
           if (!Array.isArray(machinesRaw)) machinesRaw = [];
           machinesRaw.forEach(m => {
+              // Mapa por ID de BD directo (para resolver órdenes cargadas de la BD local)
+              if (m.id) map.set(m.id, m.id);
               // Mapa por nombre normalizado
               [m.nombre, m.codigo_maquina, m.codigo, m.descripcion, m.nombre_maquina].forEach(v => {
                   if (v) map.set(normStr(v), m.id);
