@@ -705,6 +705,15 @@ export default function MasterEmployeeDatabasePage() {
     );
   };
 
+  const handleAdvancedFilterChange = (newFilters) => {
+    if (!newFilters) return;
+    const { searchTerm, ...rest } = newFilters;
+    setFilters(prev => ({
+      ...prev,
+      ...rest,
+    }));
+  };
+
   if (!isHrModuleAllowed) {
     return (
       <div className="flex items-center justify-center h-full p-8">
@@ -1055,7 +1064,7 @@ export default function MasterEmployeeDatabasePage() {
         <Card className="p-3 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm shrink-0 animate-in slide-in-from-top-2 duration-200">
           <AdvancedSearch
             data={masterEmployees}
-            onFilterChange={setFilters}
+            onFilterChange={handleAdvancedFilterChange}
             searchFields={SEARCH_FIELDS}
             filterOptions={filterOptions}
             sortOptions={SORT_OPTIONS}
