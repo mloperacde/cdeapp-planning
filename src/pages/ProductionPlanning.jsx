@@ -834,6 +834,19 @@ export default function ProductionPlanningPage() {
               </SelectContent>
             </Select>
           </div>
+
+          <div className="space-y-2 min-w-[180px]">
+            <Label>Visualización</Label>
+            <Select value={showOnlyWithPriority ? "priority" : "all"} onValueChange={v => setShowOnlyWithPriority(v === "priority")}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Mostrar todas</SelectItem>
+                <SelectItem value="priority">Solo con prioridad</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </CardContent>
       </Card>
 
