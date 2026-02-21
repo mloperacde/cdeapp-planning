@@ -282,31 +282,39 @@ Cant: ${order.quantity || '-'} | Multi: ${order.multi_qty || '-'} | Mat: ${order
 Ent: ${order.effective_delivery_date || '-'}
 Ini: ${order.effective_start_date || '-'} | Fin: ${order.planned_end_date || '-'}`;
 
+                     const qty = order.multi_qty || order.quantity || '';
+                     const statusLabel = order.status === 'En Progreso' ? 'EP' : order.status === 'Completada' ? '✓' : order.status === 'Retrasada' ? 'RET' : order.status === 'Cancelada' ? 'CAN' : '';
+
                      return (
                        <div
                         key={order.id}
                         onClick={() => onEditOrder(order)}
-                        className={`absolute h-8 rounded shadow-sm border cursor-pointer px-2 py-0.5 flex items-center gap-2 text-xs transition-all hover:shadow-md hover:z-20 ${getPriorityColor(order.priority)} text-white`}
+                        className={`absolute rounded shadow border cursor-pointer px-2 py-1 flex flex-col justify-center gap-0.5 text-xs transition-all hover:shadow-md hover:z-20 ${getPriorityColor(order.priority)} text-white`}
                         style={{
                           left: `${effectiveStartIndex * 128 + 4}px`,
                           width: `${durationCols * 128 - 8}px`,
-                          top: `${idx * 36 + 4}px`,
+                          top: `${idx * 52 + 4}px`,
+                          minHeight: '48px',
+                          overflow: 'hidden',
                         }}
                         title={tooltipText}
                       >
-                        <div className="flex flex-col min-w-0 flex-1 justify-center h-full">
-                          <div className="flex items-center gap-1">
-                            <span className="font-bold shrink-0 text-[10px]">{order.priority === 0 ? 'S/P' : `P${order.priority}`}</span>
-                            <span className="font-medium truncate text-[10px]">{order.order_number}</span>
-                            {isLate && <AlertCircle className="w-3 h-3 text-yellow-300 shrink-0" />}
-                          </div>
-                          {order.product_name || order.product_article_code ? (
-                            <span className="truncate text-[9px] opacity-90 leading-tight">{order.product_name || order.product_article_code}</span>
-                          ) : null}
+                        {/* Row 1: Priority + Order number + late icon */}
+                        <div className="flex items-center gap-1 min-w-0">
+                          <span className="font-bold shrink-0 text-[9px] bg-white/20 rounded px-1">{order.priority === 0 ? 'S/P' : `P${order.priority}`}</span>
+                          <span className="font-bold truncate text-[10px]">{order.order_number}</span>
+                          {isLate && <AlertCircle className="w-3 h-3 text-yellow-300 shrink-0" />}
+                          {statusLabel && <span className="text-[8px] bg-white/20 rounded px-1 shrink-0">{statusLabel}</span>}
                         </div>
-                        <Badge variant="secondary" className="text-[9px] px-1 py-0 h-4 shrink-0 bg-white/20 text-white border-none">
-                          {order.quantity || 0}
-                        </Badge>
+                        {/* Row 2: Article code */}
+                        <div className="truncate text-[9px] opacity-90 leading-tight">
+                          {order.product_article_code || order.product_name || '—'}
+                        </div>
+                        {/* Row 3: Qty + Material */}
+                        <div className="flex items-center gap-1 min-w-0">
+                          {qty && <span className="text-[8px] bg-white/20 rounded px-1 shrink-0">{qty} uds</span>}
+                          {order.material_type && <span className="truncate text-[8px] opacity-80">{order.material_type}</span>}
+                        </div>
                       </div>
                      );
                    })}
