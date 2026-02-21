@@ -135,23 +135,25 @@ export default function PlanningGantt({ orders = [], machines = [], dateRange, o
           <div className="min-w-max">
             {/* Header Row */}
             <div className="flex border-b sticky top-0 bg-white dark:bg-slate-900 z-30 shadow-sm">
-                  <div className="w-56 p-2.5 font-bold text-xs border-r bg-slate-50 dark:bg-slate-800 sticky left-0 z-40">
+              <div className="w-64 flex-shrink-0 p-2.5 font-bold text-xs border-r bg-slate-50 dark:bg-slate-800 sticky left-0 z-40">
                 Máquina / Ubicación
               </div>
-              {days.map(day => (
-                <div
-                  key={day.toISOString()}
-                  className="p-1.5 border-r text-center"
-                  style={{ width: `${zoom.dayWidth}px`, minWidth: `${zoom.dayWidth}px` }}
-                >
-                  <div className="text-[10px] font-semibold uppercase text-slate-500">
-                    {format(day, 'EEE', { locale: es })}
+              <div className="flex">
+                {days.map(day => (
+                  <div
+                    key={day.toISOString()}
+                    className="border-r text-center flex flex-col items-center justify-center py-1.5"
+                    style={{ width: `${zoom.dayWidth}px`, minWidth: `${zoom.dayWidth}px`, flexShrink: 0 }}
+                  >
+                    <div className="text-[10px] font-semibold uppercase text-slate-500">
+                      {format(day, 'EEE', { locale: es })}
+                    </div>
+                    <div className={`text-xs font-bold ${isSameDay(day, new Date()) ? 'text-blue-600' : ''}`}>
+                      {format(day, 'dd MMM')}
+                    </div>
                   </div>
-                  <div className={`text-xs font-bold ${isSameDay(day, new Date()) ? 'text-blue-600' : ''}`}>
-                    {format(day, 'dd MMM')}
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
 
             {/* Machine Rows */}
