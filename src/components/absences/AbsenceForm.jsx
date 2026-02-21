@@ -108,11 +108,22 @@ export default function AbsenceForm({
         if (matchingType) typeId = matchingType.id;
       }
 
+      // Try to infer employee_id by name if it is missing
+      let employeeId = initialData.employee_id;
+      if (!employeeId && initialData.employee_name && employees.length > 0) {
+        const found = employees.find(e =>
+          e.nombre && e.nombre.toLowerCase() === initialData.employee_name.toLowerCase()
+        );
+        if (found) {
+          employeeId = found.id;
+        }
+      }
+
       setFormData(prev => ({
         ...prev,
         ...initialData,
-        employee_id: initialData.employee_id || "",
-        employee_name: initialData.employee_name || "", // Ensure name is preserved
+        employee_id: employeeId ? String(employeeId) : "",
+        employee_name: initialData.employee_name || "",
         absence_type_id: typeId || "",
         motivo: initialData.motivo || "",
         tipo: initialData.tipo || "",
@@ -153,20 +164,22 @@ export default function AbsenceForm({
       setFullDay(false);
       setUnknownEndDate(false);
     }
-  }, [initialData, absenceTypes]);
+  }, [initialData, absenceTypes, employees]);
 
   const employeesForSelect = React.useMemo(() => {
     let filtered = employees.filter(emp => 
       !searchTerm || emp.nombre?.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    if (initialData?.employee_id) {
-      const exists = filtered.some(emp => String(emp.id) === String(initialData.employee_id));
+    const targetId = formData.employee_id || initialData?.employee_id;
+
+    if (targetId) {
+      const exists = filtered.some(emp => String(emp.id) === String(targetId));
       if (!exists) {
         filtered = [
           {
-            id: String(initialData.employee_id),
-            nombre: initialData.employee_name || `Empleado ${initialData.employee_id}`,
+            id: String(targetId),
+            nombre: initialData?.employee_name || `Empleado ${targetId}`,
           },
           ...filtered,
         ];
@@ -174,7 +187,7 @@ export default function AbsenceForm({
     }
 
     return filtered;
-  }, [employees, searchTerm, initialData]);
+  }, [employees, searchTerm, initialData, formData.employee_id]);
 
   // Determine if we are in edit mode
   const isEditing = !!(initialData && initialData.id);
