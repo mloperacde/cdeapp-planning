@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +11,10 @@ import {
   RefreshCw, Search, AlertTriangle, CheckCircle2, ShieldAlert, Info,
   Clock, X, Bell
 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import AbsenceForm from "../absences/AbsenceForm";
+import { createAbsence, updateAbsence, deleteAbsence } from "../absences/AbsenceOperations";
+import { toast } from "sonner";
 import { format } from "date-fns";
 
 function formatMin(min) {
@@ -47,6 +52,111 @@ export default function AttendanceMonitor() {
   const [filterEquipo, setFilterEquipo] = useState("__all__");
   const [filterTurno, setFilterTurno] = useState("__all__");
   const [activeCorte, setActiveCorte] = useState(null);
+  const [absenceDialogOpen, setAbsenceDialogOpen] = useState(false);
+  const [absenceInitialData, setAbsenceInitialData] = useState(null);
+  const [lastAbsenceNotice, setLastAbsenceNotice] = useState("");
+
+  const queryClient = useQueryClient();
+
+  const { data: currentUser } = useQuery({
+    queryKey: ["currentUser"],
+    queryFn: () => base44.auth.me(),
+  });
+
+  const { data: employees = [] } = useQuery({
+    queryKey: ["employeeMasterDatabase"],
+    queryFn: () => base44.entities.EmployeeMasterDatabase.list("nombre", 1000),
+  });
+
+  const { data: absences = [] } = useQuery({
+    queryKey: ["absences"],
+    queryFn: () => base44.entities.Absence.list("-fecha_inicio", 1000),
+  });
+
+  const { data: absenceTypes = [] } = useQuery({
+    queryKey: ["absenceTypes"],
+    queryFn: () => base44.entities.AbsenceType.list("orden", 1000),
+  });
+
+  const { data: vacations = [] } = useQuery({
+    queryKey: ["vacations"],
+    queryFn: () => base44.entities.Vacation.list(),
+  });
+
+  const { data: holidays = [] } = useQuery({
+    queryKey: ["holidays"],
+    queryFn: () => base44.entities.Holiday.list(),
+  });
+
+  const saveMutation = useMutation({
+    mutationFn: async (data) => {
+      if (absenceInitialData && absenceInitialData.id) {
+        return await updateAbsence(
+          absenceInitialData.id,
+          data,
+          currentUser,
+          absenceTypes,
+          vacations,
+          holidays
+        );
+      }
+      return await createAbsence(
+        data,
+        currentUser,
+        employees,
+        absenceTypes,
+        vacations,
+        holidays
+      );
+    },
+    onSuccess: async () => {
+      try {
+        await base44.functions.invoke("syncEmployeeAvailability");
+      } catch (e) {
+        console.warn("Sync availability failed", e);
+      }
+      queryClient.invalidateQueries({ queryKey: ["absences"] });
+      queryClient.invalidateQueries({ queryKey: ["employees"] });
+      queryClient.invalidateQueries({ queryKey: ["employeesMaster"] });
+      queryClient.invalidateQueries({ queryKey: ["employeeMasterDatabase"] });
+      queryClient.invalidateQueries({ queryKey: ["vacationPendingBalances"] });
+      queryClient.invalidateQueries({ queryKey: ["globalAbsenteeism"] });
+      toast.success("Ausencia registrada. Cambios aplicados en todos los módulos.");
+      setLastAbsenceNotice("Ausencia registrada y disponibilidad sincronizada. Vuelve a consultar si deseas refrescar los datos.");
+      setAbsenceDialogOpen(false);
+      setAbsenceInitialData(null);
+    },
+    onError: (error) => {
+      toast.error("Error al guardar ausencia: " + (error?.message || ""));
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id) => {
+      const absence = absences.find(a => a.id === id);
+      if (absence) {
+        await deleteAbsence(absence, employees);
+      }
+    },
+    onSuccess: async () => {
+      try {
+        await base44.functions.invoke("syncEmployeeAvailability");
+      } catch (e) {
+        console.warn("Sync availability failed", e);
+      }
+      queryClient.invalidateQueries({ queryKey: ["absences"] });
+      queryClient.invalidateQueries({ queryKey: ["employees"] });
+      queryClient.invalidateQueries({ queryKey: ["employeesMaster"] });
+      queryClient.invalidateQueries({ queryKey: ["employeeMasterDatabase"] });
+      queryClient.invalidateQueries({ queryKey: ["vacationPendingBalances"] });
+      toast.success("Ausencia eliminada. Cambios aplicados en todos los módulos.");
+      setAbsenceDialogOpen(false);
+      setAbsenceInitialData(null);
+    },
+    onError: (error) => {
+      toast.error("Error al eliminar ausencia: " + (error?.message || ""));
+    },
+  });
 
   const handleConsultar = async () => {
     setIsLoading(true);
@@ -173,6 +283,38 @@ export default function AttendanceMonitor() {
     return "—";
   }
 
+  function handleOpenCreateAbsence(emp) {
+    const empRecord = employees.find(e => String(e.codigo_empleado) === String(emp.codigo_empleado));
+    const employeeId = empRecord?.id || emp.id;
+    const employeeName = empRecord?.nombre || emp.nombre || "";
+    const baseTime = emp.horaEntradaEsperada || emp.horaEsperada || "08:00";
+    const time = typeof baseTime === "string" ? baseTime.slice(0, 5) : "08:00";
+    const fechaInicio = `${selectedDate}T${time}`;
+    setAbsenceInitialData({
+      employee_id: employeeId,
+      employee_name: employeeName,
+      fecha_inicio: fechaInicio,
+      fecha_fin: "",
+      fecha_fin_desconocida: false,
+      motivo: "",
+      tipo: "",
+      absence_type_id: "",
+      remunerada: true,
+      notas: "",
+      documentos_adjuntos: [],
+    });
+    setAbsenceDialogOpen(true);
+  }
+
+  function handleOpenEditAbsence(row) {
+    if (!row.ausencia) return;
+    const absence = row.ausencia;
+    const empRecord = employees.find(e => e.id === absence.employee_id);
+    const employeeName = empRecord?.nombre || row.employee_name || "";
+    setAbsenceInitialData({ ...absence, employee_name: employeeName });
+    setAbsenceDialogOpen(true);
+  }
+
   return (
     <div className="space-y-4 p-4">
       <Card>
@@ -186,6 +328,13 @@ export default function AttendanceMonitor() {
           </p>
         </CardHeader>
         <CardContent className="p-4">
+
+          {lastAbsenceNotice && (
+            <div className="mb-3 flex items-start gap-2 rounded-lg border border-green-200 bg-green-50 px-3 py-2">
+              <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
+              <p className="text-[11px] text-green-800">{lastAbsenceNotice}</p>
+            </div>
+          )}
 
           {/* Controles */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 mb-3 items-end">
@@ -434,11 +583,20 @@ export default function AttendanceMonitor() {
                             <td className="px-3 py-2 max-w-[260px]">
                               <div className="space-y-1">
                                 {emp.alertaPresenciaConAusencia && (
-                                  <div className="flex items-start gap-1 bg-yellow-100 rounded p-1">
-                                    <Bell className="w-3 h-3 text-yellow-600 mt-0.5 shrink-0" />
-                                    <span className="text-yellow-800 text-[10px] leading-tight font-medium">
-                                      ALERTA: Ha fichado pero tiene ausencia activa ({emp.ausencia?.tipo || "ausencia"}).
-                                    </span>
+                                  <div className="flex flex-col gap-1 bg-yellow-100 rounded p-1">
+                                    <div className="flex items-start gap-1">
+                                      <Bell className="w-3 h-3 text-yellow-600 mt-0.5 shrink-0" />
+                                      <span className="text-yellow-800 text-[10px] leading-tight font-medium">
+                                        ALERTA: Ha fichado pero tiene ausencia activa ({emp.ausencia?.tipo || "ausencia"}).
+                                      </span>
+                                    </div>
+                                    <button
+                                      type="button"
+                                      className="self-start text-[10px] text-yellow-800 underline underline-offset-2"
+                                      onClick={() => handleOpenEditAbsence(emp)}
+                                    >
+                                      Gestionar ausencia
+                                    </button>
                                   </div>
                                 )}
                                 {emp.incongruencias.map((inc, i) => (
@@ -514,10 +672,16 @@ export default function AttendanceMonitor() {
                                   <span className="text-blue-700 text-[10px]">Confirmada</span>
                                 </div>
                               ) : (
-                                <div className="flex items-start gap-1">
+                                <button
+                                  type="button"
+                                  className="flex items-start gap-1"
+                                  onClick={() => handleOpenCreateAbsence(emp)}
+                                >
                                   <AlertTriangle className="w-3 h-3 text-red-500 mt-0.5 shrink-0" />
-                                  <span className="text-red-700 text-[10px] font-medium">Crear ausencia en RRHH</span>
-                                </div>
+                                  <span className="text-red-700 text-[10px] font-medium underline underline-offset-2">
+                                    Crear ausencia en RRHH
+                                  </span>
+                                </button>
                               )}
                             </td>
                           </tr>
@@ -590,6 +754,38 @@ export default function AttendanceMonitor() {
           )}
         </CardContent>
       </Card>
+
+      {absenceDialogOpen && (
+        <Dialog
+          open={absenceDialogOpen}
+          onOpenChange={(open) => {
+            if (!open) {
+              setAbsenceDialogOpen(false);
+              setAbsenceInitialData(null);
+            }
+          }}
+        >
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>
+                {absenceInitialData && absenceInitialData.id ? "Editar Ausencia" : "Comunicar Nueva Ausencia"}
+              </DialogTitle>
+            </DialogHeader>
+            <AbsenceForm
+              initialData={absenceInitialData}
+              employees={employees}
+              absenceTypes={absenceTypes}
+              onSubmit={(data) => saveMutation.mutate(data)}
+              onCancel={() => {
+                setAbsenceDialogOpen(false);
+                setAbsenceInitialData(null);
+              }}
+              onDelete={(id) => deleteMutation.mutate(id)}
+              isSubmitting={saveMutation.isPending}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
