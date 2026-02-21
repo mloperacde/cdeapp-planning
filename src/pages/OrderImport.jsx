@@ -78,8 +78,8 @@ const extractValue = (obj, fieldDef) => {
     return undefined;
 };
 
-// Normaliza string para comparación: minúsculas, sin tildes, solo alfanumérico
-const normStr = (s) => String(s || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '').trim();
+// Normaliza string para comparación: minúsculas, sin tildes, sin paréntesis, solo alfanumérico y espacios
+const normStr = (s) => String(s || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, '').replace(/[()]/g, '').replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
 
 export default function OrderImport() {
   const [rawOrders, setRawOrders] = useState([]);
