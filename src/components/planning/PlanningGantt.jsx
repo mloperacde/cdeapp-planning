@@ -345,8 +345,8 @@ Ent: ${order.effective_delivery_date || '-'}`;
                         onClick={() => onEditOrder(order)}
                         className={`absolute rounded shadow-md border-2 cursor-pointer flex flex-col justify-start gap-0.5 text-white pointer-events-auto hover:shadow-lg hover:brightness-110 transition-all hover:z-30 ${getPriorityColor(order.priority)} ${isLate ? 'border-yellow-400' : 'border-white/20'}`}
                         style={{
-                          left: `${startIndex * zoom.dayWidth + 4}px`,
-                          width: `${durationCols * zoom.dayWidth - 8}px`,
+                          left: `${leftPx + 2}px`,
+                          width: `${widthPx - 4}px`,
                           top: `${idx * zoom.rowHeight + 4}px`,
                           minHeight: `${zoom.rowHeight - 4}px`,
                           padding: '4px 8px',
