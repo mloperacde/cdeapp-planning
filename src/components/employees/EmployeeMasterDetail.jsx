@@ -139,6 +139,14 @@ export default function EmployeeMasterDetail({ employee, onClose, onEdit }) {
     }
   }, [employee?.id, refetchMachineSkills]);
 
+  const { data: vacationPendingBalances = [] } = useQuery({
+    queryKey: ['vacationPendingBalances'],
+    queryFn: () => base44.entities.VacationPendingBalance.list(undefined, 1000),
+    initialData: [],
+    staleTime: 0,
+    gcTime: 0,
+  });
+
   const { data: trainingRecords } = useQuery({
     queryKey: ['employeeTraining'],
     queryFn: () => base44.entities.EmployeeTraining.list(),
@@ -157,6 +165,29 @@ export default function EmployeeMasterDetail({ employee, onClose, onEdit }) {
   const employeeMachines = (employeeMachineSkills || [])
     .filter(ems => ems.employee_id === employee.id)
     .sort((a, b) => (a.orden_preferencia || 99) - (b.orden_preferencia || 99));
+
+  const festivoConfigs = useMemo(() => {
+    if (!Array.isArray(vacationPendingBalances)) return [];
+    return vacationPendingBalances
+      .filter(
+        (b) =>
+          b.employee_id === employee.id &&
+          b.tipo_saldo === "compensacion_festivos" &&
+          Array.isArray(b.detalle_festivos) &&
+          b.detalle_festivos.length > 0
+      )
+      .flatMap((b) =>
+        b.detalle_festivos.map((det) => ({
+          ...det,
+          anio: b.anio,
+        }))
+      )
+      .sort((a, b) => {
+        const aStart = a.fecha_inicio_trabajos_festivos || "";
+        const bStart = b.fecha_inicio_trabajos_festivos || "";
+        return bStart.localeCompare(aStart);
+      });
+  }, [vacationPendingBalances, employee.id]);
 
   // Changed to React.useEffect as per outline
   React.useEffect(() => {
@@ -764,45 +795,91 @@ export default function EmployeeMasterDetail({ employee, onClose, onEdit }) {
             </TabsContent>
 
             <TabsContent value="absences" className="space-y-4 mt-6">
-              <h3 className="font-semibold text-lg text-slate-900">
-                Historial de Ausencias ({employeeAbsences.length})
-              </h3>
+              <div className="space-y-4">
+                <h3 className="font-semibold text-lg text-slate-900">
+                  Historial de Ausencias ({employeeAbsences.length})
+                </h3>
 
-              {employeeAbsences.length === 0 ? (
-                <Card className="bg-slate-50">
-                  <CardContent className="p-8 text-center">
-                    <Calendar className="w-12 h-12 text-slate-300 mx-auto mb-2" />
-                    <p className="text-slate-500">No hay ausencias registradas</p>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="space-y-3">
-                  {employeeAbsences
-                    .sort((a, b) => new Date(b.fecha_inicio) - new Date(a.fecha_inicio))
-                    .map((absence) => (
-                      <Card key={absence.id}>
-                        <CardContent className="p-4">
-                          <div className="flex items-start justify-between">
-                            <div>
-                              <Badge>{absence.tipo || absence.motivo}</Badge>
-                              <p className="text-sm mt-2">
-                                {format(new Date(absence.fecha_inicio), "dd/MM/yyyy", { locale: es })}
-                                {" → "}
-                                {absence.fecha_fin ? format(new Date(absence.fecha_fin), "dd/MM/yyyy", { locale: es }) : "Indefinida"}
-                              </p>
-                              {absence.motivo && (
-                                <p className="text-xs text-slate-600 mt-1">{absence.motivo}</p>
-                              )}
+                {employeeAbsences.length === 0 ? (
+                  <Card className="bg-slate-50">
+                    <CardContent className="p-8 text-center">
+                      <Calendar className="w-12 h-12 text-slate-300 mx-auto mb-2" />
+                      <p className="text-slate-500">No hay ausencias registradas</p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="space-y-3">
+                    {employeeAbsences
+                      .sort((a, b) => new Date(b.fecha_inicio) - new Date(a.fecha_inicio))
+                      .map((absence) => (
+                        <Card key={absence.id}>
+                          <CardContent className="p-4">
+                            <div className="flex items-start justify-between">
+                              <div>
+                                <Badge>{absence.tipo || absence.motivo}</Badge>
+                                <p className="text-sm mt-2">
+                                  {format(new Date(absence.fecha_inicio), "dd/MM/yyyy", { locale: es })}
+                                  {" → "}
+                                  {absence.fecha_fin
+                                    ? format(new Date(absence.fecha_fin), "dd/MM/yyyy", { locale: es })
+                                    : "Indefinida"}
+                                </p>
+                                {absence.motivo && (
+                                  <p className="text-xs text-slate-600 mt-1">{absence.motivo}</p>
+                                )}
+                              </div>
+                              <Badge
+                                className={
+                                  absence.remunerada
+                                    ? "bg-green-100 text-green-800"
+                                    : "bg-red-100 text-red-800"
+                                }
+                              >
+                                {absence.remunerada ? "Remunerada" : "No remunerada"}
+                              </Badge>
                             </div>
-                            <Badge className={absence.remunerada ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}>
-                              {absence.remunerada ? "Remunerada" : "No remunerada"}
-                            </Badge>
+                          </CardContent>
+                        </Card>
+                      ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-3 mt-6">
+                <h3 className="font-semibold text-lg text-slate-900 flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-blue-600" />
+                  Trabajo en festivos (configuraciones de compensación)
+                </h3>
+
+                {festivoConfigs.length === 0 ? (
+                  <Card className="bg-slate-50">
+                    <CardContent className="p-4 text-sm text-slate-500">
+                      No hay configuraciones de trabajo en festivos registradas para este empleado.
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="space-y-2">
+                    {festivoConfigs.map((cfg, idx) => (
+                      <Card key={idx}>
+                        <CardContent className="p-3 flex items-center justify-between">
+                          <div>
+                            <p className="text-xs text-slate-500">
+                              Año {cfg.anio || "–"}
+                            </p>
+                            <p className="text-sm text-slate-800">
+                              {cfg.fecha_inicio_trabajos_festivos || "?"} →{" "}
+                              {cfg.fecha_fin_trabajos_festivos || "?"}
+                            </p>
                           </div>
+                          <Badge className="bg-blue-600 text-white text-xs">
+                            {cfg.dias_generados || 0} día(s) generados
+                          </Badge>
                         </CardContent>
                       </Card>
                     ))}
-                </div>
-              )}
+                  </div>
+                )}
+              </div>
             </TabsContent>
           </Tabs>
         </CardContent>

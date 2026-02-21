@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { CalendarDays, TrendingUp, AlertCircle, ChevronRight, RefreshCw } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -203,6 +204,8 @@ export default function VacationPendingBalancePanel({ employees = [], compact = 
   const [festivoEmployeeId, setFestivoEmployeeId] = useState("");
   const [festivoStart, setFestivoStart] = useState("");
   const [festivoEnd, setFestivoEnd] = useState("");
+  const [festivoDetailOpen, setFestivoDetailOpen] = useState(false);
+  const [selectedFestivoEmployeeId, setSelectedFestivoEmployeeId] = useState("");
 
   const departments = useMemo(() => {
     const set = new Set();
@@ -316,6 +319,51 @@ export default function VacationPendingBalancePanel({ employees = [], compact = 
     onError: (error) => {
       toast.error(
         "Error al actualizar saldo de festivos: " + (error?.message || "desconocido")
+      );
+    },
+  });
+
+  const festivoEditMutation = useMutation({
+    mutationFn: async ({ balanceId, index, field, value }) => {
+      const current = balances.find((b) => b.id === balanceId);
+      if (!current) {
+        throw new Error("No se ha encontrado el saldo de festivos a editar.");
+      }
+      const detalleFestivos = Array.isArray(current.detalle_festivos)
+        ? [...current.detalle_festivos]
+        : [];
+      const existing = detalleFestivos[index];
+      if (!existing) {
+        throw new Error("No se ha encontrado el registro de festivos a editar.");
+      }
+      const updated = {
+        ...existing,
+        [field]: field === "dias_generados" ? Number(value) || 0 : value,
+      };
+      detalleFestivos[index] = updated;
+
+      const diasPendientes = detalleFestivos.reduce(
+        (sum, f) => sum + (Number(f.dias_generados) || 0),
+        0
+      );
+      const diasConsumidos = current.dias_consumidos || 0;
+      const diasDisponibles = diasPendientes - diasConsumidos;
+
+      await base44.entities.VacationPendingBalance.update(balanceId, {
+        detalle_festivos: detalleFestivos,
+        dias_pendientes: diasPendientes,
+        dias_disponibles: diasDisponibles,
+        tipo_saldo: "compensacion_festivos",
+      });
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["vacationPendingBalances"] });
+      await queryClient.invalidateQueries({ queryKey: ["employeeMasterDatabase"] });
+      toast.success("Saldo de festivos actualizado");
+    },
+    onError: (error) => {
+      toast.error(
+        "Error al editar saldo de festivos: " + (error?.message || "desconocido")
       );
     },
   });
@@ -692,15 +740,161 @@ export default function VacationPendingBalancePanel({ employees = [], compact = 
                         : ""}
                     </p>
                   </div>
-                  <Badge className="bg-blue-600 text-white font-semibold">
-                    {balance.dias_disponibles} días
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-blue-600 text-white font-semibold">
+                      {balance.dias_disponibles} días
+                    </Badge>
+                    <Button
+                      variant="outline"
+                      size="xs"
+                      onClick={() => {
+                        setSelectedFestivoEmployeeId(balance.employee_id);
+                        setFestivoDetailOpen(true);
+                      }}
+                    >
+                      Ver / editar
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
           )}
         </CardContent>
       </Card>
+
+      {festivoDetailOpen && selectedFestivoEmployeeId && (
+        <Dialog
+          open={festivoDetailOpen}
+          onOpenChange={(open) => {
+            if (!open) {
+              setFestivoDetailOpen(false);
+              setSelectedFestivoEmployeeId("");
+            }
+          }}
+        >
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>
+                Configuración de festivos –{" "}
+                {(() => {
+                  const emp = employees.find((e) => e.id === selectedFestivoEmployeeId);
+                  return emp?.nombre || "";
+                })()}
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="space-y-4 mt-2">
+              {festivoBalances
+                .filter((b) => b.employee_id === selectedFestivoEmployeeId)
+                .sort((a, b) => {
+                  const ya = typeof a.anio === "number" ? a.anio : parseInt(a.anio || "0", 10);
+                  const yb = typeof b.anio === "number" ? b.anio : parseInt(b.anio || "0", 10);
+                  return ya - yb;
+                })
+                .map((balance) => {
+                  const detalles = Array.isArray(balance.detalle_festivos)
+                    ? balance.detalle_festivos
+                    : [];
+                  return (
+                    <Card key={balance.id} className="border border-blue-200">
+                      <CardContent className="p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <p className="font-semibold text-slate-900">
+                            Año {balance.anio || "–"}
+                          </p>
+                          <div className="flex items-center gap-3 text-xs">
+                            <span className="text-slate-600">
+                              Pendientes: <strong>{balance.dias_pendientes || 0}</strong> días
+                            </span>
+                            <span className="text-slate-600">
+                              Consumidos: <strong>{balance.dias_consumidos || 0}</strong> días
+                            </span>
+                            <span className="text-slate-900">
+                              Disponibles: <strong>{balance.dias_disponibles || 0}</strong> días
+                            </span>
+                          </div>
+                        </div>
+
+                        {detalles.length === 0 ? (
+                          <p className="text-xs text-slate-500">
+                            No hay configuraciones registradas para este año.
+                          </p>
+                        ) : (
+                          <div className="space-y-2">
+                            {detalles.map((det, idx) => (
+                              <div
+                                key={idx}
+                                className="grid grid-cols-1 md:grid-cols-4 gap-2 items-end p-2 bg-slate-50 rounded border"
+                              >
+                                <div>
+                                  <p className="text-xs text-slate-600 mb-1">
+                                    Inicio trabajos festivos
+                                  </p>
+                                  <Input
+                                    type="date"
+                                    defaultValue={det.fecha_inicio_trabajos_festivos || ""}
+                                    onBlur={(e) =>
+                                      festivoEditMutation.mutate({
+                                        balanceId: balance.id,
+                                        index: idx,
+                                        field: "fecha_inicio_trabajos_festivos",
+                                        value: e.target.value,
+                                      })
+                                    }
+                                  />
+                                </div>
+                                <div>
+                                  <p className="text-xs text-slate-600 mb-1">
+                                    Fin trabajos festivos
+                                  </p>
+                                  <Input
+                                    type="date"
+                                    defaultValue={det.fecha_fin_trabajos_festivos || ""}
+                                    onBlur={(e) =>
+                                      festivoEditMutation.mutate({
+                                        balanceId: balance.id,
+                                        index: idx,
+                                        field: "fecha_fin_trabajos_festivos",
+                                        value: e.target.value,
+                                      })
+                                    }
+                                  />
+                                </div>
+                                <div>
+                                  <p className="text-xs text-slate-600 mb-1">
+                                    Días generados
+                                  </p>
+                                  <Input
+                                    type="number"
+                                    min={0}
+                                    step={0.5}
+                                    defaultValue={
+                                      typeof det.dias_generados === "number"
+                                        ? det.dias_generados
+                                        : ""
+                                    }
+                                    onBlur={(e) =>
+                                      festivoEditMutation.mutate({
+                                        balanceId: balance.id,
+                                        index: idx,
+                                        field: "dias_generados",
+                                        value: e.target.value,
+                                      })
+                                    }
+                                  />
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

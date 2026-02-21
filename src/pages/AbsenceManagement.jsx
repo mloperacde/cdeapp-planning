@@ -26,6 +26,7 @@ import VacationAccumulationConfig from "../components/absences/VacationAccumulat
 import AdvancedReportGenerator from "../components/reports/AdvancedReportGenerator";
 import AttendanceAnalyzer from "../components/attendance/AttendanceAnalyzer";
 import VacationWorkCompensationManager from "../components/absences/VacationWorkCompensationManager";
+import AbsenceHistoryView from "../components/absences/AbsenceHistoryView";
 
 export default function AbsenceManagementPage() {
   const { 
@@ -253,15 +254,29 @@ export default function AbsenceManagementPage() {
 
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full flex flex-col gap-6">
           <TabsList className="flex w-full flex-nowrap overflow-x-auto h-auto bg-white dark:bg-slate-800/50">
-            <TabsTrigger value="dashboard" className="flex-1 py-2" type="button"><LayoutDashboard className="w-4 h-4 mr-2"/> Dashboard</TabsTrigger>
-            <TabsTrigger value="list" className="flex-1 py-2" type="button"><FileText className="w-4 h-4 mr-2"/> Listado</TabsTrigger>
-            
+            <TabsTrigger value="dashboard" className="flex-1 py-2" type="button">
+              <LayoutDashboard className="w-4 h-4 mr-2"/> Dashboard
+            </TabsTrigger>
+            <TabsTrigger value="list" className="flex-1 py-2" type="button">
+              <FileText className="w-4 h-4 mr-2"/> Listado
+            </TabsTrigger>
             {!isShiftManager && (
               <>
-                <TabsTrigger value="approval" className="flex-1 py-2" type="button"><CheckSquare className="w-4 h-4 mr-2"/> Aprobaciones</TabsTrigger>
-                <TabsTrigger value="calendar" className="flex-1 py-2" type="button"><CalendarDays className="w-4 h-4 mr-2"/> Calendario</TabsTrigger>
-                <TabsTrigger value="types-config" className="flex-1 py-2" type="button"><Settings className="w-4 h-4 mr-2"/> Tipos de Ausencias</TabsTrigger>
-                <TabsTrigger value="config" className="flex-1 py-2" type="button"><Settings className="w-4 h-4 mr-2"/> Protección de vacaciones</TabsTrigger>
+                <TabsTrigger value="history" className="flex-1 py-2" type="button">
+                  <CalendarDays className="w-4 h-4 mr-2"/> Histórico
+                </TabsTrigger>
+                <TabsTrigger value="approval" className="flex-1 py-2" type="button">
+                  <CheckSquare className="w-4 h-4 mr-2"/> Aprobaciones
+                </TabsTrigger>
+                <TabsTrigger value="calendar" className="flex-1 py-2" type="button">
+                  <CalendarDays className="w-4 h-4 mr-2"/> Calendario
+                </TabsTrigger>
+                <TabsTrigger value="types-config" className="flex-1 py-2" type="button">
+                  <Settings className="w-4 h-4 mr-2"/> Tipos de Ausencias
+                </TabsTrigger>
+                <TabsTrigger value="config" className="flex-1 py-2" type="button">
+                  <Settings className="w-4 h-4 mr-2"/> Protección de vacaciones
+                </TabsTrigger>
               </>
             )}
           </TabsList>
@@ -364,6 +379,10 @@ export default function AbsenceManagementPage() {
               initialAbsences={absences} 
               initialEmployees={employees}
             />
+          </TabsContent>
+
+          <TabsContent value="history" className="space-y-6">
+            <AbsenceHistoryView />
           </TabsContent>
 
           <TabsContent value="approval">
