@@ -311,7 +311,19 @@ Ent: ${order.effective_delivery_date || '-'}`;
                         <div className="truncate text-[9px] opacity-95 leading-tight font-medium w-full">
                           {order.product_article_code || '—'}
                         </div>
-                        {/* Línea 3: Cantidad + Material */}
+                        {/* Línea 3: Nombre artículo */}
+                        {order.product_name && (
+                          <div className="truncate text-[8px] opacity-90 leading-tight w-full italic">
+                            {order.product_name}
+                          </div>
+                        )}
+                        {/* Línea 4: Cliente */}
+                        {order.client_name && (
+                          <div className="truncate text-[8px] opacity-80 leading-tight w-full">
+                            👤 {order.client_name}
+                          </div>
+                        )}
+                        {/* Línea 5: Cantidad + Material */}
                         <div className="flex items-center gap-1 min-w-0 w-full">
                           {qty && (
                             <span className="text-[8px] bg-black/20 rounded px-1 shrink-0 leading-tight">
