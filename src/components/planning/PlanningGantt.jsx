@@ -7,7 +7,24 @@ import { es } from "date-fns/locale";
 import { AlertCircle, CalendarClock } from "lucide-react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 
-export default function PlanningGantt({ orders = [], machines = [], dateRange, onEditOrder, onOrderDrop, holidays = [] }) {
+const ZOOM_CONFIG = {
+  compact: {
+    dayWidth: 96,
+    rowHeight: 64,
+  },
+  normal: {
+    dayWidth: 128,
+    rowHeight: 80,
+  },
+  detailed: {
+    dayWidth: 160,
+    rowHeight: 96,
+  },
+};
+
+export default function PlanningGantt({ orders = [], machines = [], dateRange, onEditOrder, onOrderDrop, holidays = [], zoomLevel = "compact" }) {
+  const zoom = ZOOM_CONFIG[zoomLevel] || ZOOM_CONFIG.compact;
+
   // 1. Calculate Working Days (Skip weekends and holidays)
   const days = useMemo(() => {
     if (!dateRange?.start || !dateRange?.end) return [];
@@ -118,15 +135,19 @@ export default function PlanningGantt({ orders = [], machines = [], dateRange, o
           <div className="min-w-max">
             {/* Header Row */}
             <div className="flex border-b sticky top-0 bg-white dark:bg-slate-900 z-30 shadow-sm">
-              <div className="w-64 p-3 font-bold text-sm border-r bg-slate-50 dark:bg-slate-800 sticky left-0 z-40">
+                  <div className="w-56 p-2.5 font-bold text-xs border-r bg-slate-50 dark:bg-slate-800 sticky left-0 z-40">
                 Máquina / Ubicación
               </div>
               {days.map(day => (
-                <div key={day.toISOString()} className="w-32 p-2 border-r text-center min-w-[8rem]">
-                  <div className="text-xs font-semibold uppercase text-slate-500">
+                <div
+                  key={day.toISOString()}
+                  className="p-1.5 border-r text-center"
+                  style={{ width: `${zoom.dayWidth}px`, minWidth: `${zoom.dayWidth}px` }}
+                >
+                  <div className="text-[10px] font-semibold uppercase text-slate-500">
                     {format(day, 'EEE', { locale: es })}
                   </div>
-                  <div className={`text-sm font-bold ${isSameDay(day, new Date()) ? 'text-blue-600' : ''}`}>
+                  <div className={`text-xs font-bold ${isSameDay(day, new Date()) ? 'text-blue-600' : ''}`}>
                     {format(day, 'dd MMM')}
                   </div>
                 </div>
@@ -222,8 +243,12 @@ Ent: ${order.effective_delivery_date || '-'}`;
                           <div
                             ref={provided.innerRef}
                             {...provided.droppableProps}
-                            className={`w-32 border-r bg-transparent transition-colors ${snapshot.isDraggingOver ? 'bg-blue-50/50 dark:bg-blue-900/20' : ''}`}
-                            style={{ minHeight: `${Math.max(8, machine.scheduled.length) * 80 + 16}px` }}
+                            className={`border-r bg-transparent transition-colors ${snapshot.isDraggingOver ? 'bg-blue-50/50 dark:bg-blue-900/20' : ''}`}
+                            style={{
+                              width: `${zoom.dayWidth}px`,
+                              minWidth: `${zoom.dayWidth}px`,
+                              minHeight: `${Math.max(6, machine.scheduled.length) * zoom.rowHeight + 12}px`,
+                            }}
                           >
                              {/* Droppable placeholder needs to be here even if empty */}
                              <div className="w-full h-full opacity-0 pointer-events-none">
@@ -296,10 +321,10 @@ Ent: ${order.effective_delivery_date || '-'}`;
                         onClick={() => onEditOrder(order)}
                         className={`absolute rounded shadow-md border-2 cursor-pointer flex flex-col justify-start gap-0.5 text-white pointer-events-auto hover:shadow-lg hover:brightness-110 transition-all hover:z-30 ${getPriorityColor(order.priority)} ${isLate ? 'border-yellow-400' : 'border-white/20'}`}
                         style={{
-                          left: `${startIndex * 128 + 4}px`,
-                          width: `${durationCols * 128 - 8}px`,
-                          top: `${idx * 80 + 4}px`,
-                          minHeight: '76px',
+                          left: `${startIndex * zoom.dayWidth + 4}px`,
+                          width: `${durationCols * zoom.dayWidth - 8}px`,
+                          top: `${idx * zoom.rowHeight + 4}px`,
+                          minHeight: `${zoom.rowHeight - 4}px`,
                           padding: '4px 8px',
                           overflow: 'hidden',
                           zIndex: 10,

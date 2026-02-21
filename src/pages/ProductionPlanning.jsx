@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
@@ -39,6 +39,17 @@ export default function ProductionPlanningPage() {
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [isSyncing, setIsSyncing] = useState(false);
   const [showOnlyWithPriority, setShowOnlyWithPriority] = useState(false);
+  const [ganttZoom, setGanttZoom] = useState(() => {
+    if (typeof window === "undefined") return "compact";
+    const stored = window.localStorage.getItem("productionPlanning.ganttZoom");
+    if (stored === "compact" || stored === "normal" || stored === "detailed") return stored;
+    return "compact";
+  });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem("productionPlanning.ganttZoom", ganttZoom);
+  }, [ganttZoom]);
 
   // Data Fetching
   const { data: machines = [] } = useQuery({
@@ -197,6 +208,11 @@ export default function ProductionPlanningPage() {
     // Sort by Priority (Ascending: 1 is higher than 10)
     return filtered.sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999));
   }, [workOrders, selectedMachine, selectedStatus, dateRange, showOnlyWithPriority]);
+
+  const visibleMachines = useMemo(() => {
+    if (selectedMachine === "all") return machines;
+    return machines.filter((m) => m.id === selectedMachine);
+  }, [machines, selectedMachine]);
 
   const handleSyncCdeApp = async () => {
     setIsSyncing(true);
@@ -847,6 +863,20 @@ export default function ProductionPlanningPage() {
               </SelectContent>
             </Select>
           </div>
+
+          <div className="space-y-2 min-w-[150px]">
+            <Label>Zoom Gantt</Label>
+            <Select value={ganttZoom} onValueChange={setGanttZoom}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="compact">Compacto</SelectItem>
+                <SelectItem value="normal">Medio</SelectItem>
+                <SelectItem value="detailed">Detallado</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </CardContent>
       </Card>
 
@@ -877,7 +907,7 @@ export default function ProductionPlanningPage() {
              <TabsContent value="machines">
                 <MachineLoadGraph 
                    orders={filteredOrders}
-                   machines={machines}
+                   machines={visibleMachines}
                    dateRange={dateRange}
                 />
              </TabsContent>
@@ -895,18 +925,19 @@ export default function ProductionPlanningPage() {
             <TabsContent value="gantt" className="flex-1 min-h-0 mt-2">
               <PlanningGantt 
                 orders={filteredOrders} 
-                machines={machines}
+                machines={visibleMachines}
                 processes={processes}
                 dateRange={dateRange}
                 onEditOrder={handleEditOrder}
                 onOrderDrop={handleOrderDrop}
                 holidays={holidays}
+                zoomLevel={ganttZoom}
               />
             </TabsContent>
 
             <TabsContent value="list" className="flex-1 mt-2">
               <MachineOrdersList 
-                machines={machines}
+                machines={visibleMachines}
                 orders={filteredOrders}
                 processes={processes}
                 onEditOrder={handleEditOrder}
