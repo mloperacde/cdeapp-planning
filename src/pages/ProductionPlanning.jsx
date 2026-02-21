@@ -143,17 +143,16 @@ export default function ProductionPlanningPage() {
           client_name: extra.client_name || extra['Cliente'] || order.client_name,
           material_type: extra.material_type || extra['material'] || extra['Material'] || order.material_type,
           multi_qty: (() => {
-            const raw = merged.multi_qty || merged['Mult x Cantidad'];
+            const raw = extra['Mult x Cantidad'] || extra.multi_qty || order.multi_qty;
             if (!raw) return '';
-            // Limpiar separadores de miles y quedar con número limpio
             const clean = String(raw).replace(/\./g, '').replace(/,/g, '.');
             const n = parseFloat(clean);
             return isNaN(n) ? raw : (Number.isInteger(n) ? n : n);
           })(),
-          quantity: merged.quantity || merged['Cantidad'] || order.quantity,
-          status: order.status || merged.status || merged['Estado'] || 'Pendiente',
-          priority: order.priority ?? merged.priority ?? merged['Prioridad'] ?? 3,
-          article_status: merged.article_status || merged['Edo. Art.'],
+          quantity: extra.quantity || extra['Cantidad'] || order.quantity,
+          status: order.status || extra.status || extra['Estado'] || 'Pendiente',
+          priority: order.priority ?? extra.priority ?? extra['Prioridad'] ?? 3,
+          article_status: extra.article_status || extra['Edo. Art.'],
         };
       });
     },
