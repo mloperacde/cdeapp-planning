@@ -112,28 +112,36 @@ export default function ProductionPlanningPage() {
           return val;
         };
 
-        const merged = { ...extra, ...order };
+        // IMPORTANTE: el JSON en `notes` (extra) tiene los datos completos con horas.
+        // Los campos directos del entity pueden tener versiones truncadas (sin hora).
+        // Prioridad: extra (JSON interno) > order (campos directos del entity)
+        const merged = { ...order, ...extra };
         return {
           ...merged,
-          // Fechas normalizadas
-          start_date: normDate(merged.start_date || merged['Fecha Inicio Limite Simple'] || merged['start_date_simple']),
-          committed_delivery_date: normDate(merged.committed_delivery_date || merged['Fecha Entrega']),
-          new_delivery_date: normDate(merged.new_delivery_date || merged['Nueva Fecha Entrega']),
-          planned_end_date: normDate(merged.planned_end_date || merged['Fecha Fin Simple'] || merged['end_date_simple']),
-          // Inicio vigente: modified_start_date tiene prioridad sobre start_date (igual que en OrderImport)
+          // Inicio vigente CON HORA: Fecha Inicio Limite tiene hora real (ej: "23/02/2026 19:37")
+          // modified_start_date (Fecha Inicio Modificada) tiene prioridad si existe
           effective_start_date: (() => {
-            const modStart = normDate(merged.effective_start_date || merged.modified_start_date || merged['Fecha Inicio Modificada']);
-            const startLimit = normDate(merged.start_date || merged['Fecha Inicio Limite'] || merged.start_date_simple || merged['start_date_simple']);
-            const result = (modStart && !String(modStart).startsWith('0000')) ? modStart : startLimit;
+            const modStart = normDate(extra['Fecha Inicio Modificada'] || extra.modified_start_date || '');
+            const startLimit = normDate(extra['Fecha Inicio Limite'] || extra.start_date || order.start_date || '');
+            const result = (modStart && !String(modStart).startsWith('0000') && modStart.length > 0) ? modStart : startLimit;
             return result || null;
           })(),
-          // Fecha fin: columna "Fecha Fin" / planned_end_date (no la fecha de entrega)
-          effective_delivery_date: normDate(merged.planned_end_date || merged['Fecha Fin'] || merged.end_date_simple || merged['end_date_simple']),
+          // Fecha fin CON HORA: usar "Fecha Fin" del JSON interno (ej: "24/02/2026 11:49")
+          effective_delivery_date: normDate(
+            extra['Fecha Fin'] || extra.planned_end_date ||
+            (order.planned_end_date && !order.planned_end_date.includes('/') ? order.planned_end_date : null) ||
+            extra['Fecha Entrega'] || extra.committed_delivery_date || order.committed_delivery_date || ''
+          ),
+          // Fechas normalizadas sin hora (para otros usos)
+          start_date: normDate(extra['Fecha Inicio Limite'] || extra.start_date || order.start_date || ''),
+          committed_delivery_date: normDate(extra['Fecha Entrega'] || extra.committed_delivery_date || order.committed_delivery_date || ''),
+          new_delivery_date: normDate(extra['Nueva Fecha Entrega'] || extra.new_delivery_date || ''),
+          planned_end_date: normDate(extra['Fecha Fin'] || extra.planned_end_date || order.planned_end_date || ''),
           // Campos clave del JSON
-          product_article_code: merged.product_article_code || merged['Artículo'] || order.product_article_code,
-          product_name: merged.product_name || merged['Nombre'] || order.product_name,
-          client_name: merged.client_name || merged['Cliente'] || order.client_name,
-          material_type: merged.material_type || merged['material'] || merged['Material'],
+          product_article_code: extra.product_article_code || extra['Artículo'] || order.product_article_code,
+          product_name: extra.product_name || extra['Nombre'] || order.product_name,
+          client_name: extra.client_name || extra['Cliente'] || order.client_name,
+          material_type: extra.material_type || extra['material'] || extra['Material'] || order.material_type,
           multi_qty: (() => {
             const raw = merged.multi_qty || merged['Mult x Cantidad'];
             if (!raw) return '';
