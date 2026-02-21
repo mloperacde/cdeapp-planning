@@ -67,7 +67,59 @@ export default function ProductionPlanningPage() {
     queryKey: ['workOrders'],
     queryFn: async () => {
       if (!base44.entities.WorkOrder) return [];
-      return await base44.entities.WorkOrder.list();
+      const raw = await base44.entities.WorkOrder.list(undefined, 2000);
+      // Los datos reales están en el campo `notes` como JSON serializado
+      // Extraemos y fusionamos con los campos directos del entity
+      return raw.map(order => {
+        let extra = {};
+        if (order.notes && typeof order.notes === 'string') {
+          try {
+            const parsed = JSON.parse(order.notes);
+            if (parsed && typeof parsed === 'object') extra = parsed;
+          } catch (_) { /* no JSON */ }
+        }
+        // Normalizar fechas: "DD/MM/YYYY HH:mm" -> "YYYY-MM-DD"
+        const normDate = (val) => {
+          if (!val) return null;
+          if (typeof val !== 'string') return val;
+          // Ya es ISO
+          if (val.includes('-') && val.length >= 10) return val.substring(0, 10);
+          // DD/MM/YYYY o DD/MM/YYYY HH:mm
+          if (val.includes('/')) {
+            const datePart = val.split(' ')[0];
+            const parts = datePart.split('/');
+            if (parts.length === 3) {
+              const [d, m, y] = parts;
+              if (!isNaN(d) && !isNaN(m) && !isNaN(y)) {
+                return `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
+              }
+            }
+          }
+          return val;
+        };
+
+        const merged = { ...extra, ...order };
+        return {
+          ...merged,
+          // Fechas normalizadas
+          start_date: normDate(merged.start_date || merged['Fecha Inicio Limite Simple'] || merged['start_date_simple']),
+          committed_delivery_date: normDate(merged.committed_delivery_date || merged['Fecha Entrega']),
+          new_delivery_date: normDate(merged.new_delivery_date || merged['Nueva Fecha Entrega']),
+          planned_end_date: normDate(merged.planned_end_date || merged['Fecha Fin Simple'] || merged['end_date_simple']),
+          effective_start_date: normDate(merged.effective_start_date || merged['modified_start_date'] || merged['start_date_simple']),
+          effective_delivery_date: normDate(merged.effective_delivery_date || merged['new_delivery_date'] || merged['committed_delivery_date'] || merged['Fecha Entrega']),
+          // Campos clave del JSON
+          product_article_code: merged.product_article_code || merged['Artículo'] || order.product_article_code,
+          product_name: merged.product_name || merged['Nombre'] || order.product_name,
+          client_name: merged.client_name || merged['Cliente'] || order.client_name,
+          material_type: merged.material_type || merged['material'] || merged['Material'],
+          multi_qty: merged.multi_qty || merged['Mult x Cantidad'] || merged['multi_qty'],
+          quantity: merged.quantity || merged['Cantidad'] || order.quantity,
+          status: order.status || merged.status || merged['Estado'] || 'Pendiente',
+          priority: order.priority ?? merged.priority ?? merged['Prioridad'] ?? 3,
+          article_status: merged.article_status || merged['Edo. Art.'],
+        };
+      });
     },
   });
 
