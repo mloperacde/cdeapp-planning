@@ -351,17 +351,17 @@ export default function OrderImport() {
                   const machineName = row.machine_name;
                   const machineIdSource = row.machine_id_source;
 
-                  // Prioridad 1: si la orden ya tiene machine_id que sea un ID de BD válido (24 hex)
                   const isDbId = (v) => v && /^[a-f0-9]{24}$/i.test(String(v).trim());
+
+                  // Prioridad 1: row._db_machine_id es el machine_id preservado desde la BD local
                   let machineId = null;
-                  // Campos candidatos: el campo machine_id del registro, el id del WorkOrder guardado
-                  const candidateDbIds = [row.machine_id, row._machine_id, row.id && row.machine_id]
-                      .map(v => String(v || '').trim())
-                      .filter(isDbId);
-                  if (candidateDbIds.length > 0) {
-                      machineId = candidateDbIds[0];
+                  if (isDbId(row._db_machine_id)) {
+                      machineId = String(row._db_machine_id).trim();
+                  } else if (isDbId(row.machine_id)) {
+                      // machine_id puede venir del WorkOrder guardado en BD local (24 hex)
+                      machineId = String(row.machine_id).trim();
                   } else {
-                      // machineIdSource puede ser el número externo de CDE (ej: 33)
+                      // Para datos frescos de CDE: resolver por nombre o ID numérico CDE
                       machineId = resolve(machineName, machineIdSource);
                   }
 
