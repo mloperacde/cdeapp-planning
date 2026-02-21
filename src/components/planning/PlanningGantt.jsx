@@ -39,11 +39,30 @@ export default function PlanningGantt({ orders = [], machines = [], dateRange, o
     return machines.map(machine => {
       const machineOrders = orders.filter(o => o.machine_id === machine.id);
       
-      // Separate scheduled vs unscheduled (backlog)
-      // Unscheduled: No effective_start_date OR explicitly cleared
-      // Scheduled: Has effective_start_date
-      const scheduled = machineOrders.filter(o => o.effective_start_date);
-      const backlog = machineOrders.filter(o => !o.effective_start_date); // Pry 1 & 2 from CSV will be here
+      // Scheduled: Has effective_start_date — sorted by start date, then priority
+      const scheduled = machineOrders
+        .filter(o => o.effective_start_date)
+        .sort((a, b) => {
+          const dateA = new Date(a.effective_start_date);
+          const dateB = new Date(b.effective_start_date);
+          if (dateA - dateB !== 0) return dateA - dateB;
+          // Same date: sort by priority (1=most urgent first, 0=sin prioridad last)
+          const pA = a.priority === 0 ? 99 : (a.priority || 99);
+          const pB = b.priority === 0 ? 99 : (b.priority || 99);
+          return pA - pB;
+        });
+
+      // Backlog: No effective_start_date — sorted by priority then committed_delivery_date
+      const backlog = machineOrders
+        .filter(o => !o.effective_start_date)
+        .sort((a, b) => {
+          const pA = a.priority === 0 ? 99 : (a.priority || 99);
+          const pB = b.priority === 0 ? 99 : (b.priority || 99);
+          if (pA - pB !== 0) return pA - pB;
+          const dateA = new Date(a.committed_delivery_date || a.effective_delivery_date || '9999');
+          const dateB = new Date(b.committed_delivery_date || b.effective_delivery_date || '9999');
+          return dateA - dateB;
+        });
 
       return {
         ...machine,
@@ -51,7 +70,7 @@ export default function PlanningGantt({ orders = [], machines = [], dateRange, o
         backlog
       };
     });
-  }, [machines, orders]); // machineRows recalculates when machines change (including orden)
+  }, [machines, orders]);
 
   const getPriorityColor = (priority) => {
     switch(priority) {
