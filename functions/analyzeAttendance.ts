@@ -1,12 +1,9 @@
+// @ts-ignore Base44 SDK se resuelve en tiempo de ejecución vía Deno/npm specifier
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 declare const Deno: {
   serve: (handler: (req: Request) => Promise<Response> | Response) => void;
 };
-
-declare module 'npm:@base44/sdk@0.8.6' {
-  export function createClientFromRequest(req: Request): any;
-}
 
 function toMin(t: string | null | undefined) {
   if (!t) return null;
@@ -25,7 +22,9 @@ function getHorarioEsperado(
 ) {
   if (!master) return { horaEntrada: null, horaFin: null, duracionMin: null, turnoReal: null };
   const tipo = master.tipo_turno;
-  let horaEntrada = null, horaFin = null, turnoReal = null;
+  let horaEntrada: string | null = null;
+  let horaFin: string | null = null;
+  let turnoReal: string | null = null;
 
   if (tipo === "Turno Partido") {
     horaEntrada = master.turno_partido_entrada1 || null;
@@ -51,7 +50,14 @@ function getHorarioEsperado(
     }
   }
 
-  const duracionMin = horaEntrada && horaFin ? toMin(horaFin) - toMin(horaEntrada) : null;
+  let duracionMin: number | null = null;
+  if (horaEntrada && horaFin) {
+    const inicio = toMin(horaEntrada);
+    const fin = toMin(horaFin);
+    if (inicio != null && fin != null) {
+      duracionMin = fin - inicio;
+    }
+  }
   return { horaEntrada, horaFin, duracionMin, turnoReal };
 }
 
@@ -171,15 +177,25 @@ Deno.serve(async (req: Request) => {
       const { horaEntrada: horaEsperada, horaFin: horaFinEsperada, duracionMin, turnoReal } = getHorarioEsperado(master, teamScheduleMap);
       const tolerancia = departamentosEstrictos.includes(departamento) ? toleranciaReducida : toleranciaEntrada;
 
-      let retrasoMin = 0, esRetraso = false;
+      let retrasoMin = 0;
+      let esRetraso = false;
       if (horaEsperada) {
-        retrasoMin = Math.max(0, toMin(primerRegistro.record_time) - toMin(horaEsperada) - tolerancia);
-        esRetraso = retrasoMin > 0;
+        const entradaReal = toMin(primerRegistro.record_time);
+        const entradaEsperada = toMin(horaEsperada);
+        if (entradaReal != null && entradaEsperada != null) {
+          retrasoMin = Math.max(0, entradaReal - entradaEsperada - tolerancia);
+          esRetraso = retrasoMin > 0;
+        }
       }
 
-      const presenciaMin = sorted.length >= 2
-        ? toMin(ultimoRegistro.record_time) - toMin(primerRegistro.record_time)
-        : 0;
+      let presenciaMin = 0;
+      if (sorted.length >= 2) {
+        const inicio = toMin(primerRegistro.record_time);
+        const fin = toMin(ultimoRegistro.record_time);
+        if (inicio != null && fin != null) {
+          presenciaMin = fin - inicio;
+        }
+      }
 
       let incidenciaJornada = null;
       if (duracionMin && presenciaMin > 0 && sorted.length >= 2) {
@@ -233,7 +249,7 @@ Deno.serve(async (req: Request) => {
     // Empleados rotativos del equipo de Tarde no se marcan como ausentes en la auditoría de Mañana.
     const fichajesIds = new Set(Object.keys(fichajesMap));
     const sinRegistro = masterEmployees
-      .filter(m => {
+      .filter((m: any) => {
         if (!m.codigo_empleado || m.estado_empleado !== "Alta") return false;
         if (fichajesIds.has(String(m.codigo_empleado))) return false;
         const { horaEntrada, turnoReal } = getHorarioEsperado(m, teamScheduleMap);
@@ -243,7 +259,7 @@ Deno.serve(async (req: Request) => {
         if (turnoReal === "Tarde") return false;
         return true;
       })
-      .map(m => {
+      .map((m: any) => {
         const { horaEntrada, turnoReal } = getHorarioEsperado(m, teamScheduleMap);
         const ausencia = ausenciasMap[String(m.codigo_empleado)] || null;
         return {
@@ -278,7 +294,7 @@ Deno.serve(async (req: Request) => {
       teamScheduleMap,
     });
 
-  } catch (error) {
+  } catch (error: any) {
     return Response.json({ error: error.message }, { status: 500 });
   }
 });
