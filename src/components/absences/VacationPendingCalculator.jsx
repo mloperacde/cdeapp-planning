@@ -128,7 +128,8 @@ export async function calculateVacationPendingBalance(absence, absenceType, vaca
     await base44.entities.VacationPendingBalance.update(balance.id, {
       dias_pendientes: totalDiasPendientes,
       dias_disponibles: diasDisponibles,
-      detalle_ausencias: detalleAusencias
+      detalle_ausencias: detalleAusencias,
+      tipo_saldo: balance.tipo_saldo || "proteccion_vacaciones",
     });
 
     if (!skipSync) {
@@ -143,7 +144,8 @@ export async function calculateVacationPendingBalance(absence, absenceType, vaca
       dias_pendientes: diasCoincidentes,
       dias_consumidos: 0,
       dias_disponibles: diasCoincidentes,
-      detalle_ausencias: [detalleAusencia]
+      detalle_ausencias: [detalleAusencia],
+      tipo_saldo: "proteccion_vacaciones",
     });
 
     if (!skipSync) {
@@ -303,21 +305,42 @@ export async function consumeVacationPendingForAbsence(absence, holidays, origin
     throw new Error("El empleado no tiene saldo de vacaciones pendientes disponible.");
   }
 
-  let totalPendientes = 0;
-  let totalConsumidos = 0;
-  for (const b of balances) {
-    totalPendientes += b.dias_pendientes || 0;
-    totalConsumidos += b.dias_consumidos || 0;
-  }
-  const totalDisponibles = totalPendientes - totalConsumidos;
+  const protectionBalances = balances.filter(
+    (b) => b.tipo_saldo === "proteccion_vacaciones" || !b.tipo_saldo
+  );
+  const festivoBalances = balances.filter(
+    (b) => b.tipo_saldo === "compensacion_festivos"
+  );
 
-  if (diasToConsume > totalDisponibles) {
+  const sumDisponibles = (list) => {
+    let totalPendientes = 0;
+    let totalConsumidos = 0;
+    for (const b of list) {
+      totalPendientes += b.dias_pendientes || 0;
+      totalConsumidos += b.dias_consumidos || 0;
+    }
+    return totalPendientes - totalConsumidos;
+  };
+
+  const disponiblesProteccion = sumDisponibles(protectionBalances);
+  const disponiblesFestivos = sumDisponibles(festivoBalances);
+
+  let sourceBalances;
+  if (diasToConsume <= disponiblesProteccion) {
+    sourceBalances = protectionBalances;
+  } else if (diasToConsume <= disponiblesFestivos) {
+    sourceBalances = festivoBalances;
+  } else {
+    const totalDisponibles = disponiblesProteccion + disponiblesFestivos;
+    if (totalDisponibles <= 0) {
+      throw new Error("El empleado no tiene saldo de vacaciones pendientes disponible.");
+    }
     throw new Error(
-      `No se pueden registrar vacaciones: saldo disponible ${totalDisponibles} día(s), se necesitan ${diasToConsume}.`
+      `No se pueden registrar vacaciones: saldo disponible ${totalDisponibles} día(s) entre protección y festivos, se necesitan ${diasToConsume}.`
     );
   }
 
-  const employeeBalances = [...balances].sort((a, b) => {
+  const employeeBalances = [...sourceBalances].sort((a, b) => {
     const yearA = typeof a.anio === "number" ? a.anio : parseInt(a.anio || "0", 10);
     const yearB = typeof b.anio === "number" ? b.anio : parseInt(b.anio || "0", 10);
     return yearA - yearB;
