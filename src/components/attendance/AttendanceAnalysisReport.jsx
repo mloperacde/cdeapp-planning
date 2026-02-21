@@ -168,9 +168,11 @@ export default function AttendanceAnalysisReport() {
       }
 
       // Analizar por departamento
-      const expectedEmployees = employees.filter(emp => 
-        emp.incluir_en_planning !== false && getExpectedShift(emp, selectedDate) !== null
-      );
+      const expectedEmployees = employees.filter(emp => {
+        const code = emp.codigo_empleado ? String(emp.codigo_empleado) : "";
+        if (code === "999" || code === "998" || code === "997") return false;
+        return emp.incluir_en_planning !== false && getExpectedShift(emp, selectedDate) !== null;
+      });
 
       const byDepartment = {};
       const incidents = [];

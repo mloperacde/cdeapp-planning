@@ -121,21 +121,31 @@ Deno.serve(async (req: Request) => {
     const departamentosEstrictos = config.departamentos_estrictos || [];
     const toleranciaReducida = config.tolerancia_reducida_minutos ?? 5;
 
+    const excludedIds = new Set(["999", "998", "997"]);
+
+    const filteredMasterEmployees = masterEmployees.filter((m: any) => {
+      if (!m?.codigo_empleado) return true;
+      return !excludedIds.has(String(m.codigo_empleado));
+    });
+
+    const filteredRawRecords = rawRecords.filter((r: any) => {
+      if (!r?.employee_id) return true;
+      return !excludedIds.has(String(r.employee_id));
+    });
+
     // Mapa team_key → turno para la semana: { "team_1": "Mañana", "team_2": "Tarde" }
     const teamScheduleMap: Record<string, string> = {};
     for (const ws of weekSchedules) {
       teamScheduleMap[ws.team_key] = ws.turno;
     }
 
-    // Mapa codigo_empleado → master
     const masterMapByCodigo: Record<string, any> = {};
-    for (const emp of masterEmployees) {
+    for (const emp of filteredMasterEmployees) {
       if (emp.codigo_empleado) masterMapByCodigo[String(emp.codigo_empleado)] = emp;
     }
 
-    // Mapa master.id → codigo_empleado
     const masterIdToCodigo: Record<string, string> = {};
-    for (const m of masterEmployees) {
+    for (const m of filteredMasterEmployees) {
       if (m.id && m.codigo_empleado) masterIdToCodigo[m.id] = String(m.codigo_empleado);
     }
 
@@ -145,12 +155,11 @@ Deno.serve(async (req: Request) => {
       if (!a.employee_id) continue;
       if (!ausenciaActivaEnFecha(a, date)) continue;
       const codigo = masterIdToCodigo[a.employee_id];
-      if (codigo) ausenciasMap[codigo] = a;
+      if (codigo && !excludedIds.has(String(codigo))) ausenciasMap[codigo] = a;
     }
 
-    // Agrupar fichajes por employee_id
     const fichajesMap: Record<string, { employee_id: string; employee_name: string; registros: any[] }> = {};
-    for (const r of rawRecords) {
+    for (const r of filteredRawRecords) {
       const id = String(r.employee_id);
       if (!fichajesMap[id]) fichajesMap[id] = { employee_id: id, employee_name: r.employee_name, registros: [] };
       fichajesMap[id].registros.push(r);
@@ -248,7 +257,7 @@ Deno.serve(async (req: Request) => {
     // Solo se consideran ausentes los empleados cuyo turno REAL esta semana ya debería haber empezado.
     // Empleados rotativos del equipo de Tarde no se marcan como ausentes en la auditoría de Mañana.
     const fichajesIds = new Set(Object.keys(fichajesMap));
-    const sinRegistro = masterEmployees
+    const sinRegistro = filteredMasterEmployees
       .filter((m: any) => {
         if (!m.codigo_empleado || m.estado_empleado !== "Alta") return false;
         if (fichajesIds.has(String(m.codigo_empleado))) return false;
