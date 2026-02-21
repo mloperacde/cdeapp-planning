@@ -38,6 +38,7 @@ export default function ProductionPlanningPage() {
   const [selectedTeam, setSelectedTeam] = useState("all");
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [isSyncing, setIsSyncing] = useState(false);
+  const [showOnlyWithPriority, setShowOnlyWithPriority] = useState(false);
 
   // Data Fetching
   const { data: machines = [] } = useQuery({
