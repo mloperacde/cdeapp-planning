@@ -184,14 +184,9 @@ export default function ProductionPlanningPage() {
 
   // Derived Data
   const filteredOrders = useMemo(() => {
-    // First, augment orders with effective dates logic
-    const augmentedOrders = workOrders.map(order => ({
-        ...order,
-        effective_start_date: order.modified_start_date || order.start_date,
-        effective_delivery_date: order.new_delivery_date || order.committed_delivery_date
-    }));
-
-    const filtered = augmentedOrders.filter(order => {
+    // Las fechas effective_start_date y effective_delivery_date ya vienen calculadas
+    // correctamente desde el query de workOrders (con horas precisas). NO sobreescribir.
+    const filtered = workOrders.filter(order => {
       // Filter by Machine
       if (selectedMachine !== "all" && order.machine_id !== selectedMachine) return false;
       
