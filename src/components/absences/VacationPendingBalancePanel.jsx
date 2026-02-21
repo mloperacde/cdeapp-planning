@@ -12,7 +12,7 @@ import { CalendarDays, TrendingUp, AlertCircle, ChevronRight, RefreshCw } from "
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { toast } from "sonner";
-import { recalculateVacationPendingBalances } from "./VacationPendingCalculator";
+import { recalculateVacationPendingBalances, removeAbsenceFromBalance } from "./VacationPendingCalculator";
 
 export default function VacationPendingBalancePanel({ employees = [], compact = false }) {
   const queryClient = useQueryClient();
@@ -206,6 +206,11 @@ export default function VacationPendingBalancePanel({ employees = [], compact = 
   const [festivoEnd, setFestivoEnd] = useState("");
   const [festivoDetailOpen, setFestivoDetailOpen] = useState(false);
   const [selectedFestivoEmployeeId, setSelectedFestivoEmployeeId] = useState("");
+  const [protectionDetailOpen, setProtectionDetailOpen] = useState(false);
+  const [selectedProtectionEmployeeId, setSelectedProtectionEmployeeId] = useState("");
+  const [yearFilter, setYearFilter] = useState("all");
+  const [absenceTypeFilter, setAbsenceTypeFilter] = useState("all");
+  const [festivoYearFilter, setFestivoYearFilter] = useState("all");
 
   const departments = useMemo(() => {
     const set = new Set();
@@ -214,6 +219,47 @@ export default function VacationPendingBalancePanel({ employees = [], compact = 
     });
     return ["all", ...Array.from(set).sort((a, b) => (a || "").localeCompare(b || ""))];
   }, [employees]);
+
+  const availableYears = useMemo(() => {
+    const set = new Set();
+    employeesWithProtectionBalance.forEach((b) => {
+      if (Array.isArray(b.year_breakdown)) {
+        b.year_breakdown.forEach((yb) => {
+          if (yb && typeof yb.year !== "undefined" && yb.year !== null) {
+            set.add(yb.year);
+          }
+        });
+      }
+    });
+    return ["all", ...Array.from(set).sort((a, b) => Number(a) - Number(b))];
+  }, [employeesWithProtectionBalance]);
+
+  const availableAbsenceTypes = useMemo(() => {
+    const set = new Set();
+    employeesWithProtectionBalance.forEach((b) => {
+      const detalles = Array.isArray(b.detalle_ausencias) ? b.detalle_ausencias : [];
+      detalles.forEach((d) => {
+        if (d && d.tipo_ausencia) {
+          set.add(d.tipo_ausencia);
+        }
+      });
+    });
+    return ["all", ...Array.from(set).sort((a, b) => (a || "").localeCompare(b || ""))];
+  }, [employeesWithProtectionBalance]);
+
+  const availableFestivoYears = useMemo(() => {
+    const set = new Set();
+    employeesWithFestivoBalance.forEach((b) => {
+      if (Array.isArray(b.year_breakdown)) {
+        b.year_breakdown.forEach((yb) => {
+          if (yb && typeof yb.year !== "undefined" && yb.year !== null) {
+            set.add(yb.year);
+          }
+        });
+      }
+    });
+    return ["all", ...Array.from(set).sort((a, b) => Number(a) - Number(b))];
+  }, [employeesWithFestivoBalance]);
 
   const filteredBalances = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
@@ -225,9 +271,21 @@ export default function VacationPendingBalancePanel({ employees = [], compact = 
         departmentFilter === "all" ||
         (b.employee?.departamento || "") === departmentFilter;
       const matchesMin = b.dias_disponibles >= min;
-      return matchesName && matchesDept && matchesMin;
+      const matchesYear =
+        yearFilter === "all" ||
+        (Array.isArray(b.year_breakdown) &&
+          b.year_breakdown.some((yb) => {
+            const y = typeof yb.year === "number" ? yb.year : parseInt(yb.year || "0", 10);
+            const target = parseInt(yearFilter, 10);
+            return !Number.isNaN(y) && !Number.isNaN(target) && y === target;
+          }));
+      const detalles = Array.isArray(b.detalle_ausencias) ? b.detalle_ausencias : [];
+      const matchesAbsenceType =
+        absenceTypeFilter === "all" ||
+        detalles.some((d) => d && d.tipo_ausencia === absenceTypeFilter);
+      return matchesName && matchesDept && matchesMin && matchesYear && matchesAbsenceType;
     });
-  }, [employeesWithProtectionBalance, searchTerm, departmentFilter, minDays]);
+  }, [employeesWithProtectionBalance, searchTerm, departmentFilter, minDays, yearFilter, absenceTypeFilter]);
 
   const totalDiasPendientes = useMemo(() => {
     return filteredBalances.reduce((sum, b) => sum + b.dias_disponibles, 0);
@@ -368,6 +426,102 @@ export default function VacationPendingBalancePanel({ employees = [], compact = 
     },
   });
 
+  const protectionEditMutation = useMutation({
+    mutationFn: async ({ balanceId, index, field, value }) => {
+      const current = balances.find((b) => b.id === balanceId);
+      if (!current) {
+        throw new Error("No se ha encontrado el saldo de protección a editar.");
+      }
+      const detalleAusencias = Array.isArray(current.detalle_ausencias)
+        ? [...current.detalle_ausencias]
+        : [];
+      const existing = detalleAusencias[index];
+      if (!existing) {
+        throw new Error("No se ha encontrado el registro de ausencia a editar.");
+      }
+      const updated = {
+        ...existing,
+        [field]: field === "dias_coincidentes" ? Number(value) || 0 : value,
+      };
+      detalleAusencias[index] = updated;
+
+      const totalDiasPendientes = detalleAusencias.reduce(
+        (sum, d) => sum + (Number(d.dias_coincidentes) || 0),
+        0
+      );
+      const diasConsumidos = current.dias_consumidos || 0;
+      const diasDisponibles = totalDiasPendientes - diasConsumidos;
+
+      await base44.entities.VacationPendingBalance.update(balanceId, {
+        detalle_ausencias: detalleAusencias,
+        dias_pendientes: totalDiasPendientes,
+        dias_disponibles: diasDisponibles,
+        tipo_saldo: current.tipo_saldo || "proteccion_vacaciones",
+      });
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["vacationPendingBalances"] });
+      await queryClient.invalidateQueries({ queryKey: ["employeeMasterDatabase"] });
+      toast.success("Saldo de protección actualizado");
+    },
+    onError: (error) => {
+      toast.error(
+        "Error al editar saldo de protección: " + (error?.message || "desconocido")
+      );
+    },
+  });
+
+  const protectionDeleteMutation = useMutation({
+    mutationFn: async ({ absenceId, employeeId, year }) => {
+      if (!absenceId || !employeeId || !year) {
+        throw new Error("Faltan datos para eliminar el registro de ausencia.");
+      }
+      await removeAbsenceFromBalance(absenceId, employeeId, year);
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["vacationPendingBalances"] });
+      await queryClient.invalidateQueries({ queryKey: ["employeeMasterDatabase"] });
+      toast.success("Ausencia eliminada del saldo de protección");
+    },
+    onError: (error) => {
+      toast.error(
+        "Error al eliminar ausencia del saldo: " + (error?.message || "desconocido")
+      );
+    },
+  });
+
+  const reclassToFestivoMutation = useMutation({
+    mutationFn: async ({ employeeId }) => {
+      if (!employeeId) {
+        throw new Error("Empleado no válido para reclasificar saldo.");
+      }
+      const all = await base44.entities.VacationPendingBalance.filter({
+        employee_id: employeeId,
+      });
+      const targets = all.filter(
+        (b) => b && (b.tipo_saldo === "proteccion_vacaciones" || !b.tipo_saldo)
+      );
+      if (!targets.length) {
+        return;
+      }
+      for (const bal of targets) {
+        await base44.entities.VacationPendingBalance.update(bal.id, {
+          tipo_saldo: "compensacion_festivos",
+        });
+      }
+      await queryClient.invalidateQueries({ queryKey: ["vacationPendingBalances"] });
+      await queryClient.invalidateQueries({ queryKey: ["employeeMasterDatabase"] });
+    },
+    onSuccess: () => {
+      toast.success("Saldo reclasificado al panel de festivos");
+    },
+    onError: (error) => {
+      toast.error(
+        "Error al reclasificar saldo: " + (error?.message || "desconocido")
+      );
+    },
+  });
+
   if (compact) {
     return (
       <Card className="shadow-lg border-0 bg-gradient-to-br from-amber-50 to-orange-50">
@@ -458,7 +612,7 @@ export default function VacationPendingBalancePanel({ employees = [], compact = 
           </div>
         </CardHeader>
         <CardContent className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-4">
             <div className="relative">
               <Input
                 placeholder="Buscar por nombre..."
@@ -489,6 +643,34 @@ export default function VacationPendingBalancePanel({ employees = [], compact = 
                 value={minDays}
                 onChange={(e) => setMinDays(e.target.value)}
               />
+            </div>
+            <div>
+              <Select value={yearFilter} onValueChange={setYearFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Año" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableYears.map((y) => (
+                    <SelectItem key={y} value={y.toString()}>
+                      {y === "all" ? "Todos los años" : y}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Select value={absenceTypeFilter} onValueChange={setAbsenceTypeFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Tipo de ausencia" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableAbsenceTypes.map((t) => (
+                    <SelectItem key={t} value={t}>
+                      {t === "all" ? "Todos los tipos" : t}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
@@ -628,9 +810,21 @@ export default function VacationPendingBalancePanel({ employees = [], compact = 
                         )}
                       </div>
 
-                      <Badge className="bg-orange-600 text-white text-lg px-4 py-2 ml-4">
-                        +{balance.dias_disponibles}
-                      </Badge>
+                      <div className="flex flex-col items-end gap-2 ml-4">
+                        <Badge className="bg-orange-600 text-white text-lg px-4 py-2">
+                          +{balance.dias_disponibles}
+                        </Badge>
+                        <Button
+                          variant="outline"
+                          size="xs"
+                          onClick={() => {
+                            setSelectedProtectionEmployeeId(balance.employee_id);
+                            setProtectionDetailOpen(true);
+                          }}
+                        >
+                          Ver / editar
+                        </Button>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -639,6 +833,166 @@ export default function VacationPendingBalancePanel({ employees = [], compact = 
           )}
         </CardContent>
       </Card>
+
+      {protectionDetailOpen && selectedProtectionEmployeeId && (
+        <Dialog
+          open={protectionDetailOpen}
+          onOpenChange={(open) => {
+            if (!open) {
+              setProtectionDetailOpen(false);
+              setSelectedProtectionEmployeeId("");
+            }
+          }}
+        >
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>
+                Detalle de protección de vacaciones –{" "}
+                {(() => {
+                  const emp = employees.find((e) => e.id === selectedProtectionEmployeeId);
+                  return emp?.nombre || "";
+                })()}
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="flex items-center justify-between mt-1 mb-3">
+              <p className="text-xs text-slate-600">
+                Aquí se muestran las ausencias y vacaciones que han generado el saldo pendiente.
+              </p>
+              <Button
+                variant="outline"
+                size="xs"
+                disabled={reclassToFestivoMutation.isPending}
+                onClick={() =>
+                  reclassToFestivoMutation.mutate({
+                    employeeId: selectedProtectionEmployeeId,
+                  })
+                }
+              >
+                Mover todo el saldo a festivos
+              </Button>
+            </div>
+
+            <div className="space-y-4">
+              {protectionBalances
+                .filter((b) => b.employee_id === selectedProtectionEmployeeId)
+                .sort((a, b) => {
+                  const ya = typeof a.anio === "number" ? a.anio : parseInt(a.anio || "0", 10);
+                  const yb = typeof b.anio === "number" ? b.anio : parseInt(b.anio || "0", 10);
+                  return ya - yb;
+                })
+                .map((balance) => {
+                  const detalles = Array.isArray(balance.detalle_ausencias)
+                    ? balance.detalle_ausencias
+                    : [];
+                  return (
+                    <Card key={balance.id} className="border border-orange-200">
+                      <CardContent className="p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <p className="font-semibold text-slate-900">
+                            Año {balance.anio || "–"}
+                          </p>
+                          <div className="flex items-center gap-3 text-xs">
+                            <span className="text-slate-600">
+                              Pendientes: <strong>{balance.dias_pendientes || 0}</strong> días
+                            </span>
+                            <span className="text-slate-600">
+                              Consumidos: <strong>{balance.dias_consumidos || 0}</strong> días
+                            </span>
+                            <span className="text-slate-900">
+                              Disponibles: <strong>{balance.dias_disponibles || 0}</strong> días
+                            </span>
+                          </div>
+                        </div>
+
+                        {detalles.length === 0 ? (
+                          <p className="text-xs text-slate-500">
+                            No hay ausencias registradas para este año.
+                          </p>
+                        ) : (
+                          <div className="space-y-2">
+                            {detalles.map((det, idx) => (
+                              <div
+                                key={idx}
+                                className="grid grid-cols-1 md:grid-cols-[2fr_3fr_auto] gap-2 items-start p-2 bg-slate-50 rounded border"
+                              >
+                                <div className="space-y-1">
+                                  <p className="text-xs font-semibold text-slate-800">
+                                    {det.tipo_ausencia || "Ausencia"}
+                                  </p>
+                                  <p className="text-xs text-slate-600">
+                                    {det.fecha_inicio || "?"} → {det.fecha_fin || "?"}
+                                  </p>
+                                </div>
+                                <div className="space-y-1">
+                                  <p className="text-xs text-slate-600">
+                                    Días coincidentes con vacaciones:
+                                  </p>
+                                  <div className="flex items-center gap-2">
+                                    <Input
+                                      type="number"
+                                      min={0}
+                                      step={0.5}
+                                      className="h-7 text-xs max-w-[90px]"
+                                      defaultValue={
+                                        typeof det.dias_coincidentes === "number"
+                                          ? det.dias_coincidentes
+                                          : ""
+                                      }
+                                      onBlur={(e) =>
+                                        protectionEditMutation.mutate({
+                                          balanceId: balance.id,
+                                          index: idx,
+                                          field: "dias_coincidentes",
+                                          value: e.target.value,
+                                        })
+                                      }
+                                    />
+                                  </div>
+                                  {Array.isArray(det.periodos_vacaciones) &&
+                                    det.periodos_vacaciones.length > 0 && (
+                                      <div className="mt-1">
+                                        <p className="text-xs font-semibold text-slate-700">
+                                          Vacaciones afectadas:
+                                        </p>
+                                        {det.periodos_vacaciones.map((vac, vIdx) => (
+                                          <p
+                                            key={vIdx}
+                                            className="text-xs text-slate-600"
+                                          >
+                                            • {vac.nombre} ({vac.dias} día(s))
+                                          </p>
+                                        ))}
+                                      </div>
+                                    )}
+                                </div>
+                                <div className="flex flex-col items-end gap-2">
+                                  <Button
+                                    variant="destructive"
+                                    size="xs"
+                                    onClick={() =>
+                                      protectionDeleteMutation.mutate({
+                                        absenceId: det.absence_id,
+                                        employeeId: balance.employee_id,
+                                        year: balance.anio,
+                                      })
+                                    }
+                                  >
+                                    Eliminar
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
 
       <Card className="shadow-xl border-2 border-blue-200">
         <CardHeader className="bg-gradient-to-r from-blue-50 to-cyan-50 border-b">
@@ -650,7 +1004,7 @@ export default function VacationPendingBalancePanel({ employees = [], compact = 
           </div>
         </CardHeader>
         <CardContent className="p-6 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
             <div>
               <p className="text-xs text-slate-600 mb-1">Empleado</p>
               <Select value={festivoEmployeeId} onValueChange={setFestivoEmployeeId}>
@@ -716,6 +1070,20 @@ export default function VacationPendingBalancePanel({ employees = [], compact = 
                 {festivoMutation.isPending ? "Calculando..." : "Calcular y sumar saldo"}
               </Button>
             </div>
+            <div>
+              <Select value={festivoYearFilter} onValueChange={setFestivoYearFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filtrar por año" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableFestivoYears.map((y) => (
+                    <SelectItem key={y} value={y.toString()}>
+                      {y === "all" ? "Todos los años" : y}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {employeesWithFestivoBalance.length === 0 ? (
@@ -726,7 +1094,18 @@ export default function VacationPendingBalancePanel({ employees = [], compact = 
             </div>
           ) : (
             <div className="space-y-2">
-              {employeesWithFestivoBalance.map((balance) => (
+              {employeesWithFestivoBalance
+                .filter((b) => {
+                  if (festivoYearFilter === "all") return true;
+                  const target = parseInt(festivoYearFilter, 10);
+                  if (Number.isNaN(target)) return true;
+                  if (!Array.isArray(b.year_breakdown)) return false;
+                  return b.year_breakdown.some((yb) => {
+                    const y = typeof yb.year === "number" ? yb.year : parseInt(yb.year || "0", 10);
+                    return !Number.isNaN(y) && y === target;
+                  });
+                })
+                .map((balance) => (
                 <div
                   key={balance.employee_id}
                   className="flex items-center justify-between p-2 border rounded-lg bg-white"

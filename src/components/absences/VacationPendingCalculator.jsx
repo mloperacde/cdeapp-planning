@@ -324,23 +324,28 @@ export async function consumeVacationPendingForAbsence(absence, holidays, origin
 
   const disponiblesProteccion = sumDisponibles(protectionBalances);
   const disponiblesFestivos = sumDisponibles(festivoBalances);
+  const totalDisponibles = disponiblesProteccion + disponiblesFestivos;
 
-  let sourceBalances;
-  if (diasToConsume <= disponiblesProteccion) {
-    sourceBalances = protectionBalances;
-  } else if (diasToConsume <= disponiblesFestivos) {
-    sourceBalances = festivoBalances;
-  } else {
-    const totalDisponibles = disponiblesProteccion + disponiblesFestivos;
-    if (totalDisponibles <= 0) {
-      throw new Error("El empleado no tiene saldo de vacaciones pendientes disponible.");
-    }
+  if (totalDisponibles <= 0) {
+    throw new Error("El empleado no tiene saldo de vacaciones pendientes disponible.");
+  }
+
+  if (diasToConsume > totalDisponibles) {
     throw new Error(
       `No se pueden registrar vacaciones: saldo disponible ${totalDisponibles} día(s) entre protección y festivos, se necesitan ${diasToConsume}.`
     );
   }
 
-  const employeeBalances = [...sourceBalances].sort((a, b) => {
+  let employeeBalances;
+  if (diasToConsume <= disponiblesProteccion) {
+    employeeBalances = [...protectionBalances];
+  } else if (diasToConsume <= disponiblesFestivos) {
+    employeeBalances = [...festivoBalances];
+  } else {
+    employeeBalances = [...protectionBalances, ...festivoBalances];
+  }
+
+  employeeBalances.sort((a, b) => {
     const yearA = typeof a.anio === "number" ? a.anio : parseInt(a.anio || "0", 10);
     const yearB = typeof b.anio === "number" ? b.anio : parseInt(b.anio || "0", 10);
     return yearA - yearB;
