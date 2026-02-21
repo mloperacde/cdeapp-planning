@@ -6,6 +6,8 @@ import { addDays, format, isSameDay, isValid, startOfDay, endOfDay, max, min, di
 import { es } from "date-fns/locale";
 import { getMachineAlias } from "@/utils/machineAlias";
 
+const DAILY_CAPACITY_HOURS = 14;
+
 export default function MachineLoadGraph({ orders, machines, dateRange }) {
   // Generate days array
   const days = useMemo(() => {
@@ -85,7 +87,7 @@ export default function MachineLoadGraph({ orders, machines, dateRange }) {
         <CardTitle className="text-sm font-medium flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Activity className="w-4 h-4" />
-            Gráfico de Carga de Máquina (Horas Ocupadas / 24h)
+            Gráfico de Carga de Máquina (Horas Ocupadas / 14h)
           </div>
           <div className="flex gap-2">
             <Badge variant="outline" className="bg-green-100 text-green-800 border-green-200">
@@ -129,7 +131,7 @@ export default function MachineLoadGraph({ orders, machines, dateRange }) {
                     {days.map(day => {
                         const dayIso = format(day, 'yyyy-MM-dd');
                         const hours = machineLoad[dayIso] || 0;
-                        const percentage = (hours / 24) * 100;
+                        const percentage = (hours / DAILY_CAPACITY_HOURS) * 100;
                         
                         let bgClass = "bg-white";
                         let textClass = "text-slate-300";
