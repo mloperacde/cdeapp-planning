@@ -85,6 +85,7 @@ import MantenimientoSkills from './pages/MantenimientoSkills';
 import MasterEmployeeDatabase from './pages/MasterEmployeeDatabase';
 import MessagingConfiguration from './pages/MessagingConfiguration';
 import NewProcessConfigurator from './pages/NewProcessConfigurator';
+import OrderImport from './pages/OrderImport';
 import OrganizationalStructure from './pages/OrganizationalStructure';
 import PerformanceManagement from './pages/PerformanceManagement';
 import PlanificacionSkills from './pages/PlanificacionSkills';
@@ -107,7 +108,6 @@ import Timeline from './pages/Timeline';
 import WarehousePlanningPage from './pages/WarehousePlanningPage';
 import WorkCalendarConfig from './pages/WorkCalendarConfig';
 import index from './pages/index';
-import OrderImport from './pages/OrderImport';
 import ArticleManagement from './pages/ArticleManagement';
 import OrderImport from './pages/OrderImport';
 import __Layout from './Layout.jsx';
@@ -152,6 +152,7 @@ export const PAGES = {
     "MasterEmployeeDatabase": MasterEmployeeDatabase,
     "MessagingConfiguration": MessagingConfiguration,
     "NewProcessConfigurator": NewProcessConfigurator,
+    "OrderImport": OrderImport,
     "OrganizationalStructure": OrganizationalStructure,
     "PerformanceManagement": PerformanceManagement,
     "PlanificacionSkills": PlanificacionSkills,
@@ -174,7 +175,6 @@ export const PAGES = {
     "WarehousePlanningPage": WarehousePlanningPage,
     "WorkCalendarConfig": WorkCalendarConfig,
     "index": index,
-    "OrderImport": OrderImport,
     "ArticleManagement": ArticleManagement,
     "OrderImport": OrderImport,
 }
