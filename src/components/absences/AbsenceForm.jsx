@@ -156,11 +156,25 @@ export default function AbsenceForm({
   }, [initialData, absenceTypes]);
 
   const employeesForSelect = React.useMemo(() => {
-    const filtered = employees.filter(emp => 
+    let filtered = employees.filter(emp => 
       !searchTerm || emp.nombre?.toLowerCase().includes(searchTerm.toLowerCase())
     );
+
+    if (initialData?.employee_id) {
+      const exists = filtered.some(emp => String(emp.id) === String(initialData.employee_id));
+      if (!exists) {
+        filtered = [
+          {
+            id: String(initialData.employee_id),
+            nombre: initialData.employee_name || `Empleado ${initialData.employee_id}`,
+          },
+          ...filtered,
+        ];
+      }
+    }
+
     return filtered;
-  }, [employees, searchTerm]);
+  }, [employees, searchTerm, initialData]);
 
   // Determine if we are in edit mode
   const isEditing = !!(initialData && initialData.id);
