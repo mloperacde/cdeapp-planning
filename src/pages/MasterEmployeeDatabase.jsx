@@ -76,8 +76,8 @@ const ALL_COLUMNS = {
   telefono_movil: { label: "Móvil", default: false },
   tipo_jornada: { label: "Jornada", default: false },
   num_horas_jornada: { label: "Horas/Sem", default: false },
-  tipo_turno: { label: "Turno", default: true },
-  equipo: { label: "Equipo", default: true },
+  tipo_turno: { label: "Tipo de turno", default: true },
+  equipo: { label: "Turno/Equipo", default: true },
   incluir_en_planning: { label: "Incluir en planning", default: false },
   tipo_contrato: { label: "Contrato", default: false },
   codigo_contrato: { label: "Cód. Contrato", default: false },
@@ -102,8 +102,8 @@ const SORT_OPTIONS = [
   { field: 'puesto', label: 'Puesto' },
   { field: 'estado_empleado', label: 'Estado' },
   { field: 'tipo_jornada', label: 'Tipo de jornada' },
-  { field: 'tipo_turno', label: 'Turno' },
-  { field: 'equipo', label: 'Equipo' },
+  { field: 'tipo_turno', label: 'Tipo de turno' },
+  { field: 'equipo', label: 'Turno/Equipo' },
   { field: 'disponibilidad', label: 'Disponibilidad' },
   { field: 'categoria', label: 'Categoría' },
   { field: 'tipo_contrato', label: 'Tipo de contrato' },
@@ -250,10 +250,10 @@ export default function MasterEmployeeDatabasePage() {
         'IBAN': emp.iban || '',
         'SWIFT/BIC': emp.swift_bic || '',
         'Banco': emp.banco_nombre || '',
-        'Tipo Jornada': emp.tipo_jornada || '',
-        'Horas Jornada': emp.num_horas_jornada || '',
-        'Tipo Turno': emp.tipo_turno || '',
-        'Equipo': emp.equipo || '',
+        'Tipo de jornada': emp.tipo_jornada || '',
+        'Horas jornada': emp.num_horas_jornada || '',
+        'Tipo de turno': emp.tipo_turno || '',
+        'Turno/Equipo': emp.equipo || '',
         'Team ID': emp.team_id || '',
         'Team Key': emp.team_key || '',
         'Team Fixed': emp.team_fixed ? 'Sí' : 'No',
@@ -367,12 +367,15 @@ export default function MasterEmployeeDatabasePage() {
         options: estados.map(e => ({ value: e, label: e }))
       },
       equipo: {
-        label: 'Equipo',
+        label: 'Turno/Equipo',
         options: equipos.map(e => ({ value: e, label: e }))
       },
       tipo_turno: {
-        label: 'Turno',
-        options: tiposTurno.map(t => ({ value: t, label: t }))
+        label: 'Tipo de turno',
+        options: [
+          { value: '__SIN_TURNO__', label: 'Sin turno' },
+          ...tiposTurno.map(t => ({ value: t, label: t })),
+        ]
       },
       tipo_jornada: {
         label: 'Tipo de Jornada',
@@ -416,8 +419,12 @@ export default function MasterEmployeeDatabasePage() {
       const matchesEquipo = !filters.equipo || filters.equipo === 'all' ||
         emp.equipo === filters.equipo;
 
-      const matchesTurno = !filters.tipo_turno || filters.tipo_turno === 'all' ||
-        emp.tipo_turno === filters.tipo_turno;
+      const matchesTurno =
+        !filters.tipo_turno ||
+        filters.tipo_turno === 'all' ||
+        (filters.tipo_turno === '__SIN_TURNO__'
+          ? !emp.tipo_turno
+          : emp.tipo_turno === filters.tipo_turno);
 
       const matchesJornada = !filters.tipo_jornada || filters.tipo_jornada === 'all' ||
         emp.tipo_jornada === filters.tipo_jornada;
