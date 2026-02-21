@@ -196,6 +196,7 @@ export default function ProductionPlanningPage() {
       // Filter by Date Range - include orders that overlap with the range
       if (order.effective_start_date) {
         const orderStart = new Date(order.effective_start_date);
+        // Usar effective_delivery_date (Fecha Fin con hora) para el fin real del bloque
         const orderEnd = order.effective_delivery_date ? new Date(order.effective_delivery_date) : orderStart;
         const rangeStart = new Date(dateRange.start);
         const rangeEnd = new Date(dateRange.end);
