@@ -191,6 +191,7 @@ export default function AbsenceForm({
 
   // Determine if we are in edit mode
   const isEditing = !!(initialData && initialData.id);
+  const isAuditPreselect = !isEditing && !!initialData?.employee_id && !!initialData?.employee_name;
 
   // Get employee name for display in edit mode
   const displayEmployeeName = React.useMemo(() => {
@@ -372,9 +373,9 @@ export default function AbsenceForm({
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
         <Label htmlFor="employee_id">Empleado *</Label>
-        {isEditing ? (
+        {isEditing || isAuditPreselect ? (
           <div className="p-2 bg-slate-100 dark:bg-slate-800 border rounded-md text-slate-700 dark:text-slate-300 font-medium">
-            {displayEmployeeName}
+            {isEditing ? displayEmployeeName : (initialData?.employee_name || displayEmployeeName)}
           </div>
         ) : (
           <Select

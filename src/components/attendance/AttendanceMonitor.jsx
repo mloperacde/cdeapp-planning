@@ -303,6 +303,7 @@ export default function AttendanceMonitor() {
       remunerada: true,
       notas: "",
       documentos_adjuntos: [],
+      source: "attendance_audit",
     });
     setAbsenceDialogOpen(true);
   }
