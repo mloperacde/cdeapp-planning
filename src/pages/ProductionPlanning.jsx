@@ -113,7 +113,14 @@ export default function ProductionPlanningPage() {
           product_name: merged.product_name || merged['Nombre'] || order.product_name,
           client_name: merged.client_name || merged['Cliente'] || order.client_name,
           material_type: merged.material_type || merged['material'] || merged['Material'],
-          multi_qty: merged.multi_qty || merged['Mult x Cantidad'] || merged['multi_qty'],
+          multi_qty: (() => {
+            const raw = merged.multi_qty || merged['Mult x Cantidad'];
+            if (!raw) return '';
+            // Limpiar separadores de miles y quedar con número limpio
+            const clean = String(raw).replace(/\./g, '').replace(/,/g, '.');
+            const n = parseFloat(clean);
+            return isNaN(n) ? raw : (Number.isInteger(n) ? n : n);
+          })(),
           quantity: merged.quantity || merged['Cantidad'] || order.quantity,
           status: order.status || merged.status || merged['Estado'] || 'Pendiente',
           priority: order.priority ?? merged.priority ?? merged['Prioridad'] ?? 3,
