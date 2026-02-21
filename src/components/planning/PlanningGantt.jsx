@@ -179,9 +179,19 @@ Ent: ${order.effective_delivery_date || '-'}`;
                                        {order.priority === 0 ? 'S/P' : `P${order.priority}`}
                                      </Badge>
                                   </div>
-                                  <div className="truncate text-[9px] text-slate-500" title={order.product_article_code}>
-                                     {order.product_article_code || order.product_name || 'Sin artículo'}
+                                  <div className="truncate text-[9px] text-slate-600 dark:text-slate-400 font-medium" title={order.product_article_code}>
+                                     {order.product_article_code || '—'}
                                   </div>
+                                  {order.product_name && (
+                                    <div className="truncate text-[8px] text-slate-500 italic" title={order.product_name}>
+                                      {order.product_name}
+                                    </div>
+                                  )}
+                                  {order.client_name && (
+                                    <div className="truncate text-[8px] text-slate-400" title={order.client_name}>
+                                      👤 {order.client_name}
+                                    </div>
+                                  )}
                                   <div className="flex items-center gap-1 mt-0.5">
                                     {(order.multi_qty || order.quantity) && (
                                       <span className="text-[8px] text-slate-500 font-medium">{order.multi_qty || order.quantity} uds</span>
