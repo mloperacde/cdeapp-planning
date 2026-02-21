@@ -49,10 +49,32 @@ export default function AbsenceHistoryView() {
     return Array.from(set).sort();
   }, [absenceTypes, absences]);
 
+  const parseDate = (value) => {
+    if (!value) return null;
+    const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? null : d;
+  };
+
+  const formatSafe = (value, pattern = "dd/MM/yyyy HH:mm") => {
+    try {
+      const d = parseDate(value);
+      if (!d) return "-";
+      return format(d, pattern, { locale: es });
+    } catch {
+      return "-";
+    }
+  };
+
   const filteredAbsences = useMemo(() => {
     return absences
       .slice()
-      .sort((a, b) => new Date(b.fecha_inicio) - new Date(a.fecha_inicio))
+      .sort((a, b) => {
+        const da = parseDate(a.fecha_inicio);
+        const db = parseDate(b.fecha_inicio);
+        const ta = da ? da.getTime() : -Infinity;
+        const tb = db ? db.getTime() : -Infinity;
+        return tb - ta;
+      })
       .filter((abs) => {
         const emp = employees.find((e) => e.id === abs.employee_id);
 
@@ -238,20 +260,12 @@ export default function AbsenceHistoryView() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-xs whitespace-nowrap">
-                          {abs.fecha_inicio
-                            ? format(new Date(abs.fecha_inicio), "dd/MM/yyyy HH:mm", {
-                                locale: es,
-                              })
-                            : "-"}
+                          {formatSafe(abs.fecha_inicio)}
                         </TableCell>
                         <TableCell className="text-xs whitespace-nowrap">
                           {abs.fecha_fin_desconocida
                             ? "Indefinida"
-                            : abs.fecha_fin
-                            ? format(new Date(abs.fecha_fin), "dd/MM/yyyy HH:mm", {
-                                locale: es,
-                              })
-                            : "-"}
+                            : formatSafe(abs.fecha_fin)}
                         </TableCell>
                         <TableCell className="text-xs">
                           <Badge
@@ -292,4 +306,3 @@ export default function AbsenceHistoryView() {
     </Card>
   );
 }
-
