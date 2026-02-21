@@ -133,6 +133,8 @@ export default function OrderImport() {
                     if (val !== undefined) newRow[field.key] = val;
                 });
                 newRow.id = o.id;
+                // Preservar el machine_id real de BD (24 hex) para no perderlo durante la normalización
+                newRow._db_machine_id = o.machine_id;
                 newRow.effective_delivery_date = (newRow.new_delivery_date && !String(newRow.new_delivery_date).startsWith('0000')) ? newRow.new_delivery_date : newRow.committed_delivery_date;
                 newRow.effective_start_date = (newRow.modified_start_date && !String(newRow.modified_start_date).startsWith('0000')) ? newRow.modified_start_date : newRow.start_date;
                 if (o.machine_id && machinesMap.has(o.machine_id)) newRow.machine_name = machinesMap.get(o.machine_id);
