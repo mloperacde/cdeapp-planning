@@ -165,30 +165,23 @@ export default function ProductionPlanningPage() {
     }));
 
     const filtered = augmentedOrders.filter(order => {
-      // Filter by Priority (Must exist)
-      if (order.priority === null || order.priority === undefined) return false;
-
       // Filter by Machine
       if (selectedMachine !== "all" && order.machine_id !== selectedMachine) return false;
       
       // Filter by Status
       if (selectedStatus !== "all" && order.status !== selectedStatus) return false;
       
-      // Filter by Date Range (Check overlap) - ONLY for scheduled orders
+      // Filter by Date Range - include orders that overlap with the range
       if (order.effective_start_date) {
         const orderStart = new Date(order.effective_start_date);
-        // Using delivery date as end for visualization, or start date if missing
-        const orderEnd = order.effective_delivery_date ? new Date(order.effective_delivery_date) : new Date(order.effective_start_date); 
+        const orderEnd = order.effective_delivery_date ? new Date(order.effective_delivery_date) : orderStart;
         const rangeStart = new Date(dateRange.start);
         const rangeEnd = new Date(dateRange.end);
-        
-        // If date is invalid (shouldn't happen if start_date exists), skip
         if (isNaN(orderStart.getTime())) return false;
-        
         return orderStart <= rangeEnd && orderEnd >= rangeStart;
       }
       
-      // If no start_date (Backlog), include it so it appears in the "Sin Programar" column
+      // Backlog (sin fecha inicio): siempre incluir para que aparezca en "Sin Programar"
       return true;
     });
 
