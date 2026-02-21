@@ -1,20 +1,28 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+declare const Deno: {
+  serve: (handler: (req: Request) => Promise<Response> | Response) => void;
+};
 
-function toMin(t) {
+declare module 'npm:@base44/sdk@0.8.6' {
+  export function createClientFromRequest(req: Request): any;
+}
+
+function toMin(t: string | null | undefined) {
   if (!t) return null;
   const [h, m] = t.split(":").map(Number);
   return h * 60 + m;
 }
 
-function formatMin(min) {
+function formatMin(min: number | null | undefined) {
   if (min == null || min <= 0) return "—";
   return `${Math.floor(min / 60)}h ${String(min % 60).padStart(2, "0")}m`;
 }
 
-// teamScheduleMap: team_key → turno ("Mañana" | "Tarde") para la semana dada
-function getHorarioEsperado(master, teamScheduleMap) {
+function getHorarioEsperado(
+  master: any,
+  teamScheduleMap: Record<string, string | undefined>
+) {
   if (!master) return { horaEntrada: null, horaFin: null, duracionMin: null, turnoReal: null };
   const tipo = master.tipo_turno;
   let horaEntrada = null, horaFin = null, turnoReal = null;
@@ -47,7 +55,9 @@ function getHorarioEsperado(master, teamScheduleMap) {
   return { horaEntrada, horaFin, duracionMin, turnoReal };
 }
 
-function detectarIncongruencias(sorted) {
+function detectarIncongruencias(
+  sorted: Array<{ direction: string; record_time: string }>
+) {
   const issues = [];
   for (let i = 1; i < sorted.length; i++) {
     if (sorted[i].direction === sorted[i - 1].direction) {
@@ -58,7 +68,7 @@ function detectarIncongruencias(sorted) {
   return issues;
 }
 
-function ausenciaActivaEnFecha(absence, fecha) {
+function ausenciaActivaEnFecha(absence: any, fecha: string) {
   if (!absence?.fecha_inicio) return false;
   const inicio = new Date(absence.fecha_inicio);
   const fin = absence.fecha_fin_desconocida ? new Date("2099-12-31") : new Date(absence.fecha_fin);
@@ -66,9 +76,7 @@ function ausenciaActivaEnFecha(absence, fecha) {
   return d >= new Date(inicio.toDateString()) && d <= new Date(fin.toDateString());
 }
 
-// ── Handler ───────────────────────────────────────────────────────────────────
-
-Deno.serve(async (req) => {
+Deno.serve(async (req: Request) => {
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
@@ -102,31 +110,31 @@ Deno.serve(async (req) => {
       base44.entities.TeamWeekSchedule.filter({ fecha_inicio_semana: weekStart }, "team_key", 10),
     ]);
 
-    const config = configs.find(c => c.activo) || {};
+    const config = configs.find((c: any) => c.activo) || {};
     const toleranciaEntrada = config.tolerancia_entrada_minutos ?? 10;
     const departamentosEstrictos = config.departamentos_estrictos || [];
     const toleranciaReducida = config.tolerancia_reducida_minutos ?? 5;
 
     // Mapa team_key → turno para la semana: { "team_1": "Mañana", "team_2": "Tarde" }
-    const teamScheduleMap = {};
+    const teamScheduleMap: Record<string, string> = {};
     for (const ws of weekSchedules) {
       teamScheduleMap[ws.team_key] = ws.turno;
     }
 
     // Mapa codigo_empleado → master
-    const masterMapByCodigo = {};
+    const masterMapByCodigo: Record<string, any> = {};
     for (const emp of masterEmployees) {
       if (emp.codigo_empleado) masterMapByCodigo[String(emp.codigo_empleado)] = emp;
     }
 
     // Mapa master.id → codigo_empleado
-    const masterIdToCodigo = {};
+    const masterIdToCodigo: Record<string, string> = {};
     for (const m of masterEmployees) {
       if (m.id && m.codigo_empleado) masterIdToCodigo[m.id] = String(m.codigo_empleado);
     }
 
     // ausenciasMap: codigo_empleado → ausencia activa en date
-    const ausenciasMap = {};
+    const ausenciasMap: Record<string, any> = {};
     for (const a of ausencias) {
       if (!a.employee_id) continue;
       if (!ausenciaActivaEnFecha(a, date)) continue;
@@ -135,7 +143,7 @@ Deno.serve(async (req) => {
     }
 
     // Agrupar fichajes por employee_id
-    const fichajesMap = {};
+    const fichajesMap: Record<string, { employee_id: string; employee_name: string; registros: any[] }> = {};
     for (const r of rawRecords) {
       const id = String(r.employee_id);
       if (!fichajesMap[id]) fichajesMap[id] = { employee_id: id, employee_name: r.employee_name, registros: [] };
@@ -143,10 +151,10 @@ Deno.serve(async (req) => {
     }
 
     // ── 1. Empleados CON fichaje ──────────────────────────────────────────────
-    const rows = [];
-    const noEnMaestra = [];
+    const rows: any[] = [];
+    const noEnMaestra: any[] = [];
 
-    for (const emp of Object.values(fichajesMap)) {
+    for (const emp of Object.values(fichajesMap) as Array<{ employee_id: string; employee_name: string; registros: any[] }>) {
       const sorted = [...emp.registros].sort((a, b) => a.record_time.localeCompare(b.record_time));
       const primerRegistro = sorted[0];
       const ultimoRegistro = sorted[sorted.length - 1];
