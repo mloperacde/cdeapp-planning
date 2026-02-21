@@ -257,50 +257,28 @@ export default function OrderImport() {
   const buildMachinesMap = async () => {
       let machinesRaw = [];
       const map = new Map();
-      const cdeIdMap = new Map();
+      const cdeIdMap = new Map(); // ID numérico CDE → ID base44
+
       try {
           machinesRaw = await base44.entities.MachineMasterDatabase.list(undefined, 1000);
           if (!Array.isArray(machinesRaw)) machinesRaw = [];
           machinesRaw.forEach(m => {
-              [m.nombre, m.codigo_maquina, m.codigo, m.descripcion, m.nombre_maquina].forEach(v => { if (v) map.set(normStr(v), m.id); });
+              // Mapa por nombre normalizado
+              [m.nombre, m.codigo_maquina, m.codigo, m.descripcion, m.nombre_maquina].forEach(v => {
+                  if (v) map.set(normStr(v), m.id);
+              });
               const alias = getMachineAlias(m);
               if (alias) map.set(normStr(alias), m.id);
-              // Mapear por ID numérico externo (cde_machine_id)
+              // Mapa por cde_machine_id explícito
               if (m.cde_machine_id) cdeIdMap.set(String(m.cde_machine_id).trim(), m.id);
-              // También por orden_visualizacion si coincide con el ID numérico de CDE
-              if (m.orden_visualizacion) cdeIdMap.set(String(Math.round(m.orden_visualizacion)), m.id);
+              // Mapa por orden_visualizacion (suele coincidir con ID CDE)
+              if (m.orden_visualizacion != null) cdeIdMap.set(String(Math.round(m.orden_visualizacion)), m.id);
           });
       } catch (e) { console.error("Error cargando maquinas:", e); }
 
       const resolve = (machineName, machineIdSource) => {
-          const name = String(machineName || '');
-          const s = normStr(name);
-
-          // 1. Exacto
-          if (s && map.has(s)) return map.get(s);
-
-          // 2. Formato "SALA CODIGO - NOMBRE_MAQUINA"
-          if (name.includes(' - ')) {
-              const parts = name.split(' - ');
-              const afterDash = normStr(parts.slice(1).join(' - '));
-              const beforeTokens = parts[0].trim().split(' ');
-              const codeToken = normStr(beforeTokens[beforeTokens.length - 1]);
-              if (afterDash && map.has(afterDash)) return map.get(afterDash);
-              if (codeToken && map.has(codeToken)) return map.get(codeToken);
-              const beforeNorm = normStr(parts[0]);
-              if (beforeNorm && map.has(beforeNorm)) return map.get(beforeNorm);
-          }
-
-          // 3. Fuzzy: clave contenida en nombre o viceversa
-          if (s.length >= 3) {
-              for (const [key, id] of map.entries()) {
-                  if (key.length < 3) continue;
-                  if (s.includes(key) || key.includes(s)) return id;
-              }
-          }
-
-          // 4. Por machine_id_source numerico (cde_machine_id, codigo)
-          if (machineIdSource) {
+          // PRIORIDAD 0: resolver por ID numérico CDE primero (más fiable)
+          if (machineIdSource != null) {
               const src = String(machineIdSource).trim();
               if (cdeIdMap.has(src)) return cdeIdMap.get(src);
               const found = machinesRaw.find(m =>
@@ -311,19 +289,41 @@ export default function OrderImport() {
               if (found) return found.id;
           }
 
-          // 5. Último recurso: buscar directamente en BD por nombre exacto
-          const exactMatch = machinesRaw.find(m => {
-              const nombre = normStr(m.nombre || '');
-              const desc = normStr(m.descripcion || '');
-              const sClean = normStr(name.replace(/^[\d\w]+ - /, '')); // quitar prefijo sala
-              return nombre === s || desc === s || nombre === sClean || desc === sClean;
-          });
-          if (exactMatch) return exactMatch.id;
+          const name = String(machineName || '');
+          const s = normStr(name);
+
+          // 1. Exacto por nombre normalizado
+          if (s && map.has(s)) return map.get(s);
+
+          // 2. Formato "SALA CODIGO - NOMBRE_MAQUINA" (con o sin paréntesis)
+          const cleanName = name.replace(/^\(/, '').replace(/\)$/, ''); // quitar paréntesis envolventes
+          const sClean = normStr(cleanName);
+          if (sClean && sClean !== s && map.has(sClean)) return map.get(sClean);
+
+          if (cleanName.includes(' - ')) {
+              const parts = cleanName.split(' - ');
+              const afterDash = normStr(parts.slice(1).join(' - '));
+              const beforeTokens = parts[0].trim().split(' ');
+              const codeToken = normStr(beforeTokens[beforeTokens.length - 1]);
+              if (afterDash && map.has(afterDash)) return map.get(afterDash);
+              if (codeToken && map.has(codeToken)) return map.get(codeToken);
+              const beforeNorm = normStr(parts[0]);
+              if (beforeNorm && map.has(beforeNorm)) return map.get(beforeNorm);
+          }
+
+          // 3. Fuzzy: clave contenida en nombre o viceversa
+          const sSearch = sClean || s;
+          if (sSearch.length >= 3) {
+              for (const [key, id] of map.entries()) {
+                  if (key.length < 3) continue;
+                  if (sSearch.includes(key) || key.includes(sSearch)) return id;
+              }
+          }
 
           return null;
       };
 
-      return { map, machinesRaw, resolve };
+      return { map, cdeIdMap, machinesRaw, resolve };
   };
 
   const saveOrders = async () => {
