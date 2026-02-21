@@ -277,46 +277,41 @@ export default function OrderImport() {
       } catch (e) { console.error("Error cargando maquinas:", e); }
 
       const resolve = (machineName, machineIdSource) => {
-          // PRIORIDAD 0: resolver por ID numérico CDE primero (más fiable)
+          // PRIORIDAD 0: solo usar cdeIdMap si la máquina tiene cde_machine_id explícito en BD
+          // (NO usar orden_visualizacion porque no es fiable como ID CDE)
           if (machineIdSource != null) {
               const src = String(machineIdSource).trim();
               if (cdeIdMap.has(src)) return cdeIdMap.get(src);
-              const found = machinesRaw.find(m =>
-                  String(m.cde_machine_id || '').trim() === src ||
-                  String(m.codigo_maquina || '').trim() === src ||
-                  String(m.codigo || '').trim() === src
-              );
-              if (found) return found.id;
           }
 
           const name = String(machineName || '');
-          const s = normStr(name);
+          // Limpiar paréntesis envolventes: "(1SANI - X)" → "1SANI - X"
+          const cleanName = name.replace(/^\(+/, '').replace(/\)+$/, '').trim();
+          const s = normStr(cleanName);
 
           // 1. Exacto por nombre normalizado
           if (s && map.has(s)) return map.get(s);
 
-          // 2. Formato "SALA CODIGO - NOMBRE_MAQUINA" (con o sin paréntesis)
-          const cleanName = name.replace(/^\(/, '').replace(/\)$/, ''); // quitar paréntesis envolventes
-          const sClean = normStr(cleanName);
-          if (sClean && sClean !== s && map.has(sClean)) return map.get(sClean);
-
+          // 2. Formato "SALA CODIGO - NOMBRE_MAQUINA": buscar por la parte después del " - "
           if (cleanName.includes(' - ')) {
               const parts = cleanName.split(' - ');
+              // Parte derecha (nombre de máquina real)
               const afterDash = normStr(parts.slice(1).join(' - '));
-              const beforeTokens = parts[0].trim().split(' ');
+              // Último token de la parte izquierda (suele ser el código numérico)
+              const beforeTokens = parts[0].trim().split(/\s+/);
               const codeToken = normStr(beforeTokens[beforeTokens.length - 1]);
+              const beforeAll = normStr(parts[0]);
+
               if (afterDash && map.has(afterDash)) return map.get(afterDash);
               if (codeToken && map.has(codeToken)) return map.get(codeToken);
-              const beforeNorm = normStr(parts[0]);
-              if (beforeNorm && map.has(beforeNorm)) return map.get(beforeNorm);
+              if (beforeAll && map.has(beforeAll)) return map.get(beforeAll);
           }
 
-          // 3. Fuzzy: clave contenida en nombre o viceversa
-          const sSearch = sClean || s;
-          if (sSearch.length >= 3) {
+          // 3. Fuzzy: alguna clave del mapa está contenida en el nombre o viceversa
+          if (s.length >= 3) {
               for (const [key, id] of map.entries()) {
                   if (key.length < 3) continue;
-                  if (sSearch.includes(key) || key.includes(sSearch)) return id;
+                  if (s.includes(key) || key.includes(s)) return id;
               }
           }
 
