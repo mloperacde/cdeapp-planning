@@ -236,7 +236,7 @@ Ent: ${order.effective_delivery_date || '-'}`;
                 </div>
 
                 {/* Timeline Grid */}
-                <div className="flex relative">
+                <div className="flex relative flex-shrink-0">
                   {days.map(day => {
                     const dateStr = format(day, 'yyyy-MM-dd');
                     return (
