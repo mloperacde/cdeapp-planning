@@ -334,10 +334,19 @@ export default function OrderImport() {
                   const orderNumber = row.order_number;
                   const machineName = row.machine_name;
                   const machineIdSource = row.machine_id_source;
-                  // Si el campo machine_id ya viene como un ID de BD (24 chars hex), usarlo directamente
-                  const rawMachineId = row.machine_id || row.machine_id_source;
-                  const isDbId = rawMachineId && /^[a-f0-9]{24}$/i.test(String(rawMachineId).trim());
-                  const machineId = isDbId ? String(rawMachineId).trim() : resolve(machineName, machineIdSource);
+
+                  // Prioridad 1: si la orden ya tiene machine_id que sea un ID de BD válido (24 hex)
+                  const isDbId = (v) => v && /^[a-f0-9]{24}$/i.test(String(v).trim());
+                  let machineId = null;
+                  // Buscar en todos los campos posibles que puedan contener un ID de BD
+                  const candidateDbIds = [row.machine_id, row.machine_id_source, machineIdSource]
+                      .map(v => String(v || '').trim())
+                      .filter(isDbId);
+                  if (candidateDbIds.length > 0) {
+                      machineId = candidateDbIds[0];
+                  } else {
+                      machineId = resolve(machineName, machineIdSource);
+                  }
 
                   if (!orderNumber || !machineId) {
                       const reason = !orderNumber ? 'Falta número de orden' : `Máquina no encontrada: "${machineName || machineIdSource || 'N/A'}"`;
