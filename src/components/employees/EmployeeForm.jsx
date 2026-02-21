@@ -677,7 +677,7 @@ export default function EmployeeForm({ employee, machines, onClose }) {
                     <SelectContent>
                       <SelectItem value="Jornada Completa">Jornada Completa</SelectItem>
                       <SelectItem value="Jornada Parcial">Jornada Parcial</SelectItem>
-                      <SelectItem value="Reducción de Jornada">Reducción de Jornada</SelectItem>
+                      <SelectItem value="Jornada Reducida">Jornada Reducida</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -717,7 +717,7 @@ export default function EmployeeForm({ employee, machines, onClose }) {
               </div>
 
               {/* Jornada Reducida + Fijo Mañana */}
-              {formData.tipo_jornada === "Reducción de Jornada" && formData.tipo_turno === "Fijo Mañana" && (
+              {formData.tipo_jornada === "Jornada Reducida" && formData.tipo_turno === "Fijo Mañana" && (
                 <div className="p-4 border-2 border-amber-200 rounded-lg bg-amber-50 space-y-4">
                   <h4 className="font-semibold text-amber-900">Configuración Turno Fijo Mañana - Jornada Reducida</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -742,7 +742,7 @@ export default function EmployeeForm({ employee, machines, onClose }) {
               )}
 
               {/* Jornada Reducida + Fijo Tarde */}
-              {formData.tipo_jornada === "Reducción de Jornada" && formData.tipo_turno === "Fijo Tarde" && (
+              {formData.tipo_jornada === "Jornada Reducida" && formData.tipo_turno === "Fijo Tarde" && (
                 <div className="p-4 border-2 border-indigo-200 rounded-lg bg-indigo-50 space-y-4">
                   <h4 className="font-semibold text-indigo-900">Configuración Turno Fijo Tarde - Jornada Reducida</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -766,8 +766,8 @@ export default function EmployeeForm({ employee, machines, onClose }) {
                 </div>
               )}
 
-              {/* Configuración de horarios para Reducción de Jornada con Rotativo */}
-              {formData.tipo_jornada === "Reducción de Jornada" && formData.tipo_turno === "Rotativo" && (
+              {/* Configuración de horarios para Jornada Reducida con Rotativo */}
+              {formData.tipo_jornada === "Jornada Reducida" && formData.tipo_turno === "Rotativo" && (
                 <div className="p-4 border-2 border-orange-200 rounded-lg bg-orange-50 space-y-4">
                   <h4 className="font-semibold text-orange-900">Configuración de Horario Especial - Jornada Reducida</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

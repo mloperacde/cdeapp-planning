@@ -196,6 +196,18 @@ function buildStandardShiftUpdate(emp) {
   return updates;
 }
 
+const CANONICAL_JORNADA_REDUCIDA = 'Jornada Reducida';
+
+function shouldNormalizeJornadaReducida(value) {
+  if (!value) return false;
+  const normalized = value.toString().trim().toLowerCase();
+  return (
+    normalized === 'jornada reducida' ||
+    normalized === 'reduccion de jornada' ||
+    normalized === 'reducción de jornada'
+  );
+}
+
 export default function MasterEmployeeDatabasePage() {
   const [filters, setFilters] = useState({});
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -618,6 +630,11 @@ export default function MasterEmployeeDatabasePage() {
     return employeesWithShiftGaps.slice(0, maxEmployeesPerRun);
   }, [employeesWithShiftGaps, maxEmployeesPerRun]);
 
+  const employeesWithJornadaReducidaInconsistent = useMemo(() => {
+    if (!masterEmployees) return [];
+    return masterEmployees.filter(emp => shouldNormalizeJornadaReducida(emp.tipo_jornada));
+  }, [masterEmployees]);
+
   const handleApplyStandardShiftRules = async () => {
     if (!employeesToUpdate || employeesToUpdate.length === 0) {
       toast.info('No hay empleados con horarios incompletos para estas reglas.');
@@ -648,6 +665,42 @@ export default function MasterEmployeeDatabasePage() {
         success: (updatedCount) => `Actualizados ${updatedCount} empleados`,
         error: (error) =>
           error?.message || 'Error al aplicar las reglas de horarios',
+      }
+    );
+  };
+
+  const handleNormalizeJornadaReducida = async () => {
+    if (!employeesWithJornadaReducidaInconsistent || employeesWithJornadaReducidaInconsistent.length === 0) {
+      toast.info('No hay empleados con tipo de jornada a normalizar.');
+      return;
+    }
+
+    await toast.promise(
+      (async () => {
+        let updatedCount = 0;
+
+        for (let index = 0; index < employeesWithJornadaReducidaInconsistent.length; index++) {
+          const emp = employeesWithJornadaReducidaInconsistent[index];
+          if (!emp.id) continue;
+
+          await base44.entities.EmployeeMasterDatabase.update(emp.id, {
+            tipo_jornada: CANONICAL_JORNADA_REDUCIDA,
+          });
+          updatedCount++;
+
+          if (index < employeesWithJornadaReducidaInconsistent.length - 1) {
+            await sleep(150);
+          }
+        }
+
+        queryClient.invalidateQueries({ queryKey: ['employeeMasterDatabase'] });
+        return updatedCount;
+      })(),
+      {
+        loading: `Normalizando tipo de jornada en ${employeesWithJornadaReducidaInconsistent.length} empleados...`,
+        success: (updatedCount) => `Tipo de jornada actualizado en ${updatedCount} empleados`,
+        error: (error) =>
+          error?.message || 'Error al normalizar el tipo de jornada',
       }
     );
   };
@@ -780,6 +833,37 @@ export default function MasterEmployeeDatabasePage() {
                 ))}
               </TableBody>
             </Table>
+          </div>
+        </Card>
+      )}
+
+      {employeesWithJornadaReducidaInconsistent.length > 0 && (
+        <Card className="p-3 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm shrink-0">
+          <div className="flex items-center justify-between mb-2">
+            <div>
+              <span className="text-xs text-slate-500 font-medium uppercase tracking-wider">
+                Normalización Tipo de Jornada Reducida
+              </span>
+              <p className="text-[11px] text-slate-500">
+                Unifica los valores &quot;Jornada reducida&quot; y &quot;Reducción de jornada&quot; a &quot;Jornada Reducida&quot;.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="flex flex-col items-end mr-2">
+                <span className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                  {employeesWithJornadaReducidaInconsistent.length}
+                </span>
+                <span className="text-[10px] text-slate-500">Empleados afectados</span>
+              </div>
+              <Button
+                size="sm"
+                className="bg-indigo-600 hover:bg-indigo-700 h-9 px-3"
+                onClick={handleNormalizeJornadaReducida}
+              >
+                <Users className="w-4 h-4 mr-2" />
+                Unificar Jornada Reducida
+              </Button>
+            </div>
           </div>
         </Card>
       )}

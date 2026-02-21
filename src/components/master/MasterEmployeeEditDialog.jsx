@@ -890,7 +890,7 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
                     <SelectContent>
                       <SelectItem value="Jornada Completa">Jornada Completa</SelectItem>
                       <SelectItem value="Jornada Parcial">Jornada Parcial</SelectItem>
-                      <SelectItem value="Reduccion de Jornada">Reducción de Jornada</SelectItem>
+                      <SelectItem value="Jornada Reducida">Jornada Reducida</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
