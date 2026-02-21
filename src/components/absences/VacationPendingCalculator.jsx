@@ -276,3 +276,141 @@ export async function removeAbsenceFromBalance(absenceId, employeeId, year) {
 
   await syncEmployeeVacationProtection(employeeId);
 }
+
+export async function consumeVacationPendingForAbsence(absence, holidays, origin = "consumo_automatico_ausencia_vacaciones") {
+  if (!absence || !absence.employee_id || !absence.fecha_inicio) return null;
+
+  const start = new Date(absence.fecha_inicio);
+  const end = absence.fecha_fin ? new Date(absence.fecha_fin) : start;
+
+  const holidaySet = new Set(holidays.map(h => format(new Date(h.date), "yyyy-MM-dd")));
+  const allDays = eachDayOfInterval({ start, end });
+
+  const workingDays = allDays.filter(day => {
+    const dateStr = format(day, "yyyy-MM-dd");
+    const isHoliday = holidaySet.has(dateStr);
+    return !isWeekend(day) && !isHoliday;
+  });
+
+  const diasToConsume = workingDays.length;
+  if (diasToConsume <= 0) return null;
+
+  const balances = await base44.entities.VacationPendingBalance.filter({
+    employee_id: absence.employee_id,
+  });
+
+  if (!balances || balances.length === 0) {
+    throw new Error("El empleado no tiene saldo de vacaciones pendientes disponible.");
+  }
+
+  let totalPendientes = 0;
+  let totalConsumidos = 0;
+  for (const b of balances) {
+    totalPendientes += b.dias_pendientes || 0;
+    totalConsumidos += b.dias_consumidos || 0;
+  }
+  const totalDisponibles = totalPendientes - totalConsumidos;
+
+  if (diasToConsume > totalDisponibles) {
+    throw new Error(
+      `No se pueden registrar vacaciones: saldo disponible ${totalDisponibles} día(s), se necesitan ${diasToConsume}.`
+    );
+  }
+
+  const employeeBalances = [...balances].sort((a, b) => {
+    const yearA = typeof a.anio === "number" ? a.anio : parseInt(a.anio || "0", 10);
+    const yearB = typeof b.anio === "number" ? b.anio : parseInt(b.anio || "0", 10);
+    return yearA - yearB;
+  });
+
+  let remaining = diasToConsume;
+  let firstUpdatedBalanceId = null;
+
+  for (const balance of employeeBalances) {
+    if (remaining <= 0) break;
+
+    const diasPendientes = balance.dias_pendientes || 0;
+    const diasConsumidos = balance.dias_consumidos || 0;
+    const disponiblesFila = diasPendientes - diasConsumidos;
+
+    if (disponiblesFila <= 0) continue;
+
+    const toConsume = Math.min(remaining, disponiblesFila);
+    const updatedConsumidos = diasConsumidos + toConsume;
+    const updatedDisponibles = diasPendientes - updatedConsumidos;
+
+    await base44.entities.VacationPendingBalance.update(balance.id, {
+      dias_consumidos: updatedConsumidos,
+      dias_disponibles: updatedDisponibles,
+    });
+
+    if (!firstUpdatedBalanceId) {
+      firstUpdatedBalanceId = balance.id;
+    }
+
+    remaining -= toConsume;
+  }
+
+  if (firstUpdatedBalanceId) {
+    try {
+      const target = balances.find(b => b.id === firstUpdatedBalanceId) || null;
+      const existing = target && Array.isArray(target.detalle_consumos) ? target.detalle_consumos : [];
+      const fechasConcedidas = workingDays.map(d => format(d, "yyyy-MM-dd"));
+      const consumoRecord = {
+        id: `CONS-AUTO-${absence.employee_id}-${Date.now()}`,
+        fecha_registro: new Date().toISOString(),
+        dias: diasToConsume,
+        fechas_concedidas: fechasConcedidas,
+        comentario: absence.motivo || "Consumo automático por ausencia de vacaciones",
+        origen: origin,
+        absence_id: absence.id,
+      };
+      await base44.entities.VacationPendingBalance.update(firstUpdatedBalanceId, {
+        detalle_consumos: [...existing, consumoRecord],
+      });
+    } catch {
+      // Best effort: si falla guardar detalle, no interrumpimos el flujo principal
+    }
+  }
+
+  await syncEmployeeVacationProtection(absence.employee_id);
+
+  return { dias_consumidos: diasToConsume };
+}
+
+export async function removeVacationPendingConsumptionForAbsence(absenceId, employeeId) {
+  if (!absenceId || !employeeId) return;
+
+  const balances = await base44.entities.VacationPendingBalance.filter({
+    employee_id: employeeId,
+  });
+
+  if (!balances || balances.length === 0) return;
+
+  for (const balance of balances) {
+    const detalleConsum = Array.isArray(balance.detalle_consumos) ? balance.detalle_consumos : [];
+    const toRemove = detalleConsum.filter(
+      c => c.absence_id === absenceId && c.origen === "consumo_automatico_ausencia_vacaciones"
+    );
+
+    if (toRemove.length === 0) continue;
+
+    const remaining = detalleConsum.filter(
+      c => !(c.absence_id === absenceId && c.origen === "consumo_automatico_ausencia_vacaciones")
+    );
+
+    const totalDiasRemove = toRemove.reduce((sum, c) => sum + (c.dias || 0), 0);
+    const diasPendientes = balance.dias_pendientes || 0;
+    const diasConsumidosOriginal = balance.dias_consumidos || 0;
+    const diasConsumidos = Math.max(0, diasConsumidosOriginal - totalDiasRemove);
+    const diasDisponibles = diasPendientes - diasConsumidos;
+
+    await base44.entities.VacationPendingBalance.update(balance.id, {
+      dias_consumidos: diasConsumidos,
+      dias_disponibles: diasDisponibles,
+      detalle_consumos: remaining,
+    });
+  }
+
+  await syncEmployeeVacationProtection(employeeId);
+}

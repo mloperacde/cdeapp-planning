@@ -1,5 +1,10 @@
 import { base44 } from "@/api/base44Client";
-import { calculateVacationPendingBalance, removeAbsenceFromBalance } from "./VacationPendingCalculator";
+import {
+  calculateVacationPendingBalance,
+  removeAbsenceFromBalance,
+  consumeVacationPendingForAbsence,
+  removeVacationPendingConsumptionForAbsence,
+} from "./VacationPendingCalculator";
 import { updateEmployeeAbsenteeismDaily } from "./AbsenteeismCalculator";
 import { notifyAbsenceRequestRealtime } from "../notifications/AdvancedNotificationService";
 import { format } from "date-fns";
@@ -41,6 +46,17 @@ export const updateEmployeeAvailability = async (employeeId, disponibilidad, abs
   }
 };
 
+function isVacationPendingConsumptionType(absenceType) {
+  if (!absenceType) return false;
+  if (absenceType.consume_vacaciones_pendientes === true) return true;
+  const nombreLower = (absenceType.nombre || "").toLowerCase();
+  const catLower = (absenceType.categoria_principal || absenceType.categoria || "").toLowerCase();
+  if (nombreLower.includes("vacaciones pendientes") || catLower.includes("vacaciones pendientes")) {
+    return true;
+  }
+  return false;
+}
+
 /**
  * Centralized function to create an absence.
  * Handles entity creation, availability update, vacation balance, and notifications.
@@ -55,28 +71,41 @@ export const createAbsence = async (data, currentUser, employees, absenceTypes, 
   // 1. Create Absence Record
   const result = await base44.entities.Absence.create(dataWithStatus);
 
-  // 2. Update Employee Availability
-  // Logic: If absence starts today or in the past and is not finished, mark as Ausente.
-  // If it's a future absence, we don't mark as Ausente yet (usually a daily job handles this, but here we assume immediate effect if date matches)
-  
-  const now = new Date();
-  const start = new Date(data.fecha_inicio);
-  const end = data.fecha_fin_desconocida ? new Date('2099-12-31') : new Date(data.fecha_fin);
-  
-  // Check if current moment is within the absence period
-  if (now >= start && now <= end) {
-      await updateEmployeeAvailability(data.employee_id, "Ausente", {
-        ausencia_inicio: data.fecha_inicio,
-        ausencia_fin: data.fecha_fin_desconocida ? null : data.fecha_fin,
-        ausencia_motivo: data.motivo,
-      });
-  }
-
-  // 3. Calculate Vacation Pending Balance if applicable
+  // 2. Calculate Vacation Pending Balance (protección) si aplica
   const absenceType = absenceTypes.find(at => at.id === data.absence_type_id);
   if (absenceType) {
     const employeeVacations = await getEmployeeVacationAbsences(data.employee_id, absenceTypes);
     await calculateVacationPendingBalance(result, absenceType, vacations, holidays, employeeVacations);
+
+    // 2b. Si es ausencia de vacaciones que consume saldo pendiente, registrar consumo
+    if (isVacationPendingConsumptionType(absenceType)) {
+      try {
+        await consumeVacationPendingForAbsence(result, holidays);
+      } catch (error) {
+        // Rollback: eliminar ausencia si no podemos consumir el saldo
+        try {
+          await base44.entities.Absence.delete(result.id);
+        } catch {
+          // ignore rollback errors
+        }
+        throw error;
+      }
+    }
+  }
+
+  // 3. Update Employee Availability
+  // Logic: If absence starts today or in the past and is not finished, mark as Ausente.
+  // If it's a future absence, we don't mark as Ausente yet
+  const now = new Date();
+  const start = new Date(data.fecha_inicio);
+  const end = data.fecha_fin_desconocida ? new Date("2099-12-31") : new Date(data.fecha_fin);
+
+  if (now >= start && now <= end) {
+    await updateEmployeeAvailability(data.employee_id, "Ausente", {
+      ausencia_inicio: data.fecha_inicio,
+      ausencia_fin: data.fecha_fin_desconocida ? null : data.fecha_fin,
+      ausencia_motivo: data.motivo,
+    });
   }
 
   // 4. Update Absenteeism Stats
@@ -143,10 +172,15 @@ export const updateAbsence = async (id, data, currentUser, absenceTypes, vacatio
 
   // 3. Recalculate Vacation Balance (remove old and add new)
   await removeAbsenceFromBalance(id, data.employee_id, new Date(data.fecha_inicio).getFullYear());
+  await removeVacationPendingConsumptionForAbsence(id, data.employee_id);
   const absenceType = absenceTypes.find(at => at.id === data.absence_type_id);
   if (absenceType) {
     const employeeVacations = await getEmployeeVacationAbsences(data.employee_id, absenceTypes);
     await calculateVacationPendingBalance(result, absenceType, vacations, holidays, employeeVacations);
+
+    if (isVacationPendingConsumptionType(absenceType)) {
+      await consumeVacationPendingForAbsence(result, holidays);
+    }
   }
   
   // 4. Update Absenteeism
@@ -162,6 +196,7 @@ export const deleteAbsence = async (absence, employees) => {
   // 1. Remove from balance
   const year = new Date(absence.fecha_inicio).getFullYear();
   await removeAbsenceFromBalance(absence.id, absence.employee_id, year);
+  await removeVacationPendingConsumptionForAbsence(absence.id, absence.employee_id);
 
   // 2. Delete Record
   await base44.entities.Absence.delete(absence.id);
