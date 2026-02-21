@@ -123,14 +123,19 @@ Deno.serve(async (req: Request) => {
 
     const excludedIds = new Set(["999", "998", "997"]);
 
-    const filteredMasterEmployees = masterEmployees.filter((m: any) => {
-      if (!m?.codigo_empleado) return true;
-      return !excludedIds.has(String(m.codigo_empleado));
-    });
+    const isExcludedEmployee = (m: any) => {
+      if (!m) return false;
+      const codigo = m.codigo_empleado != null ? String(m.codigo_empleado).trim() : "";
+      const internalId = m.id != null ? String(m.id).trim() : "";
+      return excludedIds.has(codigo) || excludedIds.has(internalId);
+    };
+
+    const filteredMasterEmployees = masterEmployees.filter((m: any) => !isExcludedEmployee(m));
 
     const filteredRawRecords = rawRecords.filter((r: any) => {
-      if (!r?.employee_id) return true;
-      return !excludedIds.has(String(r.employee_id));
+      const id = r?.employee_id != null ? String(r.employee_id).trim() : "";
+      if (!id) return true;
+      return !excludedIds.has(id);
     });
 
     // Mapa team_key → turno para la semana: { "team_1": "Mañana", "team_2": "Tarde" }
@@ -155,7 +160,8 @@ Deno.serve(async (req: Request) => {
       if (!a.employee_id) continue;
       if (!ausenciaActivaEnFecha(a, date)) continue;
       const codigo = masterIdToCodigo[a.employee_id];
-      if (codigo && !excludedIds.has(String(codigo))) ausenciasMap[codigo] = a;
+      const normalizedCodigo = codigo != null ? String(codigo).trim() : "";
+      if (normalizedCodigo && !excludedIds.has(normalizedCodigo)) ausenciasMap[normalizedCodigo] = a;
     }
 
     const fichajesMap: Record<string, { employee_id: string; employee_name: string; registros: any[] }> = {};
@@ -259,8 +265,11 @@ Deno.serve(async (req: Request) => {
     const fichajesIds = new Set(Object.keys(fichajesMap));
     const sinRegistro = filteredMasterEmployees
       .filter((m: any) => {
-        if (!m.codigo_empleado || m.estado_empleado !== "Alta") return false;
-        if (fichajesIds.has(String(m.codigo_empleado))) return false;
+        const codigo = m.codigo_empleado != null ? String(m.codigo_empleado).trim() : "";
+        const internalId = m.id != null ? String(m.id).trim() : "";
+        if (excludedIds.has(codigo) || excludedIds.has(internalId)) return false;
+        if (!codigo || m.estado_empleado !== "Alta") return false;
+        if (fichajesIds.has(codigo)) return false;
         const { horaEntrada, turnoReal } = getHorarioEsperado(m, teamScheduleMap);
         if (!horaEntrada) return false;
         // Si el empleado cubre turno de Tarde esta semana, no se incluye como ausente
