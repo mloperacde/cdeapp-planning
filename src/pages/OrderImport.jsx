@@ -257,17 +257,18 @@ export default function OrderImport() {
   const buildMachinesMap = async () => {
       let machinesRaw = [];
       const map = new Map();
+      const cdeIdMap = new Map();
       try {
           machinesRaw = await base44.entities.MachineMasterDatabase.list(undefined, 1000);
           if (!Array.isArray(machinesRaw)) machinesRaw = [];
-          // También construimos mapa por ID numérico externo (cde_machine_id)
-          const cdeIdMap = new Map();
           machinesRaw.forEach(m => {
               [m.nombre, m.codigo_maquina, m.codigo, m.descripcion, m.nombre_maquina].forEach(v => { if (v) map.set(normStr(v), m.id); });
               const alias = getMachineAlias(m);
               if (alias) map.set(normStr(alias), m.id);
-              // Mapear por ID numérico externo
+              // Mapear por ID numérico externo (cde_machine_id)
               if (m.cde_machine_id) cdeIdMap.set(String(m.cde_machine_id).trim(), m.id);
+              // También por orden_visualizacion si coincide con el ID numérico de CDE
+              if (m.orden_visualizacion) cdeIdMap.set(String(Math.round(m.orden_visualizacion)), m.id);
           });
       } catch (e) { console.error("Error cargando maquinas:", e); }
 
