@@ -90,20 +90,22 @@ export default function ProductionPlanningPage() {
             if (parsed && typeof parsed === 'object') extra = parsed;
           } catch (_) { /* no JSON */ }
         }
-        // Normalizar fechas: "DD/MM/YYYY HH:mm" -> "YYYY-MM-DD"
+        // Normalizar fechas: "DD/MM/YYYY HH:mm" -> ISO completo "YYYY-MM-DDTHH:mm:00"
+        // IMPORTANTE: preservamos la hora para calcular posición fraccionaria en el Gantt
         const normDate = (val) => {
           if (!val) return null;
           if (typeof val !== 'string') return val;
-          // Ya es ISO
-          if (val.includes('-') && val.length >= 10) return val.substring(0, 10);
+          // Ya es ISO (contiene guiones y empieza por dígito de año)
+          if (/^\d{4}-/.test(val)) return val; // dejar tal cual (con o sin hora)
           // DD/MM/YYYY o DD/MM/YYYY HH:mm
           if (val.includes('/')) {
-            const datePart = val.split(' ')[0];
+            const [datePart, timePart] = val.split(' ');
             const parts = datePart.split('/');
             if (parts.length === 3) {
               const [d, m, y] = parts;
               if (!isNaN(d) && !isNaN(m) && !isNaN(y)) {
-                return `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
+                const dateStr = `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
+                return timePart ? `${dateStr}T${timePart}:00` : dateStr;
               }
             }
           }
