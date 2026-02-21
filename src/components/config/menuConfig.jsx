@@ -53,6 +53,7 @@ export const MENU_STRUCTURE = [
   { name: 'Descansos', path: '/Breaks', icon: Coffee, category: 'Planificación' },
   { name: 'Timeline', path: '/Timeline', icon: Clock, category: 'Planificación' },
   { name: 'Planificación Producción', path: '/ProductionPlanning', icon: Factory, category: 'Planificación' },
+  { name: 'Importar Órdenes', path: '/OrderImport', icon: Database, category: 'Planificación' },
   { name: 'Planning Diario Máquinas', path: '/MachineDailyPlanning', icon: Factory, category: 'Planificación' },
   { name: 'Asignaciones de Máquinas', path: '/MachineAssignments', icon: Settings, category: 'Planificación' },
   // Fabricación
