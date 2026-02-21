@@ -301,6 +301,7 @@ export default function OrderImport() {
           // 4. Por machine_id_source numerico (cde_machine_id, codigo)
           if (machineIdSource) {
               const src = String(machineIdSource).trim();
+              if (cdeIdMap.has(src)) return cdeIdMap.get(src);
               const found = machinesRaw.find(m =>
                   String(m.cde_machine_id || '').trim() === src ||
                   String(m.codigo_maquina || '').trim() === src ||
@@ -308,6 +309,16 @@ export default function OrderImport() {
               );
               if (found) return found.id;
           }
+
+          // 5. Último recurso: buscar directamente en BD por nombre exacto
+          const exactMatch = machinesRaw.find(m => {
+              const nombre = normStr(m.nombre || '');
+              const desc = normStr(m.descripcion || '');
+              const sClean = normStr(name.replace(/^[\d\w]+ - /, '')); // quitar prefijo sala
+              return nombre === s || desc === s || nombre === sClean || desc === sClean;
+          });
+          if (exactMatch) return exactMatch.id;
+
           return null;
       };
 
