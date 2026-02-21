@@ -184,11 +184,19 @@ export default function ProductionPlanningPage() {
       
       // Backlog (sin fecha inicio): siempre incluir para que aparezca en "Sin Programar"
       return true;
+    })
+    .filter(order => {
+      // Filtro de prioridad: si showOnlyWithPriority, excluir órdenes con priority === 0 o null/undefined
+      if (showOnlyWithPriority) {
+        const p = order.priority;
+        return p !== null && p !== undefined && p !== 0 && p !== '';
+      }
+      return true;
     });
 
     // Sort by Priority (Ascending: 1 is higher than 10)
     return filtered.sort((a, b) => (a.priority ?? 999) - (b.priority ?? 999));
-  }, [workOrders, selectedMachine, selectedStatus, dateRange]);
+  }, [workOrders, selectedMachine, selectedStatus, dateRange, showOnlyWithPriority]);
 
   const handleSyncCdeApp = async () => {
     setIsSyncing(true);
