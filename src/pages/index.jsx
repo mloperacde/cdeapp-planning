@@ -36,7 +36,7 @@ import ProcessConfiguration from "./ProcessConfiguration";
 import NewProcessConfigurator from "./NewProcessConfigurator";
 import ProductionDashboard from "./ProductionDashboard";
 import ProductionPlanning from "./ProductionPlanning";
-import OrderImport from "./production/OrderImport";
+import OrderImport from "./OrderImport";
 import QualityControl from "./QualityControl";
 import Reports from "./Reports";
 import ShiftHandover from "./ShiftHandover";
