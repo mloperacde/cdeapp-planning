@@ -285,7 +285,8 @@ export default function AttendanceMonitor() {
 
   function handleOpenCreateAbsence(emp) {
     const empRecord = employees.find(e => String(e.codigo_empleado) === String(emp.codigo_empleado));
-    const employeeId = empRecord?.id || emp.id;
+    const rawEmployeeId = empRecord?.id || emp.id;
+    const employeeId = rawEmployeeId != null ? String(rawEmployeeId) : "";
     const employeeName = empRecord?.nombre || emp.nombre || "";
     const baseTime = emp.horaEntradaEsperada || emp.horaEsperada || "08:00";
     const time = typeof baseTime === "string" ? baseTime.slice(0, 5) : "08:00";
@@ -311,7 +312,11 @@ export default function AttendanceMonitor() {
     const absence = row.ausencia;
     const empRecord = employees.find(e => e.id === absence.employee_id);
     const employeeName = empRecord?.nombre || row.employee_name || "";
-    setAbsenceInitialData({ ...absence, employee_name: employeeName });
+    setAbsenceInitialData({
+      ...absence,
+      employee_id: absence.employee_id != null ? String(absence.employee_id) : "",
+      employee_name: employeeName,
+    });
     setAbsenceDialogOpen(true);
   }
 
