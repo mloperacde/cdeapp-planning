@@ -356,11 +356,13 @@ export default function OrderImport() {
 
                   const isDbId = (v) => v && /^[a-f0-9]{24}$/i.test(String(v).trim());
 
-                  // Si el row ya tiene un machine_id hex válido de BD, usarlo directamente
-                  // Cubre tanto órdenes locales como datos CDE ya resueltos previamente
+                  // PRIORIDAD 1: Si el row ya tiene un machine_id hex válido de BD (ej: órdenes ya guardadas), usarlo directamente
+                  // PRIORIDAD 2: Resolver por nombre/código usando la función robusta (para órdenes nuevas de CDEApp)
                   let machineId = null;
                   if (isDbId(row.machine_id)) {
                       machineId = String(row.machine_id).trim();
+                  } else if (isDbId(row._db_machine_id)) {
+                      machineId = String(row._db_machine_id).trim();
                   } else {
                       machineId = resolve(machineName, machineIdSource);
                   }
