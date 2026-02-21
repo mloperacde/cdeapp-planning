@@ -126,11 +126,10 @@ export default function ProductionPlanningPage() {
             const result = (modStart && !String(modStart).startsWith('0000') && modStart.length > 0) ? modStart : startLimit;
             return result || null;
           })(),
-          // Fecha fin CON HORA: usar "Fecha Fin" del JSON interno (ej: "24/02/2026 11:49")
+          // Fecha fin CON HORA: SIEMPRE usar "Fecha Fin" del JSON interno (ej: "24/02/2026 11:49")
+          // NUNCA usar effective_delivery_date del entity/JSON porque contiene la fecha de entrega, no la fin real
           effective_delivery_date: normDate(
-            extra['Fecha Fin'] || extra.planned_end_date ||
-            (order.planned_end_date && !order.planned_end_date.includes('/') ? order.planned_end_date : null) ||
-            extra['Fecha Entrega'] || extra.committed_delivery_date || order.committed_delivery_date || ''
+            extra['Fecha Fin'] || extra['end_date_simple'] || extra.planned_end_date || order.planned_end_date || ''
           ),
           // Fechas normalizadas sin hora (para otros usos)
           start_date: normDate(extra['Fecha Inicio Limite'] || extra.start_date || order.start_date || ''),
