@@ -264,39 +264,61 @@ Ent: ${order.effective_delivery_date || '-'}`;
 
                   {/* Scheduled Orders - Positioned as time blocks */}
                   <div className="absolute inset-0 overflow-visible pointer-events-none">
-                   {machine.scheduled.map((order, idx) => {
-                     // Fecha inicio vigente: modified_start_date > start_date
-                     const startStr = order.effective_start_date;
-                     let startDate = parseISO(startStr);
-                     if (!isValid(startDate)) startDate = new Date(startStr);
-                     if (!isValid(startDate)) return null;
+                  {machine.scheduled.map((order, idx) => {
+                    // Fecha inicio vigente (con hora si está disponible)
+                    const startStr = order.effective_start_date;
+                    let startDate = parseISO(startStr);
+                    if (!isValid(startDate)) startDate = new Date(startStr);
+                    if (!isValid(startDate)) return null;
 
-                     // Fecha fin vigente: new_delivery_date > committed_delivery_date > planned_end_date
-                     const endStr = order.effective_delivery_date || order.planned_end_date;
-                     let endDate = endStr ? parseISO(endStr) : startDate;
-                     if (!isValid(endDate)) endDate = startDate;
+                    // Fecha fin vigente (con hora si está disponible)
+                    const endStr = order.effective_delivery_date || order.planned_end_date;
+                    let endDate = endStr ? parseISO(endStr) : startDate;
+                    if (!isValid(endDate)) endDate = startDate;
 
-                     // Calcular índice de columna inicio
-                     let startIndex = days.findIndex(d => isSameDay(d, startDate));
-                     if (startIndex === -1) {
-                       if (startDate < days[0]) startIndex = 0;
-                       else return null; // Fuera de rango (futuro)
-                     }
+                    // Helper: dado un Date, encontrar el índice del día en `days` y la fracción de hora
+                    // Asumimos jornada laboral 07:00-22:00 (15h). Fuera de ese rango se clampea.
+                    const WORK_START_H = 7;   // 07:00
+                    const WORK_HOURS = 15;    // hasta 22:00
 
-                     // Calcular índice de columna fin
-                     let endIndex = days.findIndex(d => isSameDay(d, endDate));
-                     if (endIndex === -1) {
-                       if (endDate > days[days.length - 1]) endIndex = days.length - 1;
-                       else if (endDate < days[0]) return null;
-                       else {
-                         // Buscar el día más cercano anterior
-                         for (let i = days.length - 1; i >= 0; i--) {
-                           if (days[i] <= endDate) { endIndex = i; break; }
-                         }
-                       }
-                     }
+                    const dayFraction = (date) => {
+                      const h = date.getHours() + date.getMinutes() / 60;
+                      const clamped = Math.min(Math.max(h, WORK_START_H), WORK_START_H + WORK_HOURS);
+                      return (clamped - WORK_START_H) / WORK_HOURS;
+                    };
 
-                     const durationCols = Math.max(1, endIndex - startIndex + 1);
+                    // Calcular índice de columna inicio
+                    let startIndex = days.findIndex(d => isSameDay(d, startDate));
+                    let startFrac = 0;
+                    if (startIndex === -1) {
+                      if (startDate < days[0]) { startIndex = 0; startFrac = 0; }
+                      else return null;
+                    } else {
+                      startFrac = dayFraction(startDate);
+                    }
+
+                    // Calcular índice de columna fin
+                    let endIndex = days.findIndex(d => isSameDay(d, endDate));
+                    let endFrac = 1;
+                    if (endIndex === -1) {
+                      if (endDate > days[days.length - 1]) { endIndex = days.length - 1; endFrac = 1; }
+                      else if (endDate < days[0]) return null;
+                      else {
+                        for (let i = days.length - 1; i >= 0; i--) {
+                          if (days[i] <= endDate) { endIndex = i; break; }
+                        }
+                      }
+                    } else {
+                      endFrac = dayFraction(endDate);
+                    }
+
+                    // Posición en píxeles con fracción horaria
+                    const leftPx = startIndex * zoom.dayWidth + startFrac * zoom.dayWidth;
+                    const rightPx = endIndex * zoom.dayWidth + endFrac * zoom.dayWidth;
+                    const widthPx = Math.max(zoom.dayWidth * 0.5, rightPx - leftPx);
+
+                    // (mantenemos durationCols solo para compat. con código heredado si alguien lo usa)
+                    const durationCols = Math.max(1, endIndex - startIndex + 1);
 
                      const isLate = order.effective_delivery_date && new Date(order.effective_delivery_date) < new Date();
                      const qty = order.multi_qty || order.quantity || '';
