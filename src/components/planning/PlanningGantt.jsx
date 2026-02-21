@@ -224,96 +224,102 @@ Ent: ${order.effective_delivery_date || '-'}`;
                     );
                   })}
 
-                  {/* Scheduled Orders - Stacked Compact Cards */}
-                  <div className="absolute inset-0 p-2 space-y-1 overflow-visible">
+                  {/* Scheduled Orders - Positioned as time blocks */}
+                  <div className="absolute inset-0 overflow-visible pointer-events-none">
                    {machine.scheduled.map((order, idx) => {
-                     let startDate = parseISO(order.effective_start_date);
-                     if (!isValid(startDate)) startDate = new Date(order.effective_start_date);
+                     // Fecha inicio vigente: modified_start_date > start_date
+                     const startStr = order.effective_start_date;
+                     let startDate = parseISO(startStr);
+                     if (!isValid(startDate)) startDate = new Date(startStr);
                      if (!isValid(startDate)) return null;
 
-                     // Usar planned_end_date como fecha fin principal, fallback a effective_delivery_date
-                     let endDateStr = order.planned_end_date || order.effective_delivery_date;
-                     let endDate = endDateStr ? parseISO(endDateStr) : startDate;
-                     
-                     if (!isValid(endDate) && endDateStr) endDate = new Date(endDateStr);
+                     // Fecha fin vigente: new_delivery_date > committed_delivery_date > planned_end_date
+                     const endStr = order.effective_delivery_date || order.planned_end_date;
+                     let endDate = endStr ? parseISO(endStr) : startDate;
                      if (!isValid(endDate)) endDate = startDate;
 
-                     const startIndex = days.findIndex(d => isSameDay(d, startDate));
-                     let effectiveStartIndex = startIndex;
-                     let effectiveEndIndex = days.findIndex(d => isSameDay(d, endDate));
-
-                     if (effectiveStartIndex === -1 && effectiveEndIndex === -1) {
-                       if (startDate < days[0] && endDate > days[days.length-1]) {
-                         effectiveStartIndex = 0;
-                         effectiveEndIndex = days.length - 1;
-                       } else {
-                         return null; 
-                       }
+                     // Calcular índice de columna inicio
+                     let startIndex = days.findIndex(d => isSameDay(d, startDate));
+                     if (startIndex === -1) {
+                       if (startDate < days[0]) startIndex = 0;
+                       else return null; // Fuera de rango (futuro)
                      }
 
-                     if (effectiveStartIndex === -1) {
-                       if (startDate < days[0]) effectiveStartIndex = 0;
-                       else return null;
-                     }
-
-                     if (effectiveEndIndex === -1) {
-                       if (endDate > days[days.length-1]) effectiveEndIndex = days.length - 1;
+                     // Calcular índice de columna fin
+                     let endIndex = days.findIndex(d => isSameDay(d, endDate));
+                     if (endIndex === -1) {
+                       if (endDate > days[days.length - 1]) endIndex = days.length - 1;
+                       else if (endDate < days[0]) return null;
                        else {
-                         if (endDate < days[0]) return null;
-                         effectiveEndIndex = days.length - 1; 
+                         // Buscar el día más cercano anterior
                          for (let i = days.length - 1; i >= 0; i--) {
-                           if (days[i] <= endDate) {
-                             effectiveEndIndex = i;
-                             break;
-                           }
+                           if (days[i] <= endDate) { endIndex = i; break; }
                          }
                        }
                      }
 
-                     const durationCols = effectiveEndIndex - effectiveStartIndex + 1;
-                     if (durationCols <= 0) return null;
+                     const durationCols = Math.max(1, endIndex - startIndex + 1);
 
                      const isLate = order.effective_delivery_date && new Date(order.effective_delivery_date) < new Date();
-                     
-                     const tooltipText = `${order.priority === 0 ? 'S/P' : `P${order.priority}`} | ${order.order_number}
-Art: ${order.product_article_code || '-'} | ${order.product_name || '-'}
-Cli: ${order.client_name || '-'}
-Cant: ${order.quantity || '-'} | Multi: ${order.multi_qty || '-'} | Mat: ${order.material_type || '-'}
-Ent: ${order.effective_delivery_date || '-'}
-Ini: ${order.effective_start_date || '-'} | Fin: ${order.planned_end_date || '-'}`;
-
                      const qty = order.multi_qty || order.quantity || '';
-                     const statusLabel = order.status === 'En Progreso' ? 'EP' : order.status === 'Completada' ? '✓' : order.status === 'Retrasada' ? 'RET' : order.status === 'Cancelada' ? 'CAN' : '';
+                     const statusLabel = {
+                       'En Progreso': 'EP',
+                       'Completada': '✓',
+                       'Retrasada': 'RET',
+                       'Cancelada': 'CAN'
+                     }[order.status] || '';
+
+                     const tooltipText = [
+                       `Nº ${order.order_number} | ${order.priority === 0 ? 'Sin Pry' : `Pry ${order.priority}`}`,
+                       `Artículo: ${order.product_article_code || '-'}`,
+                       `Nombre: ${order.product_name || '-'}`,
+                       `Cliente: ${order.client_name || '-'}`,
+                       `Cantidad: ${qty || '-'} | Material: ${order.material_type || '-'}`,
+                       `Estado: ${order.status || '-'}`,
+                       `Inicio: ${startStr || '-'} | Entrega: ${endStr || '-'}`,
+                     ].join('\n');
 
                      return (
                        <div
                         key={order.id}
                         onClick={() => onEditOrder(order)}
-                        className={`absolute rounded shadow border cursor-pointer px-2 py-1 flex flex-col justify-center gap-0.5 text-xs transition-all hover:shadow-md hover:z-20 ${getPriorityColor(order.priority)} text-white`}
+                        className={`absolute rounded shadow-md border-2 cursor-pointer flex flex-col justify-start gap-0.5 text-white pointer-events-auto hover:shadow-lg hover:brightness-110 transition-all hover:z-30 ${getPriorityColor(order.priority)} ${isLate ? 'border-yellow-400' : 'border-white/20'}`}
                         style={{
-                          left: `${effectiveStartIndex * 128 + 4}px`,
+                          left: `${startIndex * 128 + 4}px`,
                           width: `${durationCols * 128 - 8}px`,
-                          top: `${idx * 52 + 4}px`,
-                          minHeight: '48px',
+                          top: `${idx * 56 + 4}px`,
+                          minHeight: '52px',
+                          padding: '4px 8px',
                           overflow: 'hidden',
+                          zIndex: 10,
                         }}
                         title={tooltipText}
                       >
-                        {/* Row 1: Priority + Order number + late icon */}
-                        <div className="flex items-center gap-1 min-w-0">
-                          <span className="font-bold shrink-0 text-[9px] bg-white/20 rounded px-1">{order.priority === 0 ? 'S/P' : `P${order.priority}`}</span>
-                          <span className="font-bold truncate text-[10px]">{order.order_number}</span>
+                        {/* Línea 1: Nº Orden + Estado + Alerta */}
+                        <div className="flex items-center gap-1 min-w-0 w-full">
+                          <span className="font-bold text-[10px] shrink-0 bg-black/20 rounded px-1 leading-tight">
+                            {order.priority === 0 ? 'S/P' : `P${order.priority}`}
+                          </span>
+                          <span className="font-bold text-[10px] truncate flex-1">{order.order_number}</span>
+                          {statusLabel && (
+                            <span className="text-[8px] bg-black/20 rounded px-1 shrink-0 leading-tight">{statusLabel}</span>
+                          )}
                           {isLate && <AlertCircle className="w-3 h-3 text-yellow-300 shrink-0" />}
-                          {statusLabel && <span className="text-[8px] bg-white/20 rounded px-1 shrink-0">{statusLabel}</span>}
                         </div>
-                        {/* Row 2: Article code */}
-                        <div className="truncate text-[9px] opacity-90 leading-tight">
-                          {order.product_article_code || order.product_name || '—'}
+                        {/* Línea 2: Código artículo */}
+                        <div className="truncate text-[9px] opacity-95 leading-tight font-medium w-full">
+                          {order.product_article_code || '—'}
                         </div>
-                        {/* Row 3: Qty + Material */}
-                        <div className="flex items-center gap-1 min-w-0">
-                          {qty && <span className="text-[8px] bg-white/20 rounded px-1 shrink-0">{qty} uds</span>}
-                          {order.material_type && <span className="truncate text-[8px] opacity-80">{order.material_type}</span>}
+                        {/* Línea 3: Cantidad + Material */}
+                        <div className="flex items-center gap-1 min-w-0 w-full">
+                          {qty && (
+                            <span className="text-[8px] bg-black/20 rounded px-1 shrink-0 leading-tight">
+                              {qty} uds
+                            </span>
+                          )}
+                          {order.material_type && (
+                            <span className="truncate text-[8px] opacity-85 leading-tight">{order.material_type}</span>
+                          )}
                         </div>
                       </div>
                      );
