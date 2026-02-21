@@ -212,7 +212,8 @@ Ent: ${order.effective_delivery_date || '-'}`;
                           <div
                             ref={provided.innerRef}
                             {...provided.droppableProps}
-                            className={`w-32 border-r min-h-[8rem] bg-transparent transition-colors ${snapshot.isDraggingOver ? 'bg-blue-50/50 dark:bg-blue-900/20' : ''}`}
+                            className={`w-32 border-r bg-transparent transition-colors ${snapshot.isDraggingOver ? 'bg-blue-50/50 dark:bg-blue-900/20' : ''}`}
+                            style={{ minHeight: `${Math.max(8, machine.scheduled.length) * 56 + 16}px` }}
                           >
                              {/* Droppable placeholder needs to be here even if empty */}
                              <div className="w-full h-full opacity-0 pointer-events-none">
