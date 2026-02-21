@@ -31,6 +31,10 @@ export async function calculateVacationPendingBalance(absence, absenceType, vaca
     return null;
   }
 
+  if (absence && absence.ignore_protection_balance) {
+    return null;
+  }
+
   const absenceStart = new Date(absence.fecha_inicio);
   const today = new Date();
 
@@ -207,7 +211,9 @@ export async function recalculateVacationPendingBalances() {
 
     // Filtrar solo ausencias que pueden generar días pendientes (OPTIMIZACIÓN CLAVE)
     const protectionAbsences = absences.filter(abs => 
-      abs.absence_type_id && protectionTypeIds.has(abs.absence_type_id)
+      abs.absence_type_id &&
+      protectionTypeIds.has(abs.absence_type_id) &&
+      !abs.ignore_protection_balance
     );
 
     console.log(`Recalculando protección para ${protectionAbsences.length} ausencias relevantes...`);
@@ -265,15 +271,21 @@ export async function removeAbsenceFromBalance(absenceId, employeeId, year) {
   const diasDisponibles = totalDiasPendientes - (balance.dias_consumidos || 0);
 
   if (detalleAusencias.length === 0) {
-    // Si no quedan ausencias, eliminar el balance
     await base44.entities.VacationPendingBalance.delete(balance.id);
   } else {
-    // Actualizar balance
     await base44.entities.VacationPendingBalance.update(balance.id, {
       dias_pendientes: totalDiasPendientes,
       dias_disponibles: diasDisponibles,
       detalle_ausencias: detalleAusencias
     });
+  }
+
+  try {
+    await base44.entities.Absence.update(absenceId, {
+      ignore_protection_balance: true
+    });
+  } catch (error) {
+    console.error("Error marcando ausencia para ignorar protección:", error);
   }
 
   await syncEmployeeVacationProtection(employeeId);

@@ -442,6 +442,7 @@ export default function VacationPendingBalancePanel({ employees = [], compact = 
       const updated = {
         ...existing,
         [field]: field === "dias_coincidentes" ? Number(value) || 0 : value,
+        ignore_protection_balance: true,
       };
       detalleAusencias[index] = updated;
 
@@ -458,6 +459,16 @@ export default function VacationPendingBalancePanel({ employees = [], compact = 
         dias_disponibles: diasDisponibles,
         tipo_saldo: current.tipo_saldo || "proteccion_vacaciones",
       });
+
+      if (updated.absence_id) {
+        try {
+          await base44.entities.Absence.update(updated.absence_id, {
+            ignore_protection_balance: true,
+          });
+        } catch (error) {
+          console.error("Error marcando ausencia para ignorar protección:", error);
+        }
+      }
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["vacationPendingBalances"] });
