@@ -104,7 +104,8 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="h-full flex flex-col p-6 gap-6 bg-slate-50 dark:bg-slate-950 overflow-y-auto">
+    <PullToRefresh onRefresh={handleRefresh}>
+    <div className="h-full flex flex-col p-6 gap-6 bg-slate-50 dark:bg-slate-950">
       {/* Standard Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 shrink-0 bg-white dark:bg-slate-900 p-2 px-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
         <div className="flex items-center gap-3">
