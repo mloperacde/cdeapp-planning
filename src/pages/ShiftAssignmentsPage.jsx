@@ -122,20 +122,22 @@ export default function ShiftAssignmentsPage() {
     }
   });
 
-  // New: Fetch Machine Planning
-  const { data: machinePlannings = [] } = useQuery({
-    queryKey: ['machinePlannings', format(selectedDate, 'yyyy-MM-dd'), selectedTeam],
+  // New: Fetch Daily Machine Planning (plan confirmado por día/turno/equipo)
+  const { data: dailyMachinePlannings = [] } = useQuery({
+    queryKey: ['dailyMachinePlannings', format(selectedDate, 'yyyy-MM-dd'), selectedShift, selectedTeam],
     queryFn: () => {
+       const dateStr = format(selectedDate, 'yyyy-MM-dd');
        const filters = { 
-         fecha_planificacion: format(selectedDate, 'yyyy-MM-dd')
+         date: dateStr,
+         shift: selectedShift
        };
        if (selectedTeam !== "all") {
            const teamObj = teams.find(t => String(t.id) === String(selectedTeam));
            if (teamObj) filters.team_key = teamObj.team_key;
        }
-       return base44.entities.MachinePlanning.filter(filters);
+       return base44.entities.DailyMachinePlanning.filter(filters);
     },
-    enabled: !!selectedDate
+    enabled: !!selectedDate && !!selectedShift
   });
 
   // New: Fetch Team Schedules (for Shift Auto-detection)
@@ -337,13 +339,13 @@ export default function ShiftAssignmentsPage() {
     }
   });
 
-  // Filter machines based on planning
+  // Filter machines based on confirmed daily planning
   const plannedMachines = useMemo(() => {
-    if (!machinePlannings.length) return [];
-    const plannedIds = new Set(machinePlannings.map(mp => String(mp.machine_id)));
+    if (!dailyMachinePlannings.length) return [];
+    const plannedIds = new Set(dailyMachinePlannings.map(mp => String(mp.machine_id)));
     return machines.filter(m => plannedIds.has(String(m.id)))
         .sort((a,b) => (a.orden_visualizacion || 999) - (b.orden_visualizacion || 999));
-  }, [machines, machinePlannings]);
+  }, [machines, dailyMachinePlannings]);
 
   // Helper: Get Ideal Slot
   const getExperienceSlot = (emp, machineId) => {
@@ -442,7 +444,7 @@ export default function ShiftAssignmentsPage() {
     let assignedCount = 0;
 
     plannedMachines.forEach(machine => {
-        const planning = machinePlannings.find(mp => String(mp.machine_id) === String(machine.id));
+        const planning = dailyMachinePlannings.find(mp => String(mp.machine_id) === String(machine.id));
         const requiredOps = Number(planning?.operadores_necesarios) || 0;
         
         // Define needed roles
