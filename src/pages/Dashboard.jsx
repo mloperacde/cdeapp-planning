@@ -107,12 +107,11 @@ export default function Dashboard() {
   };
 
   return (
-    <PullToRefresh onRefresh={handleRefresh}>
-    <div className="h-full flex flex-col p-6 gap-6 bg-slate-50 dark:bg-slate-950">
-      {/* Standard Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 shrink-0 bg-white dark:bg-slate-900 p-2 px-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
+    <div className="h-full flex flex-col p-3 md:p-6 gap-4 md:gap-6 bg-slate-50 dark:bg-slate-950">
+      {/* Header */}
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-2 shrink-0 bg-white dark:bg-slate-900 p-2 px-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
         <div className="flex items-center gap-3">
-          <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+          <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg" aria-hidden="true">
             <LayoutDashboard className="w-4 h-4 text-blue-600 dark:text-blue-400" />
           </div>
           <div>
@@ -124,180 +123,88 @@ export default function Dashboard() {
             </p>
           </div>
         </div>
-      </div>
+      </header>
 
       {showNotifications && user && (
         <NotificationCenter currentEmployee={user} />
       )}
 
-      <div className="flex flex-col gap-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-blue-700 font-medium">Total Empleados</p>
-                  <p className="text-3xl font-bold text-blue-900 mt-2">{stats.totalEmployees}</p>
-                </div>
-                <Users className="w-12 h-12 text-blue-600" />
-              </div>
-            </CardContent>
-          </Card>
+      <div className="flex flex-col gap-4 md:gap-6">
+        {/* Stats grid – 2 cols on mobile, 4 on desktop */}
+        <section aria-label="Estadísticas generales" className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+          <StatCard label="Total Empleados" value={stats.totalEmployees} icon={Users} colorFrom="from-blue-50" colorTo="to-blue-100" borderColor="border-blue-200" textColor="text-blue-700" valueColor="text-blue-900" iconColor="text-blue-600" />
+          <StatCard label="Ausencias Activas" value={stats.activeAbsences} icon={CalendarDays} colorFrom="from-green-50" colorTo="to-green-100" borderColor="border-green-200" textColor="text-green-700" valueColor="text-green-900" iconColor="text-green-600" />
+          <StatCard label="Pendientes Aprobación" value={stats.pendingAbsences} icon={AlertCircle} colorFrom="from-orange-50" colorTo="to-orange-100" borderColor="border-orange-200" textColor="text-orange-700" valueColor="text-orange-900" iconColor="text-orange-600" />
+          <StatCard label="Mantenimiento (7d)" value={stats.upcomingMaintenance} icon={Wrench} colorFrom="from-purple-50" colorTo="to-purple-100" borderColor="border-purple-200" textColor="text-purple-700" valueColor="text-purple-900" iconColor="text-purple-600" />
+        </section>
 
-          <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-green-700 font-medium">Ausencias Activas</p>
-                  <p className="text-3xl font-bold text-green-900 mt-2">{stats.activeAbsences}</p>
-                </div>
-                <CalendarDays className="w-12 h-12 text-green-600" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-orange-700 font-medium">Pendientes Aprobación</p>
-                  <p className="text-3xl font-bold text-orange-900 mt-2">{stats.pendingAbsences}</p>
-                </div>
-                <AlertCircle className="w-12 h-12 text-orange-600" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-purple-700 font-medium">Mantenimiento (7 días)</p>
-                  <p className="text-3xl font-bold text-purple-900 mt-2">{stats.upcomingMaintenance}</p>
-                </div>
-                <Wrench className="w-12 h-12 text-purple-600" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div>
-          <h2 className="text-xl font-semibold text-slate-900 mb-4">Accesos Rápidos</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        {/* Quick actions – horizontal scroll on mobile */}
+        <section aria-label="Accesos rápidos">
+          <h2 className="text-base md:text-xl font-semibold text-slate-900 dark:text-slate-100 mb-3">Accesos Rápidos</h2>
+          <div className="flex gap-3 overflow-x-auto pb-1 md:grid md:grid-cols-5 md:overflow-visible scrollbar-hide">
             {quickActions.map((action) => {
               const Icon = action.icon;
               return (
-                <Link key={action.title} to={action.url}>
-                  <Card className="h-full hover:shadow-xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm cursor-pointer group">
-                    <CardContent className="p-6">
-                      <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${colorClasses[action.color]} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300 shadow-lg`}>
-                        <Icon className="w-6 h-6 text-white" />
+                <Link
+                  key={action.title}
+                  to={action.url}
+                  className="flex-shrink-0 w-36 md:w-auto"
+                  aria-label={action.title}
+                >
+                  <Card className="h-full hover:shadow-xl transition-all duration-300 border-0 bg-white dark:bg-slate-800 cursor-pointer group active:scale-95">
+                    <CardContent className="p-4 md:p-6">
+                      <div className={`w-10 h-10 md:w-12 md:h-12 rounded-lg bg-gradient-to-br ${colorClasses[action.color]} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300 shadow-lg`} aria-hidden="true">
+                        <Icon className="w-5 h-5 md:w-6 md:h-6 text-white" />
                       </div>
-                      <h3 className="font-semibold text-slate-900 mb-1 group-hover:text-blue-600 transition-colors">
+                      <h3 className="font-semibold text-sm text-slate-900 dark:text-slate-100 mb-0.5 group-hover:text-blue-600 transition-colors leading-tight">
                         {action.title}
                       </h3>
-                      <p className="text-sm text-slate-600">{action.description}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 hidden md:block">{action.description}</p>
                     </CardContent>
                   </Card>
                 </Link>
               );
             })}
           </div>
+        </section>
+
+        {/* Widgets */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-8">
+          <div className="lg:col-span-1 min-h-[300px] md:h-[600px]">
+            <Suspense fallback={<SectionSkeleton height="h-full" />}>
+              <ShiftSwapWidget />
+            </Suspense>
+          </div>
+          <div className="lg:col-span-2">
+            <h2 className="text-base md:text-xl font-semibold text-slate-900 dark:text-slate-100 mb-3">Calendario Laboral</h2>
+            <Suspense fallback={<SectionSkeleton height="h-64" />}>
+              <WorkCalendar />
+            </Suspense>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-1 h-[600px]">
-                <ShiftSwapWidget />
-            </div>
-            <div className="lg:col-span-2">
-                <h2 className="text-xl font-semibold text-slate-900 mb-4">Calendario Laboral</h2>
-                <WorkCalendar />
-            </div>
-        </div>
-
-        <TimelineSection />
+        {/* Timeline – lazy */}
+        <Suspense fallback={<SectionSkeleton height="h-64" />}>
+          <TimelineSection />
+        </Suspense>
       </div>
     </div>
-    </PullToRefresh>
   );
 }
 
-function TimelineSection() {
-  const { employees = [], teams = [], holidays = [], vacations = [] } = useAppData();
-  const [viewMode, setViewMode] = useState('week');
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  const [selectedTeam, setSelectedTeam] = useState('all');
-  const [selectedDepartment, setSelectedDepartment] = useState('all');
-
-  const { data: teamSchedules = [] } = useQuery({
-    queryKey: ['teamWeekSchedules'],
-    queryFn: () => base44.entities.TeamWeekSchedule.list(undefined, 500),
-    initialData: [],
-  });
-
-  const { start: startDate, end: endDate } = useMemo(() => {
-    const dateCopy = new Date(selectedDate);
-    switch (viewMode) {
-      case 'day':
-        return {
-          start: new Date(dateCopy.setHours(7, 0, 0, 0)),
-          end: new Date(dateCopy.setHours(22, 0, 0, 0))
-        };
-      case 'week': {
-        const weekStart = startOfWeek(dateCopy, { weekStartsOn: 1 });
-        const weekEnd = endOfWeek(dateCopy, { weekStartsOn: 1 });
-        weekStart.setHours(7, 0, 0, 0);
-        weekEnd.setHours(22, 0, 0, 0);
-        return { start: weekStart, end: weekEnd };
-      }
-      default:
-        return {
-          start: new Date(dateCopy.setHours(7, 0, 0, 0)),
-          end: new Date(dateCopy.setHours(22, 0, 0, 0))
-        };
-    }
-  }, [viewMode, selectedDate]);
-
-  const departments = useMemo(() => {
-    const depts = new Set();
-    employees.forEach(emp => {
-      if (emp?.departamento) depts.add(emp.departamento);
-    });
-    return Array.from(depts).sort();
-  }, [employees]);
-
+// ── Stat card extracted for reuse and clarity ──────────────────────────────────
+function StatCard({ label, value, icon: Icon, colorFrom, colorTo, borderColor, textColor, valueColor, iconColor }) {
   return (
-    <div className="mb-8">
-      <h2 className="text-xl font-semibold text-slate-900 mb-4">Planning / Línea de Tiempo</h2>
-      <Card className="bg-white/80 backdrop-blur-sm shadow-xl border-0">
-        <TimelineControls
-          viewMode={viewMode}
-          onViewModeChange={setViewMode}
-          selectedDate={selectedDate}
-          onSelectedDateChange={setSelectedDate}
-          selectedTeam={selectedTeam}
-          onSelectedTeamChange={setSelectedTeam}
-          teams={teams || []}
-          selectedDepartment={selectedDepartment}
-          onSelectedDepartmentChange={setSelectedDepartment}
-          departments={departments}
-        />
-      </Card>
-
-      <Card className="bg-white/80 backdrop-blur-sm shadow-xl border-0 overflow-hidden mt-4">
-        <TimelineView 
-          startDate={startDate} 
-          endDate={endDate}
-          holidays={holidays}
-          vacations={vacations}
-          selectedTeam={selectedTeam}
-          employees={employees}
-          teams={teams}
-          teamSchedules={teamSchedules}
-          viewMode={viewMode}
-          selectedDepartment={selectedDepartment}
-        />
-      </Card>
-    </div>
+    <Card className={`bg-gradient-to-br ${colorFrom} ${colorTo} ${borderColor}`} role="region" aria-label={label}>
+      <CardContent className="p-4 md:p-6">
+        <div className="flex items-center justify-between gap-2">
+          <div className="min-w-0">
+            <p className={`text-xs md:text-sm ${textColor} font-medium leading-tight`}>{label}</p>
+            <p className={`text-2xl md:text-3xl font-bold ${valueColor} mt-1`} aria-live="polite">{value}</p>
+          </div>
+          <Icon className={`w-8 h-8 md:w-12 md:h-12 ${iconColor} flex-shrink-0`} aria-hidden="true" />
+        </div>
+      </CardContent>
+    </Card>
   );
 }
