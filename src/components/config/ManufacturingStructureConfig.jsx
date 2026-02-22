@@ -9,6 +9,7 @@ import { cdeApi } from "@/services/cdeApi";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Select,
   SelectContent,
@@ -41,6 +42,8 @@ export function StructureConfig({ config, setConfig }) {
   const [editingArea, setEditingArea] = useState(null); // { id, name }
   const [editingRoom, setEditingRoom] = useState(null); // { areaId, roomId, name }
   const [isAddingRoom, setIsAddingRoom] = useState(null); // areaId
+
+  const queryClient = useQueryClient();
 
   const handleSyncMachines = async () => {
     try {
@@ -157,6 +160,9 @@ export function StructureConfig({ config, setConfig }) {
           `Catálogo sincronizado: ${withAlias.length} máquinas, sin asignaciones automáticas aplicadas.`
         );
       }
+
+      queryClient.invalidateQueries({ queryKey: ['machines'] });
+      queryClient.invalidateQueries({ queryKey: ['machines', 'strict_dedup'] });
     } catch (error) {
       console.error("Sync machines error:", error);
       toast.error(`Error al sincronizar máquinas: ${error.message}`);

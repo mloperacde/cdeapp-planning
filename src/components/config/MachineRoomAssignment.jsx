@@ -56,6 +56,7 @@ export default function MachineRoomAssignment({ config }) {
     mutationFn: ({ id, data }) => base44.entities.MachineMasterDatabase.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['machines'] });
+      queryClient.invalidateQueries({ queryKey: ['machines', 'strict_dedup'] });
       toast.success("Máquina actualizada");
       setIsAssignDialogOpen(false);
       setSelectedMachine(null);
