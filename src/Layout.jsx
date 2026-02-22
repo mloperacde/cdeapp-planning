@@ -262,7 +262,7 @@ export default function Layout({ children, currentPageName }) {
             <div className="px-2 pt-2 pb-0">
                <Breadcrumbs auto={true} />
             </div>
-            <div className="flex-1 min-h-0">
+            <div key={pageKey} className="flex-1 min-h-0 page-enter">
                {children}
             </div>
           </div>
