@@ -76,6 +76,46 @@ button, a, nav, [role="button"], [role="tab"], [role="menuitem"] {
   }
 }
 
+/* ── Hide scrollbar (utility) ── */
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ── WCAG 2.1 AA – focus-visible ring ── */
+:focus-visible {
+  outline: 3px solid #2563eb;
+  outline-offset: 2px;
+}
+
+/* ── Minimum touch targets for ALL interactive elements on mobile ── */
+@media (max-width: 768px) {
+  button:not([aria-hidden]),
+  [role="button"],
+  a,
+  input[type="checkbox"],
+  input[type="radio"],
+  select {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  /* Override for inline/icon-only elements that should not stretch layout */
+  .touch-target-sm {
+    min-height: 44px;
+    min-width: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+/* ── Reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+  .page-enter { animation: none !important; }
+}
+
 /* ── Pull-to-refresh indicator ── */
 .ptr-indicator {
   display: flex;
