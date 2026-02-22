@@ -91,6 +91,7 @@ import PerformanceManagement from './pages/PerformanceManagement';
 import PlanificacionSkills from './pages/PlanificacionSkills';
 import ProcessConfiguration from './pages/ProcessConfiguration';
 import ProductionDashboard from './pages/ProductionDashboard';
+import ProductionOptimizer from './pages/ProductionOptimizer';
 import ProductionPlanning from './pages/ProductionPlanning';
 import QualityControl from './pages/QualityControl';
 import QualityPlanningPage from './pages/QualityPlanningPage';
@@ -108,7 +109,6 @@ import Timeline from './pages/Timeline';
 import WarehousePlanningPage from './pages/WarehousePlanningPage';
 import WorkCalendarConfig from './pages/WorkCalendarConfig';
 import index from './pages/index';
-import ProductionOptimizer from './pages/ProductionOptimizer';
 import ArticleManagement from './pages/ArticleManagement';
 import __Layout from './Layout.jsx';
 
@@ -158,6 +158,7 @@ export const PAGES = {
     "PlanificacionSkills": PlanificacionSkills,
     "ProcessConfiguration": ProcessConfiguration,
     "ProductionDashboard": ProductionDashboard,
+    "ProductionOptimizer": ProductionOptimizer,
     "ProductionPlanning": ProductionPlanning,
     "QualityControl": QualityControl,
     "QualityPlanningPage": QualityPlanningPage,
@@ -175,7 +176,6 @@ export const PAGES = {
     "WarehousePlanningPage": WarehousePlanningPage,
     "WorkCalendarConfig": WorkCalendarConfig,
     "index": index,
-    "ProductionOptimizer": ProductionOptimizer,
     "ArticleManagement": ArticleManagement,
 }
 

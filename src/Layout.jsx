@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAppData } from './components/data/DataProvider';
 import { usePermissions } from '@/components/permissions/usePermissions';
 import { MENU_STRUCTURE } from '@/components/config/menuConfig';
