@@ -74,7 +74,9 @@ export default function ResourceForecast({ orders, employees, selectedTeam, date
           if (order.machine_id) activeMachineIds.add(order.machine_id);
         }
       });
-      const demand = activeMachineIds.size * OPERARIOS_POR_MAQUINA;
+      // Si no hay filtro de equipo → día completo = 2 turnos → demanda doble
+      const turnos = selectedTeam === "all" ? 2 : 1;
+      const demand = activeMachineIds.size * OPERARIOS_POR_MAQUINA * turnos;
 
       // --- OFERTA: operarios disponibles ese día (sin ausencias) ---
       const supply = employeesAssignable.filter(emp => {
