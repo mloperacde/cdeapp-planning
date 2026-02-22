@@ -17,8 +17,9 @@ import WorkCalendar from "../components/absences/WorkCalendar";
 import ShiftSwapWidget from "../components/dashboard/ShiftSwapWidget";
 import NotificationCenter from "../components/notifications/NotificationCenter";
 import { startOfWeek, endOfWeek } from "date-fns";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
+import PullToRefresh from "@/components/mobile/PullToRefresh";
 
 export default function Dashboard() {
   const { user, employees, absences, maintenance: maintenanceSchedules } = useAppData();
