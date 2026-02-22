@@ -215,6 +215,7 @@ export default function Dashboard() {
         <TimelineSection />
       </div>
     </div>
+    </PullToRefresh>
   );
 }
 
