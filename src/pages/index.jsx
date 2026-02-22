@@ -286,6 +286,7 @@ function PagesContent() {
                 
                 <Route path="/Breaks" element={<Breaks />} />
                 <Route path="/MachinePlanning" element={<MachinePlanning />} />
+                <Route path="/MachineDailyPlanning" element={<MachinePlanning />} />
                 <Route path="/MessagingConfiguration" element={<MessagingConfiguration />} />
                 <Route path="/RulesAndTemplates" element={<RulesAndTemplates />} />
                 <Route path="/OrganizationalStructure" element={<OrganizationalStructure />} />
