@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { useAppData } from './components/data/DataProvider';
 import { usePermissions } from '@/components/permissions/usePermissions';
-import { MENU_STRUCTURE } from '@/config/menuConfig';
+import { MENU_STRUCTURE } from '@/components/config/menuConfig';
 import { 
   Menu, X, Cog, ChevronDown, ChevronRight, LogOut, 
   User as UserIcon, Key, Shield
