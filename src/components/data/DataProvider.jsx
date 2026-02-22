@@ -1,7 +1,7 @@
 import React, { createContext, useContext } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
-import { getMachineAlias } from "@/utils/machineAlias";
+const getMachineAlias = (m) => m?.nombre || m?.codigo_maquina || m?.codigo || m?.id || "Máquina";
 import { toast } from "sonner";
 
 /**
