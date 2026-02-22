@@ -38,6 +38,7 @@ export default function DailyProductionPlanningPage() {
 
   // --- Local State ---
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [selectedShift, setSelectedShift] = useState("Mañana");
   const [selectedTeam, setSelectedTeam] = useState(""); 
   const [machineSearch, setMachineSearch] = useState("");
   
@@ -66,13 +67,6 @@ export default function DailyProductionPlanningPage() {
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
   });
-
-  // Set default team
-  React.useEffect(() => {
-    if (teams.length > 0 && !selectedTeam) {
-        setSelectedTeam(teams[0].team_key);
-    }
-  }, [teams, selectedTeam]);
 
   // 2. Fetch Machines (STRICT DEDUPLICATION)
   const { data: machines = [] } = useQuery({
@@ -146,23 +140,47 @@ export default function DailyProductionPlanningPage() {
 
   // --- Derived State ---
 
-  const currentShift = useMemo(() => {
-    if (!shiftSchedule) return "Desconocido";
-    
-    // Parse YYYY-MM-DD as local date to avoid timezone shifts
+  const selectedTeamObj = useMemo(() => {
+    return (teams || []).find(t => t.team_key === selectedTeam) || null;
+  }, [teams, selectedTeam]);
+
+  React.useEffect(() => {
+    if (!shiftSchedule || !selectedDate || !selectedShift) return;
+
     const [year, month, day] = selectedDate.split('-').map(Number);
     const dateObj = new Date(year, month - 1, day);
-    
     const weekStart = startOfWeek(dateObj, { weekStartsOn: 1 });
     const weekStartStr = format(weekStart, 'yyyy-MM-dd');
-    
-    const schedule = shiftSchedule.find(s => 
-      s.team_key === selectedTeam && 
-      s.fecha_inicio_semana === weekStartStr
-    );
 
-    return schedule?.turno || "Sin Asignar";
-  }, [shiftSchedule, selectedDate, selectedTeam]);
+    const normalize = (str) => str ? str.toString().trim().toLowerCase() : "";
+    const targetShift = normalize(selectedShift);
+
+    const schedule = shiftSchedule.find(s => {
+      const turno = normalize(s.turno);
+      if (targetShift.includes("mañana")) {
+        return turno.includes("mañana") || turno.includes("t1");
+      }
+      if (targetShift.includes("tarde")) {
+        return turno.includes("tarde") || turno.includes("t2");
+      }
+      return false;
+    });
+
+    if (schedule && schedule.team_key && schedule.fecha_inicio_semana === weekStartStr) {
+      if (schedule.team_key !== selectedTeam) {
+        setSelectedTeam(schedule.team_key);
+      }
+      return;
+    }
+
+    if (!selectedTeam && teams.length > 0) {
+      setSelectedTeam(teams[0].team_key);
+    }
+  }, [shiftSchedule, selectedDate, selectedShift, teams, selectedTeam]);
+
+  const currentShift = useMemo(() => {
+    return selectedShift || "Sin Asignar";
+  }, [selectedShift]);
 
   const activePlanningsMap = useMemo(() => {
     const map = new Map();
@@ -598,23 +616,22 @@ export default function DailyProductionPlanningPage() {
                   
                   <div className="h-6 w-px bg-slate-200 hidden sm:block" />
                   
-                  <Select value={selectedTeam} onValueChange={setSelectedTeam}>
+                  <Select value={selectedShift} onValueChange={setSelectedShift}>
                       <SelectTrigger className="w-full sm:w-[200px] border-0 shadow-none focus:ring-0 h-8">
-                          <SelectValue placeholder="Seleccionar Equipo" />
+                          <SelectValue placeholder="Seleccionar turno" />
                       </SelectTrigger>
                       <SelectContent>
-                          {teams.map(t => (
-                              <SelectItem key={t.team_key} value={t.team_key}>
-                                  {t.team_name}
-                              </SelectItem>
-                          ))}
+                          <SelectItem value="Mañana">Mañana</SelectItem>
+                          <SelectItem value="Tarde">Tarde</SelectItem>
                       </SelectContent>
                   </Select>
 
                   <div className="h-6 w-px bg-slate-200 hidden sm:block" />
 
                   <div className="px-3 text-sm font-medium text-slate-600 whitespace-nowrap flex items-center gap-2">
-                      Turno: <span className="text-slate-900 bg-slate-100 px-2 py-0.5 rounded text-xs">{currentShift}</span>
+                      Equipo: <span className="text-slate-900 bg-slate-100 px-2 py-0.5 rounded text-xs">
+                        {selectedTeamObj?.team_name || "Sin equipo asignado"}
+                      </span>
                   </div>
               </div>
           </div>
