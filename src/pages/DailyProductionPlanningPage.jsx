@@ -41,7 +41,6 @@ export default function DailyProductionPlanningPage() {
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [selectedShift, setSelectedShift] = useState("Mañana");
   const [selectedTeam, setSelectedTeam] = useState(""); 
-  const [machineSearch, setMachineSearch] = useState("");
   const [configMode, setConfigMode] = useState("manual");
   
   // Import Dialog State
@@ -225,6 +224,8 @@ export default function DailyProductionPlanningPage() {
   const plannedMachines = useMemo(() => {
     const list = [];
     activePlanningsMap.forEach(planning => {
+        // Solo contar como "planificada" la parte manual (no sugerida)
+        if (planning.auto_suggested) return;
         const machine = machines.find(m => String(m.id) === String(planning.machine_id));
         if (machine) {
             list.push({ ...machine, planning });
@@ -278,18 +279,6 @@ export default function DailyProductionPlanningPage() {
 
     return result;
   }, [machines, manufacturingConfig]);
-
-  const availableMachines = useMemo(() => {
-    return (machines || []).filter(m => !activePlanningsMap.has(String(m.id)));
-  }, [machines, activePlanningsMap]);
-
-  const filteredAvailableMachines = useMemo(() => {
-      if (!machineSearch.trim()) return availableMachines || [];
-      const lower = machineSearch.toLowerCase();
-      return (availableMachines || []).filter(m => 
-          m.alias?.toLowerCase().includes(lower)
-      );
-  }, [availableMachines, machineSearch]);
 
   const availableOperators = useMemo(() => {
     const teamObj = (teams || []).find(t => t.team_key === selectedTeam);
@@ -359,6 +348,7 @@ export default function DailyProductionPlanningPage() {
   const totalRequiredOperators = useMemo(() => {
     let total = 0;
     activePlanningsMap.forEach(p => {
+        if (p.auto_suggested) return;
         total += (Number(p.operadores_necesarios) || 0);
     });
     return total;
@@ -499,6 +489,7 @@ export default function DailyProductionPlanningPage() {
         duration: 3000
       });
       queryClient.invalidateQueries(["machinePlannings", selectedDate, selectedTeam]);
+      setConfigMode("suggested");
     },
     onError: (err) => {
       toast({
@@ -1071,9 +1062,10 @@ export default function DailyProductionPlanningPage() {
                 <div className="p-3 space-y-3">
                   {areasWithMachines.map(group => {
                     const totalInArea = group.machines.length;
-                    const activeInAreaManual = group.machines.filter(m =>
-                      activePlanningsMap.has(String(m.id))
-                    ).length;
+                    const activeInAreaManual = group.machines.filter(m => {
+                      const planning = activePlanningsMap.get(String(m.id));
+                      return planning && !planning.auto_suggested;
+                    }).length;
                     const activeInAreaSuggested = group.machines.filter(m => {
                       const planning = activePlanningsMap.get(String(m.id));
                       return planning && planning.auto_suggested;
@@ -1113,7 +1105,7 @@ export default function DailyProductionPlanningPage() {
                             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-1.5">
                               {group.machines.map(machine => {
                                 const planning = activePlanningsMap.get(String(machine.id));
-                                const isActiveManual = !!planning;
+                                const isActiveManual = !!(planning && !planning.auto_suggested);
                                 const isActiveSuggested = !!(planning && planning.auto_suggested);
                                 const isActive =
                                   configMode === "manual" ? isActiveManual : isActiveSuggested;
