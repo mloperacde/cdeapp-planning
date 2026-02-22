@@ -276,15 +276,17 @@ export default function Layout({ children, currentPageName }) {
         </div>
         
         {/* Contenido de la página */}
-        {hasAccess ? (
-          <div className="h-full flex flex-col">
-            <div className="px-2 pt-2 pb-0">
-               <Breadcrumbs auto={true} />
+          {hasAccess ? (
+            <PullToRefresh onRefresh={handleGlobalRefresh} className="h-full" id="main-content">
+            <div className="h-full flex flex-col">
+              <div className="px-2 pt-2 pb-0">
+                 <Breadcrumbs auto={true} />
+              </div>
+              <div key={pageKey} className="flex-1 min-h-0 page-enter">
+                 {children}
+              </div>
             </div>
-            <div key={pageKey} className="flex-1 min-h-0 page-enter">
-               {children}
-            </div>
-          </div>
+            </PullToRefresh>
         ) : !user ? (
             <div className="h-full flex flex-col items-center justify-center p-8 text-center">
               {userLoading ? (
