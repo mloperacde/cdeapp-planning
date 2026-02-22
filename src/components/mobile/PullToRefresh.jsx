@@ -64,6 +64,7 @@ export default function PullToRefresh({ onRefresh, children, className = '', id 
 
       <div
         ref={containerRef}
+        id={id}
         className={`h-full overflow-y-auto mobile-scroll ${className}`}
         style={{ transform: pulling ? `translateY(${Math.min(distance * 0.4, 28)}px)` : undefined, transition: pulling ? 'none' : 'transform 0.25s ease' }}
         onTouchStart={handleTouchStart}
