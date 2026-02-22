@@ -112,7 +112,7 @@ export default function ShiftAssignmentsDisplayPage() {
     return () => {
       if (frameId) cancelAnimationFrame(frameId);
     };
-  }, [viewMode, machinesGrouped.length, employeeRows.length]);
+  }, [viewMode]);
 
   const machineRows = useMemo(() => {
     const rows = [];
