@@ -31,7 +31,7 @@ export default function Dashboard() {
   const queryClient = useQueryClient();
 
   const handleRefresh = useCallback(async () => {
-    await queryClient.invalidateQueries();
+    await queryClient.refetchQueries({ type: 'active' });
   }, [queryClient]);
 
   const stats = useMemo(() => {
