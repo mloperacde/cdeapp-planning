@@ -436,43 +436,29 @@ export default function ShiftAssignmentsPage() {
         const planning = dailyMachinePlannings.find(mp => String(mp.machine_id) === String(machine.id));
         const requiredOps = Number(planning?.operadores_necesarios) || 0;
         
-        // Define needed roles
         const rolesToFill = [];
-        if (requiredOps >= 1) rolesToFill.push({ key: 'responsable_linea', label: 'Responsable' });
-        if (requiredOps >= 2) rolesToFill.push({ key: 'segunda_linea', label: 'Segunda' });
+        if (requiredOps >= 1) rolesToFill.push({ key: 'responsable_linea' });
+        if (requiredOps >= 2) rolesToFill.push({ key: 'segunda_linea' });
         for (let i = 0; i < requiredOps - 2; i++) {
-            rolesToFill.push({ key: `operador_${i+1}`, label: `Operador ${i+1}` });
+            rolesToFill.push({ key: `operador_${i+1}` });
         }
 
         rolesToFill.forEach(({ key }) => {
-            // Skip if already filled
             if (newAssignments[machine.id]?.[key]) return;
 
-            // Find Candidates
-            // Criteria: 
-            // 1. Available & In Team
-            // 2. Matches Role
-            // 3. Ideal Slot 1 (Fallback to Slot 2)
-            
-            // Get all potential candidates first
-            const candidates = employees.filter(e => {
+            const roleCandidates = employees.filter(e => {
                 if (assignedEmpIds.has(String(e.id))) return false;
                 if (!isEmployeeAvailable(e, dateStr, selectedTeam)) return false;
                 if (!checkRoleMatch(e, key)) return false;
                 return true;
             });
 
-            // Sort by Preference Slot
-            // We look for Slot 1, then Slot 2.
             let bestCandidate = null;
-            
-            // Find Slot 1
-            const slot1 = candidates.find(e => getExperienceSlot(e, machine.id) === 1);
+            const slot1 = roleCandidates.find(e => getExperienceSlot(e, machine.id) === 1);
             if (slot1) {
                 bestCandidate = slot1;
             } else {
-                // Find Slot 2
-                const slot2 = candidates.find(e => getExperienceSlot(e, machine.id) === 2);
+                const slot2 = roleCandidates.find(e => getExperienceSlot(e, machine.id) === 2);
                 if (slot2) bestCandidate = slot2;
             }
 
@@ -480,6 +466,47 @@ export default function ShiftAssignmentsPage() {
                 newAssignments[machine.id] = {
                     ...newAssignments[machine.id],
                     [key]: bestCandidate.id
+                };
+                assignedEmpIds.add(String(bestCandidate.id));
+                assignedCount++;
+            }
+        });
+    });
+
+    plannedMachines.forEach(machine => {
+        const planning = dailyMachinePlannings.find(mp => String(mp.machine_id) === String(machine.id));
+        const requiredOps = Number(planning?.operidores_necesarios) || Number(planning?.operadores_necesarios) || 0;
+
+        const rolesToFill = [];
+        if (requiredOps >= 1) rolesToFill.push('responsable_linea');
+        if (requiredOps >= 2) rolesToFill.push('segunda_linea');
+        for (let i = 0; i < requiredOps - 2; i++) {
+            rolesToFill.push(`operador_${i+1}`);
+        }
+
+        rolesToFill.forEach((roleKey) => {
+            if (newAssignments[machine.id]?.[roleKey]) return;
+
+            const candidates = employees.filter(e => {
+                if (assignedEmpIds.has(String(e.id))) return false;
+                if (!isEmployeeAvailable(e, dateStr, selectedTeam)) return false;
+                return true;
+            });
+
+            if (candidates.length === 0) return;
+
+            const sorted = [...candidates].sort((a, b) => {
+                const sa = getExperienceSlot(a, machine.id);
+                const sb = getExperienceSlot(b, machine.id);
+                if (sa !== sb) return sa - sb;
+                return getEmployeeName(a).localeCompare(getEmployeeName(b));
+            });
+
+            const bestCandidate = sorted[0];
+            if (bestCandidate) {
+                newAssignments[machine.id] = {
+                    ...newAssignments[machine.id],
+                    [roleKey]: bestCandidate.id
                 };
                 assignedEmpIds.add(String(bestCandidate.id));
                 assignedCount++;
