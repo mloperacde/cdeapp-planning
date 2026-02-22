@@ -6,8 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sparkles, RefreshCw, CheckCircle2, XCircle, AlertTriangle, Clock, Loader2, ChevronDown, ChevronUp } from "lucide-react";
-import { getMachineAlias } from "@/utils/machineAlias";
 import { toast } from "sonner";
+
+const getMachineAlias = (m) => m?.nombre || m?.codigo_maquina || m?.id || "Máquina";
 import AIOptimizationPlan from "@/components/planning/AIOptimizationPlan";
 import AIOptimizationSummary from "@/components/planning/AIOptimizationSummary";
 
