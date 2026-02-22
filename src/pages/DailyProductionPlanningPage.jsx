@@ -300,7 +300,8 @@ export default function DailyProductionPlanningPage() {
 
     (dailyPlansHistory || []).forEach(r => {
       if (!r || r.team_key !== selectedTeam) return;
-      if (r.turno && norm(r.turno) !== targetShift) return;
+      const recordShift = norm(r.turno || r.shift);
+      if (recordShift && recordShift !== targetShift) return;
       const snap = Array.isArray(r.snapshot) ? r.snapshot : [];
       snap.forEach(item => {
         const mid = String(item.machine_id);
@@ -749,6 +750,8 @@ export default function DailyProductionPlanningPage() {
       const totalOperadores = snapshot.reduce((acc, item) => acc + (item.operadores_necesarios || 0), 0);
 
       await base44.entities.DailyProductionPlanning.create({
+        date: selectedDate,
+        shift: currentShift,
         fecha: selectedDate,
         turno: currentShift,
         team_key: selectedTeam,
