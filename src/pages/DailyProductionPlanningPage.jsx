@@ -114,10 +114,10 @@ export default function DailyProductionPlanningPage() {
   });
 
   const { data: dailyPlansHistory = [] } = useQuery({
-    queryKey: ['dailyPlansHistory'],
+    queryKey: ['dailyMachinePlansHistory'],
     queryFn: async () => {
-      if (!base44.entities.DailyProductionPlanning) return [];
-      const data = await base44.entities.DailyProductionPlanning.list('', 1000);
+      if (!base44.entities.DailyMachinePlanning) return [];
+      const data = await base44.entities.DailyMachinePlanning.list('', 2000);
       return Array.isArray(data) ? data : [];
     },
     staleTime: 5 * 60 * 1000,
@@ -302,13 +302,11 @@ export default function DailyProductionPlanningPage() {
       if (!r || r.team_key !== selectedTeam) return;
       const recordShift = norm(r.turno || r.shift);
       if (recordShift && recordShift !== targetShift) return;
-      const snap = Array.isArray(r.snapshot) ? r.snapshot : [];
-      snap.forEach(item => {
-        const mid = String(item.machine_id);
-        const op = Number(item.operadores_necesarios) || 0;
-        sums.set(mid, (sums.get(mid) || 0) + op);
-        counts.set(mid, (counts.get(mid) || 0) + 1);
-      });
+      if (!r.machine_id) return;
+      const mid = String(r.machine_id);
+      const op = Number(r.operadores_necesarios) || 0;
+      sums.set(mid, (sums.get(mid) || 0) + op);
+      counts.set(mid, (counts.get(mid) || 0) + 1);
     });
 
     const avg = new Map();
@@ -716,8 +714,8 @@ export default function DailyProductionPlanningPage() {
       if (!selectedDate || !selectedTeam) {
         throw new Error("Debe seleccionar un día y equipo antes de guardar.");
       }
-      if (!base44.entities.DailyProductionPlanning) {
-        throw new Error("Entidad DailyProductionPlanning no disponible en este entorno.");
+      if (!base44.entities.DailyMachinePlanning) {
+        throw new Error("Entidad DailyMachinePlanning no disponible en este entorno.");
       }
 
       const manualPlannings = [];
@@ -730,36 +728,20 @@ export default function DailyProductionPlanningPage() {
         throw new Error("No hay ninguna máquina planificada en modo manual para guardar.");
       }
 
-      const snapshot = manualPlannings.map(p => {
-        const machine = machines.find(m => String(m.id) === String(p.machine_id));
-        const alias = machine ? machine.alias : p.machine_nombre;
-        const codigo = machine ? machine.codigo_maquina : p.machine_codigo;
-        const areaId = machine && machine.area_id ? machine.area_id : null;
-        const areaName = machine && machine.area_name ? machine.area_name : null;
-
-        return {
+      for (const p of manualPlannings) {
+        await base44.entities.DailyMachinePlanning.create({
+          date: selectedDate,
+          shift: currentShift,
+          fecha: selectedDate,
+          turno: currentShift,
+          team_key: selectedTeam,
           machine_id: p.machine_id,
-          machine_alias: alias,
-          machine_codigo: codigo,
+          process_id: p.process_id || null,
+          activa: p.activa_planning !== false,
           operadores_necesarios: Number(p.operadores_necesarios) || 0,
-          area_id: areaId,
-          area_name: areaName
-        };
-      });
-
-      const totalOperadores = snapshot.reduce((acc, item) => acc + (item.operadores_necesarios || 0), 0);
-
-      await base44.entities.DailyProductionPlanning.create({
-        date: selectedDate,
-        shift: currentShift,
-        fecha: selectedDate,
-        turno: currentShift,
-        team_key: selectedTeam,
-        total_machines: snapshot.length,
-        total_operadores: totalOperadores,
-        snapshot,
-        created_at: new Date().toISOString()
-      });
+        });
+        await new Promise(resolve => setTimeout(resolve, 25));
+      }
     },
     onSuccess: () => {
       toast({
