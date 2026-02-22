@@ -609,6 +609,7 @@ export default function ShiftAssignmentsPage() {
       return;
     }
     const dateStr = format(selectedDate, "yyyy-MM-dd");
+    let extra = "";
     try {
       const payload = {
         date: dateStr,
@@ -617,9 +618,18 @@ export default function ShiftAssignmentsPage() {
         assignments,
         plannedMachineIds: plannedMachines.map(m => m.id),
       };
-      window.localStorage.setItem("shiftAssignmentsDisplayPayload", JSON.stringify(payload));
+      const raw = JSON.stringify(payload);
+      if (typeof window !== "undefined") {
+        try {
+          window.localStorage.setItem("shiftAssignmentsDisplayPayload", raw);
+        } catch {}
+        try {
+          const encoded = btoa(unescape(encodeURIComponent(raw)));
+          extra = `&payload=${encodeURIComponent(encoded)}`;
+        } catch {}
+      }
     } catch {}
-    const url = `${createPageUrl("ShiftAssignmentsDisplay")}?date=${encodeURIComponent(dateStr)}&shift=${encodeURIComponent(selectedShift)}&teamId=${encodeURIComponent(selectedTeam)}`;
+    const url = `${createPageUrl("ShiftAssignmentsDisplay")}?date=${encodeURIComponent(dateStr)}&shift=${encodeURIComponent(selectedShift)}&teamId=${encodeURIComponent(selectedTeam)}${extra}`;
     window.open(url, "_blank", "noopener,noreferrer");
   };
 

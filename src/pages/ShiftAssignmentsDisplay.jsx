@@ -16,6 +16,7 @@ export default function ShiftAssignmentsDisplayPage() {
   const dateParam = searchParams.get("date");
   const shiftParam = searchParams.get("shift") || "";
   const teamIdParam = searchParams.get("teamId");
+  const payloadParam = searchParams.get("payload");
 
   const { employees, machines, teams } = useAppData();
 
@@ -42,6 +43,17 @@ export default function ShiftAssignmentsDisplayPage() {
   });
 
   const localPayload = useMemo(() => {
+    let fromUrl = null;
+    if (payloadParam) {
+      try {
+        const decodedParam = decodeURIComponent(payloadParam);
+        const json = decodeURIComponent(escape(atob(decodedParam)));
+        fromUrl = JSON.parse(json);
+      } catch {
+        fromUrl = null;
+      }
+    }
+    if (fromUrl) return fromUrl;
     if (typeof window === "undefined") return null;
     try {
       const raw = window.localStorage.getItem("shiftAssignmentsDisplayPayload");
@@ -51,7 +63,7 @@ export default function ShiftAssignmentsDisplayPage() {
     } catch {
       return null;
     }
-  }, []);
+  }, [payloadParam]);
 
   const roles = useMemo(
     () => [
