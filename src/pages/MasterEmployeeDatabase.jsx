@@ -356,42 +356,66 @@ export default function MasterEmployeeDatabasePage() {
     return {
       departamento: {
         label: 'Departamento',
-        options: departamentos.map(d => ({ value: d, label: d }))
+        options: [
+          { value: '__SIN_DEPARTAMENTO__', label: 'Sin departamento' },
+          ...departamentos.map(d => ({ value: d, label: d })),
+        ],
       },
       puesto: {
         label: 'Puesto',
-        options: puestos.map(p => ({ value: p, label: p }))
+        options: [
+          { value: '__SIN_PUESTO__', label: 'Sin puesto' },
+          ...puestos.map(p => ({ value: p, label: p })),
+        ],
       },
       estado_empleado: {
         label: 'Estado Empleado',
-        options: estados.map(e => ({ value: e, label: e }))
+        options: [
+          { value: '__SIN_ESTADO_EMPLEADO__', label: 'Sin estado' },
+          ...estados.map(e => ({ value: e, label: e })),
+        ],
       },
       equipo: {
         label: 'Turno/Equipo',
-        options: equipos.map(e => ({ value: e, label: e }))
+        options: [
+          { value: '__SIN_EQUIPO__', label: 'Sin equipo' },
+          ...equipos.map(e => ({ value: e, label: e })),
+        ],
       },
       tipo_turno: {
         label: 'Tipo de turno',
         options: [
           { value: '__SIN_TURNO__', label: 'Sin turno' },
           ...tiposTurno.map(t => ({ value: t, label: t })),
-        ]
+        ],
       },
       tipo_jornada: {
         label: 'Tipo de Jornada',
-        options: tiposJornada.map(t => ({ value: t, label: t }))
+        options: [
+          { value: '__SIN_TIPO_JORNADA__', label: 'Sin tipo de jornada' },
+          ...tiposJornada.map(t => ({ value: t, label: t })),
+        ],
       },
       disponibilidad: {
         label: 'Disponibilidad',
-        options: disponibilidades.map(d => ({ value: d, label: d }))
+        options: [
+          { value: '__SIN_DISPONIBILIDAD__', label: 'Sin disponibilidad' },
+          ...disponibilidades.map(d => ({ value: d, label: d })),
+        ],
       },
       categoria: {
         label: 'Categoría',
-        options: categorias.map(c => ({ value: c, label: c }))
+        options: [
+          { value: '__SIN_CATEGORIA__', label: 'Sin categoría' },
+          ...categorias.map(c => ({ value: c, label: c })),
+        ],
       },
       tipo_contrato: {
         label: 'Tipo de Contrato',
-        options: tiposContrato.map(t => ({ value: t, label: t }))
+        options: [
+          { value: '__SIN_TIPO_CONTRATO__', label: 'Sin tipo de contrato' },
+          ...tiposContrato.map(t => ({ value: t, label: t })),
+        ],
       },
     };
   }, [masterEmployees]);
@@ -407,17 +431,33 @@ export default function MasterEmployeeDatabasePage() {
         emp.departamento?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         emp.puesto?.toLowerCase().includes(searchTerm.toLowerCase());
 
-      const matchesDept = !filters.departamento || filters.departamento === 'all' || 
-        emp.departamento === filters.departamento;
+      const matchesDept =
+        !filters.departamento ||
+        filters.departamento === 'all' ||
+        (filters.departamento === '__SIN_DEPARTAMENTO__'
+          ? !emp.departamento
+          : emp.departamento === filters.departamento);
       
-      const matchesPuesto = !filters.puesto || filters.puesto === 'all' || 
-        emp.puesto === filters.puesto;
+      const matchesPuesto =
+        !filters.puesto ||
+        filters.puesto === 'all' ||
+        (filters.puesto === '__SIN_PUESTO__'
+          ? !emp.puesto
+          : emp.puesto === filters.puesto);
       
-      const matchesEstado = !filters.estado_empleado || filters.estado_empleado === 'all' || 
-        emp.estado_empleado === filters.estado_empleado;
+      const matchesEstado =
+        !filters.estado_empleado ||
+        filters.estado_empleado === 'all' ||
+        (filters.estado_empleado === '__SIN_ESTADO_EMPLEADO__'
+          ? !emp.estado_empleado
+          : emp.estado_empleado === filters.estado_empleado);
       
-      const matchesEquipo = !filters.equipo || filters.equipo === 'all' ||
-        emp.equipo === filters.equipo;
+      const matchesEquipo =
+        !filters.equipo ||
+        filters.equipo === 'all' ||
+        (filters.equipo === '__SIN_EQUIPO__'
+          ? !emp.equipo
+          : emp.equipo === filters.equipo);
 
       const matchesTurno =
         !filters.tipo_turno ||
@@ -426,17 +466,33 @@ export default function MasterEmployeeDatabasePage() {
           ? !emp.tipo_turno
           : emp.tipo_turno === filters.tipo_turno);
 
-      const matchesJornada = !filters.tipo_jornada || filters.tipo_jornada === 'all' ||
-        emp.tipo_jornada === filters.tipo_jornada;
+      const matchesJornada =
+        !filters.tipo_jornada ||
+        filters.tipo_jornada === 'all' ||
+        (filters.tipo_jornada === '__SIN_TIPO_JORNADA__'
+          ? !emp.tipo_jornada
+          : emp.tipo_jornada === filters.tipo_jornada);
 
-      const matchesDisponibilidad = !filters.disponibilidad || filters.disponibilidad === 'all' ||
-        emp.disponibilidad === filters.disponibilidad;
+      const matchesDisponibilidad =
+        !filters.disponibilidad ||
+        filters.disponibilidad === 'all' ||
+        (filters.disponibilidad === '__SIN_DISPONIBILIDAD__'
+          ? !emp.disponibilidad
+          : emp.disponibilidad === filters.disponibilidad);
 
-      const matchesCategoria = !filters.categoria || filters.categoria === 'all' ||
-        emp.categoria === filters.categoria;
+      const matchesCategoria =
+        !filters.categoria ||
+        filters.categoria === 'all' ||
+        (filters.categoria === '__SIN_CATEGORIA__'
+          ? !emp.categoria
+          : emp.categoria === filters.categoria);
 
-      const matchesTipoContrato = !filters.tipo_contrato || filters.tipo_contrato === 'all' ||
-        emp.tipo_contrato === filters.tipo_contrato;
+      const matchesTipoContrato =
+        !filters.tipo_contrato ||
+        filters.tipo_contrato === 'all' ||
+        (filters.tipo_contrato === '__SIN_TIPO_CONTRATO__'
+          ? !emp.tipo_contrato
+          : emp.tipo_contrato === filters.tipo_contrato);
 
       return (
         matchesSearch &&
