@@ -429,14 +429,15 @@ export default function DailyProductionPlanningPage() {
           id: order.id,
           machine_id: order.machine_id,
           effective_start_date: effectiveStart,
-          effective_delivery_date: effectiveEnd
+          effective_delivery_date: effectiveEnd,
+          product_name: extra.product_name || extra["Nombre"] || order.product_name || ""
         };
       });
 
       const selectedDateObj = new Date(selectedDate);
       selectedDateObj.setHours(12, 0, 0, 0);
 
-      const machinesForDay = new Set();
+      const machinesForDay = new Map();
 
       orders.forEach(o => {
         if (!o.effective_start_date) return;
@@ -449,7 +450,10 @@ export default function DailyProductionPlanningPage() {
         const endDay = new Date(end);
         endDay.setHours(23, 59, 59, 999);
         if (selectedDateObj >= startDay && selectedDateObj <= endDay && o.machine_id) {
-          machinesForDay.add(String(o.machine_id));
+          const key = String(o.machine_id);
+          if (!machinesForDay.has(key)) {
+            machinesForDay.set(key, o);
+          }
         }
       });
 
@@ -465,6 +469,7 @@ export default function DailyProductionPlanningPage() {
       }
 
       for (const machine of toCreate) {
+        const orderForMachine = machinesForDay.get(String(machine.id));
         await base44.entities.MachinePlanning.create({
           machine_id: machine.id,
           machine_nombre: machine.alias,
@@ -475,7 +480,8 @@ export default function DailyProductionPlanningPage() {
           activa_planning: true,
           turno: currentShift,
           auto_suggested: true,
-          process_id: null
+          process_id: null,
+          product_name: orderForMachine?.product_name || null
         });
         await new Promise(resolve => setTimeout(resolve, 50));
       }
@@ -1011,93 +1017,9 @@ export default function DailyProductionPlanningPage() {
       
       {/* Scrollable Main Content */}
       <div className="flex-1 min-h-0 overflow-hidden">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-full">
-          
-          {/* Left Column: Machine Catalog */}
-          <Card className="flex flex-col h-full border-slate-200 shadow-sm overflow-hidden">
-            <CardHeader className="pb-2 pt-3 px-3 border-b bg-slate-50/50 shrink-0">
-               <div className="flex items-center justify-between">
-                 <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                   <Factory className="w-3.5 h-3.5 text-slate-500" />
-                   Catálogo
-                 </CardTitle>
-                 <div className="flex items-center gap-1">
-                    <span className="text-xs text-slate-400 font-normal mr-1">{filteredAvailableMachines.length} disp.</span>
-                    <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-5 w-5 text-slate-400 hover:text-blue-600"
-                        onClick={() => queryClient.invalidateQueries(['machines'])}
-                        title="Recargar máquinas"
-                    >
-                        <Repeat className="h-3 w-3" />
-                    </Button>
-                 </div>
-               </div>
-               <div className="relative mt-2">
-                  <Search className="absolute left-2 top-2 h-3.5 w-3.5 text-slate-400" />
-                  <Input 
-                     placeholder="Buscar..." 
-                     className="pl-8 h-8 text-xs bg-white" 
-                     value={machineSearch}
-                     onChange={(e) => setMachineSearch(e.target.value)}
-                  />
-               </div>
-            </CardHeader>
-            <CardContent className="flex-1 p-0 overflow-hidden bg-slate-50/30 flex flex-col min-h-0">
-              {filteredAvailableMachines.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-12 text-slate-400 px-4 text-center h-full">
-                    {machines.length === 0 ? (
-                       <div className="flex flex-col items-center animate-pulse">
-                          <Factory className="w-8 h-8 mb-2 opacity-20" />
-                          <p className="text-xs">Cargando...</p>
-                       </div>
-                    ) : (
-                       <>
-                          <Search className="w-8 h-8 mb-2 opacity-20" />
-                          <p className="text-xs">Sin resultados.</p>
-                       </>
-                    )}
-                  </div>
-                ) : (
-                  <div className="flex-1 w-full h-full min-h-0">
-                      <ScrollArea className="h-full w-full">
-                        <div className="grid grid-cols-2 xl:grid-cols-3 gap-1.5 p-2">
-                            {filteredAvailableMachines.map((machine) => (
-                                <div 
-                                    key={machine.id} 
-                                    className="group relative bg-white border border-slate-200 rounded-md p-2 hover:border-blue-300 hover:shadow-sm transition-all cursor-pointer"
-                                    onClick={() => handleAddMachine(machine)}
-                                >
-                                    <div className="flex flex-col h-full justify-between gap-1">
-                                        <div className="font-medium text-xs text-slate-700 leading-tight line-clamp-2" title={machine.alias}>
-                                            {machine.alias}
-                                        </div>
-                                        {(machine.codigo_maquina || machine.ubicacion) && (
-                                            <div className="flex items-center gap-1 mt-auto pt-1">
-                                                {machine.codigo_maquina && (
-                                                    <span className="bg-slate-100 text-slate-500 px-1 rounded text-[9px] font-mono border border-slate-100">
-                                                        {machine.codigo_maquina}
-                                                    </span>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <div className="bg-blue-50 text-blue-600 rounded-full p-0.5 shadow-sm">
-                                            <Plus className="h-3 w-3" />
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                      </ScrollArea>
-                  </div>
-                )}
-            </CardContent>
-          </Card>
+        <div className="grid grid-cols-1 lg:grid-cols-1 gap-4 h-full">
 
-          <Card className="lg:col-span-2 flex flex-col h-full border-slate-200 shadow-sm overflow-hidden">
+          <Card className="flex flex-col h-full border-slate-200 shadow-sm overflow-hidden">
             <CardHeader className="pb-2 pt-3 px-4 border-b shrink-0">
               <div className="flex items-center justify-between gap-3">
                 <CardTitle className="text-sm font-semibold flex items-center gap-2">
