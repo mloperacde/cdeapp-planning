@@ -3,7 +3,7 @@ import { RefreshCw } from 'lucide-react';
 
 const THRESHOLD = 72; // px to trigger refresh
 
-export default function PullToRefresh({ onRefresh, children, className = '' }) {
+export default function PullToRefresh({ onRefresh, children, className = '', id }) {
   const [pulling, setPulling] = useState(false);
   const [distance, setDistance] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
