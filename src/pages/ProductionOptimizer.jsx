@@ -2,10 +2,9 @@ import { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Sparkles, RefreshCw, CheckCircle2, XCircle, AlertTriangle, Clock, Loader2, ChevronDown, ChevronUp } from "lucide-react";
+import { Sparkles, CheckCircle2, XCircle, Clock, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import AIOptimizationPlan from "@/components/planning/AIOptimizationPlan";
 import AIOptimizationSummary from "@/components/planning/AIOptimizationSummary";
@@ -18,9 +17,8 @@ export default function ProductionOptimizer() {
   const [approvedItems, setApprovedItems] = useState({});
   const [rejectedItems, setRejectedItems] = useState({});
 
-  // Datos necesarios
   const { data: workOrders = [] } = useQuery({
-    queryKey: ["workOrders"],
+    queryKey: ["workOrders_optimizer"],
     queryFn: async () => {
       const raw = await base44.entities.WorkOrder.list(undefined, 2000);
       return raw.map(order => {
@@ -34,7 +32,7 @@ export default function ProductionOptimizer() {
   });
 
   const { data: machines = [] } = useQuery({
-    queryKey: ["machines"],
+    queryKey: ["machines_optimizer"],
     queryFn: async () => {
       const data = await base44.entities.MachineMasterDatabase.list(undefined, 1000);
       return data.map(m => ({
@@ -50,13 +48,8 @@ export default function ProductionOptimizer() {
   });
 
   const { data: employees = [] } = useQuery({
-    queryKey: ["employees"],
+    queryKey: ["employees_optimizer"],
     queryFn: () => base44.entities.EmployeeMasterDatabase.list(),
-  });
-
-  const { data: absences = [] } = useQuery({
-    queryKey: ["absences"],
-    queryFn: () => base44.entities.Absence.filter({ estado_aprobacion: "Aprobada" }),
   });
 
   const operarios = employees.filter(e => {
@@ -82,21 +75,16 @@ export default function ProductionOptimizer() {
     setRejectedItems({});
 
     try {
-      // Preparar contexto resumido para la IA
       const ordersContext = pendingOrders.slice(0, 80).map(o => ({
         orden: o.order_number,
-        maquina_id: o.machine_id,
         maquina: machines.find(m => m.id === o.machine_id)?.alias || o.machine_id || "Sin asignar",
-        cliente: o.client_name || o["Cliente"],
-        producto: o.product_name || o["Nombre"],
-        cantidad: o.quantity || o["Cantidad"] || 0,
+        cliente: o.client_name,
+        producto: o.product_name,
+        cantidad: o.quantity || 0,
         prioridad: o.priority ?? 99,
         estado: o.status,
-        inicio_limite: o.start_date || o["Fecha Inicio Limite"],
-        fecha_entrega: o.committed_delivery_date || o["Fecha Entrega"],
-        nueva_entrega: o.new_delivery_date || o["Nueva Fecha Entrega"],
-        fecha_fin: o.planned_end_date || o["Fecha Fin"],
-        cadencia: o.production_cadence || o["Cadencia"] || 0,
+        fecha_entrega: o.committed_delivery_date,
+        cadencia: o.production_cadence || 0,
         duracion_estimada_h: (o.production_cadence && o.quantity)
           ? Math.ceil(o.quantity / o.production_cadence)
           : null,
@@ -106,55 +94,20 @@ export default function ProductionOptimizer() {
         id: m.id,
         alias: m.alias,
         tipo: m.tipo,
-        ubicacion: m.ubicacion,
         ordenes_asignadas: pendingOrders.filter(o => o.machine_id === m.id).length,
       }));
 
       const today = new Date().toISOString().split("T")[0];
 
-      const prompt = `Eres un experto en planificación de producción industrial. 
-Fecha actual: ${today}
-
-Tienes ${pendingOrders.length} órdenes de producción pendientes y ${activeMachines.length} máquinas operativas con ${operarios.length} operarios disponibles.
-
-ÓRDENES (primeras ${ordersContext.length}):
-${JSON.stringify(ordersContext, null, 1)}
-
-MÁQUINAS OPERATIVAS:
-${JSON.stringify(machinesContext, null, 1)}
-
-Analiza la situación y genera un plan de producción optimizado considerando:
-1. PRIORIDAD: Ordenes con menor número de prioridad son más urgentes
-2. FECHAS LÍMITE: Respetar fecha_entrega y nueva_entrega
-3. CARGA DE MÁQUINAS: Distribuir equitativamente la carga entre máquinas
-4. DURACIÓN: Usar cadencia y cantidad para estimar horas necesarias
-5. CONFLICTOS: Detectar sobrecargas o plazos en riesgo
-
-Para cada orden analizada, proporciona:
-- recomendacion: "mantener" | "reubicar" | "urgente" | "en_riesgo"
-- motivo: explicación breve
-- accion_sugerida: qué hacer concretamente
-- nueva_maquina_id: solo si recomiendas reubicar (id de la máquina destino)
-
-También genera:
-- resumen_ejecutivo: párrafo de 2-3 líneas con el estado general
-- alertas: lista de los principales problemas detectados (max 5)
-- kpis: { ordenes_en_riesgo, ordenes_urgentes, maquinas_sobrecargadas, eficiencia_estimada_pct }
-- recomendaciones_generales: lista de 3-5 acciones globales
-
-Devuelve SOLO JSON válido con esta estructura:
-{
-  "resumen_ejecutivo": "...",
-  "kpis": { "ordenes_en_riesgo": 0, "ordenes_urgentes": 0, "maquinas_sobrecargadas": 0, "eficiencia_estimada_pct": 0 },
-  "alertas": ["..."],
-  "recomendaciones_generales": ["..."],
-  "plan": [
-    { "orden": "...", "recomendacion": "...", "motivo": "...", "accion_sugerida": "...", "nueva_maquina_id": null }
-  ]
-}`;
-
       const result = await base44.integrations.Core.InvokeLLM({
-        prompt,
+        prompt: `Eres un experto en planificación de producción industrial. Fecha actual: ${today}
+Tienes ${pendingOrders.length} órdenes pendientes, ${activeMachines.length} máquinas operativas y ${operarios.length} operarios.
+
+ÓRDENES: ${JSON.stringify(ordersContext, null, 1)}
+MÁQUINAS: ${JSON.stringify(machinesContext, null, 1)}
+
+Analiza y genera un plan optimizado. Para cada orden: recomendacion (mantener/reubicar/urgente/en_riesgo), motivo y accion_sugerida.
+Genera también: resumen_ejecutivo, alertas (max 5), kpis y recomendaciones_generales (3-5).`,
         response_json_schema: {
           type: "object",
           properties: {
@@ -187,7 +140,6 @@ Devuelve SOLO JSON válido con esta estructura:
         },
       });
 
-      // Enriquecer con datos de las órdenes originales
       const enrichedPlan = (result.plan || []).map(item => {
         const order = pendingOrders.find(o => o.order_number === item.orden);
         const machine = machines.find(m => m.id === order?.machine_id);
@@ -215,14 +167,13 @@ Devuelve SOLO JSON válido con esta estructura:
     setApprovedItems(prev => { const n = { ...prev }; delete n[orden]; return n; });
   };
 
-  const handleApproveAll = async () => {
+  const handleApproveAll = () => {
     if (!plan) return;
-    const actionable = plan.plan.filter(i => i.recomendacion !== "mantener");
     const newApproved = {};
-    actionable.forEach(i => { newApproved[i.orden] = true; });
+    plan.plan.filter(i => i.recomendacion !== "mantener").forEach(i => { newApproved[i.orden] = true; });
     setApprovedItems(newApproved);
     setRejectedItems({});
-    toast.success(`${actionable.length} recomendaciones aprobadas.`);
+    toast.success(`${Object.keys(newApproved).length} recomendaciones aprobadas.`);
   };
 
   const approvedCount = Object.keys(approvedItems).length;
@@ -244,7 +195,7 @@ Devuelve SOLO JSON válido con esta estructura:
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {plan && (
             <div className="flex items-center gap-2 text-xs">
               <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
@@ -283,11 +234,11 @@ Devuelve SOLO JSON válido con esta estructura:
           <div className="text-center">
             <p className="text-lg font-semibold text-slate-700">Listo para optimizar</p>
             <p className="text-sm text-slate-500 max-w-md mt-1">
-              La IA analizará las {pendingOrders.length} órdenes pendientes, la carga de máquinas, 
+              La IA analizará las {pendingOrders.length} órdenes pendientes, la carga de máquinas,
               disponibilidad de personal y fechas límite para proponer el plan óptimo de producción.
             </p>
           </div>
-          <Button onClick={generatePlan} className="bg-purple-600 hover:bg-purple-700 text-white px-8">
+          <Button onClick={generatePlan} disabled={pendingOrders.length === 0} className="bg-purple-600 hover:bg-purple-700 text-white px-8">
             <Sparkles className="w-4 h-4 mr-2" /> Generar Plan de Optimización
           </Button>
         </div>
