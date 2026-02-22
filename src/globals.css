@@ -1,3 +1,4 @@
+css
 /* ── iOS / Mobile Safe Area & Base Reset ── */
 :root {
   --sat: env(safe-area-inset-top);
@@ -59,6 +60,20 @@ button, a, nav, [role="button"], [role="tab"], [role="menuitem"] {
   overflow-y: auto;
   overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;
+}
+
+/* ── Minimum 44px tap targets for table/list action buttons on mobile ── */
+@media (max-width: 768px) {
+  table button,
+  table a,
+  [data-list-action],
+  .list-action-btn {
+    min-height: 44px;
+    min-width: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
 }
 
 /* ── Pull-to-refresh indicator ── */
