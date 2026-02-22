@@ -72,7 +72,7 @@ export default function DailyProductionPlanningPage() {
 
   // 2. Fetch Machines (STRICT DEDUPLICATION)
   const { data: machines = [] } = useQuery({
-    queryKey: ['machines', 'strict_dedup'],
+    queryKey: ['machines'],
     queryFn: async () => {
       const rawMachines = await base44.entities.MachineMasterDatabase.list(undefined, 2000);
       
