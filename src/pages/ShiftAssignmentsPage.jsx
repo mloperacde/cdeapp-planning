@@ -17,7 +17,9 @@ import {
   Search,
   Factory,
   Sparkles,
-  Edit3
+  Edit3,
+  Download,
+  Monitor
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { format, startOfWeek } from "date-fns";
@@ -25,6 +27,8 @@ import { es } from "date-fns/locale";
 import { toast } from "sonner";
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { getMachineAlias } from "@/utils/machineAlias";
+import { createPageUrl } from "@/utils";
+import * as XLSX from "xlsx";
 
 // Helper: Get Employee Name Robustly
 const getEmployeeName = (emp) => {
@@ -475,12 +479,10 @@ export default function ShiftAssignmentsPage() {
 
     plannedMachines.forEach(machine => {
         const planning = dailyMachinePlannings.find(mp => String(mp.machine_id) === String(machine.id));
-        const requiredOps = Number(planning?.operidores_necesarios) || Number(planning?.operadores_necesarios) || 0;
+        const requiredOps = Number(planning?.operadores_necesarios) || 0;
 
         const rolesToFill = [];
-        if (requiredOps >= 1) rolesToFill.push('responsable_linea');
-        if (requiredOps >= 2) rolesToFill.push('segunda_linea');
-        for (let i = 0; i < requiredOps - 2; i++) {
+        for (let i = 0; i < Math.max(0, requiredOps - 2); i++) {
             rolesToFill.push(`operador_${i+1}`);
         }
 
@@ -522,7 +524,95 @@ export default function ShiftAssignmentsPage() {
     }
   };
 
-  // Helper: Get Employee Name Robustly
+  const handleExportExcel = () => {
+    try {
+      const dateStr = format(selectedDate, "yyyy-MM-dd");
+      const teamObj = selectedTeam !== "all" ? teams.find(t => String(t.id) === String(selectedTeam)) : null;
+      const teamName = teamObj?.team_name || "";
+      const roles = [
+        { key: "responsable_linea", label: "Responsable línea" },
+        { key: "segunda_linea", label: "2ª línea" },
+        { key: "operador_1", label: "Operador 1" },
+        { key: "operador_2", label: "Operador 2" },
+        { key: "operador_3", label: "Operador 3" },
+        { key: "operador_4", label: "Operador 4" },
+        { key: "operador_5", label: "Operador 5" },
+        { key: "operador_6", label: "Operador 6" },
+        { key: "operador_7", label: "Operador 7" },
+        { key: "operador_8", label: "Operador 8" }
+      ];
+
+      const machineRows = [];
+      const employeeRows = [];
+
+      dailyStaffing.forEach(ds => {
+        const machine = machines.find(m => String(m.id) === String(ds.machine_id));
+        roles.forEach(role => {
+          const empId = ds[role.key];
+          if (!empId) return;
+          const emp = employees.find(e => String(e.id) === String(empId));
+          const empName = getEmployeeName(emp);
+          const puesto = emp?.puesto || "";
+          machineRows.push({
+            Fecha: dateStr,
+            Turno: selectedShift,
+            Equipo: teamName,
+            Maquina: machine ? getMachineAlias(machine) : String(ds.machine_id || ""),
+            CodigoMaquina: machine?.codigo_maquina || "",
+            Rol: role.label,
+            Empleado: empName,
+            Puesto: puesto
+          });
+          employeeRows.push({
+            Fecha: dateStr,
+            Turno: selectedShift,
+            Equipo: teamName,
+            Empleado: empName,
+            Puesto: puesto,
+            Rol: role.label,
+            Maquina: machine ? getMachineAlias(machine) : String(ds.machine_id || ""),
+            CodigoMaquina: machine?.codigo_maquina || ""
+          });
+        });
+      });
+
+      employeeRows.sort((a, b) => (a.Empleado || "").localeCompare(b.Empleado || ""));
+
+      if (machineRows.length === 0 && employeeRows.length === 0) {
+        toast.info("No hay asignaciones para exportar");
+        return;
+      }
+
+      const wb = XLSX.utils.book_new();
+      if (machineRows.length > 0) {
+        const wsMachines = XLSX.utils.json_to_sheet(machineRows);
+        XLSX.utils.book_append_sheet(wb, wsMachines, "PorMaquinas");
+      }
+      if (employeeRows.length > 0) {
+        const wsEmployees = XLSX.utils.json_to_sheet(employeeRows);
+        XLSX.utils.book_append_sheet(wb, wsEmployees, "PorEmpleados");
+      }
+
+      const safeShift = (selectedShift || "").replace(/\s+/g, "_");
+      const safeTeam = (teamName || "").replace(/\s+/g, "_") || "Equipo";
+      const fileName = `AsignacionTurno_${dateStr}_${safeShift}_${safeTeam}.xlsx`;
+      XLSX.writeFile(wb, fileName);
+      toast.success("Asignación exportada a Excel", { description: fileName });
+    } catch (error) {
+      toast.error("Error al exportar a Excel");
+    }
+  };
+
+  const handleOpenScreen = () => {
+    if (selectedTeam === "all") {
+      toast.error("Seleccione un equipo antes de enviar a pantalla.");
+      return;
+    }
+    const dateStr = format(selectedDate, "yyyy-MM-dd");
+    const url = `${createPageUrl("ShiftAssignmentsDisplay")}?date=${encodeURIComponent(dateStr)}&shift=${encodeURIComponent(selectedShift)}&teamId=${encodeURIComponent(selectedTeam)}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
   const getEmployeeName = (emp) => {
       if (!emp) return "";
       return emp.nombre || emp.name || emp.Name || emp.full_name || emp.fullName || emp.display_name || "Sin Nombre";
@@ -637,6 +727,26 @@ export default function ShiftAssignmentsPage() {
                     ))}
                 </SelectContent>
             </Select>
+
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleExportExcel}
+              className="gap-2"
+            >
+              <Download className="w-4 h-4" />
+              Exportar Excel
+            </Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleOpenScreen}
+              className="gap-2"
+            >
+              <Monitor className="w-4 h-4" />
+              Enviar a pantalla
+            </Button>
 
             <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending} className="bg-green-600 hover:bg-green-700">
                 <Save className="w-4 h-4 mr-2" />
