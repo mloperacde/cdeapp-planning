@@ -38,6 +38,22 @@ export default function Layout({ children, currentPageName }) {
   // Si no está en el menú, dejamos que usePermissions decida (que permite por defecto salvo Config)
   const hasAccess = canAccessPage(normalizedPath);
 
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const prevPathRef = useRef(location.pathname);
+  const [pageKey, setPageKey] = useState(0);
+
+  useEffect(() => {
+    if (prevPathRef.current !== location.pathname) {
+      prevPathRef.current = location.pathname;
+      setPageKey(k => k + 1);
+    }
+  }, [location.pathname]);
+
+  const handleDeleteAccount = async () => {
+    // Placeholder – extend with real account deletion logic if needed
+    await base44.auth.logout();
+  };
+
   const [expandedCategories, setExpandedCategories] = useState({
     'Principal': true,
     'Recursos Humanos': true,
