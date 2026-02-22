@@ -119,6 +119,7 @@ const PAGES = {
   ProcessConfiguration: ProcessConfiguration,
   ProductionDashboard: ProductionDashboard,
   ProductionPlanning: ProductionPlanning,
+  ProductionOptimizer: ProductionOptimizer,
   QualityControl: QualityControl,
   Reports: Reports,
   ShiftHandover: ShiftHandover,
