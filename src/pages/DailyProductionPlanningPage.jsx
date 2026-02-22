@@ -156,6 +156,7 @@ export default function DailyProductionPlanningPage() {
     const targetShift = normalize(selectedShift);
 
     const schedule = shiftSchedule.find(s => {
+      if (s.fecha_inicio_semana !== weekStartStr) return false;
       const turno = normalize(s.turno);
       if (targetShift.includes("mañana")) {
         return turno.includes("mañana") || turno.includes("t1");
@@ -166,7 +167,7 @@ export default function DailyProductionPlanningPage() {
       return false;
     });
 
-    if (schedule && schedule.team_key && schedule.fecha_inicio_semana === weekStartStr) {
+    if (schedule && schedule.team_key) {
       if (schedule.team_key !== selectedTeam) {
         setSelectedTeam(schedule.team_key);
       }
