@@ -25,6 +25,11 @@ export default function Dashboard() {
   const { user, employees, absences, maintenance: maintenanceSchedules } = useAppData();
   const [searchParams] = useSearchParams();
   const showNotifications = searchParams.get('notifications') === 'true';
+  const queryClient = useQueryClient();
+
+  const handleRefresh = useCallback(async () => {
+    await queryClient.invalidateQueries();
+  }, [queryClient]);
 
   const stats = useMemo(() => {
     const today = new Date();
