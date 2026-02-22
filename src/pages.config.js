@@ -61,7 +61,6 @@ import CalidadSkills from './pages/CalidadSkills';
 import CommitteeManagement from './pages/CommitteeManagement';
 import Configuration from './pages/Configuration';
 import DailyProductionPlanningPage from './pages/DailyProductionPlanningPage';
-import Dashboard from './pages/Dashboard';
 import DataModelView from './pages/DataModelView';
 import DireccionSkills from './pages/DireccionSkills';
 import DocumentManagement from './pages/DocumentManagement';
@@ -128,7 +127,6 @@ export const PAGES = {
     "CommitteeManagement": CommitteeManagement,
     "Configuration": Configuration,
     "DailyProductionPlanningPage": DailyProductionPlanningPage,
-    "Dashboard": Dashboard,
     "DataModelView": DataModelView,
     "DireccionSkills": DireccionSkills,
     "DocumentManagement": DocumentManagement,
@@ -180,7 +178,7 @@ export const PAGES = {
 }
 
 export const pagesConfig = {
-    mainPage: "Dashboard",
+    mainPage: "AbsenceManagement",
     Pages: PAGES,
     Layout: __Layout,
 };
