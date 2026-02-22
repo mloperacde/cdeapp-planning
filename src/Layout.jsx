@@ -10,6 +10,7 @@ import {
   User as UserIcon, Key, Shield, Trash2
 } from 'lucide-react';
 import BottomNav from '@/components/mobile/BottomNav';
+import PullToRefresh from '@/components/mobile/PullToRefresh';
 import DeleteAccountDialog from '@/components/mobile/DeleteAccountDialog';
 import { Button } from "@/components/ui/button";
 import {
