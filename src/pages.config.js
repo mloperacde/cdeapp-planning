@@ -73,7 +73,6 @@ import IncentiveManagement from './pages/IncentiveManagement';
 import LockerManagement from './pages/LockerManagement';
 import MLInsights from './pages/MLInsights';
 import MachineAssignments from './pages/MachineAssignments';
-import MachineDailyPlanning from './pages/MachineDailyPlanning';
 import MachineMaintenance from './pages/MachineMaintenance';
 import MachineManagement from './pages/MachineManagement';
 import MachineMaster from './pages/MachineMaster';
@@ -140,7 +139,6 @@ export const PAGES = {
     "LockerManagement": LockerManagement,
     "MLInsights": MLInsights,
     "MachineAssignments": MachineAssignments,
-    "MachineDailyPlanning": MachineDailyPlanning,
     "MachineMaintenance": MachineMaintenance,
     "MachineManagement": MachineManagement,
     "MachineMaster": MachineMaster,
