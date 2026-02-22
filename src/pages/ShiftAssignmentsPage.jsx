@@ -97,6 +97,7 @@ export default function ShiftAssignmentsPage() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedShift, setSelectedShift] = useState("Mañana");
   const [selectedTeam, setSelectedTeam] = useState("all");
+  const [isDatePopoverOpen, setIsDatePopoverOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [assignments, setAssignments] = useState({});
   const [editingEmployeeId, setEditingEmployeeId] = useState(null);
@@ -152,49 +153,37 @@ export default function ShiftAssignmentsPage() {
       queryFn: () => base44.entities.EmployeeMachineSkill.list(undefined, 2000)
   });
 
-  // Auto-detect Shift based on Date + Team
+  // Sync Team based on Date + Shift (same philosophy as DailyProductionPlanningPage)
   useEffect(() => {
-      if (selectedTeam !== "all" && teamSchedules.length > 0) {
-          const teamObj = teams.find(t => String(t.id) === String(selectedTeam));
-          if (!teamObj) return;
+      if (!selectedShift || !selectedDate || teamSchedules.length === 0) return;
 
-          const dateObj = new Date(selectedDate);
-          // Calculate start of week (Monday)
-          const weekStart = startOfWeek(dateObj, { weekStartsOn: 1 });
-          const weekStartStr = format(weekStart, 'yyyy-MM-dd');
+      const dateObj = new Date(selectedDate);
+      const weekStart = startOfWeek(dateObj, { weekStartsOn: 1 });
+      const weekStartStr = format(weekStart, 'yyyy-MM-dd');
 
-          console.log(`Checking schedule for Team ${teamObj.team_key} Week ${weekStartStr}`);
+      const normalize = (str) => str ? str.toString().trim().toLowerCase() : "";
+      const targetShift = normalize(selectedShift);
 
-          const schedule = teamSchedules.find(s => 
-              s.team_key === teamObj.team_key && 
-              s.fecha_inicio_semana === weekStartStr
-          );
-
-          if (schedule && schedule.turno) {
-              console.log(`Found schedule: ${schedule.turno}`);
-              setSelectedShift(schedule.turno);
-          } else {
-              console.log("No schedule found");
+      const schedule = teamSchedules.find(s => {
+          if (s.fecha_inicio_semana !== weekStartStr) return false;
+          const turno = normalize(s.turno);
+          if (targetShift.includes("mañana")) {
+              return turno.includes("mañana") || turno.includes("t1");
           }
-      }
-  }, [selectedDate, selectedTeam, teamSchedules, teams]);
+          if (targetShift.includes("tarde")) {
+              return turno.includes("tarde") || turno.includes("t2");
+          }
+          if (targetShift.includes("noche")) {
+              return turno.includes("noche") || turno.includes("t3");
+          }
+          return turno === targetShift;
+      });
 
-  // Sync Team based on Shift (Reverse Logic - Optional but requested)
-  useEffect(() => {
-      if (selectedTeam === "all" && teamSchedules.length > 0) {
-           const dateObj = new Date(selectedDate);
-           const weekStart = startOfWeek(dateObj, { weekStartsOn: 1 });
-           const weekStartStr = format(weekStart, 'yyyy-MM-dd');
-
-           const schedule = teamSchedules.find(s => 
-               s.turno === selectedShift && 
-               s.fecha_inicio_semana === weekStartStr
-           );
-
-           if (schedule) {
-               const team = teams.find(t => t.team_key === schedule.team_key);
-               if (team) setSelectedTeam(String(team.id));
-           }
+      if (schedule && schedule.team_key) {
+          const team = teams.find(t => t.team_key === schedule.team_key);
+          if (team && String(team.id) !== String(selectedTeam)) {
+              setSelectedTeam(String(team.id));
+          }
       }
   }, [selectedShift, selectedDate, teamSchedules, teams, selectedTeam]);
 
@@ -578,7 +567,7 @@ export default function ShiftAssignmentsPage() {
             <p className="text-slate-500">Gestión de personal por máquina y turno</p>
          </div>
          <div className="flex items-center gap-4">
-            <Popover>
+            <Popover open={isDatePopoverOpen} onOpenChange={setIsDatePopoverOpen}>
                 <PopoverTrigger asChild>
                   <Button variant="outline" className="w-[200px] justify-start text-left font-normal">
                     <CalendarIcon className="mr-2 h-4 w-4" />
@@ -586,7 +575,16 @@ export default function ShiftAssignmentsPage() {
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0">
-                  <Calendar mode="single" selected={selectedDate} onSelect={(d) => d && setSelectedDate(d)} locale={es} />
+                  <Calendar 
+                    mode="single" 
+                    selected={selectedDate} 
+                    onSelect={(d) => {
+                      if (!d) return;
+                      setSelectedDate(d);
+                      setIsDatePopoverOpen(false);
+                    }} 
+                    locale={es} 
+                  />
                 </PopoverContent>
             </Popover>
             
