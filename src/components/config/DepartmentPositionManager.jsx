@@ -185,6 +185,17 @@ export default function DepartmentPositionManager() {
     return map;
   }, [departments, employees]);
 
+  const totalEmployeeCountRecursive = useMemo(() => {
+    if (!selectedDept) return 0;
+    const base = employeeCountByDept.get(selectedDept.id) ?? 0;
+    const descendants = getDescendantIds(selectedDept.id, departments);
+    let total = base;
+    descendants.forEach(id => {
+      total += employeeCountByDept.get(id) ?? 0;
+    });
+    return total;
+  }, [selectedDept, departments, employeeCountByDept]);
+
   const consolidatePositionsMutation = useMutation({
     mutationFn: async () => {
       const [allPos, allEmps, allDepts] = await Promise.all([
@@ -943,7 +954,7 @@ export default function DepartmentPositionManager() {
                    <div className="flex items-center gap-2 text-slate-600">
                      <Users className="w-4 h-4 text-slate-400" />
                      <span className="font-medium">Empleados Totales:</span>
-                     <span className="font-bold text-indigo-600">{selectedDept.total_employee_count || 0}</span>
+                     <span className="font-bold text-indigo-600">{totalEmployeeCountRecursive}</span>
                     <span className="text-[10px] text-slate-400">(incl. sub-depts)</span>
                    </div>
                   </div>

@@ -72,27 +72,60 @@ export default function OrganizationalChart({
   // Calculate recursive stats for all departments
   const deptStats = React.useMemo(() => {
     const stats = {};
-    
+
+    const normalizeDeptName = (name) =>
+      (name || "")
+        .toString()
+        .trim()
+        .toUpperCase();
+
+    // Pre-calcular empleados directos por departamento a partir de EmployeeMasterDatabase
+    const employeeCountByDept = new Map();
+    departments.forEach(dept => {
+      const normalizedDeptName = normalizeDeptName(dept.name);
+      let deptEmps;
+
+      if (normalizedDeptName === "PRODUCCIÓN T1" || normalizedDeptName === "PRODUCCIÓN T1.1") {
+        deptEmps = employees.filter(e => {
+          const empDept = normalizeDeptName(e.departamento);
+          return empDept === "PRODUCCIÓN" && e.team_key === "team_1";
+        });
+      } else if (normalizedDeptName === "PRODUCCIÓN T2" || normalizedDeptName === "PRODUCCIÓN T2.2") {
+        deptEmps = employees.filter(e => {
+          const empDept = normalizeDeptName(e.departamento);
+          return empDept === "PRODUCCIÓN" && e.team_key === "team_2";
+        });
+      } else {
+        deptEmps = employees.filter(e => normalizeDeptName(e.departamento) === normalizedDeptName);
+      }
+
+      employeeCountByDept.set(dept.id, deptEmps.length);
+    });
+
     const calculateStats = (deptId) => {
       if (stats[deptId]) return stats[deptId];
 
       const dept = departments.find(d => d.id === deptId);
       if (!dept) return { employees: 0, headcount: 0 };
 
-      // Use stored total_employee_count for employees
-      const totalEmp = dept.total_employee_count || 0;
+      // Empleados directos de este departamento según EmployeeMasterDatabase
+      const directEmp = employeeCountByDept.get(deptId) ?? 0;
 
-      // Calculate headcount (positions) recursively
+      // Puestos (headcount) directos
       const directPos = positions.filter(p => p.department_id === deptId);
       const directHC = directPos.reduce((acc, p) => acc + (p.max_headcount || 0), 0);
 
-      // Children headcount
+      // Hijos: acumular empleados y headcount de sub-departamentos
       const children = departments.filter(d => d.parent_id === deptId);
-      const childrenHC = children.reduce((sum, child) => {
+      let childrenEmp = 0;
+      let childrenHC = 0;
+      children.forEach(child => {
         const childStats = calculateStats(child.id);
-        return sum + childStats.headcount;
-      }, 0);
+        childrenEmp += childStats.employees;
+        childrenHC += childStats.headcount;
+      });
 
+      const totalEmp = directEmp + childrenEmp;
       const totalHC = directHC + childrenHC;
 
       stats[deptId] = { employees: totalEmp, headcount: totalHC };
