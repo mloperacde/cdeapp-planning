@@ -5,7 +5,7 @@ import { useAppData } from './components/data/DataProvider';
 import { usePermissions } from '@/components/permissions/usePermissions';
 import { MENU_STRUCTURE } from '@/components/config/menuConfig';
 import { 
-  Menu, X, Cog, ChevronDown, ChevronRight, LogOut, 
+  Menu, X, Cog, ChevronDown, ChevronRight, ChevronLeft, LogOut, 
   User as UserIcon, Key, Shield, Trash2
 } from 'lucide-react';
 import BottomNav from '@/components/mobile/BottomNav';
