@@ -158,7 +158,11 @@ export default function ResourceForecast({ orders, employees, selectedTeam, date
               <TrendingDown className="w-4 h-4 flex-shrink-0" />
               <div>
                 <div>Demanda</div>
-                <div className="text-[10px] font-normal text-slate-400">~{OPERARIOS_POR_MAQUINA} op/máq.</div>
+                <div className="text-[10px] font-normal text-slate-400">
+                {selectedTeam === "all"
+                  ? `~${OPERARIOS_POR_MAQUINA}×2 turnos/máq.`
+                  : `~${OPERARIOS_POR_MAQUINA} op/máq.`}
+              </div>
               </div>
             </div>
             {forecast.map((day, i) => (
