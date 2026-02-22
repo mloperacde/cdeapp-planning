@@ -699,7 +699,7 @@ export default function ShiftAssignmentsPage() {
          <div>
             <h1 className="text-2xl font-bold flex items-center gap-2">
                 <Users className="w-6 h-6 text-blue-600" />
-                Asignación de Turnos
+                Planning Diario
             </h1>
             <p className="text-slate-500">Gestión de personal por máquina y turno</p>
          </div>

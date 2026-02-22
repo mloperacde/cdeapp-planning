@@ -65,7 +65,7 @@ export const MENU_STRUCTURE = [
   // Fabricación
   { name: 'Empleados producción', path: '/EmployeesShiftManager', icon: Users, category: 'Fabricación' },
   { name: 'Jefes de Turno', path: '/ShiftManagers', icon: Briefcase, category: 'Fabricación' },
-  { name: 'Asignación de Turno', path: '/ShiftAssignmentsPage', icon: CalendarDays, category: 'Fabricación' },
+  { name: 'Planning Diario', path: '/ShiftAssignmentsPage', icon: CalendarDays, category: 'Fabricación' },
   { name: 'Consulta Máquinas', path: '/MachineManagement', icon: Settings, category: 'Fabricación' },
   { name: 'Control Calidad', path: '/QualityControl', icon: ClipboardCheck, category: 'Fabricación' },
   { name: 'Config. Calidad', path: '/ProcessConfiguration', icon: FileCog, category: 'Fabricación' },
