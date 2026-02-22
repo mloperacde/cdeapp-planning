@@ -20,7 +20,8 @@ export default function MachineLoadGraph({ orders, machines, dateRange }) {
     const dayList = [];
     let current = start;
     while (current <= end) {
-      dayList.push(new Date(current));
+      const dow = current.getDay(); // 0=Dom, 6=Sáb
+      if (dow !== 0 && dow !== 6) dayList.push(new Date(current));
       current = addDays(current, 1);
     }
     return dayList;
