@@ -50,7 +50,6 @@ import SupportManagement1415 from "./SupportManagement1415";
 import Timeline from "./Timeline";
 import WorkCalendarConfig from "./WorkCalendarConfig";
 import Breaks from "./Breaks";
-import MachinePlanning from "./MachineDailyPlanning";
 
 import DataModelView from "./DataModelView";
 import MessagingConfiguration from "./MessagingConfiguration";
@@ -134,7 +133,7 @@ const PAGES = {
   Timeline: Timeline,
   WorkCalendarConfig: WorkCalendarConfig,
   Breaks: Breaks,
-  MachinePlanning: MachinePlanning,
+  MachinePlanning: DailyProductionPlanningPage,
   DataModelView: DataModelView,
 
   DireccionSkills: DireccionSkills,
@@ -285,8 +284,8 @@ function PagesContent() {
                 <Route path="/WorkCalendarConfig" element={<WorkCalendarConfig />} />
                 
                 <Route path="/Breaks" element={<Breaks />} />
-                <Route path="/MachinePlanning" element={<MachinePlanning />} />
-                <Route path="/MachineDailyPlanning" element={<MachinePlanning />} />
+                <Route path="/MachinePlanning" element={<DailyProductionPlanningPage />} />
+                <Route path="/MachineDailyPlanning" element={<DailyProductionPlanningPage />} />
                 <Route path="/MessagingConfiguration" element={<MessagingConfiguration />} />
                 <Route path="/RulesAndTemplates" element={<RulesAndTemplates />} />
                 <Route path="/OrganizationalStructure" element={<OrganizationalStructure />} />
