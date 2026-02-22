@@ -240,12 +240,13 @@ function TimelineSection() {
           start: new Date(dateCopy.setHours(7, 0, 0, 0)),
           end: new Date(dateCopy.setHours(22, 0, 0, 0))
         };
-      case 'week':
+      case 'week': {
         const weekStart = startOfWeek(dateCopy, { weekStartsOn: 1 });
         const weekEnd = endOfWeek(dateCopy, { weekStartsOn: 1 });
         weekStart.setHours(7, 0, 0, 0);
         weekEnd.setHours(22, 0, 0, 0);
         return { start: weekStart, end: weekEnd };
+      }
       default:
         return {
           start: new Date(dateCopy.setHours(7, 0, 0, 0)),
