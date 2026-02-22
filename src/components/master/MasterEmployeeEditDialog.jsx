@@ -27,6 +27,7 @@ import {
 import { User, Briefcase, Clock, Home, FileText, Calendar, Wrench, AlertCircle, TrendingDown, ArrowLeft, Flame, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { getMachineAlias } from "@/utils/machineAlias";
 
 export default function MasterEmployeeEditDialog({ employee, open, onClose, permissions: propPermissions, initialData }) {
@@ -39,6 +40,7 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
     incluir_en_planning: true,
   });
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   // USAR DATAPROVIDER PARA MÁQUINAS Y EQUIPOS - evita duplicación y problemas de timing
   const { teams = [], machines: sharedMachines = [] } = useAppData();
@@ -118,7 +120,10 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
         }
       }
       const url = `/AbsenceManagement?${params.toString()}`;
-      window.open(url, "_blank");
+      if (onClose) {
+        onClose();
+      }
+      navigate(url);
     }
   };
 
