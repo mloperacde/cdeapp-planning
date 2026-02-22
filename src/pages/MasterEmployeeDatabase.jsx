@@ -501,7 +501,7 @@ export default function MasterEmployeeDatabasePage() {
 
   const stats = useMemo(() => {
     if (!masterEmployees) {
-      return { total: 0, active: 0, absent: 0, shiftTypes: [] };
+      return { total: 0, active: 0, absent: 0, shiftTypes: [], contractTypes: [] };
     }
 
     const shiftCounts = masterEmployees.reduce((acc, emp) => {
@@ -510,7 +510,17 @@ export default function MasterEmployeeDatabasePage() {
       return acc;
     }, {});
 
+    const contractCounts = masterEmployees.reduce((acc, emp) => {
+      const tipo = emp.tipo_contrato || 'Sin contrato';
+      acc[tipo] = (acc[tipo] || 0) + 1;
+      return acc;
+    }, {});
+
     const shiftTypes = Object.entries(shiftCounts)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
+
+    const contractTypes = Object.entries(contractCounts)
       .map(([name, count]) => ({ name, count }))
       .sort((a, b) => b.count - a.count);
 
@@ -519,6 +529,7 @@ export default function MasterEmployeeDatabasePage() {
       active: masterEmployees.filter(e => e.estado_empleado === 'Alta').length,
       absent: masterEmployees.filter(e => e.disponibilidad === 'Ausente').length,
       shiftTypes,
+      contractTypes,
     };
   }, [masterEmployees]);
 
@@ -597,24 +608,24 @@ export default function MasterEmployeeDatabasePage() {
 
         <Card className="p-3 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col">
           <div className="flex items-center justify-between mb-2 shrink-0">
-            <span className="text-xs text-slate-500 font-medium uppercase tracking-wider">Por Tipo de Turno</span>
+            <span className="text-xs text-slate-500 font-medium uppercase tracking-wider">Por Tipo de Contrato</span>
             <Clock className="w-4 h-4 text-slate-400" />
           </div>
           <div className="flex-1 overflow-x-auto no-scrollbar">
             <div className="grid grid-rows-2 grid-flow-col gap-1 min-w-max pb-1">
-              {stats.shiftTypes.map((shift, i) => (
+              {stats.contractTypes.map((tipo, i) => (
                 <div
                   key={i}
                   className="flex flex-col p-1 rounded-md bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 min-w-[80px]"
                 >
                   <span className="text-base font-bold text-slate-900 dark:text-slate-100 leading-none mb-0.5">
-                    {shift.count}
+                    {tipo.count}
                   </span>
                   <span
                     className="text-[8px] font-medium text-slate-500 uppercase tracking-tight truncate max-w-[90px]"
-                    title={shift.name}
+                    title={tipo.name}
                   >
-                    {shift.name}
+                    {tipo.name}
                   </span>
                 </div>
               ))}
