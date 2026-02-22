@@ -14,6 +14,7 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import AbsenceForm from "../absences/AbsenceForm";
 import { createAbsence, updateAbsence, deleteAbsence } from "../absences/AbsenceOperations";
+import MasterEmployeeEditDialog from "../master/MasterEmployeeEditDialog";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -55,6 +56,8 @@ export default function AttendanceMonitor() {
   const [absenceDialogOpen, setAbsenceDialogOpen] = useState(false);
   const [absenceInitialData, setAbsenceInitialData] = useState(null);
   const [lastAbsenceNotice, setLastAbsenceNotice] = useState("");
+  const [employeeDialogOpen, setEmployeeDialogOpen] = useState(false);
+  const [employeeInitialData, setEmployeeInitialData] = useState(null);
 
   const queryClient = useQueryClient();
 
@@ -321,6 +324,14 @@ export default function AttendanceMonitor() {
     setAbsenceDialogOpen(true);
   }
 
+  function handleOpenCreateEmployeeFromAttendance(emp) {
+    setEmployeeInitialData({
+      codigo_empleado: emp.employee_id || "",
+      nombre: emp.employee_name || "",
+    });
+    setEmployeeDialogOpen(true);
+  }
+
   return (
     <div className="space-y-4 p-4">
       <Card>
@@ -511,7 +522,7 @@ export default function AttendanceMonitor() {
                   <TabsTrigger value="ok" className="text-xs">Correctos ({stats.ok})</TabsTrigger>
                   <TabsTrigger value="ausentes" className="text-xs">Sin presencia ({stats.ausentes})</TabsTrigger>
                   {stats.noEnMaestra > 0 && (
-                    <TabsTrigger value="no_maestra" className="text-xs">No en maestra ({stats.noEnMaestra})</TabsTrigger>
+                    <TabsTrigger value="no_maestra" className="text-xs">No encontrado en BD ({stats.noEnMaestra})</TabsTrigger>
                   )}
                 </TabsList>
               </Tabs>
@@ -717,10 +728,16 @@ export default function AttendanceMonitor() {
                           <td className="px-3 py-2 font-medium text-slate-800">{emp.employee_name}</td>
                           <td className="px-3 py-2 text-slate-500">{emp.totalMarcajes}</td>
                           <td className="px-3 py-2">
-                            <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              className="flex items-center gap-1"
+                              onClick={() => handleOpenCreateEmployeeFromAttendance(emp)}
+                            >
                               <AlertTriangle className="w-3 h-3 text-amber-600" />
-                              <span className="text-amber-700 text-[10px]">ID no encontrado en base maestra</span>
-                            </div>
+                              <span className="text-amber-700 text-[10px] underline underline-offset-2">
+                                ID no encontrado en BD
+                              </span>
+                            </button>
                           </td>
                         </tr>
                       ))}
@@ -791,6 +808,18 @@ export default function AttendanceMonitor() {
             />
           </DialogContent>
         </Dialog>
+      )}
+
+      {employeeDialogOpen && (
+        <MasterEmployeeEditDialog
+          employee={null}
+          open={employeeDialogOpen}
+          onClose={() => {
+            setEmployeeDialogOpen(false);
+            setEmployeeInitialData(null);
+          }}
+          initialData={employeeInitialData}
+        />
       )}
     </div>
   );

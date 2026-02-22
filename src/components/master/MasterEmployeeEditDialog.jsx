@@ -29,7 +29,7 @@ import { toast } from "sonner";
 import { useMemo } from "react";
 import { getMachineAlias } from "@/utils/machineAlias";
 
-export default function MasterEmployeeEditDialog({ employee, open, onClose, permissions: propPermissions }) {
+export default function MasterEmployeeEditDialog({ employee, open, onClose, permissions: propPermissions, initialData }) {
   const [activeTab, setActiveTab] = useState("personal");
   const [formData, setFormData] = useState({
     nombre: "",
@@ -176,8 +176,6 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
     const sourceData = freshEmployeeData || employee;
 
     if (sourceData && open) {
-      
-      // Empezar con datos base del empleado
       const updatedFormData = { ...sourceData };
       if (normalizeDept(updatedFormData.departamento) === "PRODUCCION") {
         updatedFormData.categoria = normalizeLegacyCategory(updatedFormData.categoria);
@@ -204,14 +202,14 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
       setFormData(updatedFormData);
     } else if (!employee) {
       setFormData({
-        nombre: "",
-        codigo_empleado: "",
+        nombre: initialData?.nombre || "",
+        codigo_empleado: initialData?.codigo_empleado || "",
         estado_empleado: "Alta",
         disponibilidad: "Disponible",
         incluir_en_planning: true,
       });
     }
-  }, [employee, freshEmployeeData, employeeSkills, open]);
+  }, [employee, freshEmployeeData, employeeSkills, open, initialData]);
 
   const { data: currentUser } = useQuery({
     queryKey: ['currentUser'],
