@@ -43,7 +43,7 @@ export const MENU_STRUCTURE = [
   { name: 'Base de datos de Empleados', path: '/MasterEmployeeDatabase', icon: Users, category: 'Recursos Humanos' },
   { name: 'ETT y Temporales', path: '/ETTTemporaryEmployees', icon: Briefcase, category: 'Recursos Humanos' },
   { name: 'Onboarding', path: '/EmployeeOnboarding', icon: UserPlus, category: 'Recursos Humanos' },
-  { name: 'Control Presencia', path: '/AttendanceControl', icon: Clock, category: 'Recursos Humanos' },
+  { name: 'Control Presencia', path: '/AttendanceManagement', icon: Clock, category: 'Recursos Humanos' },
   { name: 'Gestión Ausencias', path: '/AbsenceManagement', icon: Calendar, category: 'Recursos Humanos' },
   { name: 'Comités y PRL', path: '/CommitteeManagement', icon: Shield, category: 'Recursos Humanos' },
   { name: 'Vestuarios/Taquillas', path: '/LockerManagement', icon: Package, category: 'Recursos Humanos' },
