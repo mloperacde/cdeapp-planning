@@ -37,6 +37,9 @@ export default function UnifiedAbsenceManager(props) {
   const [showForm, setShowForm] = useState(false);
   const [editingAbsence, setEditingAbsence] = useState(null);
   const [filters, setFilters] = useState({});
+   const [filterDept, setFilterDept] = useState("all");
+   const [filterPuesto, setFilterPuesto] = useState("all");
+   const [filterEquipo, setFilterEquipo] = useState("all");
   const [autoOpenedFromContext, setAutoOpenedFromContext] = useState(false);
   const queryClient = useQueryClient();
 
@@ -130,6 +133,38 @@ export default function UnifiedAbsenceManager(props) {
     
     return { disponibles, ausentes, total };
   }, [employees, activeAbsencesConsolidated, sourceContext]);
+
+  const employeesWithActiveAbsence = useMemo(() => {
+    const ids = new Set(activeAbsencesConsolidated.map(abs => abs.employee_id));
+    return employees.filter(e => ids.has(e.id));
+  }, [activeAbsencesConsolidated, employees]);
+
+  const deptOptions = useMemo(() => {
+    const set = new Set(
+      employeesWithActiveAbsence
+        .map(e => e.departamento)
+        .filter(Boolean)
+    );
+    return Array.from(set).sort();
+  }, [employeesWithActiveAbsence]);
+
+  const puestoOptions = useMemo(() => {
+    const set = new Set(
+      employeesWithActiveAbsence
+        .map(e => e.puesto)
+        .filter(Boolean)
+    );
+    return Array.from(set).sort();
+  }, [employeesWithActiveAbsence]);
+
+  const equipoOptions = useMemo(() => {
+    const set = new Set(
+      employeesWithActiveAbsence
+        .map(e => e.equipo)
+        .filter(Boolean)
+    );
+    return Array.from(set).sort();
+  }, [employeesWithActiveAbsence]);
 
   useEffect(() => {
     if (!initialEmployeeId || autoOpenedFromContext) return;
@@ -246,9 +281,19 @@ export default function UnifiedAbsenceManager(props) {
       const isShiftManager = sourceContext === 'shift_manager';
       if (isShiftManager && employee?.departamento !== 'FABRICACION') return false;
 
+      const dept = employee?.departamento || "";
+      const puesto = employee?.puesto || "";
+      const equipo = employee?.equipo || "";
+
+      const matchesDept = filterDept === "all" || dept === filterDept;
+      const matchesPuesto = filterPuesto === "all" || puesto === filterPuesto;
+      const matchesEquipo = filterEquipo === "all" || equipo === filterEquipo;
+
+      if (!matchesDept || !matchesPuesto || !matchesEquipo) return false;
+
       return matchesSearch;
     });
-  }, [activeAbsencesConsolidated, filters, employees, sourceContext]);
+  }, [activeAbsencesConsolidated, filters, employees, sourceContext, filterDept, filterPuesto, filterEquipo]);
 
   const handleSummarizeNotes = async (absenceId, notes) => {
     if (!notes || notes.length < 10) return;
@@ -330,7 +375,7 @@ export default function UnifiedAbsenceManager(props) {
           </div>
         </CardHeader>
         <CardContent className="p-6">
-          <div className="mb-6">
+          <div className="mb-6 space-y-4">
             <AdvancedSearch
               data={activeAbsencesConsolidated}
               onFilterChange={setFilters}
@@ -338,6 +383,50 @@ export default function UnifiedAbsenceManager(props) {
               placeholder="Buscar por empleado o motivo..."
               pageId={`absence_manager_${sourceContext}`}
             />
+
+            <div className="flex flex-wrap gap-3 items-center">
+              <Select value={filterDept} onValueChange={setFilterDept}>
+                <SelectTrigger className="w-52">
+                  <SelectValue placeholder="Departamento" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos los departamentos</SelectItem>
+                  {deptOptions.map(dept => (
+                    <SelectItem key={dept} value={dept}>
+                      {dept}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={filterPuesto} onValueChange={setFilterPuesto}>
+                <SelectTrigger className="w-52">
+                  <SelectValue placeholder="Puesto" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos los puestos</SelectItem>
+                  {puestoOptions.map(p => (
+                    <SelectItem key={p} value={p}>
+                      {p}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={filterEquipo} onValueChange={setFilterEquipo}>
+                <SelectTrigger className="w-52">
+                  <SelectValue placeholder="Equipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos los equipos</SelectItem>
+                  {equipoOptions.map(e => (
+                    <SelectItem key={e} value={e}>
+                      {e}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {filteredAbsences.length === 0 ? (
