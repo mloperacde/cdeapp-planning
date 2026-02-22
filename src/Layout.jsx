@@ -232,8 +232,17 @@ export default function Layout({ children, currentPageName }) {
         </nav>
       </div>
 
+      <DeleteAccountDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        onConfirm={handleDeleteAccount}
+      />
+
+      {/* Bottom nav - mobile only */}
+      <BottomNav />
+
       {/* Contenido principal */}
-      <div className="flex-1 min-w-0 bg-slate-50 dark:bg-background overflow-visible md:ml-64">
+      <div className="flex-1 min-w-0 bg-slate-50 dark:bg-background overflow-visible md:ml-64 pb-safe-bottom" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 56px)' }}>
         {/* Header móvil */}
         <div className="md:hidden p-4 bg-white dark:bg-card border-b border-slate-200 dark:border-border flex items-center justify-between">
           <button 
