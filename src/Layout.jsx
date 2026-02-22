@@ -28,8 +28,13 @@ import NotificationBadge from '@/components/notifications/NotificationBadge';
 export default function Layout({ children, currentPageName }) {
   const location = useLocation();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [menuOpen, setMenuOpen] = useState(false);
   const isRoot = location.pathname === '/' || location.pathname === '/Dashboard';
+
+  const handleGlobalRefresh = useCallback(async () => {
+    await queryClient.refetchQueries({ type: 'active' });
+  }, [queryClient]);
   
   const { canAccessPage } = usePermissions();
   
