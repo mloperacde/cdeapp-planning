@@ -113,13 +113,21 @@ export default function MachineDailyPlanningPage() {
       team: selectedTeam
     });
 
-    // FILTRAR POR EQUIPO Y DEPARTAMENTO
+    // FILTRAR POR EQUIPO (incluyendo fijos por turno) Y DEPARTAMENTO
     const fabricacionEmployees = employees.filter(emp => {
       const isActive = emp.estado_empleado === "Alta";
       const d = (emp.departamento || "").toString().trim().toUpperCase();
       const isFabricacion = d === "PRODUCCIÓN" || d === "PRODUCCION";
       const incluir = emp.incluir_en_planning !== false;
-      const matchesTeam = !selectedTeam || emp.equipo === teams.find(t => t.team_key === selectedTeam)?.team_name;
+      const teamName = teams.find(t => t.team_key === selectedTeam)?.team_name;
+      const isTeamEmployee = !selectedTeam || emp.equipo === teamName;
+      const turno = (selectedTurno || "").toString().toLowerCase();
+      const isMorningShift = turno.includes("mañana") || turno.includes("t1");
+      const isAfternoonShift = turno.includes("tarde") || turno.includes("t2");
+      const includeByFixed = 
+        (isMorningShift && emp.tipo_turno === "Fijo Mañana") ||
+        (isAfternoonShift && emp.tipo_turno === "Fijo Tarde");
+      const matchesTeam = isTeamEmployee || includeByFixed;
       
       return isActive && isFabricacion && incluir && matchesTeam;
     });

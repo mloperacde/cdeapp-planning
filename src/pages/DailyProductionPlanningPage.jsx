@@ -216,14 +216,19 @@ export default function DailyProductionPlanningPage() {
     // Normalization helper for robust comparison
     const normalize = (str) => str ? str.toString().trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : "";
     const targetTeam = normalize(teamObj.team_name);
+    const shift = normalize(currentShift);
+    const isMorningShift = shift.includes("mañana") || shift.includes("t1");
+    const isAfternoonShift = shift.includes("tarde") || shift.includes("t2");
 
     return (employees || []).filter(e => {
-        // 1. Team Match (Robust with team_id support)
-        if (e.team_id && String(e.team_id) === String(teamObj.id)) {
-            // Match by ID
-        } else if (normalize(e.equipo) !== targetTeam) {
-             return false;
-        }
+        // 1. Team Match (Robust with team_id support) + include fixed shift employees
+        const isTeamById = e.team_id && String(e.team_id) === String(teamObj.id);
+        const isTeamByName = normalize(e.equipo) === targetTeam;
+        const tipoTurno = normalize(e.tipo_turno);
+        const includeByFixed =
+          (isMorningShift && tipoTurno === "fijo mañana") ||
+          (isAfternoonShift && tipoTurno === "fijo tarde");
+        if (!(isTeamById || isTeamByName || includeByFixed)) return false;
 
         // 2. Availability (Must be "Disponible" - Robust)
         if (normalize(e.disponibilidad) !== "disponible") return false;
