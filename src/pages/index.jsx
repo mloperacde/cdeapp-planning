@@ -258,6 +258,7 @@ function PagesContent() {
                 <Route path="/ProductionDashboard" element={<ProductionDashboard />} />
                 <Route path="/ProductionPlanning" element={<ProductionPlanning />} />
                 <Route path="/OrderImport" element={<OrderImport />} />
+                <Route path="/ProductionOptimizer" element={<ProductionOptimizer />} />
                 <Route path="/QualityControl" element={<QualityControl />} />
                 <Route path="/Reports" element={<Reports />} />
                 
