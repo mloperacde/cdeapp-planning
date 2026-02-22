@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useCallback } from "react";
+import { useMemo, useState, useEffect, useCallback, lazy, Suspense } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { 
   Users, 
@@ -11,15 +11,18 @@ import {
 import { Link, useSearchParams } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { useAppData } from "../components/data/DataProvider";
-import TimelineControls from "../components/timeline/TimelineControls";
-import TimelineView from "../components/timeline/TimelineView";
-import WorkCalendar from "../components/absences/WorkCalendar";
-import ShiftSwapWidget from "../components/dashboard/ShiftSwapWidget";
 import NotificationCenter from "../components/notifications/NotificationCenter";
-import { startOfWeek, endOfWeek } from "date-fns";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import { useQueryClient } from "@tanstack/react-query";
 import PullToRefresh from "@/components/mobile/PullToRefresh";
+
+// Lazy-load heavy sections
+const TimelineSection = lazy(() => import("../components/dashboard/DashboardTimeline"));
+const ShiftSwapWidget = lazy(() => import("../components/dashboard/ShiftSwapWidget"));
+const WorkCalendar = lazy(() => import("../components/absences/WorkCalendar"));
+
+function SectionSkeleton({ height = "h-48" }) {
+  return <div className={`${height} rounded-xl bg-slate-100 dark:bg-slate-800 animate-pulse`} aria-hidden="true" />;
+}
 
 export default function Dashboard() {
   const { user, employees, absences, maintenance: maintenanceSchedules } = useAppData();
