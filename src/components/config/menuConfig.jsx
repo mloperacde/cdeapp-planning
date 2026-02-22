@@ -36,6 +36,7 @@ import {
 export const MENU_STRUCTURE = [
   // Principal
   { name: 'Dashboard', path: '/Dashboard', icon: Home, category: 'Principal' },
+  { name: 'Timeline', path: '/Timeline', icon: CalendarDays, category: 'Principal', hidden: true },
 
   // Recursos Humanos
   { name: 'Dashboard RRHH', path: '/AdvancedHRDashboard', icon: LayoutDashboard, category: 'Recursos Humanos' },

@@ -192,7 +192,7 @@ export default function ShiftSwapWidget() {
       <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
         <CardTitle className="text-lg font-bold flex items-center gap-2">
           <RefreshCw className="w-5 h-5 text-blue-600" />
-          Tablón de Cambios
+          Tablón de Solicitudes de Cambio de Turno
         </CardTitle>
         <Button
             size="sm"
