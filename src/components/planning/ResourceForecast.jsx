@@ -213,8 +213,11 @@ export default function ResourceForecast({ orders, employees, selectedTeam, date
         {/* Nota explicativa */}
         <div className="p-3 border-t bg-amber-50 dark:bg-amber-900/10">
           <p className="text-[10px] text-amber-700 dark:text-amber-400">
-            ⚠️ Demanda estimada temporalmente: {OPERARIOS_POR_MAQUINA} operarios por máquina activa (proyección). 
-            Oferta = operarios de producción en activo sin ausencia registrada (proyección futura).
+            ⚠️ Demanda estimada temporalmente:{" "}
+            {selectedTeam === "all"
+              ? `${OPERARIOS_POR_MAQUINA} op/máq × 2 turnos (día completo)`
+              : `${OPERARIOS_POR_MAQUINA} op/máq × 1 turno`}{" "}
+            (proyección). Oferta = operarios de producción en activo sin ausencia registrada (proyección futura).
           </p>
         </div>
       </CardContent>
