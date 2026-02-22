@@ -246,14 +246,24 @@ export default function Layout({ children, currentPageName }) {
       {/* Contenido principal */}
       <div className="flex-1 min-w-0 bg-slate-50 dark:bg-background overflow-visible md:ml-64 pb-safe-bottom" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 56px)' }}>
         {/* Header móvil */}
-        <div className="md:hidden p-4 bg-white dark:bg-card border-b border-slate-200 dark:border-border flex items-center justify-between">
+        <div className="md:hidden p-3 bg-white dark:bg-card border-b border-slate-200 dark:border-border flex items-center gap-2 min-h-[52px]">
+          {!isRoot && (
+            <button
+              onClick={() => navigate(-1)}
+              className="min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-900 dark:text-foreground rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 -ml-1"
+              aria-label="Volver"
+            >
+              <ChevronLeft size={24} />
+            </button>
+          )}
           <button 
             onClick={() => setMenuOpen(true)}
-            className="text-slate-900 dark:text-foreground"
+            className="min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-900 dark:text-foreground rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+            aria-label="Menú"
           >
             <Menu size={24} />
           </button>
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-foreground">
+          <h2 className="flex-1 text-base font-semibold text-slate-900 dark:text-foreground truncate">
             {currentPageName}
           </h2>
         </div>
