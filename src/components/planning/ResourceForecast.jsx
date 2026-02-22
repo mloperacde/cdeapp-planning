@@ -54,6 +54,9 @@ export default function ResourceForecast({ orders, employees, selectedTeam, date
     });
   }, [employees, selectedTeam]);
 
+  // Oferta: número fijo de operarios asignables (proyección estática, sin datos futuros de ausencias)
+  const supply = employeesAssignable.length;
+
   // Forecast por día
   const forecast = useMemo(() => {
     return days.map(day => {
@@ -69,7 +72,6 @@ export default function ResourceForecast({ orders, employees, selectedTeam, date
           ? new Date(order.effective_delivery_date)
           : new Date(order.committed_delivery_date || order.start_date || order.effective_start_date);
         if (isNaN(oStart.getTime())) return;
-        // Orden activa si solapa con el día
         if (oStart <= dayEnd && oEnd >= dayStart) {
           if (order.machine_id) activeMachineIds.add(order.machine_id);
         }
@@ -78,30 +80,15 @@ export default function ResourceForecast({ orders, employees, selectedTeam, date
       const turnos = selectedTeam === "all" ? 2 : 1;
       const demand = activeMachineIds.size * OPERARIOS_POR_MAQUINA * turnos;
 
-      // --- OFERTA: operarios disponibles ese día (sin ausencias) ---
-      const supply = employeesAssignable.filter(emp => {
-        // Ausencia con fechas explícitas
-        if (emp.ausencia_inicio) {
-          const absStart = new Date(emp.ausencia_inicio); absStart.setHours(0, 0, 0, 0);
-          if (emp.ausencia_fin) {
-            const absEnd = new Date(emp.ausencia_fin); absEnd.setHours(23, 59, 59, 999);
-            if (dayStart >= absStart && dayStart <= absEnd) return false;
-          } else {
-            if (dayStart >= absStart) return false;
-          }
-        }
-        return true;
-      }).length;
-
       return {
         date: day,
         machines: activeMachineIds.size,
         demand,
-        supply,
+        supply, // constante: no tenemos proyección de ausencias futuras
         balance: supply - demand,
       };
     });
-  }, [days, orders, employeesAssignable]);
+  }, [days, orders, supply, selectedTeam]);
 
   const avgBalance = forecast.length
     ? (forecast.reduce((s, d) => s + d.balance, 0) / forecast.length).toFixed(1)
