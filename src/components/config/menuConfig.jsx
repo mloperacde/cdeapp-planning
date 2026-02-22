@@ -59,6 +59,7 @@ export const MENU_STRUCTURE = [
   // Planificación
   { name: 'Planificador Órdenes', path: '/ProductionPlanning', icon: Factory, category: 'Planificación' },
   { name: 'Importar Órdenes', path: '/OrderImport', icon: Database, category: 'Planificación' },
+  { name: 'Optimización IA', path: '/ProductionOptimizer', icon: Sparkles, category: 'Planificación' },
   { name: 'Planificación - Habilidades', path: '/PlanificacionSkills', icon: BarChart3, category: 'Planificación' },
 
   // Fabricación
