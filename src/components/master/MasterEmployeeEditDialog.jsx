@@ -106,6 +106,22 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
     }
   };
 
+  const handleAvailabilityChange = (value) => {
+    setFormData({ ...formData, disponibilidad: value });
+    if (value === "Ausente") {
+      const params = new URLSearchParams();
+      params.set("tab", "list");
+      if (employee?.id) {
+        params.set("employeeId", String(employee.id));
+        if (formData.nombre) {
+          params.set("employeeName", formData.nombre);
+        }
+      }
+      const url = `/AbsenceManagement?${params.toString()}`;
+      window.open(url, "_blank");
+    }
+  };
+
   const { data: prodCategories = [] } = useQuery({
     queryKey: ['salaryCategories_production'],
     queryFn: async () => {
@@ -1337,7 +1353,7 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
                   <Label>Disponibilidad Actual</Label>
                   <Select
                     value={formData.disponibilidad || "Disponible"}
-                    onValueChange={(value) => setFormData({ ...formData, disponibilidad: value })}
+                    onValueChange={handleAvailabilityChange}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -1348,39 +1364,6 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
                     </SelectContent>
                   </Select>
                 </div>
-
-                {formData.disponibilidad === "Ausente" && (
-                  <div className="p-4 border-2 border-amber-200 rounded-lg bg-amber-50 space-y-4">
-                    <h4 className="font-semibold text-amber-900">Datos de Ausencia</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label>Fecha Inicio Ausencia</Label>
-                        <Input
-                          type="datetime-local"
-                          value={formData.ausencia_inicio || ""}
-                          onChange={(e) => setFormData({ ...formData, ausencia_inicio: e.target.value })}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Fecha Fin Ausencia</Label>
-                        <Input
-                          type="datetime-local"
-                          value={formData.ausencia_fin || ""}
-                          onChange={(e) => setFormData({ ...formData, ausencia_fin: e.target.value })}
-                        />
-                      </div>
-                      <div className="space-y-2 md:col-span-2">
-                        <Label>Motivo de Ausencia</Label>
-                        <Input
-                          value={formData.ausencia_motivo || ""}
-                          onChange={(e) => setFormData({ ...formData, ausencia_motivo: e.target.value })}
-                          placeholder="Describe el motivo de la ausencia..."
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                   <p className="text-sm text-blue-800">
                     <strong>Nota:</strong> Para gestión completa de ausencias (solicitudes, aprobaciones, tipos), 

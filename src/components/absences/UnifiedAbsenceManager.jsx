@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,10 +29,15 @@ import AbsenceForm from "./AbsenceForm";
 const EMPTY_ARRAY = [];
 
 export default function UnifiedAbsenceManager(props) {
-  const { sourceContext = "rrhh" } = props;
+  const { 
+    sourceContext = "rrhh",
+    initialEmployeeId,
+    initialEmployeeName,
+  } = props;
   const [showForm, setShowForm] = useState(false);
   const [editingAbsence, setEditingAbsence] = useState(null);
   const [filters, setFilters] = useState({});
+  const [autoOpenedFromContext, setAutoOpenedFromContext] = useState(false);
   const queryClient = useQueryClient();
 
   // formData state removed as it is handled by AbsenceForm component
@@ -125,6 +130,22 @@ export default function UnifiedAbsenceManager(props) {
     
     return { disponibles, ausentes, total };
   }, [employees, activeAbsencesConsolidated, sourceContext]);
+
+  useEffect(() => {
+    if (!initialEmployeeId || autoOpenedFromContext) return;
+    if (!employees || employees.length === 0) return;
+
+    const emp = employees.find(e => String(e.id) === String(initialEmployeeId));
+    const employeeName = initialEmployeeName || emp?.nombre || "";
+
+    setEditingAbsence({
+      employee_id: String(initialEmployeeId),
+      employee_name: employeeName,
+      remunerada: true,
+    });
+    setShowForm(true);
+    setAutoOpenedFromContext(true);
+  }, [initialEmployeeId, initialEmployeeName, employees, autoOpenedFromContext]);
 
   const saveMutation = useMutation({
     mutationFn: async (data) => {

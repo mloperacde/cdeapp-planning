@@ -45,14 +45,27 @@ export default function AbsenceManagementPage() {
   // Handle tab state and URL sync
   const location = useLocation();
   const [activeTab, setActiveTab] = useState("dashboard");
+  const [initialAbsenceEmployeeId, setInitialAbsenceEmployeeId] = useState(null);
+  const [initialAbsenceEmployeeName, setInitialAbsenceEmployeeName] = useState(null);
 
   React.useEffect(() => {
     const params = new URLSearchParams(location.search);
     const tab = params.get('tab');
+    const employeeId = params.get('employeeId');
+    const employeeName = params.get('employeeName');
+
     if (tab) {
       setActiveTab(tab);
     } else {
       setActiveTab(isShiftManager ? "dashboard" : "dashboard");
+    }
+
+    if (employeeId) {
+      setInitialAbsenceEmployeeId(employeeId);
+      setInitialAbsenceEmployeeName(employeeName || null);
+    } else {
+      setInitialAbsenceEmployeeId(null);
+      setInitialAbsenceEmployeeName(null);
     }
   }, [location.search, isShiftManager]);
 
@@ -378,6 +391,8 @@ export default function AbsenceManagementPage() {
               sourceContext="absence_page" 
               initialAbsences={absences} 
               initialEmployees={employees}
+              initialEmployeeId={initialAbsenceEmployeeId}
+              initialEmployeeName={initialAbsenceEmployeeName}
             />
           </TabsContent>
 
