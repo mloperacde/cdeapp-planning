@@ -545,10 +545,10 @@ export default function ShiftAssignmentsPage() {
       const machineRows = [];
       const employeeRows = [];
 
-      dailyStaffing.forEach(ds => {
-        const machine = machines.find(m => String(m.id) === String(ds.machine_id));
+      plannedMachines.forEach(machine => {
+        const rolesForMachine = assignments[machine.id] || {};
         roles.forEach(role => {
-          const empId = ds[role.key];
+          const empId = rolesForMachine[role.key];
           if (!empId) return;
           const emp = employees.find(e => String(e.id) === String(empId));
           const empName = getEmployeeName(emp);
@@ -557,7 +557,7 @@ export default function ShiftAssignmentsPage() {
             Fecha: dateStr,
             Turno: selectedShift,
             Equipo: teamName,
-            Maquina: machine ? getMachineAlias(machine) : String(ds.machine_id || ""),
+            Maquina: getMachineAlias(machine),
             CodigoMaquina: machine?.codigo_maquina || "",
             Rol: role.label,
             Empleado: empName,
@@ -570,7 +570,7 @@ export default function ShiftAssignmentsPage() {
             Empleado: empName,
             Puesto: puesto,
             Rol: role.label,
-            Maquina: machine ? getMachineAlias(machine) : String(ds.machine_id || ""),
+            Maquina: getMachineAlias(machine),
             CodigoMaquina: machine?.codigo_maquina || ""
           });
         });
@@ -609,6 +609,16 @@ export default function ShiftAssignmentsPage() {
       return;
     }
     const dateStr = format(selectedDate, "yyyy-MM-dd");
+    try {
+      const payload = {
+        date: dateStr,
+        shift: selectedShift,
+        teamId: selectedTeam,
+        assignments,
+        plannedMachineIds: plannedMachines.map(m => m.id),
+      };
+      window.localStorage.setItem("shiftAssignmentsDisplayPayload", JSON.stringify(payload));
+    } catch {}
     const url = `${createPageUrl("ShiftAssignmentsDisplay")}?date=${encodeURIComponent(dateStr)}&shift=${encodeURIComponent(selectedShift)}&teamId=${encodeURIComponent(selectedTeam)}`;
     window.open(url, "_blank", "noopener,noreferrer");
   };

@@ -41,6 +41,27 @@ export default function ShiftAssignmentsDisplayPage() {
     }
   });
 
+  const localPayload = useMemo(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      const raw = window.localStorage.getItem("shiftAssignmentsDisplayPayload");
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      return parsed || null;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const useLocalAssignments = useMemo(() => {
+    if (!localPayload) return false;
+    if (localPayload.date !== dateForFilter) return false;
+    if ((localPayload.shift || "") !== (shiftParam || "")) return false;
+    const payloadTeam = String(localPayload.teamId || "all");
+    const urlTeam = String(teamIdParam || "all");
+    return payloadTeam === urlTeam;
+  }, [localPayload, dateForFilter, shiftParam, teamIdParam]);
+
   const roles = useMemo(
     () => [
       { key: "responsable_linea", label: "Responsable línea" },
@@ -68,48 +89,94 @@ export default function ShiftAssignmentsDisplayPage() {
 
   const machineRows = useMemo(() => {
     const rows = [];
-    dailyStaffing.forEach(ds => {
-      const machine = machines.find(m => String(m.id) === String(ds.machine_id));
-      roles.forEach(role => {
-        const empId = ds[role.key];
-        const emp = empId ? employees.find(e => String(e.id) === String(empId)) : null;
-        const empName = getEmployeeName(emp);
-        const puesto = emp?.puesto || "";
-        rows.push({
-          machineId: ds.machine_id,
-          machineName: machine ? getMachineAlias(machine) : String(ds.machine_id || ""),
-          machineCode: machine?.codigo_maquina || "",
-          roleLabel: role.label,
-          employeeName: empName,
-          puesto
+    if (useLocalAssignments && localPayload?.assignments) {
+      const assignments = localPayload.assignments || {};
+      const plannedIds = new Set((localPayload.plannedMachineIds || []).map(id => String(id)));
+      const targetMachines = machines.filter(m => plannedIds.size === 0 || plannedIds.has(String(m.id)));
+      targetMachines.forEach(machine => {
+        const rolesForMachine = assignments[machine.id] || {};
+        roles.forEach(role => {
+          const empId = rolesForMachine[role.key];
+          const emp = empId ? employees.find(e => String(e.id) === String(empId)) : null;
+          const empName = getEmployeeName(emp);
+          const puesto = emp?.puesto || "";
+          rows.push({
+            machineId: machine.id,
+            machineName: getMachineAlias(machine),
+            machineCode: machine.codigo_maquina || "",
+            roleLabel: role.label,
+            employeeName: empName,
+            puesto
+          });
         });
       });
-    });
+    } else {
+      dailyStaffing.forEach(ds => {
+        const machine = machines.find(m => String(m.id) === String(ds.machine_id));
+        roles.forEach(role => {
+          const empId = ds[role.key];
+          const emp = empId ? employees.find(e => String(e.id) === String(empId)) : null;
+          const empName = getEmployeeName(emp);
+          const puesto = emp?.puesto || "";
+          rows.push({
+            machineId: ds.machine_id,
+            machineName: machine ? getMachineAlias(machine) : String(ds.machine_id || ""),
+            machineCode: machine?.codigo_maquina || "",
+            roleLabel: role.label,
+            employeeName: empName,
+            puesto
+          });
+        });
+      });
+    }
     return rows;
-  }, [dailyStaffing, machines, employees, roles]);
+  }, [useLocalAssignments, localPayload, dailyStaffing, machines, employees, roles]);
 
   const employeeRows = useMemo(() => {
     const rows = [];
-    dailyStaffing.forEach(ds => {
-      const machine = machines.find(m => String(m.id) === String(ds.machine_id));
-      roles.forEach(role => {
-        const empId = ds[role.key];
-        if (!empId) return;
-        const emp = employees.find(e => String(e.id) === String(empId));
-        const empName = getEmployeeName(emp);
-        const puesto = emp?.puesto || "";
-        rows.push({
-          employeeName: empName,
-          puesto,
-          roleLabel: role.label,
-          machineName: machine ? getMachineAlias(machine) : String(ds.machine_id || ""),
-          machineCode: machine?.codigo_maquina || ""
+    if (useLocalAssignments && localPayload?.assignments) {
+      const assignments = localPayload.assignments || {};
+      const plannedIds = new Set((localPayload.plannedMachineIds || []).map(id => String(id)));
+      const targetMachines = machines.filter(m => plannedIds.size === 0 || plannedIds.has(String(m.id)));
+      targetMachines.forEach(machine => {
+        const rolesForMachine = assignments[machine.id] || {};
+        roles.forEach(role => {
+          const empId = rolesForMachine[role.key];
+          if (!empId) return;
+          const emp = employees.find(e => String(e.id) === String(empId));
+          const empName = getEmployeeName(emp);
+          const puesto = emp?.puesto || "";
+          rows.push({
+            employeeName: empName,
+            puesto,
+            roleLabel: role.label,
+            machineName: getMachineAlias(machine),
+            machineCode: machine.codigo_maquina || ""
+          });
         });
       });
-    });
+    } else {
+      dailyStaffing.forEach(ds => {
+        const machine = machines.find(m => String(m.id) === String(ds.machine_id));
+        roles.forEach(role => {
+          const empId = ds[role.key];
+          if (!empId) return;
+          const emp = employees.find(e => String(e.id) === String(empId));
+          const empName = getEmployeeName(emp);
+          const puesto = emp?.puesto || "";
+          rows.push({
+            employeeName: empName,
+            puesto,
+            roleLabel: role.label,
+            machineName: machine ? getMachineAlias(machine) : String(ds.machine_id || ""),
+            machineCode: machine?.codigo_maquina || ""
+          });
+        });
+      });
+    }
     rows.sort((a, b) => (a.employeeName || "").localeCompare(b.employeeName || ""));
     return rows;
-  }, [dailyStaffing, machines, employees, roles]);
+  }, [useLocalAssignments, localPayload, dailyStaffing, machines, employees, roles]);
 
   const machinesGrouped = useMemo(() => {
     const map = new Map();
