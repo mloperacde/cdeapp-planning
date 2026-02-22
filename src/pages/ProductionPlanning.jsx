@@ -906,10 +906,7 @@ export default function ProductionPlanningPage() {
              <TabsContent value="personnel">
                 <ResourceForecast 
                   orders={filteredOrders}
-                  processes={processes}
-                  machineProcesses={machineProcesses}
                   employees={employees}
-                  teams={teams}
                   selectedTeam={selectedTeam}
                   dateRange={dateRange}
                 />
