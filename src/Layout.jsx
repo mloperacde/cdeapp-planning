@@ -43,8 +43,7 @@ export default function Layout({ children, currentPageName }) {
   // Normalizar: quitar query params y trailing slash
   const normalizedPath = currentPath.split('?')[0].replace(/\/$/, '') || '/Dashboard';
   
-  // Verificar si la ruta está en el menú para aplicar restricción estricta
-  // Si no está en el menú, dejamos que usePermissions decida (que permite por defecto salvo Config)
+  const isFullScreenDisplay = normalizedPath === '/ShiftAssignmentsDisplay';
   const hasAccess = canAccessPage(normalizedPath);
 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -108,6 +107,14 @@ export default function Layout({ children, currentPageName }) {
       ? `${names[0][0]}${names[1][0]}`.toUpperCase()
       : names[0][0].toUpperCase();
   };
+
+  if (isFullScreenDisplay) {
+    return (
+      <div className="min-h-screen w-full bg-slate-900">
+        {hasAccess ? children : null}
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-slate-50 dark:bg-background w-full max-w-full overflow-x-hidden">

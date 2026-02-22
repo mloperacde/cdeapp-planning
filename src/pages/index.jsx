@@ -43,6 +43,7 @@ import Reports from "./Reports";
 import ShiftHandover from "./ShiftHandover";
 import ShiftManagers from "./ShiftManagers";
 import ShiftAssignmentsPage from "./ShiftAssignmentsPage";
+import ShiftAssignmentsDisplay from "./ShiftAssignmentsDisplay";
 import ShiftIncidentManagement from "./ShiftIncidentManagement";
 import SkillMatrix from "./SkillMatrix";
 import SupportManagement1415 from "./SupportManagement1415";
@@ -124,6 +125,7 @@ const PAGES = {
   ShiftHandover: ShiftHandover,
   ShiftManagers: ShiftManagers,
   ShiftAssignmentsPage: ShiftAssignmentsPage,
+  ShiftAssignmentsDisplay: ShiftAssignmentsDisplay,
   ShiftIncidentManagement: ShiftIncidentManagement,
   SkillMatrix: SkillMatrix,
   SupportManagement1415: SupportManagement1415,
@@ -280,6 +282,7 @@ function PagesContent() {
                 <Route path="/SupportManagement1415" element={<SupportManagement1415 />} />
 
                 <Route path="/Timeline" element={<Timeline />} />
+                <Route path="/ShiftAssignmentsDisplay" element={<ShiftAssignmentsDisplay />} />
                 
                 <Route path="/WorkCalendarConfig" element={<WorkCalendarConfig />} />
                 

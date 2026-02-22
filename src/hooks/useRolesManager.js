@@ -76,6 +76,7 @@ export const DEFAULT_ROLES_CONFIG = {
         '/OrderImport': true,
         '/ShiftManagers': true,
         '/ShiftAssignmentsPage': true,
+        '/ShiftAssignmentsDisplay': true,
         '/ShiftIncidentManagement': true,
         '/MachineManagement': true,
         '/QualityControl': true,
@@ -195,7 +196,8 @@ export const DEFAULT_ROLES_CONFIG = {
       },
       page_permissions: {
         '/Dashboard': true,
-        '/ShiftAssignmentsPage': true
+        '/ShiftAssignmentsPage': true,
+        '/ShiftAssignmentsDisplay': true
       }
     },
     user: {

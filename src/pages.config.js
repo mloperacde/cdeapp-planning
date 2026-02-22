@@ -98,6 +98,7 @@ import RulesAndTemplates from './pages/RulesAndTemplates';
 import SalaryManagement from './pages/SalaryManagement';
 import SenioritySettings from './pages/SenioritySettings';
 import ShiftAssignmentsPage from './pages/ShiftAssignmentsPage';
+import ShiftAssignmentsDisplay from './pages/ShiftAssignmentsDisplay';
 import ShiftHandover from './pages/ShiftHandover';
 import ShiftIncidentManagement from './pages/ShiftIncidentManagement';
 import ShiftManagers from './pages/ShiftManagers';
@@ -164,6 +165,7 @@ export const PAGES = {
     "SalaryManagement": SalaryManagement,
     "SenioritySettings": SenioritySettings,
     "ShiftAssignmentsPage": ShiftAssignmentsPage,
+    "ShiftAssignmentsDisplay": ShiftAssignmentsDisplay,
     "ShiftHandover": ShiftHandover,
     "ShiftIncidentManagement": ShiftIncidentManagement,
     "ShiftManagers": ShiftManagers,
