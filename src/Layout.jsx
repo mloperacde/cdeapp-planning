@@ -25,7 +25,9 @@ import NotificationBadge from '@/components/notifications/NotificationBadge';
 
 export default function Layout({ children, currentPageName }) {
   const location = useLocation();
+  const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
+  const isRoot = location.pathname === '/' || location.pathname === '/Dashboard';
   
   const { canAccessPage } = usePermissions();
   
