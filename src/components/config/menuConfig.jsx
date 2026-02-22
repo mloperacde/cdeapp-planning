@@ -26,64 +26,70 @@ import {
   MessageSquare,
   DollarSign,
   Award,
-  Sparkles
+  Sparkles,
+  LayoutDashboard,
+  CalendarDays,
+  Truck,
+  Star
 } from 'lucide-react';
 
 export const MENU_STRUCTURE = [
   // Principal
   { name: 'Dashboard', path: '/Dashboard', icon: Home, category: 'Principal' },
-  
+
   // Recursos Humanos
-  { name: 'Empleados (Master)', path: '/MasterEmployeeDatabase', icon: Users, category: 'Recursos Humanos' },
+  { name: 'Dashboard RRHH', path: '/AdvancedHRDashboard', icon: LayoutDashboard, category: 'Recursos Humanos' },
+  { name: 'Estructura Organizativa', path: '/OrganizationalStructure', icon: GitBranch, category: 'Recursos Humanos' },
+  { name: 'Base de datos de Empleados', path: '/MasterEmployeeDatabase', icon: Users, category: 'Recursos Humanos' },
+  { name: 'ETT y Temporales', path: '/ETTTemporaryEmployees', icon: Briefcase, category: 'Recursos Humanos' },
   { name: 'Onboarding', path: '/EmployeeOnboarding', icon: UserPlus, category: 'Recursos Humanos' },
-  { name: 'Ausencias', path: '/AbsenceManagement', icon: Calendar, category: 'Recursos Humanos' },
-  { name: 'Salarios y Nóminas', path: '/SalaryManagement', icon: DollarSign, category: 'Recursos Humanos' },
-  { name: 'Antigüedad', path: '/SenioritySettings', icon: Award, category: 'Recursos Humanos' },
-  { name: 'Comités', path: '/CommitteeManagement', icon: Shield, category: 'Recursos Humanos' },
-  { name: 'Incentivos', path: '/IncentiveManagement', icon: Target, category: 'Recursos Humanos' },
+  { name: 'Control Presencia', path: '/AttendanceControl', icon: Clock, category: 'Recursos Humanos' },
+  { name: 'Gestión Ausencias', path: '/AbsenceManagement', icon: Calendar, category: 'Recursos Humanos' },
+  { name: 'Comités y PRL', path: '/CommitteeManagement', icon: Shield, category: 'Recursos Humanos' },
   { name: 'Vestuarios/Taquillas', path: '/LockerManagement', icon: Package, category: 'Recursos Humanos' },
-  
+  { name: 'Matriz Habilidades', path: '/SkillMatrix', icon: BarChart3, category: 'Recursos Humanos' },
+  { name: 'Gestión Salarial', path: '/SalaryManagement', icon: DollarSign, category: 'Recursos Humanos' },
+  { name: 'Plan Incentivos', path: '/IncentiveManagement', icon: Target, category: 'Recursos Humanos' },
+
   // Dirección
-  { name: 'Estructura Organizativa', path: '/OrganizationalStructure', icon: GitBranch, category: 'Dirección' },
-  { name: 'Dashboard Avanzado RRHH', path: '/AdvancedHRDashboard', icon: TrendingUp, category: 'Dirección' },
-  { name: 'Informes', path: '/Reports', icon: FileText, category: 'Dirección' },
-  { name: 'Gestión de Usuarios', path: '/AppUserManagement', icon: UserCog, category: 'Dirección' },
-  
+  { name: 'Dirección - Habilidades', path: '/DireccionSkills', icon: Star, category: 'Dirección' },
+  { name: 'Nuevo Conf. Procesos', path: '/NewProcessConfigurator', icon: FileCog, category: 'Dirección' },
+  { name: 'Planning Producción', path: '/DailyProductionPlanningPage', icon: Factory, category: 'Dirección' },
+
   // Planificación
-  { name: 'Responsables de Turno', path: '/ShiftManagers', icon: Briefcase, category: 'Planificación' },
-  { name: 'Descansos', path: '/Breaks', icon: Coffee, category: 'Planificación' },
-  { name: 'Timeline', path: '/Timeline', icon: Clock, category: 'Planificación' },
-  { name: 'Planificación Producción', path: '/ProductionPlanning', icon: Factory, category: 'Planificación' },
+  { name: 'Planificador Órdenes', path: '/ProductionPlanning', icon: Factory, category: 'Planificación' },
   { name: 'Importar Órdenes', path: '/OrderImport', icon: Database, category: 'Planificación' },
-  { name: 'Optimización IA', path: '/ProductionOptimizer', icon: Sparkles, category: 'Planificación' },
-  { name: 'Planning Diario Máquinas', path: '/MachineDailyPlanning', icon: Factory, category: 'Planificación' },
-  { name: 'Asignaciones de Máquinas', path: '/MachineAssignments', icon: Settings, category: 'Planificación' },
+  { name: 'Planificación - Habilidades', path: '/PlanificacionSkills', icon: BarChart3, category: 'Planificación' },
+
   // Fabricación
   { name: 'Empleados producción', path: '/EmployeesShiftManager', icon: Users, category: 'Fabricación' },
-  { name: 'Máquinas (Master)', path: '/MachineMaster', icon: Database, category: 'Fabricación' },
-  { name: 'Gestión de Máquinas', path: '/MachineManagement', icon: Settings, category: 'Fabricación' },
-  { name: 'Matriz de Habilidades', path: '/SkillMatrix', icon: BarChart3, category: 'Fabricación' },
-  { name: 'Configurador de Procesos', path: '/ProcessConfiguration', icon: FileCog, category: 'Fabricación' },
-  { name: 'Artículos', path: '/ArticleManagement', icon: Package, category: 'Fabricación' },
-  
-  // Mantenimiento
-  { name: 'Seguimiento Mantenimiento', path: '/MaintenanceTracking', icon: Wrench, category: 'Mantenimiento' },
-  { name: 'Intervenciones', path: '/MaintenanceInterventions', icon: ClipboardCheck, category: 'Mantenimiento' },
+  { name: 'Jefes de Turno', path: '/ShiftManagers', icon: Briefcase, category: 'Fabricación' },
+  { name: 'Asignación de Turno', path: '/ShiftAssignmentsPage', icon: CalendarDays, category: 'Fabricación' },
+  { name: 'Consulta Máquinas', path: '/MachineManagement', icon: Settings, category: 'Fabricación' },
+  { name: 'Control Calidad', path: '/QualityControl', icon: ClipboardCheck, category: 'Fabricación' },
+  { name: 'Config. Calidad', path: '/ProcessConfiguration', icon: FileCog, category: 'Fabricación' },
+  { name: 'Fabricación - Habilidades', path: '/FabricacionSkills', icon: BarChart3, category: 'Fabricación' },
 
-  // Control de Presencia
-  { name: 'Control de Presencia', path: '/AttendanceControl', icon: Clock, category: 'Control de Presencia' },
-  
+  // Mantenimiento
+  { name: 'Planning Mantenimiento', path: '/MaintenancePlanningPage', icon: CalendarDays, category: 'Mantenimiento' },
+  { name: 'Seguimiento', path: '/MaintenanceTracking', icon: Wrench, category: 'Mantenimiento' },
+  { name: 'Intervenciones', path: '/MaintenanceInterventions', icon: ClipboardCheck, category: 'Mantenimiento' },
+  { name: 'Mantenimiento - Habilidades', path: '/MantenimientoSkills', icon: BarChart3, category: 'Mantenimiento' },
+
   // Almacén
-  { name: 'Planning Soporte 14:15', path: '/SupportManagement1415', icon: Users, category: 'Almacén' },
-  
+  { name: 'Planning Almacén', path: '/WarehousePlanningPage', icon: Truck, category: 'Almacén' },
+  { name: 'Almacén - Habilidades', path: '/AlmacenSkills', icon: BarChart3, category: 'Almacén' },
+
   // Calidad
-  { name: 'Control de Calidad', path: '/QualityControl', icon: ClipboardCheck, category: 'Calidad' },
-  
+  { name: 'Planning Calidad', path: '/QualityPlanningPage', icon: ClipboardCheck, category: 'Calidad' },
+  { name: 'Calidad - Habilidades', path: '/CalidadSkills', icon: BarChart3, category: 'Calidad' },
+
   // Análisis
-  { name: 'ML Insights', path: '/MLInsights', icon: TrendingUp, category: 'Análisis' },
-  
+  { name: 'Informes', path: '/Reports', icon: FileText, category: 'Análisis' },
+  { name: 'Análisis Predictivo', path: '/MLInsights', icon: TrendingUp, category: 'Análisis' },
+
   // Configuración
-  { name: 'Configuración General', path: '/Configuration', icon: Settings, category: 'Configuración' },
-  { name: 'Branding', path: '/BrandingConfig', icon: Palette, category: 'Configuración' },
-  { name: 'Modelo de Datos', path: '/DataModelView', icon: GitBranch, category: 'Configuración' },
+  { name: 'Configuración', path: '/Configuration', icon: Settings, category: 'Configuración' },
+  { name: 'EmailNotifications', path: '/EmailNotifications', icon: Bell, category: 'Configuración' },
+  { name: 'EmployeeAbsenceInfo', path: '/EmployeeAbsenceInfo', icon: FileText, category: 'Configuración' },
 ];
