@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect, useState } from "react";
+import React, { useMemo, useEffect, useState, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
@@ -82,13 +82,37 @@ export default function ShiftAssignmentsDisplayPage() {
   );
 
   const [viewMode, setViewMode] = useState("machines");
+  const scrollContainerRef = useRef(null);
 
   useEffect(() => {
     const id = setInterval(() => {
       setViewMode(prev => (prev === "machines" ? "employees" : "machines"));
-    }, 20000);
+    }, 45000);
     return () => clearInterval(id);
   }, []);
+
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    container.scrollTop = 0;
+    const totalScroll = container.scrollHeight - container.clientHeight;
+    if (totalScroll <= 0) return;
+    const duration = 45000;
+    const start = performance.now();
+    let frameId;
+    const step = (now) => {
+      const elapsed = now - start;
+      const t = Math.min(elapsed / duration, 1);
+      container.scrollTop = totalScroll * t;
+      if (t < 1) {
+        frameId = requestAnimationFrame(step);
+      }
+    };
+    frameId = requestAnimationFrame(step);
+    return () => {
+      if (frameId) cancelAnimationFrame(frameId);
+    };
+  }, [viewMode, machinesGrouped.length, employeeRows.length]);
 
   const machineRows = useMemo(() => {
     const rows = [];
@@ -102,14 +126,12 @@ export default function ShiftAssignmentsDisplayPage() {
           const empId = rolesForMachine[role.key];
           const emp = empId ? employees.find(e => String(e.id) === String(empId)) : null;
           const empName = getEmployeeName(emp);
-          const puesto = emp?.puesto || "";
           rows.push({
             machineId: machine.id,
             machineName: getMachineAlias(machine),
             machineCode: machine.codigo_maquina || "",
             roleLabel: role.label,
-            employeeName: empName,
-            puesto
+            employeeName: empName
           });
         });
       });
@@ -120,14 +142,12 @@ export default function ShiftAssignmentsDisplayPage() {
           const empId = ds[role.key];
           const emp = empId ? employees.find(e => String(e.id) === String(empId)) : null;
           const empName = getEmployeeName(emp);
-          const puesto = emp?.puesto || "";
           rows.push({
             machineId: ds.machine_id,
             machineName: machine ? getMachineAlias(machine) : String(ds.machine_id || ""),
             machineCode: machine?.codigo_maquina || "",
             roleLabel: role.label,
-            employeeName: empName,
-            puesto
+            employeeName: empName
           });
         });
       });
@@ -148,10 +168,8 @@ export default function ShiftAssignmentsDisplayPage() {
           if (!empId) return;
           const emp = employees.find(e => String(e.id) === String(empId));
           const empName = getEmployeeName(emp);
-          const puesto = emp?.puesto || "";
           rows.push({
             employeeName: empName,
-            puesto,
             roleLabel: role.label,
             machineName: getMachineAlias(machine),
             machineCode: machine.codigo_maquina || ""
@@ -166,10 +184,8 @@ export default function ShiftAssignmentsDisplayPage() {
           if (!empId) return;
           const emp = employees.find(e => String(e.id) === String(empId));
           const empName = getEmployeeName(emp);
-          const puesto = emp?.puesto || "";
           rows.push({
             employeeName: empName,
-            puesto,
             roleLabel: role.label,
             machineName: machine ? getMachineAlias(machine) : String(ds.machine_id || ""),
             machineCode: machine?.codigo_maquina || ""
@@ -219,80 +235,79 @@ export default function ShiftAssignmentsDisplayPage() {
           </div>
         </div>
         <div className="text-sm text-slate-400">
-          Vista: {viewMode === "machines" ? "Por máquinas" : "Por empleados"} · Cambio automático cada 20 segundos
+          Vista: {viewMode === "machines" ? "Por máquinas" : "Por empleados"} · Cambio automático cada 45 segundos
         </div>
       </div>
 
-      {viewMode === "machines" ? (
-        <div className="flex-1 overflow-auto px-8 py-6">
-          <div className="text-xl font-semibold mb-4">Máquinas y personal asignado</div>
-          {machinesGrouped.length === 0 ? (
-            <div className="text-center text-slate-400 mt-10">
-              No hay asignaciones cargadas para estos filtros.
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              {machinesGrouped.map((machine, idx) => (
-                <div
-                  key={idx}
-                  className="border border-slate-800 rounded-lg p-4 bg-slate-950/60"
-                >
-                  <div className="flex items-baseline justify-between mb-3">
-                    <div className="text-lg font-semibold">{machine.header}</div>
-                    {machine.code ? (
-                      <div className="text-xs text-slate-400">{machine.code}</div>
-                    ) : null}
+      <div ref={scrollContainerRef} className="flex-1 overflow-auto px-8 py-6">
+        {viewMode === "machines" ? (
+          <>
+            <div className="text-xl font-semibold mb-4">Máquinas y personal asignado</div>
+            {machinesGrouped.length === 0 ? (
+              <div className="text-center text-slate-400 mt-10">
+                No hay asignaciones cargadas para estos filtros.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                {machinesGrouped.map((machine, idx) => (
+                  <div
+                    key={idx}
+                    className="border border-slate-800 rounded-lg p-4 bg-slate-950/60"
+                  >
+                    <div className="flex items-baseline justify-between mb-3">
+                      <div className="text-lg font-semibold">{machine.header}</div>
+                      {machine.code ? (
+                        <div className="text-xs text-slate-400">{machine.code}</div>
+                      ) : null}
+                    </div>
+                    <table className="w-full text-lg">
+                      <tbody>
+                        {machine.rows.map((row, rIdx) => (
+                          <tr
+                            key={rIdx}
+                            className={rIdx % 2 === 0 ? "bg-slate-950" : "bg-slate-900"}
+                          >
+                            <td className="py-1.5 pr-4 text-slate-300">{row.roleLabel}</td>
+                            <td className="py-1.5 pr-4">{row.employeeName}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
-                  <table className="w-full text-lg">
-                    <tbody>
-                      {machine.rows.map((row, rIdx) => (
-                        <tr
-                          key={rIdx}
-                          className={rIdx % 2 === 0 ? "bg-slate-950" : "bg-slate-900"}
-                        >
-                          <td className="py-1.5 pr-4 text-slate-300">{row.roleLabel}</td>
-                          <td className="py-1.5 pr-4">{row.employeeName}</td>
-                          <td className="py-1.5 text-slate-300">{row.puesto}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      ) : (
-        <div className="flex-1 overflow-auto px-8 py-6">
-          <div className="text-xl font-semibold mb-4">Empleados y puesto asignado</div>
-          {employeeRows.length === 0 ? (
-            <div className="text-center text-slate-400 mt-10">
-              No hay asignaciones cargadas para estos filtros.
-            </div>
-          ) : (
-            <table className="w-full text-lg">
-              <thead className="text-left border-b border-slate-700">
-                <tr className="text-slate-300">
-                  <th className="py-2 pr-4">Empleado</th>
-                  <th className="py-2 pr-4">Puesto</th>
-                  <th className="py-2 pr-4">Rol</th>
-                  <th className="py-2">Máquina</th>
-                </tr>
-              </thead>
-              <tbody>
-                {employeeRows.map((row, idx) => (
-                  <tr key={idx} className={idx % 2 === 0 ? "bg-slate-900" : "bg-slate-950"}>
-                    <td className="py-1.5 pr-4">{row.employeeName}</td>
-                    <td className="py-1.5 pr-4 text-slate-300">{row.puesto}</td>
-                    <td className="py-1.5 pr-4 text-slate-300">{row.roleLabel}</td>
-                    <td className="py-1.5">{row.machineName}</td>
-                  </tr>
                 ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      )}
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            <div className="text-xl font-semibold mb-4">Empleados y rol asignado</div>
+            {employeeRows.length === 0 ? (
+              <div className="text-center text-slate-400 mt-10">
+                No hay asignaciones cargadas para estos filtros.
+              </div>
+            ) : (
+              <table className="w-full text-lg">
+                <thead className="text-left border-b border-slate-700">
+                  <tr className="text-slate-300">
+                    <th className="py-2 pr-4">Empleado</th>
+                    <th className="py-2 pr-4">Rol</th>
+                    <th className="py-2">Máquina</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {employeeRows.map((row, idx) => (
+                    <tr key={idx} className={idx % 2 === 0 ? "bg-slate-900" : "bg-slate-950"}>
+                      <td className="py-1.5 pr-4">{row.employeeName}</td>
+                      <td className="py-1.5 pr-4 text-slate-300">{row.roleLabel}</td>
+                      <td className="py-1.5">{row.machineName}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 }
