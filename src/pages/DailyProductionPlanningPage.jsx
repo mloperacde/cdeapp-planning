@@ -228,9 +228,9 @@ export default function DailyProductionPlanningPage() {
         // 2. Availability (Must be "Disponible" - Robust)
         if (normalize(e.disponibilidad) !== "disponible") return false;
 
-        // 3. Department: 'Fabricación' (Robust)
+        // 3. Department: 'Producción' (Robust, normalizado)
         const dept = normalize(e.departamento);
-        if (dept !== 'fabricacion') return false;
+        if (dept !== 'produccion') return false;
 
         // 4. Role (Puesto) in allowed list (Robust)
         const currentPuesto = normalize(e.puesto);
@@ -238,7 +238,8 @@ export default function DailyProductionPlanningPage() {
             'responsable de linea', 
             'segunda de linea', 
             'operario de linea',
-            'operaria de linea'
+            'operaria de linea',
+            'tecnico de proceso'
         ].map(normalize);
         
         if (!allowedRoles.includes(currentPuesto)) return false;
