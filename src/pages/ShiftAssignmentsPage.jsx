@@ -647,7 +647,7 @@ export default function ShiftAssignmentsPage() {
                         </div>
                     ) : (
                         plannedMachines.map(machine => {
-                            const planning = machinePlannings.find(mp => String(mp.machine_id) === String(machine.id));
+                            const planning = dailyMachinePlannings.find(mp => String(mp.machine_id) === String(machine.id));
                             const requiredOps = Number(planning?.operadores_necesarios) || 0;
                             
                             return (
