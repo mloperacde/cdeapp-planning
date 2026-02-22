@@ -14,7 +14,7 @@ import MaintenancePlanningPage from "./MaintenancePlanningPage";
 import WarehousePlanningPage from "./WarehousePlanningPage";
 import QualityPlanningPage from "./QualityPlanningPage";
 import DailyProductionPlanningPage from "./DailyProductionPlanningPage";
-import Dashboard from "./Dashboard";
+import Dashboard from "./Dashboard.jsx";
 import DocumentManagement from "./DocumentManagement";
 import ETTTemporaryEmployees from "./ETTTemporaryEmployees";
 import EmailNotifications from "../modules/notifications/EmailNotifications";
