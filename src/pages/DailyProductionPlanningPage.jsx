@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
-import { Factory, Users, Calendar as CalendarIcon, AlertTriangle, Trash2, Plus, Search, Save, Copy, Repeat, ArrowLeft, Filter } from "lucide-react";
+import { Factory, Users, Calendar as CalendarIcon, AlertTriangle, Trash2, Plus, Search, Save, Copy, Repeat, ArrowLeft, Filter, Sparkles } from "lucide-react";
 import { format, startOfWeek, subDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -302,6 +302,143 @@ export default function DailyProductionPlanningPage() {
   }, [activePlanningsMap]);
 
   // --- Mutations ---
+
+  const autoProposalMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedDate || !selectedTeam) {
+        throw new Error("Debe seleccionar un día y turno antes de proponer planificación.");
+      }
+
+      if (!base44.entities.WorkOrder) {
+        throw new Error("Entidad WorkOrder no disponible en este entorno.");
+      }
+
+      const raw = await base44.entities.WorkOrder.list(undefined, 2000);
+      if (!Array.isArray(raw) || raw.length === 0) {
+        throw new Error("No hay órdenes planificadas en el Gantt.");
+      }
+
+      const orders = raw.map(order => {
+        let extra = {};
+        if (order.notes && typeof order.notes === "string") {
+          try {
+            const parsed = JSON.parse(order.notes);
+            if (parsed && typeof parsed === "object") extra = parsed;
+          } catch (_) {}
+        }
+
+        const normDate = (val) => {
+          if (!val) return null;
+          if (typeof val !== "string") return val;
+          if (/^\d{4}-/.test(val)) return val;
+          if (val.includes("/")) {
+            const parts = val.split(" ");
+            const datePart = parts[0];
+            const timePart = parts[1];
+            const dmy = datePart.split("/");
+            if (dmy.length === 3) {
+              const d = dmy[0];
+              const m = dmy[1];
+              const y = dmy[2];
+              if (!isNaN(d) && !isNaN(m) && !isNaN(y)) {
+                const dateStr = `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+                return timePart ? `${dateStr}T${timePart}:00` : dateStr;
+              }
+            }
+          }
+          return val;
+        };
+
+        const merged = { ...order, ...extra };
+
+        const effectiveStart = (() => {
+          const modStart = normDate(extra["Fecha Inicio Modificada"] || extra.modified_start_date || "");
+          const startLimit = normDate(extra["Fecha Inicio Limite"] || extra.start_date || order.start_date || "");
+          const result = modStart && !String(modStart).startsWith("0000") && String(modStart).length > 0 ? modStart : startLimit;
+          return result || null;
+        })();
+
+        const effectiveEnd = normDate(
+          extra["Fecha Fin"] || extra["end_date_simple"] || extra.planned_end_date || order.planned_end_date || ""
+        );
+
+        return {
+          id: order.id,
+          machine_id: order.machine_id,
+          effective_start_date: effectiveStart,
+          effective_delivery_date: effectiveEnd
+        };
+      });
+
+      const selectedDateObj = new Date(selectedDate);
+      selectedDateObj.setHours(12, 0, 0, 0);
+
+      const machinesForDay = new Set();
+
+      orders.forEach(o => {
+        if (!o.effective_start_date) return;
+        const start = new Date(o.effective_start_date);
+        if (Number.isNaN(start.getTime())) return;
+        const end = o.effective_delivery_date ? new Date(o.effective_delivery_date) : start;
+        if (Number.isNaN(end.getTime())) return;
+        const startDay = new Date(start);
+        startDay.setHours(0, 0, 0, 0);
+        const endDay = new Date(end);
+        endDay.setHours(23, 59, 59, 999);
+        if (selectedDateObj >= startDay && selectedDateObj <= endDay && o.machine_id) {
+          machinesForDay.add(String(o.machine_id));
+        }
+      });
+
+      if (machinesForDay.size === 0) {
+        throw new Error("No hay máquinas con órdenes programadas en el Gantt para este día.");
+      }
+
+      const candidateMachines = (machines || []).filter(m => machinesForDay.has(String(m.id)));
+      const toCreate = candidateMachines.filter(m => !activePlanningsMap.has(String(m.id)));
+
+      if (toCreate.length === 0) {
+        throw new Error("Todas las máquinas del Gantt ya están en la planificación diaria.");
+      }
+
+      for (const machine of toCreate) {
+        await base44.entities.MachinePlanning.create({
+          machine_id: machine.id,
+          machine_nombre: machine.alias,
+          machine_codigo: machine.codigo_maquina,
+          fecha_planificacion: selectedDate,
+          team_key: selectedTeam,
+          operadores_necesarios: 1,
+          activa_planning: true,
+          turno: currentShift,
+          process_id: null
+        });
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+
+      return toCreate.length;
+    },
+    onMutate: async () => {
+      await queryClient.cancelQueries(["machinePlannings", selectedDate, selectedTeam]);
+    },
+    onSuccess: (count) => {
+      toast({
+        title: "Propuesta generada",
+        description: `Se han añadido ${count} máquinas desde el Gantt de órdenes.`,
+        className: "bg-blue-600 text-white border-blue-700",
+        duration: 3000
+      });
+      queryClient.invalidateQueries(["machinePlannings", selectedDate, selectedTeam]);
+    },
+    onError: (err) => {
+      toast({
+        title: "Error al proponer planificación",
+        description: err.message,
+        variant: "destructive",
+        duration: 5000
+      });
+    }
+  });
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.MachinePlanning.create(data),
@@ -639,6 +776,17 @@ export default function DailyProductionPlanningPage() {
 
           {/* Right: Actions */}
           <div className="flex flex-wrap gap-2 w-full xl:w-auto justify-end">
+              <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => autoProposalMutation.mutate()}
+                  disabled={autoProposalMutation.isPending || !selectedDate || !selectedTeam}
+                  className="h-9 gap-2 border-blue-600 text-blue-700 hover:bg-blue-50 bg-white"
+              >
+                  <Sparkles className="w-4 h-4" />
+                  {autoProposalMutation.isPending ? "Generando propuesta..." : "Propuesta desde Gantt"}
+              </Button>
+
               <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
                   <DialogTrigger asChild>
                        <Button variant="outline" size="sm" className="h-9 gap-2 bg-white border-slate-200">
