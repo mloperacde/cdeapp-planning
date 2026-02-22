@@ -18,6 +18,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import * as ReactWindow from 'react-window';
 import { AutoSizer } from "react-virtualized-auto-sizer";
 import ThemeToggle from "../components/common/ThemeToggle";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const List = ReactWindow.FixedSizeList || ReactWindow.default?.FixedSizeList;
 
@@ -41,6 +42,7 @@ export default function DailyProductionPlanningPage() {
   const [selectedShift, setSelectedShift] = useState("Mañana");
   const [selectedTeam, setSelectedTeam] = useState(""); 
   const [machineSearch, setMachineSearch] = useState("");
+  const [configMode, setConfigMode] = useState("manual");
   
   // Import Dialog State
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
@@ -138,6 +140,17 @@ export default function DailyProductionPlanningPage() {
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 
+  const { data: manufacturingConfigRecord } = useQuery({
+    queryKey: ["appConfig", "manufacturing"],
+    queryFn: async () => {
+      const configs = await base44.entities.AppConfig.filter({ config_key: "manufacturing_config" });
+      return configs[0] || null;
+    },
+    enabled: machines.length > 0,
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
   // --- Derived State ---
 
   const selectedTeamObj = useMemo(() => {
@@ -183,6 +196,22 @@ export default function DailyProductionPlanningPage() {
     return selectedShift || "Sin Asignar";
   }, [selectedShift]);
 
+  const manufacturingConfig = useMemo(() => {
+    if (!manufacturingConfigRecord) {
+      return { areas: [] };
+    }
+    try {
+      const raw = manufacturingConfigRecord.value || manufacturingConfigRecord.description || manufacturingConfigRecord.app_subtitle || null;
+      if (!raw) return { areas: [] };
+      const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
+      return {
+        areas: Array.isArray(parsed.areas) ? parsed.areas : [],
+      };
+    } catch {
+      return { areas: [] };
+    }
+  }, [manufacturingConfigRecord]);
+
   const activePlanningsMap = useMemo(() => {
     const map = new Map();
     plannings.forEach(p => {
@@ -215,6 +244,40 @@ export default function DailyProductionPlanningPage() {
     });
     return list.sort((a, b) => (a.orden_visualizacion || 999) - (b.orden_visualizacion || 999));
   }, [activePlanningsMap, machines]);
+
+  const areasWithMachines = useMemo(() => {
+    const allMachines = machines || [];
+    const areasConfig = manufacturingConfig?.areas || [];
+    const usedMachineIds = new Set();
+    const result = [];
+
+    areasConfig.forEach(area => {
+      const areaIdStr = String(area.id);
+      const machinesInArea = allMachines.filter(m => {
+        const mAreaId = m.area_id ? String(m.area_id) : null;
+        if (mAreaId && mAreaId === areaIdStr) return true;
+        if (!mAreaId && m.area_name && area.name && String(m.area_name).trim() === String(area.name).trim()) return true;
+        return false;
+      });
+      machinesInArea.forEach(m => usedMachineIds.add(String(m.id)));
+      result.push({
+        areaId: area.id,
+        areaName: area.name,
+        machines: machinesInArea,
+      });
+    });
+
+    const leftover = allMachines.filter(m => !usedMachineIds.has(String(m.id)));
+    if (leftover.length) {
+      result.push({
+        areaId: "unassigned",
+        areaName: "Sin Área",
+        machines: leftover,
+      });
+    }
+
+    return result;
+  }, [machines, manufacturingConfig]);
 
   const availableMachines = useMemo(() => {
     return (machines || []).filter(m => !activePlanningsMap.has(String(m.id)));
@@ -411,6 +474,7 @@ export default function DailyProductionPlanningPage() {
           operadores_necesarios: 1,
           activa_planning: true,
           turno: currentShift,
+          auto_suggested: true,
           process_id: null
         });
         await new Promise(resolve => setTimeout(resolve, 50));
@@ -626,6 +690,7 @@ export default function DailyProductionPlanningPage() {
         operadores_necesarios: 1,
         activa_planning: true,
         turno: currentShift,
+        auto_suggested: false,
         process_id: null
     });
   };
@@ -1032,83 +1097,206 @@ export default function DailyProductionPlanningPage() {
             </CardContent>
           </Card>
 
-          {/* Right Column: Planning Grid */}
           <Card className="lg:col-span-2 flex flex-col h-full border-slate-200 shadow-sm overflow-hidden">
             <CardHeader className="pb-2 pt-3 px-4 border-b shrink-0">
-                <div className="flex items-center justify-between">
-                    <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                        <div className="bg-blue-100 p-1 rounded">
-                            <Factory className="w-3.5 h-3.5 text-blue-600" />
-                        </div>
-                        Máquinas Planificadas <span className="text-slate-400 font-normal">({plannedMachines.length})</span>
-                    </CardTitle>
-                    <div className="text-xs text-slate-500">
-                        {totalRequiredOperators} operarios asignados
-                    </div>
+              <div className="flex items-center justify-between gap-3">
+                <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                  <div className="bg-blue-100 p-1 rounded">
+                    <Factory className="w-3.5 h-3.5 text-blue-600" />
+                  </div>
+                  Mapa de Áreas y Máquinas
+                  <span className="text-slate-400 font-normal text-xs">
+                    {plannedMachines.length} activas
+                  </span>
+                </CardTitle>
+                <div className="flex items-center gap-3">
+                  <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 p-0.5">
+                    <Button
+                      variant={configMode === "manual" ? "default" : "ghost"}
+                      size="sm"
+                      className={cn(
+                        "h-7 px-3 text-[11px]",
+                        configMode === "manual"
+                          ? "bg-blue-600 text-white hover:bg-blue-700"
+                          : "text-slate-600 hover:bg-slate-100"
+                      )}
+                      onClick={() => setConfigMode("manual")}
+                    >
+                      Config. manual
+                    </Button>
+                    <Button
+                      variant={configMode === "suggested" ? "default" : "ghost"}
+                      size="sm"
+                      className={cn(
+                        "h-7 px-3 text-[11px]",
+                        configMode === "suggested"
+                          ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                          : "text-slate-600 hover:bg-slate-100"
+                      )}
+                      onClick={() => setConfigMode("suggested")}
+                    >
+                      Config. sugerida
+                    </Button>
+                  </div>
+                  <div className="text-[11px] text-slate-500">
+                    {totalRequiredOperators} operarios asignados
+                  </div>
                 </div>
+              </div>
             </CardHeader>
             <CardContent className="flex-1 overflow-hidden p-0 min-h-0 bg-slate-50/10">
-                <ScrollArea className="h-full w-full">
-                    <div className="p-3">
-                        {plannedMachines.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center h-48 text-slate-400">
-                                <Factory className="w-10 h-10 mb-2 text-slate-200" />
-                                <p className="font-medium text-sm">Lista vacía</p>
-                                <p className="text-xs mt-1">Añada máquinas del catálogo</p>
-                            </div>
-                        ) : (
-                            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2">
-                                {plannedMachines.map(item => {
-                                    const { planning } = item;
-                                    return (
-                                        <div key={planning.id} className="group bg-white border border-slate-200 rounded-lg p-2.5 hover:shadow-md hover:border-blue-200 transition-all relative flex flex-col gap-2">
-                                            {/* Header: Name */}
-                                            <div className="flex items-start justify-between gap-2">
-                                                <div className="font-semibold text-xs text-slate-800 leading-tight line-clamp-2" title={getMachineAlias(item)}>
-                                                    {getMachineAlias(item)}
-                                                </div>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-5 w-5 -mr-1 -mt-1 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-full shrink-0"
-                                                    onClick={() => handleDeletePlanning(planning.id)}
-                                                >
-                                                    <Trash2 className="h-3 w-3" />
-                                                </Button>
-                                            </div>
+              <ScrollArea className="h-full w-full">
+                <div className="p-3 space-y-3">
+                  {areasWithMachines.map(group => {
+                    const totalInArea = group.machines.length;
+                    const activeInAreaManual = group.machines.filter(m =>
+                      activePlanningsMap.has(String(m.id))
+                    ).length;
+                    const activeInAreaSuggested = group.machines.filter(m => {
+                      const planning = activePlanningsMap.get(String(m.id));
+                      return planning && planning.auto_suggested;
+                    }).length;
+                    const activeInArea =
+                      configMode === "manual" ? activeInAreaManual : activeInAreaSuggested;
 
-                                            {/* Details & Controls */}
-                                            <div className="flex items-end justify-between gap-2 mt-auto">
-                                                <div className="flex flex-col gap-0.5">
-                                                     <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">Operarios</span>
-                                                     <div className="flex items-center gap-1">
-                                                        <Input 
-                                                            type="number" 
-                                                            min="1"
-                                                            className="h-6 w-12 px-1 text-center text-xs font-bold bg-slate-50 border-slate-200 focus:border-blue-400 focus:ring-1 focus:ring-blue-400"
-                                                            defaultValue={planning.operadores_necesarios}
-                                                            onBlur={(e) => handleOperatorChange(planning.id, e.target.value)}
-                                                            onKeyDown={(e) => {
-                                                                if(e.key === 'Enter') handleOperatorChange(planning.id, e.currentTarget.value);
-                                                            }}
-                                                        />
-                                                     </div>
-                                                </div>
-                                                
-                                                <div className="flex flex-col items-end gap-0.5">
-                                                     <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">Turno</span>
-                                                     <span className="text-[10px] font-mono bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded border border-slate-200">
-                                                        {planning.turno || currentShift}
-                                                     </span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
+                    return (
+                      <div
+                        key={group.areaId}
+                        className="border border-slate-200 rounded-lg bg-white/70 overflow-hidden"
+                      >
+                        <div className="px-3 py-2 flex items-center justify-between bg-slate-50 border-b border-slate-200">
+                          <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 rounded bg-blue-50 flex items-center justify-center">
+                              <Factory className="w-3.5 h-3.5 text-blue-600" />
                             </div>
-                        )}
-                    </div>
-                </ScrollArea>
+                            <div className="flex flex-col">
+                              <span className="text-xs font-semibold text-slate-800">
+                                {group.areaName || "Sin Área"}
+                              </span>
+                              <span className="text-[10px] text-slate-400">
+                                {totalInArea} máquinas
+                              </span>
+                            </div>
+                          </div>
+                          <span className="text-[10px] text-slate-500">
+                            {activeInArea}/{totalInArea} activas
+                          </span>
+                        </div>
+                        <div className="p-2">
+                          {group.machines.length === 0 ? (
+                            <div className="text-[11px] text-slate-400 italic px-1 py-3">
+                              No hay máquinas asignadas a esta área.
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-1.5">
+                              {group.machines.map(machine => {
+                                const planning = activePlanningsMap.get(String(machine.id));
+                                const isActiveManual = !!planning;
+                                const isActiveSuggested = !!(planning && planning.auto_suggested);
+                                const isActive =
+                                  configMode === "manual" ? isActiveManual : isActiveSuggested;
+
+                                const operatorsValue =
+                                  planning && planning.operadores_necesarios
+                                    ? planning.operadores_necesarios
+                                    : "";
+
+                                return (
+                                  <div
+                                    key={machine.id}
+                                    className={cn(
+                                      "flex items-center gap-2 rounded-md border px-2 py-1.5 bg-white",
+                                      isActive
+                                        ? "border-emerald-300 bg-emerald-50/60"
+                                        : "border-slate-200 opacity-80"
+                                    )}
+                                  >
+                                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                                      <Checkbox
+                                        id={`machine-${group.areaId}-${machine.id}`}
+                                        checked={isActive}
+                                        disabled={configMode === "suggested"}
+                                        onCheckedChange={checked => {
+                                          if (configMode !== "manual") return;
+                                          if (checked) {
+                                            if (!isActiveManual) {
+                                              handleAddMachine(machine);
+                                            }
+                                          } else if (planning) {
+                                            handleDeletePlanning(planning.id);
+                                          }
+                                        }}
+                                      />
+                                      <div className="flex flex-col flex-1 min-w-0">
+                                        <label
+                                          htmlFor={`machine-${group.areaId}-${machine.id}`}
+                                          className="text-[11px] font-medium text-slate-800 truncate cursor-pointer"
+                                          title={machine.alias}
+                                        >
+                                          {machine.alias}
+                                        </label>
+                                        <div className="flex items-center gap-1 text-[10px] text-slate-400">
+                                          {machine.codigo_maquina && (
+                                            <span className="font-mono bg-slate-50 border border-slate-200 rounded px-1">
+                                              {machine.codigo_maquina}
+                                            </span>
+                                          )}
+                                          {(machine.room_name || machine.ubicacion) && (
+                                            <span className="truncate">
+                                              {machine.room_name || machine.ubicacion}
+                                            </span>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                      {configMode === "manual" ? (
+                                        <>
+                                          <span className="text-[10px] text-slate-400">Op.</span>
+                                          <Input
+                                            type="number"
+                                            min="1"
+                                            className="h-6 w-12 px-1 text-center text-[11px] font-semibold bg-slate-50 border-slate-200 focus:border-blue-400 focus:ring-1 focus:ring-blue-400"
+                                            disabled={!isActiveManual || !planning}
+                                            defaultValue={operatorsValue}
+                                            onBlur={e => {
+                                              if (planning) {
+                                                handleOperatorChange(
+                                                  planning.id,
+                                                  e.target.value
+                                                );
+                                              }
+                                            }}
+                                            onKeyDown={e => {
+                                              if (e.key === "Enter" && planning) {
+                                                handleOperatorChange(
+                                                  planning.id,
+                                                  e.currentTarget.value
+                                                );
+                                              }
+                                            }}
+                                          />
+                                        </>
+                                      ) : (
+                                        planning &&
+                                        planning.auto_suggested && (
+                                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-300">
+                                            Sugerida
+                                          </span>
+                                        )
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
             </CardContent>
           </Card>
         </div>
