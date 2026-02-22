@@ -311,7 +311,7 @@ export function StructureConfig({ config, setConfig }) {
   };
 
   const onDragEnd = (result) => {
-    const { source, destination } = result;
+    const { source, destination, type } = result;
 
     // Dropped outside the list
     if (!destination) {
@@ -319,36 +319,63 @@ export function StructureConfig({ config, setConfig }) {
     }
 
     // Dropped in the same place
-    if (source.droppableId === destination.droppableId && source.index === destination.index) {
+    if (
+      source.droppableId === destination.droppableId &&
+      source.index === destination.index &&
+      type !== "AREAS"
+    ) {
       return;
     }
 
-    setConfig(prev => {
-        const newAreas = [...prev.areas];
-        const sourceAreaIndex = newAreas.findIndex(a => a.id === source.droppableId);
-        const destAreaIndex = newAreas.findIndex(a => a.id === destination.droppableId);
-
-        if (sourceAreaIndex === -1 || destAreaIndex === -1) return prev;
-
-        const sourceArea = { ...newAreas[sourceAreaIndex] };
-        const destArea = { ...newAreas[destAreaIndex] };
-        
-        // Remove from source
-        const [movedRoom] = sourceArea.rooms.splice(source.index, 1);
-
-        // Add to destination
-        if (source.droppableId === destination.droppableId) {
-            // Same list reorder
-            sourceArea.rooms.splice(destination.index, 0, movedRoom);
-            newAreas[sourceAreaIndex] = sourceArea;
-        } else {
-            // Move between lists
-            destArea.rooms.splice(destination.index, 0, movedRoom);
-            newAreas[sourceAreaIndex] = sourceArea;
-            newAreas[destAreaIndex] = destArea;
+    // Reordenar Áreas completas
+    if (type === "AREAS") {
+      setConfig(prev => {
+        const currentAreas = Array.isArray(prev.areas) ? prev.areas.slice() : [];
+        if (
+          source.index < 0 ||
+          source.index >= currentAreas.length ||
+          destination.index < 0 ||
+          destination.index >= currentAreas.length
+        ) {
+          return prev;
         }
+        const [movedArea] = currentAreas.splice(source.index, 1);
+        currentAreas.splice(destination.index, 0, movedArea);
+        return { ...prev, areas: currentAreas };
+      });
+      return;
+    }
 
-        return { ...prev, areas: newAreas };
+    // Reordenar / mover Salas dentro de las Áreas
+    setConfig(prev => {
+      const newAreas = [...prev.areas];
+      const sourceAreaIndex = newAreas.findIndex(a => a.id === source.droppableId);
+      const destAreaIndex = newAreas.findIndex(a => a.id === destination.droppableId);
+
+      if (sourceAreaIndex === -1 || destAreaIndex === -1) return prev;
+
+      const sourceArea = { ...newAreas[sourceAreaIndex] };
+      const destArea = { ...newAreas[destAreaIndex] };
+      
+      const sourceRooms = Array.isArray(sourceArea.rooms) ? [...sourceArea.rooms] : [];
+      const destRooms = sourceAreaIndex === destAreaIndex
+        ? sourceRooms
+        : (Array.isArray(destArea.rooms) ? [...destArea.rooms] : []);
+
+      const [movedRoom] = sourceRooms.splice(source.index, 1);
+
+      if (!movedRoom) return prev;
+
+      if (source.droppableId === destination.droppableId) {
+        destRooms.splice(destination.index, 0, movedRoom);
+        newAreas[sourceAreaIndex] = { ...sourceArea, rooms: destRooms };
+      } else {
+        destRooms.splice(destination.index, 0, movedRoom);
+        newAreas[sourceAreaIndex] = { ...sourceArea, rooms: sourceRooms };
+        newAreas[destAreaIndex] = { ...destArea, rooms: destRooms };
+      }
+
+      return { ...prev, areas: newAreas };
     });
   };
 
@@ -393,128 +420,150 @@ export function StructureConfig({ config, setConfig }) {
       </div>
 
       <DragDropContext onDragEnd={onDragEnd}>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 items-start">
-            {config.areas.map(area => (
-                <Card key={area.id} className="bg-slate-50/50 dark:bg-slate-900/50">
-                    <CardHeader className="p-4 pb-2 space-y-0">
-                        <div className="flex items-center justify-between">
+        <Droppable droppableId="areas-droppable" direction="horizontal" type="AREAS">
+          {(providedAreas) => (
+            <div
+              ref={providedAreas.innerRef}
+              {...providedAreas.droppableProps}
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 items-start"
+            >
+              {config.areas.map((area, areaIndex) => (
+                <Draggable key={area.id} draggableId={String(area.id)} index={areaIndex}>
+                  {(providedArea) => (
+                    <div
+                      ref={providedArea.innerRef}
+                      {...providedArea.draggableProps}
+                      className="h-full"
+                    >
+                      <Card className="bg-slate-50/50 dark:bg-slate-900/50 h-full">
+                        <CardHeader className="p-4 pb-2 space-y-0">
+                          <div className="flex items-center justify-between">
                             {editingArea?.id === area.id ? (
-                                <div className="flex gap-2 w-full">
-                                    <Input 
-                                        value={editingArea.name} 
-                                        onChange={(e) => setEditingArea({...editingArea, name: e.target.value})}
-                                        className="h-8 text-sm"
-                                        autoFocus
-                                    />
-                                    <Button size="icon" className="h-8 w-8" onClick={updateAreaName}>
-                                        <Plus className="w-4 h-4" />
-                                    </Button>
-                                </div>
+                              <div className="flex gap-2 w-full">
+                                <Input 
+                                  value={editingArea.name} 
+                                  onChange={(e) => setEditingArea({...editingArea, name: e.target.value})}
+                                  className="h-8 text-sm"
+                                  autoFocus
+                                />
+                                <Button size="icon" className="h-8 w-8" onClick={updateAreaName}>
+                                  <Plus className="w-4 h-4" />
+                                </Button>
+                              </div>
                             ) : (
-                                <>
-                                    <CardTitle className="text-sm font-bold flex items-center gap-2">
-                                        <Factory className="w-4 h-4 text-slate-500" />
-                                        {area.name}
-                                        <span className="text-xs font-normal text-slate-400">({area.rooms?.length || 0})</span>
-                                    </CardTitle>
-                                    <div className="flex gap-1">
-                                        <Button 
-                                            variant="ghost" 
-                                            size="icon" 
-                                            className="h-6 w-6 text-slate-400 hover:text-blue-600"
-                                            onClick={() => setEditingArea({ id: area.id, name: area.name })}
-                                        >
-                                            <Pencil className="w-3 h-3" />
-                                        </Button>
-                                        <Button 
-                                            variant="ghost" 
-                                            size="icon" 
-                                            className="h-6 w-6 text-slate-400 hover:text-red-600"
-                                            onClick={() => deleteArea(area.id)}
-                                        >
-                                            <X className="w-3 h-3" />
-                                        </Button>
-                                    </div>
-                                </>
-                            )}
-                        </div>
-                    </CardHeader>
-                    <CardContent className="p-4 pt-2">
-                        <Droppable droppableId={area.id}>
-                            {(provided, snapshot) => (
-                                <div
-                                    {...provided.droppableProps}
-                                    ref={provided.innerRef}
-                                    className={`space-y-2 min-h-[100px] p-2 rounded-lg transition-colors ${
-                                        snapshot.isDraggingOver ? 'bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-200' : 'bg-slate-100/50 dark:bg-slate-800/50'
-                                    }`}
-                                >
-                                    {area.rooms?.map((room, index) => (
-                                        <Draggable key={room.id} draggableId={room.id} index={index}>
-                                            {(provided, snapshot) => (
-                                                <div
-                                                    ref={provided.innerRef}
-                                                    {...provided.draggableProps}
-                                                    {...provided.dragHandleProps}
-                                                    className={`
-                                                        group flex items-center gap-2 p-2 rounded border bg-white dark:bg-slate-800 shadow-sm
-                                                        ${snapshot.isDragging ? 'shadow-lg ring-2 ring-blue-500 rotate-2' : 'hover:border-blue-300'}
-                                                    `}
-                                                    style={provided.draggableProps.style}
-                                                >
-                                                    <GripVertical className="w-4 h-4 text-slate-300 group-hover:text-slate-500 cursor-grab active:cursor-grabbing" />
-                                                    <span className="text-sm font-medium flex-1 truncate">{room.name}</span>
-                                                    <Button 
-                                                        variant="ghost" 
-                                                        size="icon" 
-                                                        className="h-6 w-6 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                                                        onClick={() => deleteRoom(area.id, room.id)}
-                                                    >
-                                                        <Trash2 className="w-3 h-3" />
-                                                    </Button>
-                                                </div>
-                                            )}
-                                        </Draggable>
-                                    ))}
-                                    {provided.placeholder}
-                                    
-                                    {isAddingRoom === area.id ? (
-                                        <div className="flex gap-2 mt-2">
-                                            <Input 
-                                                id={`new-room-${area.id}`}
-                                                placeholder="Nombre..." 
-                                                className="h-8 text-sm bg-white"
-                                                autoFocus
-                                                onKeyDown={(e) => {
-                                                    if (e.key === 'Enter') addRoom(area.id, e.currentTarget.value);
-                                                    if (e.key === 'Escape') setIsAddingRoom(null);
-                                                }}
-                                            />
-                                            <Button 
-                                                size="icon" 
-                                                className="h-8 w-8" 
-                                                onClick={() => addRoom(area.id, document.getElementById(`new-room-${area.id}`).value)}
-                                            >
-                                                <Plus className="w-4 h-4" />
-                                            </Button>
-                                        </div>
-                                    ) : (
-                                        <Button 
-                                            variant="ghost" 
-                                            size="sm" 
-                                            className="w-full text-xs text-slate-400 hover:text-slate-600 border border-dashed border-slate-300 hover:border-slate-400 mt-2"
-                                            onClick={() => setIsAddingRoom(area.id)}
-                                        >
-                                            <Plus className="w-3 h-3 mr-1" /> Añadir Sala
-                                        </Button>
-                                    )}
+                              <>
+                                <CardTitle className="text-sm font-bold flex items-center gap-2">
+                                  <span {...providedArea.dragHandleProps}>
+                                    <GripVertical className="w-3 h-3 mr-1 text-slate-300 hover:text-slate-500 cursor-grab active:cursor-grabbing" />
+                                  </span>
+                                  <Factory className="w-4 h-4 text-slate-500" />
+                                  {area.name}
+                                  <span className="text-xs font-normal text-slate-400">({area.rooms?.length || 0})</span>
+                                </CardTitle>
+                                <div className="flex gap-1">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-6 w-6 text-slate-400 hover:text-blue-600"
+                                    onClick={() => setEditingArea({ id: area.id, name: area.name })}
+                                  >
+                                    <Pencil className="w-3 h-3" />
+                                  </Button>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-6 w-6 text-slate-400 hover:text-red-600"
+                                    onClick={() => deleteArea(area.id)}
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </Button>
                                 </div>
+                              </>
                             )}
-                        </Droppable>
-                    </CardContent>
-                </Card>
-            ))}
-        </div>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="p-4 pt-2">
+                          <Droppable droppableId={area.id}>
+                            {(provided, snapshot) => (
+                              <div
+                                {...provided.droppableProps}
+                                ref={provided.innerRef}
+                                className={`space-y-2 min-h-[100px] p-2 rounded-lg transition-colors ${
+                                  snapshot.isDraggingOver ? 'bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-200' : 'bg-slate-100/50 dark:bg-slate-800/50'
+                                }`}
+                              >
+                                {area.rooms?.map((room, index) => (
+                                  <Draggable key={room.id} draggableId={room.id} index={index}>
+                                    {(providedRoom, snapshotRoom) => (
+                                      <div
+                                        ref={providedRoom.innerRef}
+                                        {...providedRoom.draggableProps}
+                                        {...providedRoom.dragHandleProps}
+                                        className={`
+                                          group flex items-center gap-2 p-2 rounded border bg-white dark:bg-slate-800 shadow-sm
+                                          ${snapshotRoom.isDragging ? 'shadow-lg ring-2 ring-blue-500 rotate-2' : 'hover:border-blue-300'}
+                                        `}
+                                        style={providedRoom.draggableProps.style}
+                                      >
+                                        <GripVertical className="w-4 h-4 text-slate-300 group-hover:text-slate-500 cursor-grab active:cursor-grabbing" />
+                                        <span className="text-sm font-medium flex-1 truncate">{room.name}</span>
+                                        <Button 
+                                          variant="ghost" 
+                                          size="icon" 
+                                          className="h-6 w-6 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                          onClick={() => deleteRoom(area.id, room.id)}
+                                        >
+                                          <Trash2 className="w-3 h-3" />
+                                        </Button>
+                                      </div>
+                                    )}
+                                  </Draggable>
+                                ))}
+                                {provided.placeholder}
+                                
+                                {isAddingRoom === area.id ? (
+                                  <div className="flex gap-2 mt-2">
+                                    <Input 
+                                      id={`new-room-${area.id}`}
+                                      placeholder="Nombre..." 
+                                      className="h-8 text-sm bg-white"
+                                      autoFocus
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter') addRoom(area.id, e.currentTarget.value);
+                                        if (e.key === 'Escape') setIsAddingRoom(null);
+                                      }}
+                                    />
+                                    <Button 
+                                      size="icon" 
+                                      className="h-8 w-8" 
+                                      onClick={() => addRoom(area.id, document.getElementById(`new-room-${area.id}`).value)}
+                                    >
+                                      <Plus className="w-4 h-4" />
+                                    </Button>
+                                  </div>
+                                ) : (
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    className="w-full text-xs text-slate-400 hover:text-slate-600 border border-dashed border-slate-300 hover:border-slate-400 mt-2"
+                                    onClick={() => setIsAddingRoom(area.id)}
+                                  >
+                                    <Plus className="w-3 h-3 mr-1" /> Añadir Sala
+                                  </Button>
+                                )}
+                              </div>
+                            )}
+                          </Droppable>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  )}
+                </Draggable>
+              ))}
+              {providedAreas.placeholder}
+            </div>
+          )}
+        </Droppable>
       </DragDropContext>
       {config.areas.length === 0 && (
           <div className="text-center py-12 border-2 border-dashed rounded-xl bg-slate-50">
