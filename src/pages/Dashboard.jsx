@@ -16,9 +16,9 @@ import { useQueryClient } from "@tanstack/react-query";
 import PullToRefresh from "@/components/mobile/PullToRefresh";
 
 // Lazy-load heavy sections
-const TimelineSection = lazy(() => import("../components/dashboard/DashboardTimeline"));
-const ShiftSwapWidget = lazy(() => import("../components/dashboard/ShiftSwapWidget"));
-const WorkCalendar = lazy(() => import("../components/absences/WorkCalendar"));
+const TimelineSection = lazy(() => import("@/components/dashboard/DashboardTimeline"));
+const ShiftSwapWidget = lazy(() => import("@/components/dashboard/ShiftSwapWidget"));
+const WorkCalendar = lazy(() => import("@/components/absences/WorkCalendar"));
 
 function SectionSkeleton({ height = "h-48" }) {
   return <div className={`${height} rounded-xl bg-slate-100 dark:bg-slate-800 animate-pulse`} aria-hidden="true" />;
