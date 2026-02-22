@@ -25,7 +25,8 @@ import {
   Bell,
   MessageSquare,
   DollarSign,
-  Award
+  Award,
+  Sparkles
 } from 'lucide-react';
 
 export const MENU_STRUCTURE = [
