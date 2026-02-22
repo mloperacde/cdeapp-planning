@@ -113,6 +113,18 @@ export default function DailyProductionPlanningPage() {
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 
+  const { data: dailyPlansHistory = [] } = useQuery({
+    queryKey: ['dailyPlansHistory'],
+    queryFn: async () => {
+      if (!base44.entities.DailyProductionPlanning) return [];
+      const data = await base44.entities.DailyProductionPlanning.list('', 1000);
+      return Array.isArray(data) ? data : [];
+    },
+    staleTime: 5 * 60 * 1000,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+  });
+
   // 4. Fetch Shift Schedule to determine Shift
   const { data: shiftSchedule } = useQuery({
     queryKey: ['teamWeekSchedules', selectedDate],
@@ -279,6 +291,32 @@ export default function DailyProductionPlanningPage() {
 
     return result;
   }, [machines, manufacturingConfig]);
+
+  const avgOperatorsByMachine = useMemo(() => {
+    const sums = new Map();
+    const counts = new Map();
+    const norm = (s) => s ? s.toString().trim().toLowerCase() : '';
+    const targetShift = norm(currentShift);
+
+    (dailyPlansHistory || []).forEach(r => {
+      if (!r || r.team_key !== selectedTeam) return;
+      if (r.turno && norm(r.turno) !== targetShift) return;
+      const snap = Array.isArray(r.snapshot) ? r.snapshot : [];
+      snap.forEach(item => {
+        const mid = String(item.machine_id);
+        const op = Number(item.operadores_necesarios) || 0;
+        sums.set(mid, (sums.get(mid) || 0) + op);
+        counts.set(mid, (counts.get(mid) || 0) + 1);
+      });
+    });
+
+    const avg = new Map();
+    sums.forEach((sum, mid) => {
+      const c = counts.get(mid) || 1;
+      avg.set(mid, sum / c);
+    });
+    return avg;
+  }, [dailyPlansHistory, selectedTeam, currentShift]);
 
   const availableOperators = useMemo(() => {
     const teamObj = (teams || []).find(t => t.team_key === selectedTeam);
@@ -672,6 +710,72 @@ export default function DailyProductionPlanningPage() {
     }
   });
 
+  const saveSnapshotMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedDate || !selectedTeam) {
+        throw new Error("Debe seleccionar un día y equipo antes de guardar.");
+      }
+      if (!base44.entities.DailyProductionPlanning) {
+        throw new Error("Entidad DailyProductionPlanning no disponible en este entorno.");
+      }
+
+      const manualPlannings = [];
+      activePlanningsMap.forEach(p => {
+        if (p.auto_suggested) return;
+        manualPlannings.push(p);
+      });
+
+      if (manualPlannings.length === 0) {
+        throw new Error("No hay ninguna máquina planificada en modo manual para guardar.");
+      }
+
+      const snapshot = manualPlannings.map(p => {
+        const machine = machines.find(m => String(m.id) === String(p.machine_id));
+        const alias = machine ? machine.alias : p.machine_nombre;
+        const codigo = machine ? machine.codigo_maquina : p.machine_codigo;
+        const areaId = machine && machine.area_id ? machine.area_id : null;
+        const areaName = machine && machine.area_name ? machine.area_name : null;
+
+        return {
+          machine_id: p.machine_id,
+          machine_alias: alias,
+          machine_codigo: codigo,
+          operadores_necesarios: Number(p.operadores_necesarios) || 0,
+          area_id: areaId,
+          area_name: areaName
+        };
+      });
+
+      const totalOperadores = snapshot.reduce((acc, item) => acc + (item.operadores_necesarios || 0), 0);
+
+      await base44.entities.DailyProductionPlanning.create({
+        fecha: selectedDate,
+        turno: currentShift,
+        team_key: selectedTeam,
+        total_machines: snapshot.length,
+        total_operadores: totalOperadores,
+        snapshot,
+        created_at: new Date().toISOString()
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Planificación Guardada",
+        description: "La configuración de producción ha sido confirmada correctamente.",
+        className: "bg-green-600 text-white border-green-700",
+        duration: 3000
+      });
+    },
+    onError: (err) => {
+      toast({
+        title: "Error al guardar planificación",
+        description: err.message,
+        variant: "destructive",
+        duration: 5000
+      });
+    }
+  });
+
   // --- Handlers ---
 
   const handleAddMachine = (machine) => {
@@ -724,12 +828,7 @@ export default function DailyProductionPlanningPage() {
           return;
       }
       
-      toast({
-          title: "Planificación Guardada",
-          description: "La configuración de producción ha sido confirmada correctamente.",
-          className: "bg-green-600 text-white border-green-700",
-          duration: 3000
-      });
+      saveSnapshotMutation.mutate();
   };
 
   const handleCopyPreviousDay = () => {
@@ -926,10 +1025,11 @@ export default function DailyProductionPlanningPage() {
                   variant="outline" 
                   size="sm"
                   onClick={handleSavePlanning}
+                  disabled={saveSnapshotMutation.isPending}
                   className="h-9 gap-2 border-green-600 text-green-700 hover:bg-green-50 bg-white"
               >
                   <Save className="w-4 h-4" />
-                  Guardar
+                  {saveSnapshotMutation.isPending ? "Guardando..." : "Guardar"}
               </Button>
               <Button 
                   variant="destructive" 
@@ -1114,6 +1214,9 @@ export default function DailyProductionPlanningPage() {
                                   planning && planning.operadores_necesarios
                                     ? planning.operadores_necesarios
                                     : "";
+                                const avgVal = avgOperatorsByMachine.get(String(machine.id));
+                                const avgDisplay = typeof avgVal === 'number' ? avgVal.toFixed(1) : null;
+                                const avgRounded = typeof avgVal === 'number' ? Math.max(1, Math.round(avgVal)) : null;
 
                                 return (
                                   <div
@@ -1190,6 +1293,21 @@ export default function DailyProductionPlanningPage() {
                                               }
                                             }}
                                           />
+                                          {avgDisplay && (
+                                            <span className="text-[10px] text-slate-500 ml-1">
+                                              avg {avgDisplay}
+                                            </span>
+                                          )}
+                                          {isActiveManual && planning && avgRounded && Number(operatorsValue || 0) !== avgRounded && (
+                                            <Button
+                                              variant="secondary"
+                                              size="sm"
+                                              className="h-6 text-[10px] px-2 ml-1"
+                                              onClick={() => handleOperatorChange(planning.id, String(avgRounded))}
+                                            >
+                                              Aplicar
+                                            </Button>
+                                          )}
                                         </>
                                       ) : (
                                         planning &&
