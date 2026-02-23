@@ -170,151 +170,105 @@ export default function BreaksPage() {
       return;
     }
 
-    const applicableBreaks = (breakShifts || [])
-      .filter(b => b.activo)
-      .filter(b => {
-        if (selectedShift.includes("Mañana")) {
-          return b.aplica_turno_manana;
-        }
-        if (selectedShift.includes("Tarde")) {
-          return b.aplica_turno_tarde;
-        }
-        return b.aplica_turno_manana || b.aplica_turno_tarde;
-      })
-      .sort((a, b) => (a.hora_inicio || "").localeCompare(b.hora_inicio || ""));
-
-    if (!applicableBreaks.length) {
-      toast.error("No hay turnos de descanso activos para el turno seleccionado");
-      return;
-    }
-
     setIsCalling(true);
+    setGeneratedPlan(null);
+    setAgentMessages([]);
+
     try {
-      const filters = {
-        date: selectedDate,
-        shift: selectedShift,
-        team_key: teamObj.team_key,
-      };
-
-      if (!base44.entities.DailyMachineStaffing) {
-        toast.error("Entidad DailyMachineStaffing no disponible en este entorno");
-        return;
-      }
-
-      const [staffing, employeesRaw] = await Promise.all([
-        base44.entities.DailyMachineStaffing.filter(filters),
-        base44.entities.EmployeeMasterDatabase.list(undefined, 2000),
-      ]);
-
-      const staffingArray = Array.isArray(staffing) ? staffing : [];
-
-      if (!staffingArray.length) {
-        toast.error("No hay personal asignado a máquinas para esa fecha, turno y equipo");
-        setGeneratedPlan(null);
-        return;
-      }
-
-      const normalize = (str) =>
-        str
-          ? str.toString().trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-          : "";
-
-      const employees = (Array.isArray(employeesRaw) ? employeesRaw : []).filter(
-        (e) => normalize(e.departamento) === "produccion"
-      );
-
-      const employeeById = new Map(employees.map((e) => [String(e.id), e]));
-
-      const roleKeys = [
-        "responsable_linea",
-        "segunda_linea",
-        "operador_1",
-        "operador_2",
-        "operador_3",
-        "operador_4",
-        "operador_5",
-        "operador_6",
-        "operador_7",
-        "operador_8",
-      ];
-
-      const getRoleLabel = (key) => {
-        if (key === "responsable_linea") return "Responsable línea";
-        if (key === "segunda_linea") return "2ª línea";
-        if (key.startsWith("operador_")) {
-          const idx = key.split("_")[1];
-          return `Operador ${idx}`;
-        }
-        return key;
-      };
-
-      const assignments = [];
-      const seen = new Set();
-
-      staffingArray.forEach((s) => {
-        roleKeys.forEach((key) => {
-          const empId = s[key];
-          if (!empId) return;
-          const idStr = String(empId);
-          const uniqueKey = `${idStr}-${key}`;
-          if (seen.has(uniqueKey)) return;
-          const emp = employeeById.get(idStr);
-          if (!emp) return;
-          seen.add(uniqueKey);
-          assignments.push({
-            id: idStr,
-            employee: emp,
-            roleKey: key,
-            roleLabel: getRoleLabel(key),
-          });
-        });
+      // Crear conversación con el agente break_manager
+      const conversation = await base44.agents.createConversation({
+        agent_name: "break_manager",
+        metadata: {
+          name: `Descansos ${selectedDate} ${selectedShift}`,
+          description: `Plan de descansos para ${selectedDate}, turno ${selectedShift}, equipo ${teamObj.team_name || teamObj.team_key}`,
+        },
       });
 
-      if (!assignments.length) {
-        toast.error("No se ha encontrado personal de Producción asignado a máquinas");
-        setGeneratedPlan(null);
-        return;
-      }
+      setConversationId(conversation.id);
 
-      let slots = [];
-      applicableBreaks.forEach((b, idx) => {
-        const cap = Number(b.personas_por_turno || b.people_per_shift || 0);
-        if (cap > 0) {
-          for (let i = 0; i < cap; i++) {
-            slots.push(idx);
-          }
+      const prompt = `Genera el plan de descansos para:
+- Fecha: ${selectedDate}
+- Turno: ${selectedShift}
+- Equipo: ${teamObj.team_name || teamObj.team_key} (team_key: ${teamObj.team_key})
+
+Por favor:
+1. Lee el planning de DailyMachinePlanning para esa fecha, turno y equipo (activa=true)
+2. Si no hay datos, busca también en DailyMachineStaffing
+3. Lee los BreakShift activos aplicables al turno ${selectedShift}
+4. Agrupa a los empleados por máquina (grupos indivisibles)
+5. Distribuye los grupos respetando la capacidad (personas_por_turno) de cada turno de descanso
+6. Asegúrate de que todos los empleados tengan descanso
+7. Devuelve el resultado en formato JSON como se te indicó en las instrucciones`;
+
+      // Suscribirse a la conversación para recibir actualizaciones
+      const unsubscribe = base44.agents.subscribeToConversation(conversation.id, (data) => {
+        setAgentMessages([...data.messages]);
+        
+        // Intentar extraer el plan JSON de los mensajes del asistente
+        const lastAssistantMsg = [...data.messages].reverse().find(m => m.role === 'assistant' && m.content);
+        if (lastAssistantMsg?.content) {
+          tryExtractPlan(lastAssistantMsg.content, selectedDate, selectedShift, teamObj);
         }
       });
-      if (!slots.length) {
-        slots = applicableBreaks.map((_, idx) => idx);
-      }
 
-      const byBreak = applicableBreaks.map(() => []);
-      assignments.forEach((item, index) => {
-        const slotIndex = slots[index % slots.length];
-        byBreak[slotIndex].push(item);
+      // Enviar el mensaje
+      await base44.agents.addMessage(conversation, {
+        role: "user",
+        content: prompt,
       });
 
-      const plan = {
-        date: selectedDate,
-        shift: selectedShift,
-        teamName: teamObj.team_name || teamObj.team_key,
-        breaks: applicableBreaks.map((b, idx) => ({
-          id: b.id,
-          nombre: b.nombre || b.name || "Sin nombre",
-          hora_inicio: b.hora_inicio || b.start_time || "--:--",
-          personas_por_turno: b.personas_por_turno || b.people_per_shift || 0,
-          empleados: byBreak[idx],
-        })),
-      };
+      // Esperar respuesta final (polling hasta que no haya mensajes en progreso)
+      let attempts = 0;
+      const maxAttempts = 60;
+      while (attempts < maxAttempts) {
+        await new Promise(r => setTimeout(r, 2000));
+        const updated = await base44.agents.getConversation(conversation.id);
+        const lastMsg = [...(updated.messages || [])].reverse().find(m => m.role === 'assistant');
+        if (lastMsg?.content && !updated.is_processing) {
+          tryExtractPlan(lastMsg.content, selectedDate, selectedShift, teamObj);
+          setAgentMessages(updated.messages || []);
+          break;
+        }
+        attempts++;
+      }
 
-      setGeneratedPlan(plan);
-      toast.success("Descansos generados correctamente");
+      unsubscribe();
+      toast.success("Plan de descansos generado por el agente");
     } catch (error) {
-      console.error("Error al generar descansos:", error);
-      toast.error("Error al generar descansos");
+      console.error("Error al llamar al agente:", error);
+      toast.error("Error al generar descansos con el agente");
     } finally {
       setIsCalling(false);
+    }
+  };
+
+  const tryExtractPlan = (content, date, shift, teamObj) => {
+    try {
+      // Buscar JSON en el contenido
+      const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/) || 
+                        content.match(/\{[\s\S]*"plan_descansos"[\s\S]*\}/);
+      if (!jsonMatch) return;
+      const jsonStr = jsonMatch[1] || jsonMatch[0];
+      const parsed = JSON.parse(jsonStr);
+      if (parsed.plan_descansos) {
+        setGeneratedPlan({
+          date,
+          shift,
+          teamName: teamObj.team_name || teamObj.team_key,
+          breaks: parsed.plan_descansos.map(b => ({
+            id: b.turno_descanso,
+            nombre: b.turno_descanso,
+            hora_inicio: b.hora_inicio,
+            duracion_minutos: b.duracion_minutos,
+            personas_por_turno: b.capacidad_comedor,
+            total_personas: b.total_personas,
+            grupos: b.grupos || [],
+          })),
+          resumen: parsed.resumen,
+        });
+      }
+    } catch (_) {
+      // El agente aún no ha terminado o el JSON no está listo
     }
   };
 
