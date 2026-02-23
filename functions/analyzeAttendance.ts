@@ -76,10 +76,22 @@ function detectarIncongruencias(
 
 function ausenciaActivaEnFecha(absence: any, fecha: string) {
   if (!absence?.fecha_inicio) return false;
-  const inicio = new Date(absence.fecha_inicio);
-  const fin = absence.fecha_fin_desconocida ? new Date("2099-12-31") : new Date(absence.fecha_fin);
-  const d = new Date(fecha);
-  return d >= new Date(inicio.toDateString()) && d <= new Date(fin.toDateString());
+
+  const fechaStr = String(fecha).slice(0, 10);
+  const inicioStr = String(absence.fecha_inicio).slice(0, 10);
+  if (!inicioStr) return false;
+
+  // Ausencias sin fecha fin (o con fin desconocido) se consideran activas
+  // desde fecha_inicio en adelante hasta que se establezca una fecha de fin real.
+  if (absence.fecha_fin_desconocida || !absence.fecha_fin) {
+    return fechaStr >= inicioStr;
+  }
+
+  const finStr = String(absence.fecha_fin).slice(0, 10);
+  if (!finStr) return fechaStr >= inicioStr;
+
+  // Comparación puramente por fecha (YYYY-MM-DD) para evitar efectos de zona horaria y horas.
+  return fechaStr >= inicioStr && fechaStr <= finStr;
 }
 
 Deno.serve(async (req: Request) => {
