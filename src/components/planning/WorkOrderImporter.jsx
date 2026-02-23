@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useDropzone } from 'react-dropzone';
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
@@ -261,8 +261,8 @@ export default function WorkOrderImporter({
     open, 
     onClose, 
     onImport,
-    machines = [],
-    processes = []
+    machines: initialMachines = [],
+    processes: initialProcesses = []
 }) {
   console.log("WorkOrderImporter loaded");
   const queryClient = useQueryClient();

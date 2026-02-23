@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAppData } from "../components/data/DataProvider";
@@ -622,13 +622,13 @@ export default function ShiftAssignmentsPage() {
       if (typeof window !== "undefined") {
         try {
           window.localStorage.setItem("shiftAssignmentsDisplayPayload", raw);
-        } catch {}
+        } catch (e) { /* ignored */ }
         try {
           const encoded = btoa(unescape(encodeURIComponent(raw)));
           extra = `&payload=${encodeURIComponent(encoded)}`;
-        } catch {}
+        } catch (e) { /* ignored */ }
       }
-    } catch {}
+    } catch (e) { /* ignored */ }
     const url = `${createPageUrl("ShiftAssignmentsDisplay")}?date=${encodeURIComponent(dateStr)}&shift=${encodeURIComponent(selectedShift)}&teamId=${encodeURIComponent(selectedTeam)}${extra}`;
     window.open(url, "_blank", "noopener,noreferrer");
   };

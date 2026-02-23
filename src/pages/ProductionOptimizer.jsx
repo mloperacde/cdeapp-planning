@@ -24,7 +24,7 @@ export default function ProductionOptimizer() {
       return raw.map(order => {
         let extra = {};
         if (order.notes && typeof order.notes === "string") {
-          try { const p = JSON.parse(order.notes); if (p && typeof p === "object") extra = p; } catch (_) {}
+          try { const p = JSON.parse(order.notes); if (p && typeof p === "object") extra = p; } catch (_) { /* ignored */ }
         }
         return { ...order, ...extra };
       });

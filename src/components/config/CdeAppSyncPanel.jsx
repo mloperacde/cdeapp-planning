@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import { useState } from "react";
 import { cdeApp } from "@/api/cdeAppClient";
 import { base44 } from "@/api/base44Client";
 import { localDataService } from "@/components/process-configurator/services/localDataService";

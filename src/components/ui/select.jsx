@@ -168,7 +168,9 @@ const SelectContent = React.forwardRef(({ className, children, position = "poppe
               {/* Handle bar */}
               <div className="mx-auto mt-3 mb-2 h-1.5 w-12 rounded-full bg-muted-foreground/30" />
               <div className="overflow-y-auto max-h-[65vh] px-2 pb-4">
-                <DrawerItems children={children} value={ctx.value} onValueChange={ctx.handleDrawerValueChange} />
+                <DrawerItems value={ctx.value} onValueChange={ctx.handleDrawerValueChange}>
+                  {children}
+                </DrawerItems>
               </div>
             </VaulDrawer.Content>
           </VaulDrawer.Portal>
@@ -234,7 +236,11 @@ function DrawerItems({ children, value, onValueChange }) {
       items.push(<hr key={`sep-${items.length}`} className="my-1 border-muted" />);
     // SelectGroup – recurse
     } else if (child.type === SelectGroup) {
-      items.push(<DrawerItems key={`grp-${items.length}`} children={child.props.children} value={value} onValueChange={onValueChange} />);
+      items.push(
+        <DrawerItems key={`grp-${items.length}`} value={value} onValueChange={onValueChange}>
+          {child.props.children}
+        </DrawerItems>
+      );
     }
   });
   return <>{items}</>;

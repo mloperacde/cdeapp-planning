@@ -119,7 +119,7 @@ export default function AdvancedSearch({
         appliedPrefRef.current = savedPref;
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, [savedPref]);
 
   // Save preference mutation

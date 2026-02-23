@@ -1,24 +1,76 @@
-import React, { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Save, Plus, Trash2, Clock } from "lucide-react";
+import { Save, Plus, Trash2, Clock, Loader2 } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { base44 } from "@/api/base44Client";
+import { toast } from "sonner";
 
 export default function WorkScheduleConfig() {
-  const [jornadaTypes, setJornadaTypes] = useState([
-    { id: "1", nombre: "Jornada Completa", horas: 40, descripcion: "Jornada completa de 40 horas semanales" },
-    { id: "2", nombre: "Jornada Parcial", horas: 30, descripcion: "Jornada parcial de 30 horas semanales" },
-    { id: "3", nombre: "Reducción de Jornada", horas: 35, descripcion: "Reducción de jornada a 35 horas" }
-  ]);
+  const queryClient = useQueryClient();
 
-  const [horarios, setHorarios] = useState([
-    { id: "1", nombre: "Rotativo", tipo: "rotativo", mananaInicio: "07:00", mananaFin: "15:00", tardeInicio: "14:00", tardeFin: "22:00" },
-    { id: "2", nombre: "Fijo Mañana", tipo: "fijo", inicio: "07:00", fin: "15:00" },
-    { id: "3", nombre: "Fijo Tarde", tipo: "fijo", inicio: "14:00", fin: "22:00" },
-    { id: "4", nombre: "Turno Partido", tipo: "partido", entrada1: "09:00", salida1: "13:00", entrada2: "16:00", salida2: "20:00" }
-  ]);
+  // Fetch AppConfig for work schedules
+  const { data: configRecord, isLoading } = useQuery({
+    queryKey: ["appConfig", "work_schedules"],
+    queryFn: async () => {
+      const configs = await base44.entities.AppConfig.filter({ config_key: "work_schedule_config" });
+      return configs[0] || null;
+    }
+  });
+
+  const [jornadaTypes, setJornadaTypes] = useState([]);
+  const [horarios, setHorarios] = useState([]);
+
+  useEffect(() => {
+    if (!configRecord) {
+      // Set defaults if no config exists
+      setJornadaTypes([
+        { id: "1", nombre: "Jornada Completa", horas: 40, descripcion: "Jornada completa de 40 horas semanales" },
+        { id: "2", nombre: "Jornada Parcial", horas: 30, descripcion: "Jornada parcial de 30 horas semanales" },
+        { id: "3", nombre: "Reducción de Jornada", horas: 35, descripcion: "Reducción de jornada a 35 horas" }
+      ]);
+      setHorarios([
+        { id: "1", nombre: "Rotativo", tipo: "rotativo", mananaInicio: "07:00", mananaFin: "15:00", tardeInicio: "14:00", tardeFin: "22:00" },
+        { id: "2", nombre: "Fijo Mañana", tipo: "fijo", inicio: "07:00", fin: "15:00" },
+        { id: "3", nombre: "Fijo Tarde", tipo: "fijo", inicio: "14:00", fin: "22:00" },
+        { id: "4", nombre: "Turno Partido", tipo: "partido", entrada1: "09:00", salida1: "13:00", entrada2: "16:00", salida2: "20:00" }
+      ]);
+      return;
+    }
+    try {
+      const parsed = JSON.parse(configRecord.value || configRecord.description || "{}");
+      if (parsed.jornadaTypes) setJornadaTypes(parsed.jornadaTypes);
+      if (parsed.horarios) setHorarios(parsed.horarios);
+    } catch (e) {
+      console.error("Error parsing work schedule config", e);
+    }
+  }, [configRecord]);
+
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      const payload = {
+        config_key: "work_schedule_config",
+        value: JSON.stringify({ jornadaTypes, horarios }),
+        description: JSON.stringify({ jornadaTypes, horarios })
+      };
+
+      if (configRecord?.id) {
+        return await base44.entities.AppConfig.update(configRecord.id, payload);
+      } else {
+        return await base44.entities.AppConfig.create(payload);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(["appConfig", "work_schedules"]);
+      toast.success("Configuración de horarios guardada");
+    },
+    onError: () => {
+      toast.error("Error al guardar la configuración");
+    }
+  });
 
   const [newJornada, setNewJornada] = useState({ nombre: "", horas: 40, descripcion: "" });
   const [newHorario, setNewHorario] = useState({ nombre: "", tipo: "fijo", inicio: "07:00", fin: "15:00" });

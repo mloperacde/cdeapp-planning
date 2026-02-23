@@ -1,4 +1,3 @@
-import React from 'react';
 import ProcessConfiguratorApp from '../components/process-configurator/App';
 import { Cog, ArrowLeft } from 'lucide-react';
 import { Button } from "@/components/ui/button";

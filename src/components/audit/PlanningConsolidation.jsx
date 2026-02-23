@@ -1,14 +1,53 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { base44 } from "@/api/base44Client";
 import { CheckCircle2, AlertTriangle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
+import { format, startOfWeek } from "date-fns";
 
 export default function PlanningConsolidation() {
   const [isRunning, setIsRunning] = useState(false);
   const [results, setResults] = useState(null);
+
+  const { data: teamSchedules = [] } = useQuery({
+    queryKey: ['teamSchedules_audit'],
+    queryFn: () => base44.entities.TeamWeekSchedule.list(undefined, 1000)
+  });
+
+  const getTeamForDateShift = (dateStr, shift) => {
+    if (!dateStr || !shift || teamSchedules.length === 0) return 'team_1';
+
+    try {
+      const dateObj = new Date(dateStr);
+      const weekStart = startOfWeek(dateObj, { weekStartsOn: 1 });
+      const weekStartStr = format(weekStart, 'yyyy-MM-dd');
+
+      const normalize = (str) => str ? str.toString().trim().toLowerCase() : "";
+      const targetShift = normalize(shift);
+
+      const schedule = teamSchedules.find(s => {
+        if (s.fecha_inicio_semana !== weekStartStr) return false;
+        const turno = normalize(s.turno);
+        if (targetShift.includes("mañana")) {
+          return turno.includes("mañana") || turno.includes("t1");
+        }
+        if (targetShift.includes("tarde")) {
+          return turno.includes("tarde") || turno.includes("t2");
+        }
+        if (targetShift.includes("noche")) {
+          return turno.includes("noche") || turno.includes("t3");
+        }
+        return turno === targetShift;
+      });
+
+      return schedule ? schedule.team_key : 'team_1';
+    } catch (e) {
+      return 'team_1';
+    }
+  };
 
   const consolidate = async () => {
     setIsRunning(true);

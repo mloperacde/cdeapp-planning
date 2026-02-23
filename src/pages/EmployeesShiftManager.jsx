@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
@@ -81,7 +81,7 @@ export default function EmployeesShiftManagerPage() {
     return defaults;
   });
 
-  React.useEffect(() => {
+  useEffect(() => {
     localStorage.setItem("employeesShiftManagerColumns", JSON.stringify(visibleColumns));
   }, [visibleColumns]);
   

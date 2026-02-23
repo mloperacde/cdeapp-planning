@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useAppData } from "../components/data/DataProvider";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -48,7 +48,7 @@ export default function AbsenceManagementPage() {
   const [initialAbsenceEmployeeId, setInitialAbsenceEmployeeId] = useState(null);
   const [initialAbsenceEmployeeName, setInitialAbsenceEmployeeName] = useState(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const params = new URLSearchParams(location.search);
     const tab = params.get('tab');
     const employeeId = params.get('employeeId');

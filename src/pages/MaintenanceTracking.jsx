@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
@@ -67,7 +67,7 @@ export default function MaintenanceTrackingPage() {
   });
 
   // Filtered maintenances
-  const filteredMaintenances = React.useMemo(() => {
+  const filteredMaintenances = useMemo(() => {
     let result = maintenances.filter(m => {
       const searchTerm = filters.searchTerm || "";
       const matchesSearch = !searchTerm || 

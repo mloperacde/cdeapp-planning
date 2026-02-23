@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Button } from "@/components/ui/button";
@@ -28,9 +28,9 @@ const DEFAULT_WIDGETS = [
 
 export default function ShiftManagersPage() {
   const { shifts } = useShiftConfig();
-  const [activeView, setActiveView] = React.useState("dashboard");
-  const [selectedTeamFilter, setSelectedTeamFilter] = React.useState("all");
-  const [customizerOpen, setCustomizerOpen] = React.useState(false);
+  const [activeView, setActiveView] = useState("dashboard");
+  const [selectedTeamFilter, setSelectedTeamFilter] = useState("all");
+  const [customizerOpen, setCustomizerOpen] = useState(false);
   
   const { data: currentUser } = useQuery({
       queryKey: ['currentUser'],

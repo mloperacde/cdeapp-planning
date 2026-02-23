@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DollarSign, FileText, TrendingUp, Award, Settings, CheckSquare, History, Upload, Building2, Zap } from "lucide-react";
 import SalaryComponentsManager from "@/components/salary/SalaryComponentsManager";

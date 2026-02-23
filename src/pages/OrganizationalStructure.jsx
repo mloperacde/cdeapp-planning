@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Button } from "@/components/ui/button";
@@ -69,7 +69,7 @@ export default function OrganizationalStructure() {
     return n;
   };
 
-  const vacanciesByDept = React.useMemo(() => {
+  const vacanciesByDept = useMemo(() => {
     const result = [];
     departments.forEach(dept => {
       const deptPositions = positions.filter(p => p.department_id === dept.id);
@@ -119,7 +119,7 @@ export default function OrganizationalStructure() {
     return result;
   }, [departments, positions, employees]);
 
-  const totalVacancies = React.useMemo(
+  const totalVacancies = useMemo(
     () => vacanciesByDept.reduce((sum, d) => sum + d.vacancies.length, 0),
     [vacanciesByDept]
   );

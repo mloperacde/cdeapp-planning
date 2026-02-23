@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -144,7 +144,7 @@ export function StructureConfig({ config, setConfig }) {
             updatedAt: new Date().toISOString(),
           };
           window.localStorage.setItem("machineAssignmentStats", JSON.stringify(stats));
-        } catch {}
+        } catch (e) { /* ignored */ }
       }
 
       if (autoAssigned > 0) {

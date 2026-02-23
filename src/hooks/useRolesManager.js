@@ -147,7 +147,6 @@ export const DEFAULT_ROLES_CONFIG = {
         canManageMachines: true,
         canViewReports: true,
         canConfigureSystem: false,
-        canConfigureSystem: false,
       },
       page_permissions: {
         '/Dashboard': true,

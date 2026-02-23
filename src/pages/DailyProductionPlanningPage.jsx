@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
@@ -49,7 +49,7 @@ export default function DailyProductionPlanningPage() {
   const [importTeam, setImportTeam] = useState("");
 
   // Update import defaults when main selection changes
-  React.useEffect(() => {
+  useEffect(() => {
     if (isImportDialogOpen) {
         if (!importDate) setImportDate(format(subDays(new Date(selectedDate), 1), 'yyyy-MM-dd'));
         if (!importTeam) setImportTeam(selectedTeam);
@@ -168,7 +168,7 @@ export default function DailyProductionPlanningPage() {
     return (teams || []).find(t => t.team_key === selectedTeam) || null;
   }, [teams, selectedTeam]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!shiftSchedule || !selectedDate || !selectedShift) return;
 
     const [year, month, day] = selectedDate.split('-').map(Number);
@@ -414,7 +414,7 @@ export default function DailyProductionPlanningPage() {
           try {
             const parsed = JSON.parse(order.notes);
             if (parsed && typeof parsed === "object") extra = parsed;
-          } catch (_) {}
+          } catch (e) { /* ignored */ }
         }
 
         const normDate = (val) => {

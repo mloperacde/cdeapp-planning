@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useAppData } from "@/components/data/DataProvider";
 import { Button } from "@/components/ui/button";

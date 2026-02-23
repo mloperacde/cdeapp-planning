@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -85,13 +85,13 @@ export default function ProcessConfigurationPage() {
   });
 
   // Get unique machine types
-  const machineTypes = React.useMemo(() => {
+  const machineTypes = useMemo(() => {
     const types = new Set(machines.map(m => m.tipo).filter(Boolean));
     return Array.from(types).sort();
   }, [machines]);
 
   // Filtered machines with their processes
-  const filteredMachines = React.useMemo(() => {
+  const filteredMachines = useMemo(() => {
     let result = machines.filter(m => {
       const searchTerm = filters.searchTerm || "";
       const matchesSearch = !searchTerm || 
@@ -138,7 +138,7 @@ export default function ProcessConfigurationPage() {
       };
     }).filter(mp => mp.processName).sort((a, b) => (a.orden || 0) - (b.orden || 0));
   };
-  const filteredProcesses = React.useMemo(() => {
+  const filteredProcesses = useMemo(() => {
     const searchTerm = (processFilters.searchTerm || "").toLowerCase();
     return (processes || []).filter(p => {
       const nameMatch = (p.nombre || "").toLowerCase().includes(searchTerm);

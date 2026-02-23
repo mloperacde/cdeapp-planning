@@ -172,9 +172,6 @@ export default function DocumentManagementPage() {
     return <Badge className={config}>{estado}</Badge>;
   };
 
-  // Permissions
-  const permissions = usePermissions('DocumentManagement');
-
   return (
     <div className="h-full flex flex-col p-6 gap-6 bg-slate-50 dark:bg-slate-950 overflow-y-auto">
       {/* Header Estándar */}
