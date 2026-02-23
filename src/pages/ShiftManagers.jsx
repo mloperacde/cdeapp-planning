@@ -14,6 +14,7 @@ import UnifiedAbsenceManager from "../components/absences/UnifiedAbsenceManager"
 import ThemeToggle from "../components/common/ThemeToggle";
 import { useShiftConfig } from "@/hooks/useShiftConfig";
 import ModuleGuard from "../components/common/ModuleGuard";
+import AgentChat from "@/components/common/AgentChat";
 
 const EMPTY_ARRAY = [];
 

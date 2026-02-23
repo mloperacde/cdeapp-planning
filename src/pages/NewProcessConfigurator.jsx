@@ -4,6 +4,7 @@ import { Cog, ArrowLeft } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
+import AgentChat from "@/components/common/AgentChat";
 
 export default function NewProcessConfigurator() {
   return (

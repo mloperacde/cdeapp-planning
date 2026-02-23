@@ -22,6 +22,7 @@ import AttendancePredictions from "../components/attendance/AttendancePrediction
 import AttendanceMonitor from "../components/attendance/AttendanceMonitor";
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
+import AgentChat from "@/components/common/AgentChat";
 
 // Wrapper que carga la config activa y la pasa al formulario (evita crear duplicados)
 function AttendanceConfigWrapper() {
