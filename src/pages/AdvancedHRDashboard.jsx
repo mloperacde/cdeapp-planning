@@ -100,6 +100,9 @@ export default function AdvancedHRDashboard() {
           <div className="lg:col-span-1">
             <HRReportExporter />
           </div>
+          <div className="lg:col-span-2">
+            <HRAssistantChat />
+          </div>
         </div>
       </div>
 
