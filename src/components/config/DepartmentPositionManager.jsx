@@ -185,6 +185,20 @@ export default function DepartmentPositionManager() {
     return map;
   }, [departments, employees]);
 
+  const getDescendantIds = (deptId, allDepts) => {
+    const descendants = new Set();
+    const stack = [deptId];
+    while (stack.length > 0) {
+      const currentId = stack.pop();
+      const children = allDepts.filter(d => d.parent_id === currentId);
+      children.forEach(child => {
+        descendants.add(child.id);
+        stack.push(child.id);
+      });
+    }
+    return descendants;
+  };
+
   const totalEmployeeCountRecursive = useMemo(() => {
     if (!selectedDept) return 0;
     const base = employeeCountByDept.get(selectedDept.id) ?? 0;
@@ -620,21 +634,6 @@ export default function DepartmentPositionManager() {
   const [posForm, setPosForm] = useState({
     name: "", department_id: "", max_headcount: 1, level: "Mid", description: "", orden: 0
   });
-
-  // Helper to prevent cycles when moving
-  const getDescendantIds = (deptId, allDepts) => {
-    const descendants = new Set();
-    const stack = [deptId];
-    while (stack.length > 0) {
-      const currentId = stack.pop();
-      const children = allDepts.filter(d => d.parent_id === currentId);
-      children.forEach(child => {
-        descendants.add(child.id);
-        stack.push(child.id);
-      });
-    }
-    return descendants;
-  };
 
   const invalidMoveTargets = useMemo(() => {
     if (!deptToMove) return new Set();
