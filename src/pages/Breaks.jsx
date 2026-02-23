@@ -46,7 +46,10 @@ export default function BreaksPage() {
   const [selectedShift, setSelectedShift] = useState("Mañana");
   const [selectedTeamId, setSelectedTeamId] = useState("");
   const [generatedPlan, setGeneratedPlan] = useState(null);
+  const [agentMessages, setAgentMessages] = useState([]);
+  const [conversationId, setConversationId] = useState(null);
   const queryClient = useQueryClient();
+  const messagesEndRef = useRef(null);
 
   const [formData, setFormData] = useState({
     nombre: "",
