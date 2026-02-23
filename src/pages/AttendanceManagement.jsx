@@ -195,6 +195,15 @@ export default function AttendanceManagementPage() {
           </TabsContent>
         </div>
       </Tabs>
+
+      {/* Chat con agente de presencia */}
+      <div className="shrink-0 mt-2">
+        <AgentChat
+          agentName="attendance_manager"
+          title="Asistente de Presencia (IA)"
+          placeholder="Ej: ¿Quién falta hoy? ¿Hay retrasos en el turno de mañana?"
+        />
+      </div>
     </div>
   );
 }
