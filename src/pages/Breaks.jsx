@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,7 +36,7 @@ import {
 } from "@/components/ui/table";
 import { Plus, Edit, Trash2, Coffee, Sparkles, Clock, Users } from "lucide-react";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import { format, startOfWeek } from "date-fns";
 
 export default function BreaksPage() {
   const [showForm, setShowForm] = useState(false);
@@ -98,6 +98,47 @@ export default function BreaksPage() {
     queryFn: () => base44.entities.TeamConfig.list(),
     initialData: [],
   });
+
+  const { data: teamSchedules = [] } = useQuery({
+    queryKey: ['teamSchedules'],
+    queryFn: () => base44.entities.TeamWeekSchedule.list(undefined, 1000),
+    initialData: [],
+  });
+
+  useEffect(() => {
+    if (!selectedShift || !selectedDate || teamSchedules.length === 0 || !teams.length) return;
+
+    const [year, month, day] = selectedDate.split("-").map(Number);
+    const dateObj = new Date(year, month - 1, day);
+    const weekStart = startOfWeek(dateObj, { weekStartsOn: 1 });
+    const weekStartStr = format(weekStart, "yyyy-MM-dd");
+
+    const normalize = (str) =>
+      str ? str.toString().trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : "";
+    const targetShift = normalize(selectedShift);
+
+    const schedule = teamSchedules.find((s) => {
+      if (s.fecha_inicio_semana !== weekStartStr) return false;
+      const turno = normalize(s.turno);
+      if (targetShift.includes("mañana")) {
+        return turno.includes("mañana") || turno.includes("t1");
+      }
+      if (targetShift.includes("tarde")) {
+        return turno.includes("tarde") || turno.includes("t2");
+      }
+      if (targetShift.includes("noche")) {
+        return turno.includes("noche") || turno.includes("t3");
+      }
+      return turno === targetShift;
+    });
+
+    if (schedule && schedule.team_key) {
+      const team = teams.find((t) => t.team_key === schedule.team_key);
+      if (team && String(team.id) !== String(selectedTeamId)) {
+        setSelectedTeamId(String(team.id));
+      }
+    }
+  }, [selectedShift, selectedDate, teamSchedules, teams, selectedTeamId]);
 
   // Safe header extraction
   const dataStructure = breakShifts && breakShifts.length > 0 
