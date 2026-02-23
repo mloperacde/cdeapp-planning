@@ -61,6 +61,7 @@ import CalidadSkills from './pages/CalidadSkills';
 import CommitteeManagement from './pages/CommitteeManagement';
 import Configuration from './pages/Configuration';
 import DailyProductionPlanningPage from './pages/DailyProductionPlanningPage';
+import Dashboard from './pages/Dashboard';
 import DataModelView from './pages/DataModelView';
 import DireccionSkills from './pages/DireccionSkills';
 import DocumentManagement from './pages/DocumentManagement';
@@ -97,8 +98,8 @@ import Reports from './pages/Reports';
 import RulesAndTemplates from './pages/RulesAndTemplates';
 import SalaryManagement from './pages/SalaryManagement';
 import SenioritySettings from './pages/SenioritySettings';
-import ShiftAssignmentsPage from './pages/ShiftAssignmentsPage';
 import ShiftAssignmentsDisplay from './pages/ShiftAssignmentsDisplay';
+import ShiftAssignmentsPage from './pages/ShiftAssignmentsPage';
 import ShiftHandover from './pages/ShiftHandover';
 import ShiftIncidentManagement from './pages/ShiftIncidentManagement';
 import ShiftManagers from './pages/ShiftManagers';
@@ -109,7 +110,6 @@ import WarehousePlanningPage from './pages/WarehousePlanningPage';
 import WorkCalendarConfig from './pages/WorkCalendarConfig';
 import index from './pages/index';
 import ArticleManagement from './pages/ArticleManagement';
-import Dashboard from './pages/Dashboard';
 import __Layout from './Layout.jsx';
 
 
@@ -128,6 +128,7 @@ export const PAGES = {
     "CommitteeManagement": CommitteeManagement,
     "Configuration": Configuration,
     "DailyProductionPlanningPage": DailyProductionPlanningPage,
+    "Dashboard": Dashboard,
     "DataModelView": DataModelView,
     "DireccionSkills": DireccionSkills,
     "DocumentManagement": DocumentManagement,
@@ -164,8 +165,8 @@ export const PAGES = {
     "RulesAndTemplates": RulesAndTemplates,
     "SalaryManagement": SalaryManagement,
     "SenioritySettings": SenioritySettings,
-    "ShiftAssignmentsPage": ShiftAssignmentsPage,
     "ShiftAssignmentsDisplay": ShiftAssignmentsDisplay,
+    "ShiftAssignmentsPage": ShiftAssignmentsPage,
     "ShiftHandover": ShiftHandover,
     "ShiftIncidentManagement": ShiftIncidentManagement,
     "ShiftManagers": ShiftManagers,
@@ -176,7 +177,6 @@ export const PAGES = {
     "WorkCalendarConfig": WorkCalendarConfig,
     "index": index,
     "ArticleManagement": ArticleManagement,
-    "Dashboard": Dashboard,
 }
 
 export const pagesConfig = {

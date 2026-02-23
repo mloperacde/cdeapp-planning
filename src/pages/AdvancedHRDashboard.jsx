@@ -10,6 +10,7 @@ import ApprovalTimesWidget from "../components/dashboard/ApprovalTimesWidget";
 import AbsenceDistributionWidget from "../components/dashboard/AbsenceDistributionWidget";
 import DashboardCustomizer from "../components/dashboard/DashboardCustomizer";
 import HRReportExporter from "../components/reports/HRReportExporter";
+import HRAssistantChat from "../components/dashboard/HRAssistantChat";
 import { useAppData } from "../components/data/DataProvider";
 
 export default function AdvancedHRDashboard() {
