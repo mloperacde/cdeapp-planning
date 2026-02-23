@@ -10,6 +10,7 @@ import ApprovalTimesWidget from "../components/dashboard/ApprovalTimesWidget";
 import AbsenceDistributionWidget from "../components/dashboard/AbsenceDistributionWidget";
 import DashboardCustomizer from "../components/dashboard/DashboardCustomizer";
 import HRReportExporter from "../components/reports/HRReportExporter";
+import HRAssistantChat from "../components/dashboard/HRAssistantChat";
 import { useAppData } from "../components/data/DataProvider";
 
 export default function AdvancedHRDashboard() {
@@ -98,6 +99,9 @@ export default function AdvancedHRDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-1">
             <HRReportExporter />
+          </div>
+          <div className="lg:col-span-2">
+            <HRAssistantChat />
           </div>
         </div>
       </div>
