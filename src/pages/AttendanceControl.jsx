@@ -5,9 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription
-} from "@/components/ui/dialog";
 import { Upload, Users, Clock, CheckCircle, AlertCircle, RefreshCw, Trash2, Search, LogIn, LogOut, FileWarning, Layers } from "lucide-react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
@@ -52,10 +49,6 @@ export default function AttendanceControl() {
   const [filterDate, setFilterDate] = useState(new Date().toISOString().split("T")[0]);
   const fileInputRef = useRef(null);
   const queryClient = useQueryClient();
-
-  // Estado para el diálogo de conflicto
-  const [conflictDialog, setConflictDialog] = useState(null); // { pendingRecords, date, existingBatches }
-  const [shiftName, setShiftName] = useState("tarde");
 
   const { data: records = [], isLoading, refetch } = useQuery({
     queryKey: ["attendanceRecords", filterDate],
@@ -255,32 +248,23 @@ export default function AttendanceControl() {
         return;
       }
 
-      // Detectar fecha principal del archivo
       const importedDate = toCreate[0]?.record_date;
 
-      // Verificar si ya hay registros para esa fecha
-      let existingForDate = [];
       if (importedDate) {
-        existingForDate = await base44.entities.AttendanceRecord.filter({ record_date: importedDate }, "record_time", 10);
+        try {
+          await base44.functions.invoke("deleteAttendanceRecords", { record_date: importedDate });
+        } catch (err) {
+          console.error("Error al eliminar registros previos del día:", err);
+          toast.error("No se pudieron eliminar los registros previos del día antes de importar.");
+        }
       }
 
-      if (existingForDate.length > 0) {
-        // Hay conflicto: preguntar al usuario
-        const existingBatches = [...new Set(existingForDate.map(r => r.import_batch).filter(Boolean))];
-        setImportErrors(errors);
-        setConflictDialog({ pendingRecords: toCreate, date: importedDate, existingBatches, errors });
-        setImporting(false);
-        if (fileInputRef.current) fileInputRef.current.value = "";
-        return;
-      }
-
-      // Sin conflicto: importar directamente
       const { count } = await saveRecords(toCreate);
       if (errors.length > 0) {
         setImportErrors(errors);
-        toast.warning(`${count} registros importados. ${errors.length} filas con errores.`);
+        toast.warning(`${count} registros importados. Se sobrescribieron registros previos de ese día. ${errors.length} filas con errores.`);
       } else {
-        toast.success(`${count} registros importados correctamente.`);
+        toast.success(`${count} registros importados correctamente. Se sobrescribieron registros previos de ese día.`);
       }
 
       queryClient.invalidateQueries({ queryKey: ["attendanceRecords"] });
@@ -292,46 +276,6 @@ export default function AttendanceControl() {
     } finally {
       setImporting(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
-    }
-  };
-
-  // ── RESOLVER CONFLICTO: SOBRESCRIBIR ────────────────────────────────────────
-  const handleOverwrite = async () => {
-    if (!conflictDialog) return;
-    setImporting(true);
-    try {
-      // Eliminar todos los registros del día vía backend (evita rate limit y 404)
-      await base44.functions.invoke('deleteAttendanceRecords', { record_date: conflictDialog.date });
-      const { count } = await saveRecords(conflictDialog.pendingRecords);
-      toast.success(`${count} registros importados (se sobreescribieron los anteriores).`);
-      await queryClient.invalidateQueries({ queryKey: ["attendanceRecords"] });
-      setFilterDate(conflictDialog.date);
-      await refetch();
-    } catch (err) {
-      toast.error("Error al sobreescribir: " + err.message);
-    } finally {
-      setImporting(false);
-      setConflictDialog(null);
-      setShiftName("tarde");
-    }
-  };
-
-  // ── RESOLVER CONFLICTO: CONSERVAR AMBOS ─────────────────────────────────────
-  const handleKeepBoth = async () => {
-    if (!conflictDialog) return;
-    const name = shiftName.trim().toLowerCase().replace(/\s+/g, "_") || "tarde";
-    setImporting(true);
-    try {
-      const { count } = await saveRecords(conflictDialog.pendingRecords, name);
-      toast.success(`${count} registros importados como turno "${name}".`);
-      queryClient.invalidateQueries({ queryKey: ["attendanceRecords"] });
-      setFilterDate(conflictDialog.date);
-    } catch (err) {
-      toast.error("Error al importar: " + err.message);
-    } finally {
-      setImporting(false);
-      setConflictDialog(null);
-      setShiftName("tarde");
     }
   };
 
@@ -511,49 +455,6 @@ export default function AttendanceControl() {
         </Card>
       )}
 
-      {/* ── DIÁLOGO DE CONFLICTO ──────────────────────────────────────────────── */}
-      <Dialog open={!!conflictDialog} onOpenChange={() => setConflictDialog(null)}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Ya existen registros para esta fecha</DialogTitle>
-            <DialogDescription>
-              Se detectaron registros existentes para el <strong>{conflictDialog?.date}</strong>.
-              {conflictDialog?.existingBatches?.length > 0 && (
-                <span className="block mt-1 text-xs text-slate-500">
-                  Turnos actuales: {conflictDialog.existingBatches.map(b => batchLabel(b)).join(", ")}
-                </span>
-              )}
-              <br />¿Qué deseas hacer con los <strong>{conflictDialog?.pendingRecords?.length}</strong> nuevos registros?
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700">Nombre del turno (si conservas ambos):</label>
-              <Input
-                placeholder="ej: tarde, mañana, turno2..."
-                value={shiftName}
-                onChange={(e) => setShiftName(e.target.value)}
-              />
-              <p className="text-xs text-slate-500">Esto permite identificar cada importación por turno.</p>
-            </div>
-          </div>
-
-          <DialogFooter className="flex flex-col sm:flex-row gap-2">
-            <Button variant="outline" onClick={() => setConflictDialog(null)} className="flex-1">
-              Cancelar
-            </Button>
-            <Button onClick={handleOverwrite} className="flex-1 bg-red-600 hover:bg-red-700">
-              <Trash2 className="w-4 h-4 mr-1" />
-              Sobreescribir
-            </Button>
-            <Button onClick={handleKeepBoth} className="flex-1 bg-blue-600 hover:bg-blue-700">
-              <Layers className="w-4 h-4 mr-1" />
-              Conservar ambos
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
