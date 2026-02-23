@@ -7,6 +7,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -21,13 +34,18 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Edit, Trash2, Coffee, Sparkles, Clock, Users, RefreshCw } from "lucide-react";
+import { Plus, Edit, Trash2, Coffee, Sparkles, Clock, Users } from "lucide-react";
 import { toast } from "sonner";
+import { format } from "date-fns";
 
 export default function BreaksPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingBreak, setEditingBreak] = useState(null);
   const [isCalling, setIsCalling] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(() => format(new Date(), "yyyy-MM-dd"));
+  const [selectedShift, setSelectedShift] = useState("Mañana");
+  const [selectedTeamId, setSelectedTeamId] = useState("");
+  const [generatedPlan, setGeneratedPlan] = useState(null);
   const queryClient = useQueryClient();
 
   const [formData, setFormData] = useState({
@@ -73,6 +91,12 @@ export default function BreaksPage() {
     initialData: [],
     staleTime: 0,
     refetchOnMount: 'always',
+  });
+
+  const { data: teams = [] } = useQuery({
+    queryKey: ['teamConfigs'],
+    queryFn: () => base44.entities.TeamConfig.list(),
+    initialData: [],
   });
 
   // Safe header extraction
@@ -131,19 +155,161 @@ export default function BreaksPage() {
     }
   };
 
-  const handleCallAgent = async () => {
+  const handleGenerateBreaks = async () => {
+    if (!selectedDate || !selectedShift || !selectedTeamId) {
+      toast.error("Selecciona día, turno y equipo antes de generar descansos");
+      return;
+    }
+
+    const teamObj = teams.find(t => String(t.id) === String(selectedTeamId));
+    if (!teamObj || !teamObj.team_key) {
+      toast.error("No se ha podido resolver el equipo seleccionado");
+      return;
+    }
+
+    const applicableBreaks = (breakShifts || [])
+      .filter(b => b.activo)
+      .filter(b => {
+        if (selectedShift.includes("Mañana")) {
+          return b.aplica_turno_manana;
+        }
+        if (selectedShift.includes("Tarde")) {
+          return b.aplica_turno_tarde;
+        }
+        return b.aplica_turno_manana || b.aplica_turno_tarde;
+      })
+      .sort((a, b) => (a.hora_inicio || "").localeCompare(b.hora_inicio || ""));
+
+    if (!applicableBreaks.length) {
+      toast.error("No hay turnos de descanso activos para el turno seleccionado");
+      return;
+    }
+
     setIsCalling(true);
     try {
-      // Aquí llamaríamos al agente break_manager
-      // Por ahora solo mostramos un mensaje
-      alert('Llamando al agente de generación automática de descansos...');
-      
-      // Simulamos la llamada al agente
-      // await base44.agents.breakManager.generate();
-      
+      const filters = {
+        date: selectedDate,
+        shift: selectedShift,
+        team_key: teamObj.team_key,
+      };
+
+      if (!base44.entities.DailyMachineStaffing) {
+        toast.error("Entidad DailyMachineStaffing no disponible en este entorno");
+        return;
+      }
+
+      const [staffing, employeesRaw] = await Promise.all([
+        base44.entities.DailyMachineStaffing.filter(filters),
+        base44.entities.EmployeeMasterDatabase.list(undefined, 2000),
+      ]);
+
+      const staffingArray = Array.isArray(staffing) ? staffing : [];
+
+      if (!staffingArray.length) {
+        toast.error("No hay personal asignado a máquinas para esa fecha, turno y equipo");
+        setGeneratedPlan(null);
+        return;
+      }
+
+      const normalize = (str) =>
+        str
+          ? str.toString().trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+          : "";
+
+      const employees = (Array.isArray(employeesRaw) ? employeesRaw : []).filter(
+        (e) => normalize(e.departamento) === "produccion"
+      );
+
+      const employeeById = new Map(employees.map((e) => [String(e.id), e]));
+
+      const roleKeys = [
+        "responsable_linea",
+        "segunda_linea",
+        "operador_1",
+        "operador_2",
+        "operador_3",
+        "operador_4",
+        "operador_5",
+        "operador_6",
+        "operador_7",
+        "operador_8",
+      ];
+
+      const getRoleLabel = (key) => {
+        if (key === "responsable_linea") return "Responsable línea";
+        if (key === "segunda_linea") return "2ª línea";
+        if (key.startsWith("operador_")) {
+          const idx = key.split("_")[1];
+          return `Operador ${idx}`;
+        }
+        return key;
+      };
+
+      const assignments = [];
+      const seen = new Set();
+
+      staffingArray.forEach((s) => {
+        roleKeys.forEach((key) => {
+          const empId = s[key];
+          if (!empId) return;
+          const idStr = String(empId);
+          const uniqueKey = `${idStr}-${key}`;
+          if (seen.has(uniqueKey)) return;
+          const emp = employeeById.get(idStr);
+          if (!emp) return;
+          seen.add(uniqueKey);
+          assignments.push({
+            id: idStr,
+            employee: emp,
+            roleKey: key,
+            roleLabel: getRoleLabel(key),
+          });
+        });
+      });
+
+      if (!assignments.length) {
+        toast.error("No se ha encontrado personal de Producción asignado a máquinas");
+        setGeneratedPlan(null);
+        return;
+      }
+
+      let slots = [];
+      applicableBreaks.forEach((b, idx) => {
+        const cap = Number(b.personas_por_turno || b.people_per_shift || 0);
+        if (cap > 0) {
+          for (let i = 0; i < cap; i++) {
+            slots.push(idx);
+          }
+        }
+      });
+      if (!slots.length) {
+        slots = applicableBreaks.map((_, idx) => idx);
+      }
+
+      const byBreak = applicableBreaks.map(() => []);
+      assignments.forEach((item, index) => {
+        const slotIndex = slots[index % slots.length];
+        byBreak[slotIndex].push(item);
+      });
+
+      const plan = {
+        date: selectedDate,
+        shift: selectedShift,
+        teamName: teamObj.team_name || teamObj.team_key,
+        breaks: applicableBreaks.map((b, idx) => ({
+          id: b.id,
+          nombre: b.nombre || b.name || "Sin nombre",
+          hora_inicio: b.hora_inicio || b.start_time || "--:--",
+          personas_por_turno: b.personas_por_turno || b.people_per_shift || 0,
+          empleados: byBreak[idx],
+        })),
+      };
+
+      setGeneratedPlan(plan);
+      toast.success("Descansos generados correctamente");
     } catch (error) {
-      console.error('Error al llamar al agente:', error);
-      alert('Error al ejecutar la generación automática de descansos');
+      console.error("Error al generar descansos:", error);
+      toast.error("Error al generar descansos");
     } finally {
       setIsCalling(false);
     }
@@ -167,123 +333,263 @@ export default function BreaksPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-            <Button
-              onClick={handleCallAgent}
-              disabled={isCalling}
-              variant="outline"
-              size="sm"
-              className="h-8 gap-2 bg-white hover:bg-purple-50 border-purple-200"
-            >
-              <Sparkles className="w-4 h-4" />
-              <span className="hidden sm:inline">{isCalling ? "Generando..." : "Generar descansos"}</span>
-            </Button>
-            <Button
-              onClick={() => setShowForm(true)}
-              size="sm"
-              className="h-8 gap-2 bg-blue-600 hover:bg-blue-700"
-            >
-              <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">Nuevo Turno de Descanso</span>
-            </Button>
+          <Button
+            onClick={() => setShowForm(true)}
+            size="sm"
+            className="h-8 gap-2 bg-blue-600 hover:bg-blue-700"
+          >
+            <Plus className="w-4 h-4" />
+            <span className="hidden sm:inline">Nuevo Turno de Descanso</span>
+          </Button>
         </div>
       </div>
       
       <div className="flex flex-col gap-6">
+        <Tabs defaultValue="generation" className="w-full">
+          <TabsList className="w-full max-w-md">
+            <TabsTrigger value="generation" className="flex-1 text-xs">
+              Generación Descansos
+            </TabsTrigger>
+            <TabsTrigger value="config" className="flex-1 text-xs">
+              Configuración Turnos Descanso
+            </TabsTrigger>
+          </TabsList>
 
-        <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-          <CardHeader className="border-b border-slate-100">
-            <CardTitle>Turnos de Descanso Configurados</CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            {isLoading ? (
-              <div className="p-12 text-center text-slate-500">Cargando...</div>
-            ) : breakShifts.length === 0 ? (
-              <div className="p-12 text-center text-slate-500">
-                No hay turnos de descanso configurados
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-slate-50">
-                      <TableHead>Nombre</TableHead>
-                      <TableHead>Hora Inicio</TableHead>
-                      <TableHead>Duración</TableHead>
-                      <TableHead>Personas/Turno</TableHead>
-                      <TableHead>Aplica a</TableHead>
-                      <TableHead>Estado</TableHead>
-                      <TableHead className="text-right">Acciones</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {breakShifts.map((breakShift) => (
-                      <TableRow key={breakShift.id} className="hover:bg-slate-50">
-                        <TableCell>
-                          <span className="font-semibold text-slate-900">{breakShift.nombre || breakShift.name || "Sin nombre"}</span>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Clock className="w-4 h-4 text-blue-600" />
-                            {breakShift.hora_inicio || breakShift.start_time || "--:--"}
-                          </div>
-                        </TableCell>
-                        <TableCell>{breakShift.duracion_minutos || breakShift.duration || 0} min</TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Users className="w-4 h-4 text-green-600" />
-                            {breakShift.personas_por_turno || breakShift.people_per_shift || 0}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            {breakShift.aplica_turno_manana && (
-                              <Badge variant="outline" className="bg-amber-50 text-amber-700">
-                                Mañana
+          <TabsContent value="generation" className="mt-4 space-y-4">
+            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+              <CardHeader className="border-b border-slate-100">
+                <CardTitle className="flex items-center justify-between gap-3">
+                  <span>Generar descansos para Producción</span>
+                  <Button
+                    onClick={handleGenerateBreaks}
+                    disabled={isCalling}
+                    variant="outline"
+                    size="sm"
+                    className="h-8 gap-2 bg-white hover:bg-purple-50 border-purple-200"
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    <span className="hidden sm:inline">
+                      {isCalling ? "Generando..." : "Generar descansos"}
+                    </span>
+                  </Button>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-1">
+                    <Label>Fecha</Label>
+                    <Input
+                      type="date"
+                      value={selectedDate}
+                      onChange={(e) => setSelectedDate(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Turno</Label>
+                    <Select value={selectedShift} onValueChange={setSelectedShift}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecciona turno" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Mañana">Mañana</SelectItem>
+                        <SelectItem value="Tarde">Tarde</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Equipo</Label>
+                    <Select
+                      value={selectedTeamId}
+                      onValueChange={setSelectedTeamId}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecciona equipo" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {teams.map((team) => (
+                          <SelectItem key={team.id} value={String(team.id)}>
+                            {team.team_name || team.team_key}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {generatedPlan && (
+                  <div className="space-y-3">
+                    <div className="text-xs text-slate-500">
+                      Resultado para {generatedPlan.date} · Turno {generatedPlan.shift} ·{" "}
+                      Equipo {generatedPlan.teamName}
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                      {generatedPlan.breaks.map((b) => (
+                        <Card key={b.id} className="border border-slate-200 shadow-sm">
+                          <CardHeader className="py-2 px-3 border-b bg-slate-50">
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2">
+                                <Clock className="w-4 h-4 text-blue-600" />
+                                <div className="flex flex-col">
+                                  <span className="text-xs font-semibold text-slate-800">
+                                    {b.nombre}
+                                  </span>
+                                  <span className="text-[11px] text-slate-500">
+                                    Inicio {b.hora_inicio}
+                                  </span>
+                                </div>
+                              </div>
+                              <Badge variant="outline" className="text-[10px]">
+                                {b.empleados.length}/{b.personas_por_turno || 0} personas
                               </Badge>
+                            </div>
+                          </CardHeader>
+                          <CardContent className="px-3 py-2">
+                            {b.empleados.length === 0 ? (
+                              <div className="text-[11px] text-slate-400 italic">
+                                Sin asignaciones para este turno de descanso.
+                              </div>
+                            ) : (
+                              <ul className="space-y-1">
+                                {b.empleados.map((item) => (
+                                  <li
+                                    key={`${b.id}-${item.id}-${item.roleKey}`}
+                                    className="flex items-center justify-between text-[11px]"
+                                  >
+                                    <span className="font-medium text-slate-800">
+                                      {item.employee.nombre ||
+                                        item.employee.name ||
+                                        item.employee.full_name ||
+                                        item.employee.display_name ||
+                                        "Sin nombre"}
+                                    </span>
+                                    <span className="text-slate-500">
+                                      {item.roleLabel}
+                                    </span>
+                                  </li>
+                                ))}
+                              </ul>
                             )}
-                            {breakShift.aplica_turno_tarde && (
-                              <Badge variant="outline" className="bg-indigo-50 text-indigo-700">
-                                Tarde
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="config" className="mt-4">
+            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+              <CardHeader className="border-b border-slate-100">
+                <CardTitle>Turnos de Descanso Configurados</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                {isLoading ? (
+                  <div className="p-12 text-center text-slate-500">Cargando...</div>
+                ) : breakShifts.length === 0 ? (
+                  <div className="p-12 text-center text-slate-500">
+                    No hay turnos de descanso configurados
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-slate-50">
+                          <TableHead>Nombre</TableHead>
+                          <TableHead>Hora Inicio</TableHead>
+                          <TableHead>Duración</TableHead>
+                          <TableHead>Personas/Turno</TableHead>
+                          <TableHead>Aplica a</TableHead>
+                          <TableHead>Estado</TableHead>
+                          <TableHead className="text-right">Acciones</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {breakShifts.map((breakShift) => (
+                          <TableRow key={breakShift.id} className="hover:bg-slate-50">
+                            <TableCell>
+                              <span className="font-semibold text-slate-900">
+                                {breakShift.nombre || breakShift.name || "Sin nombre"}
+                              </span>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <Clock className="w-4 h-4 text-blue-600" />
+                                {breakShift.hora_inicio || breakShift.start_time || "--:--"}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {breakShift.duracion_minutos || breakShift.duration || 0} min
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <Users className="w-4 h-4 text-green-600" />
+                                {breakShift.personas_por_turno ||
+                                  breakShift.people_per_shift ||
+                                  0}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex gap-1">
+                                {breakShift.aplica_turno_manana && (
+                                  <Badge
+                                    variant="outline"
+                                    className="bg-amber-50 text-amber-700"
+                                  >
+                                    Mañana
+                                  </Badge>
+                                )}
+                                {breakShift.aplica_turno_tarde && (
+                                  <Badge
+                                    variant="outline"
+                                    className="bg-indigo-50 text-indigo-700"
+                                  >
+                                    Tarde
+                                  </Badge>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                className={
+                                  breakShift.activo
+                                    ? "bg-green-100 text-green-800"
+                                    : "bg-slate-100 text-slate-600"
+                                }
+                              >
+                                {breakShift.activo ? "Activo" : "Inactivo"}
                               </Badge>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={
-                            breakShift.activo
-                              ? "bg-green-100 text-green-800"
-                              : "bg-slate-100 text-slate-600"
-                          }>
-                            {breakShift.activo ? "Activo" : "Inactivo"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleEdit(breakShift)}
-                            >
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDelete(breakShift.id)}
-                              className="hover:bg-red-50 hover:text-red-600"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex justify-end gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleEdit(breakShift)}
+                                >
+                                  <Edit className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleDelete(breakShift.id)}
+                                  className="hover:bg-red-50 hover:text-red-600"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
 
       {showForm && (
