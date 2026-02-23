@@ -56,7 +56,6 @@ import ArticleManagement from './pages/ArticleManagement';
 import AttendanceControl from './pages/AttendanceControl';
 import AttendanceManagement from './pages/AttendanceManagement';
 import BrandingConfig from './pages/BrandingConfig';
-import Breaks from './pages/Breaks';
 import CalidadSkills from './pages/CalidadSkills';
 import CommitteeManagement from './pages/CommitteeManagement';
 import Configuration from './pages/Configuration';
@@ -109,6 +108,7 @@ import Timeline from './pages/Timeline';
 import WarehousePlanningPage from './pages/WarehousePlanningPage';
 import WorkCalendarConfig from './pages/WorkCalendarConfig';
 import index from './pages/index';
+import Breaks from './pages/Breaks';
 import ArticleManagement from './pages/ArticleManagement';
 import __Layout from './Layout.jsx';
 
@@ -123,7 +123,6 @@ export const PAGES = {
     "AttendanceControl": AttendanceControl,
     "AttendanceManagement": AttendanceManagement,
     "BrandingConfig": BrandingConfig,
-    "Breaks": Breaks,
     "CalidadSkills": CalidadSkills,
     "CommitteeManagement": CommitteeManagement,
     "Configuration": Configuration,
@@ -176,6 +175,7 @@ export const PAGES = {
     "WarehousePlanningPage": WarehousePlanningPage,
     "WorkCalendarConfig": WorkCalendarConfig,
     "index": index,
+    "Breaks": Breaks,
     "ArticleManagement": ArticleManagement,
 }
 

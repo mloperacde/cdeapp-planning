@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,7 +34,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Edit, Trash2, Coffee, Sparkles, Clock, Users } from "lucide-react";
+import { Plus, Edit, Trash2, Coffee, Sparkles, Clock, Users, Factory, AlertTriangle, CheckCircle2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
