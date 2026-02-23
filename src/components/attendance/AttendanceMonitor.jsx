@@ -161,6 +161,40 @@ export default function AttendanceMonitor() {
     },
   });
 
+  const finalizeAbsenceMutation = useMutation({
+    mutationFn: async ({ empRow }) => {
+      if (!empRow?.ausencia?.id || !empRow?.primerMarcaje) return;
+      const absence = empRow.ausencia;
+      const endISO = new Date(`${selectedDate}T${empRow.primerMarcaje.slice(0, 5)}`).toISOString();
+      const payload = {
+        ...absence,
+        fecha_fin: endISO,
+        fecha_fin_desconocida: false,
+      };
+      return await updateAbsence(absence.id, payload, currentUser, absenceTypes, vacations, holidays);
+    },
+    onSuccess: async () => {
+      try {
+        await base44.functions.invoke("syncEmployeeAvailability");
+      } catch (e) {
+        console.warn("Sync availability failed", e);
+      }
+      queryClient.invalidateQueries({ queryKey: ["absences"] });
+      queryClient.invalidateQueries({ queryKey: ["employees"] });
+      queryClient.invalidateQueries({ queryKey: ["employeesMaster"] });
+      queryClient.invalidateQueries({ queryKey: ["employeeMasterDatabase"] });
+      queryClient.invalidateQueries({ queryKey: ["vacationPendingBalances"] });
+      queryClient.invalidateQueries({ queryKey: ["globalAbsenteeism"] });
+      toast.success("Ausencia finalizada con la hora del primer fichaje");
+      if (consulted) {
+        await handleConsultar();
+      }
+    },
+    onError: (error) => {
+      toast.error("Error al finalizar ausencia: " + (error?.message || ""));
+    },
+  });
+
   const handleConsultar = async () => {
     setIsLoading(true);
     setConsulted(false);
@@ -614,6 +648,16 @@ export default function AttendanceMonitor() {
                                     >
                                       Gestionar ausencia
                                     </button>
+                                    {emp.ausencia && (emp.ausencia.fecha_fin_desconocida || !emp.ausencia.fecha_fin) && (
+                                      <button
+                                        type="button"
+                                        className="self-start text-[10px] text-red-700 underline underline-offset-2"
+                                        onClick={() => finalizeAbsenceMutation.mutate({ empRow: emp })}
+                                        disabled={finalizeAbsenceMutation.isPending}
+                                      >
+                                        {finalizeAbsenceMutation.isPending ? "Finalizando..." : "Finalizar ausencia por fichaje"}
+                                      </button>
+                                    )}
                                   </div>
                                 )}
                                 {emp.incongruencias.map((inc, i) => (

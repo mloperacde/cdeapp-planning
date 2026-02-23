@@ -83,6 +83,24 @@ export default function UnifiedAbsenceManager(props) {
     queryFn: () => base44.auth.me(),
   });
 
+  // Fecha de hoy en ISO (yyyy-MM-dd)
+  const todayISO = useMemo(() => {
+    const now = new Date();
+    return now.toISOString().slice(0, 10);
+  }, []);
+
+  // Auditoría de presencia del día (fuente de verdad para "Sin presencia")
+  const { data: attendanceAuditToday } = useQuery({
+    queryKey: ['attendanceAuditToday', todayISO],
+    queryFn: async () => {
+      const res = await base44.functions.invoke('analyzeAttendance', { date: todayISO });
+      return res?.data || null;
+    },
+    staleTime: 60 * 1000,
+    gcTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
   // Consolidado de ausencias activas
   const activeAbsencesConsolidated = useMemo(() => {
     const now = new Date();
@@ -133,6 +151,12 @@ export default function UnifiedAbsenceManager(props) {
     
     return { disponibles, ausentes, total };
   }, [employees, activeAbsencesConsolidated, sourceContext]);
+
+  // Conteo coherente con auditoría: empleados que deberían haber acudido y no tienen fichaje
+  const ausentesHoySegunAuditoria = useMemo(() => {
+    const sinRegistro = attendanceAuditToday?.sinRegistro || [];
+    return Array.isArray(sinRegistro) ? sinRegistro.length : 0;
+  }, [attendanceAuditToday]);
 
   const employeesWithActiveAbsence = useMemo(() => {
     const ids = new Set(activeAbsencesConsolidated.map(abs => abs.employee_id));
@@ -352,7 +376,7 @@ export default function UnifiedAbsenceManager(props) {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-red-700 dark:text-red-300 font-medium">Ausentes Hoy</p>
-                <p className="text-2xl font-bold text-red-900 dark:text-red-100">{availabilityStats.ausentes}</p>
+                <p className="text-2xl font-bold text-red-900 dark:text-red-100">{ausentesHoySegunAuditoria}</p>
               </div>
               <UserX className="w-8 h-8 text-red-600" />
             </div>
