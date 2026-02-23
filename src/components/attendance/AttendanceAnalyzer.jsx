@@ -222,6 +222,8 @@ export default function AttendanceAnalyzer() {
     });
   };
 
+  const normalizeId = (v) => (v == null ? "" : String(v).trim());
+
   const analysis = useMemo(() => {
     const expectedEmployees = employees.filter(emp => {
       const code = emp.codigo_empleado ? String(emp.codigo_empleado) : "";
@@ -247,7 +249,10 @@ export default function AttendanceAnalyzer() {
 
       byDepartment[dept].expected++;
 
-      const record = attendanceRecords.find(r => r.employee_id === emp.id);
+      const record = attendanceRecords.find(r => {
+        const rid = normalizeId(r.employee_id);
+        return rid === normalizeId(emp.id) || rid === normalizeId(emp.codigo_empleado);
+      });
       
       if (!record) {
         byDepartment[dept].unregistered++;

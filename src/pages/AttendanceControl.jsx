@@ -73,6 +73,14 @@ export default function AttendanceControl() {
     });
     return map;
   }, [employees]);
+  const employeesByCodigo = useMemo(() => {
+    const map = new Map();
+    employees.forEach(e => {
+      const code = e?.codigo_empleado != null ? String(e.codigo_empleado) : null;
+      if (code) map.set(code, e);
+    });
+    return map;
+  }, [employees]);
 
   // Batches únicos del día actual (para poder borrar por turno)
   const batches = [...new Set(records.map(r => r.import_batch).filter(Boolean))];
@@ -94,10 +102,10 @@ export default function AttendanceControl() {
     records.reduce((acc, r) => {
       const key = r.employee_id;
       if (!acc[key]) {
-        const em = employeesById.get(String(r.employee_id));
+        const em = employeesById.get(String(r.employee_id)) || employeesByCodigo.get(String(r.employee_id));
         acc[key] = {
           employee_id: r.employee_id,
-          employee_name: em?.nombre || r.employee_name,
+          employee_name: em?.nombre || `Empleado ${r.employee_id}`,
           department: em?.departamento || "—",
           entries: [],
           exits: [],

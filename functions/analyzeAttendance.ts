@@ -74,6 +74,17 @@ function detectarIncongruencias(
   return issues;
 }
 
+function pad2(n: number) {
+  return String(n).padStart(2, "0");
+}
+
+function addDays(dateStr: string, delta: number) {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  dt.setUTCDate(dt.getUTCDate() + delta);
+  return `${dt.getUTCFullYear()}-${pad2(dt.getUTCMonth() + 1)}-${pad2(dt.getUTCDate())}`;
+}
+
 function ausenciaActivaEnFecha(absence: any, fecha: string) {
   if (!absence?.fecha_inicio) return false;
 
@@ -81,17 +92,22 @@ function ausenciaActivaEnFecha(absence: any, fecha: string) {
   const inicioStr = String(absence.fecha_inicio).slice(0, 10);
   if (!inicioStr) return false;
 
-  // Ausencias sin fecha fin (o con fin desconocido) se consideran activas
-  // desde fecha_inicio en adelante hasta que se establezca una fecha de fin real.
+  // Sin fecha fin o fin desconocido -> activa desde inicio en adelante
   if (absence.fecha_fin_desconocida || !absence.fecha_fin) {
     return fechaStr >= inicioStr;
   }
 
-  const finStr = String(absence.fecha_fin).slice(0, 10);
+  const finIso = String(absence.fecha_fin);
+  const finStr = finIso.slice(0, 10);
   if (!finStr) return fechaStr >= inicioStr;
 
-  // Comparación puramente por fecha (YYYY-MM-DD) para evitar efectos de zona horaria y horas.
-  return fechaStr >= inicioStr && fechaStr <= finStr;
+  // Si la hora de fin es exactamente 00:00, interpretamos el fin como EXCLUSIVO del propio día de fin:
+  // es decir, la ausencia cubre hasta el día anterior a finStr.
+  // Esto evita marcar como "activa" una ausencia que finaliza a las 00:00 del día auditado.
+  const finTime = finIso.includes("T") ? finIso.slice(11, 16) : "";
+  const finEffective = finTime === "00:00" ? addDays(finStr, -1) : finStr;
+
+  return fechaStr >= inicioStr && fechaStr <= finEffective;
 }
 
 Deno.serve(async (req: Request) => {
@@ -157,8 +173,10 @@ Deno.serve(async (req: Request) => {
     }
 
     const masterMapByCodigo: Record<string, any> = {};
+    const masterMapById: Record<string, any> = {};
     for (const emp of filteredMasterEmployees) {
       if (emp.codigo_empleado) masterMapByCodigo[String(emp.codigo_empleado)] = emp;
+      if (emp.id != null) masterMapById[String(emp.id)] = emp;
     }
 
     const masterIdToCodigo: Record<string, string> = {};
@@ -166,14 +184,16 @@ Deno.serve(async (req: Request) => {
       if (m.id && m.codigo_empleado) masterIdToCodigo[m.id] = String(m.codigo_empleado);
     }
 
-    // ausenciasMap: codigo_empleado → ausencia activa en date
-    const ausenciasMap: Record<string, any> = {};
+    // Mapas de ausencias activas en la fecha: por id y por código
+    const ausenciasByCodigo: Record<string, any> = {};
+    const ausenciasById: Record<string, any> = {};
     for (const a of ausencias) {
       if (!a.employee_id) continue;
       if (!ausenciaActivaEnFecha(a, date)) continue;
       const codigo = masterIdToCodigo[a.employee_id];
       const normalizedCodigo = codigo != null ? String(codigo).trim() : "";
-      if (normalizedCodigo && !excludedIds.has(normalizedCodigo)) ausenciasMap[normalizedCodigo] = a;
+      if (normalizedCodigo && !excludedIds.has(normalizedCodigo)) ausenciasByCodigo[normalizedCodigo] = a;
+      ausenciasById[String(a.employee_id)] = a;
     }
 
     const fichajesMap: Record<string, { employee_id: string; employee_name: string; registros: any[] }> = {};
@@ -191,7 +211,10 @@ Deno.serve(async (req: Request) => {
       const sorted = [...emp.registros].sort((a, b) => a.record_time.localeCompare(b.record_time));
       const primerRegistro = sorted[0];
       const ultimoRegistro = sorted[sorted.length - 1];
-      const master = masterMapByCodigo[emp.employee_id] || null;
+      const master =
+        masterMapById[emp.employee_id] ||
+        masterMapByCodigo[emp.employee_id] ||
+        null;
 
       if (!master) {
         noEnMaestra.push({ employee_id: emp.employee_id, employee_name: emp.employee_name, totalMarcajes: sorted.length });
@@ -238,7 +261,10 @@ Deno.serve(async (req: Request) => {
       }
 
       const incongruencias = detectarIncongruencias(sorted);
-      const ausencia = ausenciasMap[emp.employee_id] || null;
+      const ausencia =
+        ausenciasById[master?.id != null ? String(master.id) : ""] ||
+        ausenciasByCodigo[emp.employee_id] ||
+        null;
       const alertaPresenciaConAusencia = !!ausencia;
 
       let estado = "ok";
@@ -291,7 +317,10 @@ Deno.serve(async (req: Request) => {
       })
       .map((m: any) => {
         const { horaEntrada, turnoReal } = getHorarioEsperado(m, teamScheduleMap);
-        const ausencia = ausenciasMap[String(m.codigo_empleado)] || null;
+        const ausencia =
+          ausenciasById[String(m.id)] ||
+          (m.codigo_empleado != null ? ausenciasByCodigo[String(m.codigo_empleado)] : null) ||
+          null;
         return {
           id: m.id,
           codigo_empleado: m.codigo_empleado,
