@@ -28,6 +28,8 @@ export default function OrganizationalChart({
   const [zoom, setZoom] = React.useState(1);
   const [isCompact, setIsCompact] = React.useState(false);
   const [collapsedNodes, setCollapsedNodes] = React.useState(new Set());
+  const containerRef = React.useRef(null);
+  const contentRef = React.useRef(null);
 
   // Use props data if available, otherwise fetch
   const { data: fetchedDepts = [] } = useQuery({
@@ -339,6 +341,19 @@ export default function OrganizationalChart({
   // Find root departments (parent_id is null or not found in list)
   const rootDepartments = departments.filter(d => !d.parent_id || !departments.find(p => p.id === d.parent_id));
 
+  React.useLayoutEffect(() => {
+    if (!containerRef.current || !contentRef.current) return;
+    const containerWidth = containerRef.current.clientWidth;
+    const contentWidth = contentRef.current.scrollWidth;
+    if (!containerWidth || !contentWidth) return;
+    const padding = 64;
+    const effectiveWidth = Math.max(0, containerWidth - padding);
+    if (!effectiveWidth) return;
+    const fitZoom = effectiveWidth / contentWidth;
+    const clamped = Math.max(0.5, Math.min(1, fitZoom));
+    setZoom(clamped);
+  }, [rootDepartments.length, isCompact, departments]);
+
   return (
     <div className="relative overflow-hidden h-full flex flex-col bg-slate-50 rounded-lg border border-slate-200">
       {/* Toolbar */}
@@ -405,6 +420,7 @@ export default function OrganizationalChart({
       </div>
 
       <div 
+        ref={containerRef}
         className="overflow-auto flex-1 p-8" 
         style={{ cursor: 'grab' }}
         onMouseDown={(e) => {
@@ -419,6 +435,7 @@ export default function OrganizationalChart({
         }}
       >
         <div 
+          ref={contentRef}
           className="min-w-max flex justify-center origin-top transition-transform duration-200 ease-out"
           style={{ transform: `scale(${zoom})` }}
         >

@@ -1140,12 +1140,16 @@ export default function DepartmentPositionManager() {
             setIsMoveDialogOpen(true);
           }}
           onNodeDrop={(draggedId, targetId) => {
-             const descendants = getDescendantIds(draggedId, departments);
-             if (descendants.has(targetId)) {
-                toast.error("No se puede mover un departamento dentro de su descendiente");
-                return;
-             }
-             moveDeptMutation.mutate({ id: draggedId, newParentId: targetId });
+            const dragged = departments.find(d => d.id === draggedId);
+            const target = departments.find(d => d.id === targetId);
+            if (!dragged || !target) return;
+            const draggedParent = dragged.parent_id || null;
+            const targetParent = target.parent_id || null;
+            if (draggedParent !== targetParent) {
+              toast.error("Solo se puede reordenar entre departamentos del mismo nivel");
+              return;
+            }
+            reorderSiblings(draggedParent, draggedId, targetId);
           }}
         />
       )}
