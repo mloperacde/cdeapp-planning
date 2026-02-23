@@ -14,6 +14,7 @@ import UnifiedAbsenceManager from "../components/absences/UnifiedAbsenceManager"
 import ThemeToggle from "../components/common/ThemeToggle";
 import { useShiftConfig } from "@/hooks/useShiftConfig";
 import ModuleGuard from "../components/common/ModuleGuard";
+import AgentChat from "@/components/common/AgentChat";
 
 const EMPTY_ARRAY = [];
 
@@ -546,6 +547,13 @@ export default function ShiftManagersPage() {
         <ModuleGuard pageName="ShiftManagers" moduleName="manageAbsences" silent={true}>
           <UnifiedAbsenceManager sourceContext="shift_manager" />
         </ModuleGuard>
+
+        {/* Chat con agente de asignaciones */}
+        <AgentChat
+          agentName="assignment_generator"
+          title="Asistente de Asignaciones (IA)"
+          placeholder="Ej: Genera las asignaciones de mañana para el equipo 1 con las máquinas activas..."
+        />
       </div>
     </div>
   );

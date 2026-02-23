@@ -4,6 +4,7 @@ import { Cog, ArrowLeft } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
+import AgentChat from "@/components/common/AgentChat";
 
 export default function NewProcessConfigurator() {
   return (
@@ -37,6 +38,13 @@ export default function NewProcessConfigurator() {
       <div className="flex-1 min-h-0 border rounded-lg overflow-hidden bg-white dark:bg-slate-900 shadow-sm">
         <ProcessConfiguratorApp />
       </div>
+
+      {/* Chat con analista de producto */}
+      <AgentChat
+        agentName="product_analyst"
+        title="Analista de Producto (IA)"
+        placeholder="Ej: ¿Qué procesos hay configurados? ¿Qué artículos puede fabricar la máquina X?"
+      />
     </div>
   );
 }
