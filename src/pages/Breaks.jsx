@@ -310,22 +310,16 @@ Por favor:
                   </Button>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="pt-4 pb-4 space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-1">
                     <Label>Fecha</Label>
-                    <Input
-                      type="date"
-                      value={selectedDate}
-                      onChange={(e) => setSelectedDate(e.target.value)}
-                    />
+                    <Input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} />
                   </div>
                   <div className="space-y-1">
                     <Label>Turno</Label>
                     <Select value={selectedShift} onValueChange={setSelectedShift}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecciona turno" />
-                      </SelectTrigger>
+                      <SelectTrigger><SelectValue placeholder="Selecciona turno" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="Mañana">Mañana</SelectItem>
                         <SelectItem value="Tarde">Tarde</SelectItem>
@@ -334,13 +328,8 @@ Por favor:
                   </div>
                   <div className="space-y-1">
                     <Label>Equipo</Label>
-                    <Select
-                      value={selectedTeamId}
-                      onValueChange={setSelectedTeamId}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecciona equipo" />
-                      </SelectTrigger>
+                    <Select value={selectedTeamId} onValueChange={setSelectedTeamId}>
+                      <SelectTrigger><SelectValue placeholder="Selecciona equipo" /></SelectTrigger>
                       <SelectContent>
                         {teams.map((team) => (
                           <SelectItem key={team.id} value={String(team.id)}>
@@ -352,7 +341,6 @@ Por favor:
                   </div>
                 </div>
 
-                {/* Estado del agente */}
                 {isCalling && (
                   <div className="flex items-center gap-3 p-4 bg-purple-50 border border-purple-200 rounded-lg">
                     <Loader2 className="w-5 h-5 text-purple-600 animate-spin flex-shrink-0" />
@@ -362,102 +350,20 @@ Por favor:
                     </div>
                   </div>
                 )}
-
-                {/* Resultado del plan */}
-                {generatedPlan && (
-                  <div className="space-y-4">
-                    {/* Cabecera del resultado */}
-                    <div className="flex flex-wrap items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-                      <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0" />
-                      <div className="flex-1">
-                        <p className="text-sm font-semibold text-green-800">
-                          Plan generado: {generatedPlan.date} · Turno {generatedPlan.shift} · Equipo {generatedPlan.teamName}
-                        </p>
-                        {generatedPlan.resumen && (
-                          <p className="text-xs text-green-700">
-                            {generatedPlan.resumen.total_empleados} empleados · {generatedPlan.resumen.total_maquinas_activas} máquinas activas · {generatedPlan.resumen.turnos_descanso} turnos de descanso
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Advertencias */}
-                    {generatedPlan.resumen?.advertencias?.length > 0 && (
-                      <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                        <div className="flex items-center gap-2 mb-1">
-                          <AlertTriangle className="w-4 h-4 text-amber-600" />
-                          <span className="text-xs font-semibold text-amber-800">Advertencias</span>
-                        </div>
-                        <ul className="text-xs text-amber-700 space-y-1 ml-6 list-disc">
-                          {generatedPlan.resumen.advertencias.map((a, i) => (
-                            <li key={i}>{a}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-
-                    {/* Turnos de descanso */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                      {generatedPlan.breaks.map((b, idx) => (
-                        <Card key={b.id || idx} className="border border-slate-200 shadow-sm">
-                          <CardHeader className="py-2 px-3 border-b bg-slate-50">
-                            <div className="flex items-center justify-between gap-2">
-                              <div className="flex items-center gap-2">
-                                <Clock className="w-4 h-4 text-blue-600" />
-                                <div>
-                                  <span className="text-xs font-bold text-slate-800">{b.nombre}</span>
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-[11px] text-slate-500">Inicio: {b.hora_inicio}</span>
-                                    {b.duracion_minutos && (
-                                      <span className="text-[11px] text-slate-400">· {b.duracion_minutos} min</span>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                              <Badge
-                                className={`text-[10px] ${
-                                  (b.total_personas || 0) > (b.personas_por_turno || 999)
-                                    ? "bg-red-100 text-red-700"
-                                    : "bg-blue-100 text-blue-700"
-                                }`}
-                              >
-                                {b.total_personas ?? (b.grupos?.reduce((s, g) => s + (g.personas?.length || 0), 0) ?? 0)}
-                                {b.personas_por_turno ? `/${b.personas_por_turno}` : ""} pers.
-                              </Badge>
-                            </div>
-                          </CardHeader>
-                          <CardContent className="px-3 py-2 space-y-2">
-                            {(!b.grupos || b.grupos.length === 0) ? (
-                              <div className="text-[11px] text-slate-400 italic">Sin asignaciones.</div>
-                            ) : (
-                              b.grupos.map((grupo, gIdx) => (
-                                <div key={gIdx} className="border border-slate-100 rounded-md overflow-hidden">
-                                  <div className="flex items-center gap-2 px-2 py-1 bg-slate-100">
-                                    <Factory className="w-3 h-3 text-slate-500 flex-shrink-0" />
-                                    <span className="text-[11px] font-semibold text-slate-700 truncate">
-                                      {grupo.machine_nombre || grupo.machine_id || "Máquina"}
-                                    </span>
-                                    <span className="ml-auto text-[10px] text-slate-400">{grupo.personas?.length || 0} pers.</span>
-                                  </div>
-                                  <ul className="px-2 py-1 space-y-0.5">
-                                    {(grupo.personas || []).map((p, pIdx) => (
-                                      <li key={pIdx} className="flex items-center justify-between text-[11px]">
-                                        <span className="font-medium text-slate-800">{p.nombre || p.name || "Sin nombre"}</span>
-                                        <span className="text-slate-400 text-[10px]">{p.rol || ""}</span>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </div>
-                              ))
-                            )}
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </CardContent>
             </Card>
+
+            {/* Chat con el agente */}
+            <BreakAgentChat
+              conversationId={conversationId}
+              onPlanExtracted={(content) => {
+                const teamObj = teams.find(t => String(t.id) === String(selectedTeamId));
+                if (teamObj) tryExtractPlan(content, selectedDate, selectedShift, teamObj);
+              }}
+            />
+
+            {/* Resultado del plan */}
+            {generatedPlan && <BreakPlanResult plan={generatedPlan} />}
           </TabsContent>
 
           <TabsContent value="config" className="mt-4">
