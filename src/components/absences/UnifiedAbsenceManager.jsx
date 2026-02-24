@@ -187,7 +187,7 @@ export default function UnifiedAbsenceManager(props) {
   }, [attendanceAuditToday]);
 
   // Finalizar ausencia por fichaje (usar primer marcaje del día)
-  const queryClient = useQueryClient();
+  // queryClient already declared above
   const finalizeAbsenceMutation = useMutation({
     mutationFn: async ({ absence, firstPunch }) => {
       if (!absence?.id || !firstPunch) return;
