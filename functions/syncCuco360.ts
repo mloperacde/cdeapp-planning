@@ -84,6 +84,8 @@ Deno.serve(async (req) => {
     // Ensure we are sending EXACTLY what was requested: "Bearer " + key
     const authHeaderValue = apiKey?.startsWith("Bearer ") ? apiKey : `Bearer ${apiKey}`;
 
+    console.log(`[DEBUG] Fetching CUCO360: ${url}`);
+    
     const headers = {
       "Content-Type": "application/json",
       "Accept": "application/json",
@@ -91,15 +93,27 @@ Deno.serve(async (req) => {
       "cod_cliente": CLIENT_CODE
     };
 
-    const response = await fetch(url, { headers });
+    let response;
+    try {
+        response = await fetch(url, { headers });
+    } catch (netErr) {
+        console.error(`[DEBUG] Network Error calling CUCO360:`, netErr);
+        throw new Error(`Network Error calling CUCO360: ${netErr.message}`);
+    }
     
     if (!response.ok) {
       const text = await response.text();
-      // If 404 from CUCO, it might mean bad URL or endpoint
+      console.error(`[DEBUG] CUCO360 Error ${response.status}: ${text}`);
       throw new Error(`CUCO360 API Error (${response.status}) at ${url}: ${text}`);
     }
 
-    const json = await response.json();
+    let json;
+    try {
+        json = await response.json();
+    } catch (parseErr) {
+        console.error(`[DEBUG] Error parsing JSON from CUCO360`);
+        throw new Error(`Invalid JSON response from CUCO360`);
+    }
     
     if (json.response && json.response !== "ok" && json.response !== "OK") {
       throw new Error(`CUCO360 API returned error: ${JSON.stringify(json)}`);
