@@ -79,10 +79,15 @@ Deno.serve(async (req) => {
     const endpoint = `/checking/getfullchecks/${CLIENT_CODE}?start_date=${from}&end_date=${to}`;
     const url = `${baseUrl}${endpoint}`;
     
+    // Auth configuration based on user instructions
+    const apiKey = Deno.env.get("CUCO360_API_KEY");
+    // Ensure we are sending EXACTLY what was requested: "Bearer " + key
+    const authHeaderValue = apiKey?.startsWith("Bearer ") ? apiKey : `Bearer ${apiKey}`;
+
     const headers = {
       "Content-Type": "application/json",
       "Accept": "application/json",
-      "APIKey": `Bearer ${apiKey}`,
+      "APIKey": authHeaderValue,
       "cod_cliente": CLIENT_CODE
     };
 
