@@ -88,9 +88,7 @@ Deno.serve(async (req) => {
     
     const headers = {
       "Content-Type": "application/json",
-      "Accept": "application/json",
       "APIKey": authHeaderValue,
-      "cod_cliente": CLIENT_CODE
     };
 
     let response;
