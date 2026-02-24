@@ -101,6 +101,18 @@ export default function UnifiedAbsenceManager(props) {
     refetchOnWindowFocus: false,
   });
 
+  // Índice rápido por empleado de la auditoría de hoy
+  const attendanceRowsByEmployeeId = useMemo(() => {
+    const map = new Map();
+    const rows = attendanceAuditToday?.rows || [];
+    for (const r of rows) {
+      if (r?.employee_id != null) {
+        map.set(String(r.employee_id), r);
+      }
+    }
+    return map;
+  }, [attendanceAuditToday]);
+
   // Consolidado de ausencias activas
   const activeAbsencesConsolidated = useMemo(() => {
     const now = new Date();
@@ -157,6 +169,38 @@ export default function UnifiedAbsenceManager(props) {
     const sinRegistro = attendanceAuditToday?.sinRegistro || [];
     return Array.isArray(sinRegistro) ? sinRegistro.length : 0;
   }, [attendanceAuditToday]);
+
+  // Finalizar ausencia por fichaje (usar primer marcaje del día)
+  const queryClient = useQueryClient();
+  const finalizeAbsenceMutation = useMutation({
+    mutationFn: async ({ absence, firstPunch }) => {
+      if (!absence?.id || !firstPunch) return;
+      const endISO = new Date(`${todayISO}T${String(firstPunch).slice(0, 5)}`).toISOString();
+      const payload = {
+        ...absence,
+        fecha_fin: endISO,
+        fecha_fin_desconocida: false,
+      };
+      return await updateAbsence(absence.id, payload, currentUser, absenceTypes, vacations, holidays);
+    },
+    onSuccess: async () => {
+      try {
+        await base44.functions.invoke('syncEmployeeAvailability');
+      } catch (e) {
+        console.warn('Sync availability failed', e);
+      }
+      queryClient.invalidateQueries({ queryKey: ['absences'] });
+      queryClient.invalidateQueries({ queryKey: ['employees'] });
+      queryClient.invalidateQueries({ queryKey: ['employeesMaster'] });
+      queryClient.invalidateQueries({ queryKey: ['employeeMasterDatabase'] });
+      queryClient.invalidateQueries({ queryKey: ['vacationPendingBalances'] });
+      queryClient.invalidateQueries({ queryKey: ['globalAbsenteeism'] });
+      toast.success('Ausencia finalizada con la hora del primer fichaje');
+    },
+    onError: (error) => {
+      toast.error('Error al finalizar ausencia: ' + (error?.message || ''));
+    },
+  });
 
   const employeesWithActiveAbsence = useMemo(() => {
     const ids = new Set(activeAbsencesConsolidated.map(abs => abs.employee_id));
@@ -473,6 +517,8 @@ export default function UnifiedAbsenceManager(props) {
               <TableBody>
                 {filteredAbsences.map(abs => {
                   const emp = employees.find(e => e.id === abs.employee_id);
+                  const auditRow = attendanceRowsByEmployeeId.get(String(abs.employee_id));
+                  const canFinalizeByPunch = !!auditRow?.primerMarcaje && (abs.fecha_fin_desconocida || !abs.fecha_fin);
                   return (
                     <TableRow key={abs.id} className="hover:bg-slate-50 dark:hover:bg-slate-800">
                       <TableCell className="font-semibold">{getEmployeeName(abs.employee_id)}</TableCell>
@@ -502,6 +548,16 @@ export default function UnifiedAbsenceManager(props) {
                               className="text-purple-600 hover:bg-purple-50"
                             >
                               <Sparkles className="w-4 h-4" />
+                            </Button>
+                          )}
+                          {canFinalizeByPunch && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => finalizeAbsenceMutation.mutate({ absence: abs, firstPunch: auditRow.primerMarcaje })}
+                              className="text-red-700"
+                            >
+                              Finalizar por fichaje
                             </Button>
                           )}
                           <Button variant="ghost" size="icon" onClick={() => handleEdit(abs)}>
