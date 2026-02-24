@@ -24,7 +24,8 @@ Deno.serve(async (req) => {
   const client = createClientFromRequest(req);
   
   try {
-    const { date, start_date, end_date, force } = await req.json().catch(() => ({}));
+    const body = await req.json().catch(() => ({}));
+    const { date, start_date, end_date, force } = body;
 
     // 1. Validate Configuration
     const apiKeyEnv = Deno.env.get("CUCO360_API_KEY");
@@ -78,9 +79,7 @@ Deno.serve(async (req) => {
     // 4. Call CUCO360 API
     // Ensure dates are in correct format YYYY-MM-DD
     const formatDate = (d: string) => {
-        // If already YYYY-MM-DD, return as is
         if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
-        // Try to parse and format
         try {
             return new Date(d).toISOString().split('T')[0];
         } catch {
@@ -94,19 +93,14 @@ Deno.serve(async (req) => {
     const endpoint = `/checking/getfullchecks/${CLIENT_CODE}?start_date=${safeFrom}&end_date=${safeTo}`;
     const url = `${baseUrl}${endpoint}`;
     
-    // Auth configuration based on user instructions
-    // Ensure we are sending EXACTLY what was requested: "Bearer " + key
+    // Auth configuration
     const authHeaderValue = apiKeyEnv.startsWith("Bearer ") ? apiKeyEnv : `Bearer ${apiKeyEnv}`;
 
     console.log(`[DEBUG] Fetching CUCO360: ${url}`);
     
-    // Some legacy APIs accept API Key as a query param instead of header if header fails
-    // or they strictly require "Authorization" instead of "APIKey"
-    // Trying standard Authorization header as fallback if user instruction was ambiguous
     const headers = {
       "Content-Type": "application/json",
       "APIKey": authHeaderValue,
-      // "Authorization": authHeaderValue // Uncomment if APIKey fails
     };
 
     let response;
@@ -164,7 +158,7 @@ Deno.serve(async (req) => {
         import_batch: `cuco_sync_${new Date().toISOString().replace(/[:.]/g, '-')}`,
         source: "cuco360_api"
       };
-    }).filter(r => r !== null);
+    }).filter((r: any) => r !== null);
 
     if (recordsToCreate.length === 0) {
       return new Response(JSON.stringify({ 
@@ -174,32 +168,27 @@ Deno.serve(async (req) => {
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Use service role for database operations to ensure permissions
+    // Use service role for database operations
     const serviceClient = client.asServiceRole || client;
 
-    // Delete existing records for the day(s) to avoid duplicates
-    // Since we don't have bulkDelete, we fetch IDs and delete one by one (or rely on another strategy)
-    // For simplicity and safety, we filter by date range.
     if (from === to) {
         // Fetch existing records for this day
         const existing = await serviceClient.entities.AttendanceRecord.filter({ record_date: from }, "id", 2000);
         if (existing && existing.length > 0) {
             console.log(`Deleting ${existing.length} existing records for ${from}`);
-            // Delete in parallel chunks to speed up
             const deletePromises = existing.map((r: any) => serviceClient.entities.AttendanceRecord.delete(r.id));
             await Promise.all(deletePromises);
         }
     }
 
-    // Bulk create new records
-    const chunkSize = 50; // Smaller chunk size for safety
+    // Bulk create
+    const chunkSize = 50; 
     for (let i = 0; i < recordsToCreate.length; i += chunkSize) {
       const chunk = recordsToCreate.slice(i, i + chunkSize);
       try {
         await serviceClient.entities.AttendanceRecord.bulkCreate(chunk);
       } catch (err) {
          console.error("Error inserting chunk", err);
-         // Continue with next chunk or throw? throwing is safer to alert issues
          throw err;
       }
     }
@@ -218,4 +207,3 @@ Deno.serve(async (req) => {
     }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });
-// Force deploy trigger v2 - Update 2

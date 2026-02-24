@@ -321,8 +321,8 @@ export default function AttendanceControl() {
     
     setIsSyncing(true);
     try {
-      // Llamada a la nueva función de backend (force: true para ejecución manual)
-      const res = await base44.functions.invoke("syncCuco360", { date: filterDate, force: true });
+      // Llamada a la nueva función de backend (renombrada a cucoSync para forzar despliegue)
+      const res = await base44.functions.invoke("cucoSync", { date: filterDate, force: true });
       
       if (res.error) throw new Error(res.error);
       
