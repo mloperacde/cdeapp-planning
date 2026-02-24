@@ -93,21 +93,35 @@ export default function UnifiedAbsenceManager(props) {
   const { data: attendanceAuditToday } = useQuery({
     queryKey: ['attendanceAuditToday', todayISO],
     queryFn: async () => {
-      const res = await base44.functions.invoke('analyzeAttendance', { date: todayISO });
-      return res?.data || null;
+      try {
+        const res = await base44.functions.invoke('analyzeAttendance', { date: todayISO });
+        // Si el backend devuelve error en el body pero con status 200, manejarlo.
+        if (res?.error) {
+          console.warn("Error en analyzeAttendance:", res.error);
+          return null; 
+        }
+        return res?.data || null;
+      } catch (e) {
+        console.warn("Fallo al invocar analyzeAttendance:", e);
+        return null; // Retornar null en lugar de lanzar para evitar crash de UI
+      }
     },
     staleTime: 60 * 1000,
     gcTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
+    retry: 1, // Reintentar solo una vez si falla
   });
 
   // Índice rápido por empleado de la auditoría de hoy
   const attendanceRowsByEmployeeId = useMemo(() => {
     const map = new Map();
-    const rows = attendanceAuditToday?.rows || [];
-    for (const r of rows) {
-      if (r?.employee_id != null) {
-        map.set(String(r.employee_id), r);
+    // Validar que attendanceAuditToday y rows existan antes de iterar
+    const rows = attendanceAuditToday?.rows;
+    if (Array.isArray(rows)) {
+      for (const r of rows) {
+        if (r?.employee_id != null) {
+          map.set(String(r.employee_id), r);
+        }
       }
     }
     return map;
@@ -166,7 +180,9 @@ export default function UnifiedAbsenceManager(props) {
 
   // Conteo coherente con auditoría: empleados que deberían haber acudido y no tienen fichaje
   const ausentesHoySegunAuditoria = useMemo(() => {
-    const sinRegistro = attendanceAuditToday?.sinRegistro || [];
+    // Si la auditoría aún no carga o falla, mostrar 0 para evitar errores.
+    // La auditoría puede devolver null si falla el backend.
+    const sinRegistro = attendanceAuditToday?.sinRegistro;
     return Array.isArray(sinRegistro) ? sinRegistro.length : 0;
   }, [attendanceAuditToday]);
 
