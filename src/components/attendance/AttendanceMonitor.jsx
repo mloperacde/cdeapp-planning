@@ -431,10 +431,10 @@ export default function AttendanceMonitor() {
           {consulted && result && (
             <>
               {/* KPIs */}
-
               <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-8 gap-2 mb-4">
                 {[
                   { label: "Con fichaje", val: stats.total, color: "blue", tab: "todos" },
+                  { label: "Total Sin Presencia", val: stats.ausentes, color: "red", tab: "ausentes" },
                   { label: "⚠ Sin ausencia", val: stats.ausenciasSinConfigurar, color: "red", tab: "ausentes" },
                   { label: "✓ Ausencia conf.", val: stats.ausenciasConfirmadas, color: "slate", tab: "ausentes" },
                   { label: "🔔 Ficha+ausencia", val: stats.alertaAusencia, color: "yellow", tab: "alerta_ausencia" },
@@ -454,7 +454,25 @@ export default function AttendanceMonitor() {
                 ))}
               </div>
 
+              {stats.noEnMaestra > 0 && (
+                <div 
+                  className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-3 cursor-pointer hover:bg-red-100 transition-colors"
+                  onClick={() => setFilterTab("no_maestra")}
+                >
+                  <AlertTriangle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="text-sm font-medium text-red-800">
+                      Detectados {stats.noEnMaestra} fichajes de empleados no registrados en la base de datos
+                    </h4>
+                    <p className="text-xs text-red-600 mt-1">
+                      Es necesario vincular estos IDs con empleados reales para procesar su asistencia correctamente. Haz clic aquí para resolverlo.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-3 gap-2 mb-4">
+
                 <Card
                   className={`cursor-pointer transition-all hover:shadow-md ${activeCorte === "07:00" ? "ring-2 ring-offset-1" : ""}`}
                   onClick={() => setActiveCorte(activeCorte === "07:00" ? null : "07:00")}
@@ -489,22 +507,6 @@ export default function AttendanceMonitor() {
                   </CardContent>
                 </Card>
               </div>
-
-              {/* Tabs */}
-              <Tabs value={filterTab} onValueChange={setFilterTab} className="mb-3">
-                <TabsList className="h-auto flex-wrap gap-1">
-                  <TabsTrigger value="todos" className="text-xs">Todos ({stats.total})</TabsTrigger>
-                  <TabsTrigger value="alerta_ausencia" className="text-xs">🔔 Ficha+ausencia ({stats.alertaAusencia})</TabsTrigger>
-                  <TabsTrigger value="retrasos" className="text-xs">Retrasos ({stats.retrasos})</TabsTrigger>
-                  <TabsTrigger value="incongruencias" className="text-xs">Incongruencias ({stats.incongruencias})</TabsTrigger>
-                  <TabsTrigger value="jornada" className="text-xs">Jornada incompleta ({stats.jornadaIncompleta})</TabsTrigger>
-                  <TabsTrigger value="ok" className="text-xs">Correctos ({stats.ok})</TabsTrigger>
-                  <TabsTrigger value="ausentes" className="text-xs">Sin presencia ({stats.ausentes})</TabsTrigger>
-                  {stats.noEnMaestra > 0 && (
-                    <TabsTrigger value="no_maestra" className="text-xs">No encontrado en BD ({stats.noEnMaestra})</TabsTrigger>
-                  )}
-                </TabsList>
-              </Tabs>
 
               {/* ── Tabla: empleados CON fichaje ── */}
               {!["ausentes", "no_maestra"].includes(filterTab) && (
