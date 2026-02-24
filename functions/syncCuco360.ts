@@ -62,7 +62,8 @@ Deno.serve(async (req) => {
         }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
-      const { data: holidays } = await client.from('holidays').select('*').eq('fecha', from);
+      // Check Holiday using Base44 SDK entities
+      const holidays = await client.entities.Holiday.filter({ fecha: from }, "id,nombre", 1);
       if (holidays && holidays.length > 0) {
         return new Response(JSON.stringify({ 
           success: true, 
@@ -138,20 +139,33 @@ Deno.serve(async (req) => {
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    // Use service role for database operations to ensure permissions
+    const serviceClient = client.asServiceRole || client;
+
+    // Delete existing records for the day(s) to avoid duplicates
+    // Since we don't have bulkDelete, we fetch IDs and delete one by one (or rely on another strategy)
+    // For simplicity and safety, we filter by date range.
     if (from === to) {
-        await client.functions.invoke("deleteAttendanceRecords", { record_date: from });
+        // Fetch existing records for this day
+        const existing = await serviceClient.entities.AttendanceRecord.filter({ record_date: from }, "id", 2000);
+        if (existing && existing.length > 0) {
+            console.log(`Deleting ${existing.length} existing records for ${from}`);
+            // Delete in parallel chunks to speed up
+            const deletePromises = existing.map((r: any) => serviceClient.entities.AttendanceRecord.delete(r.id));
+            await Promise.all(deletePromises);
+        }
     }
 
-    const chunkSize = 100;
+    // Bulk create new records
+    const chunkSize = 50; // Smaller chunk size for safety
     for (let i = 0; i < recordsToCreate.length; i += chunkSize) {
       const chunk = recordsToCreate.slice(i, i + chunkSize);
-      const { error } = await client
-        .from("attendance_records")
-        .upsert(chunk, { onConflict: 'employee_id, record_date, record_time' });
-      
-      if (error) {
-         console.error("Error inserting chunk", error);
-         throw error;
+      try {
+        await serviceClient.entities.AttendanceRecord.bulkCreate(chunk);
+      } catch (err) {
+         console.error("Error inserting chunk", err);
+         // Continue with next chunk or throw? throwing is safer to alert issues
+         throw err;
       }
     }
 
