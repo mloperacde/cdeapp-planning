@@ -86,9 +86,13 @@ Deno.serve(async (req) => {
 
     console.log(`[DEBUG] Fetching CUCO360: ${url}`);
     
+    // Some legacy APIs accept API Key as a query param instead of header if header fails
+    // or they strictly require "Authorization" instead of "APIKey"
+    // Trying standard Authorization header as fallback if user instruction was ambiguous
     const headers = {
       "Content-Type": "application/json",
       "APIKey": authHeaderValue,
+      // "Authorization": authHeaderValue // Uncomment if APIKey fails
     };
 
     let response;
