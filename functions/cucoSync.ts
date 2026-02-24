@@ -25,7 +25,18 @@ Deno.serve(async (req) => {
   
   try {
     const body = await req.json().catch(() => ({}));
-    const { date, start_date, end_date, force } = body;
+    const { date, start_date, end_date, force, debug_mode } = body;
+
+    if (debug_mode) {
+       return new Response(JSON.stringify({ 
+          success: true, 
+          message: "Function is deployed and reachable.",
+          env_check: {
+             has_key: !!Deno.env.get("CUCO360_API_KEY"),
+             base_url: Deno.env.get("CUCO_API_URL") || DEFAULT_API_URL
+          }
+        }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
 
     // 1. Validate Configuration
     const apiKeyEnv = Deno.env.get("CUCO360_API_KEY");
