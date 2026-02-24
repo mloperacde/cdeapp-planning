@@ -130,7 +130,7 @@ export default function UnifiedAbsenceManager(props) {
       
       // But user complained about congruency with Dashboard "Activas Ahora" (Active Now).
       // So we use current time comparison.
-      return now >= start && now <= end;
+      return now >= start && now <= end && abs.estado_aprobacion === "Aprobada";
     });
   }, [absences]);
 
