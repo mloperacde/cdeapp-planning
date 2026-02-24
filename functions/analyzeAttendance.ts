@@ -311,6 +311,24 @@ Deno.serve(async (req: Request) => {
         if (fichajesIds.has(codigo)) return false;
         const { horaEntrada } = getHorarioEsperado(m, teamScheduleMap);
         if (!horaEntrada) return false;
+
+        // SI ESTAMOS EN EL DÍA DE HOY:
+        // No marcar como ausente si su turno empieza en el futuro
+        if (esHoy) {
+          const now = new Date();
+          // Añadimos 30 min de margen: si falta menos de 30 min para entrar, ya podría estar llegando.
+          // Si faltan horas, no debería salir en la lista de ausentes todavía.
+          // Convertir horaEntrada (HH:mm) a minutos
+          const [h, min] = horaEntrada.split(':').map(Number);
+          const entradaMin = h * 60 + min;
+          const nowMin = now.getHours() * 60 + now.getMinutes();
+
+          // Si la hora actual es anterior a la hora de entrada, NO es ausente todavía.
+          // Damos 15 minutos de cortesía después de la hora de entrada para considerarlo "ausente" en tiempo real
+          // O simplemente: si now < horaEntrada, no lo mostramos.
+          if (nowMin < entradaMin) return false;
+        }
+
         return true;
       })
       .map((m: any) => {
