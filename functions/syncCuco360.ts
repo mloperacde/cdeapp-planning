@@ -76,7 +76,22 @@ Deno.serve(async (req) => {
     console.log(`Syncing CUCO360 for client ${CLIENT_CODE} from ${from} to ${to}`);
 
     // 4. Call CUCO360 API
-    const endpoint = `/checking/getfullchecks/${CLIENT_CODE}?start_date=${from}&end_date=${to}`;
+    // Ensure dates are in correct format YYYY-MM-DD
+    const formatDate = (d: string) => {
+        // If already YYYY-MM-DD, return as is
+        if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
+        // Try to parse and format
+        try {
+            return new Date(d).toISOString().split('T')[0];
+        } catch {
+            return d;
+        }
+    };
+    
+    const safeFrom = formatDate(from);
+    const safeTo = formatDate(to);
+    
+    const endpoint = `/checking/getfullchecks/${CLIENT_CODE}?start_date=${safeFrom}&end_date=${safeTo}`;
     const url = `${baseUrl}${endpoint}`;
     
     // Auth configuration based on user instructions
