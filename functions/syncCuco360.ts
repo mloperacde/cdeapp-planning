@@ -27,8 +27,8 @@ Deno.serve(async (req) => {
     const { date, start_date, end_date, force } = await req.json().catch(() => ({}));
 
     // 1. Validate Configuration
-    const apiKey = Deno.env.get("CUCO360_API_KEY");
-    if (!apiKey) {
+    const apiKeyEnv = Deno.env.get("CUCO360_API_KEY");
+    if (!apiKeyEnv) {
       throw new Error("Secret 'CUCO360_API_KEY' is not configured in Base44.");
     }
     
@@ -95,9 +95,8 @@ Deno.serve(async (req) => {
     const url = `${baseUrl}${endpoint}`;
     
     // Auth configuration based on user instructions
-    const apiKey = Deno.env.get("CUCO360_API_KEY");
     // Ensure we are sending EXACTLY what was requested: "Bearer " + key
-    const authHeaderValue = apiKey?.startsWith("Bearer ") ? apiKey : `Bearer ${apiKey}`;
+    const authHeaderValue = apiKeyEnv.startsWith("Bearer ") ? apiKeyEnv : `Bearer ${apiKeyEnv}`;
 
     console.log(`[DEBUG] Fetching CUCO360: ${url}`);
     
@@ -113,9 +112,9 @@ Deno.serve(async (req) => {
     let response;
     try {
         response = await fetch(url, { headers });
-    } catch (netErr) {
+    } catch (netErr: any) {
         console.error(`[DEBUG] Network Error calling CUCO360:`, netErr);
-        throw new Error(`Network Error calling CUCO360: ${netErr.message}`);
+        throw new Error(`Network Error calling CUCO360: ${netErr?.message || String(netErr)}`);
     }
     
     if (!response.ok) {
