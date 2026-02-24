@@ -153,28 +153,6 @@ export default function AttendanceList({ selectedDate, onDateChange }) {
     });
   }, [employeeRows, searchTerm, filterDept, filterEquipo, filterTurno]);
 
-  const presentes = useMemo(() => {
-    return filtered.filter(e => e.presentEnPlanta);
-  }, [filtered]);
-
-  const deptCounts = useMemo(() => {
-    const m = new Map();
-    for (const e of presentes) {
-      const k = e.department || "—";
-      m.set(k, (m.get(k) || 0) + 1);
-    }
-    return Array.from(m.entries()).sort((a, b) => b[1] - a[1]);
-  }, [presentes]);
-
-  const teamCounts = useMemo(() => {
-    const m = new Map();
-    for (const e of presentes) {
-      const k = e.equipo || "—";
-      m.set(k, (m.get(k) || 0) + 1);
-    }
-    return Array.from(m.entries()).sort((a, b) => b[1] - a[1]);
-  }, [presentes]);
-
   return (
     <div className="space-y-4 p-4">
       <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center flex-wrap">
@@ -230,39 +208,6 @@ export default function AttendanceList({ selectedDate, onDateChange }) {
           </SelectContent>
         </Select>
         <span className="text-xs text-slate-500">{filtered.length} empleados</span>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-        <div className="flex flex-wrap gap-1 items-center">
-          <span className="text-xs text-slate-600">Presentes por departamento:</span>
-          {deptCounts.map(([d, c]) => {
-            const active = filterDept !== "all" && filterDept === d;
-            return (
-              <Badge
-                key={d}
-                onClick={() => setFilterDept(active ? "all" : d)}
-                className={`bg-slate-100 text-slate-700 cursor-pointer hover:bg-slate-200 ${active ? "ring-2 ring-blue-500 ring-offset-1" : ""}`}
-              >
-                {d}: {c}
-              </Badge>
-            );
-          })}
-        </div>
-        <div className="flex flex-wrap gap-1 items-center">
-          <span className="text-xs text-slate-600">Presentes por equipo:</span>
-          {teamCounts.map(([e, c]) => {
-            const active = filterEquipo !== "all" && filterEquipo === e;
-            return (
-              <Badge
-                key={e}
-                onClick={() => setFilterEquipo(active ? "all" : e)}
-                className={`bg-slate-100 text-slate-700 cursor-pointer hover:bg-slate-200 ${active ? "ring-2 ring-blue-500 ring-offset-1" : ""}`}
-              >
-                {e}: {c}
-              </Badge>
-            );
-          })}
-        </div>
       </div>
 
       <Card>

@@ -265,26 +265,6 @@ export default function AttendanceMonitor() {
     };
   }, [result]);
 
-  const deptCounts = useMemo(() => {
-    if (!result) return [];
-    const m = new Map();
-    for (const e of filteredRows) {
-      const k = e.departamento || "—";
-      m.set(k, (m.get(k) || 0) + 1);
-    }
-    return Array.from(m.entries()).sort((a, b) => b[1] - a[1]);
-  }, [filteredRows]);
-
-  const teamCounts = useMemo(() => {
-    if (!result) return [];
-    const m = new Map();
-    for (const e of filteredRows) {
-      const k = e.equipo || "—";
-      m.set(k, (m.get(k) || 0) + 1);
-    }
-    return Array.from(m.entries()).sort((a, b) => b[1] - a[1]);
-  }, [filteredRows]);
-
   const hayFiltrosActivos = searchEmp || filterDpto !== "__all__" || filterEquipo !== "__all__" || filterTurno !== "__all__" || activeCorte;
   const clearFiltros = () => {
     setSearchEmp("");
@@ -449,44 +429,9 @@ export default function AttendanceMonitor() {
           </div>
 
           {consulted && result && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
-              <div className="flex flex-wrap gap-1 items-center">
-                <span className="text-xs text-slate-600">Con fichaje por departamento:</span>
-                {deptCounts.map(([d, c]) => {
-                  const active = filterDpto !== "__all__" && filterDpto === d;
-                  return (
-                    <Badge
-                      key={d}
-                      onClick={() => setFilterDpto(active ? "__all__" : d)}
-                      className={`bg-slate-100 text-slate-700 cursor-pointer hover:bg-slate-200 ${active ? "ring-2 ring-blue-500 ring-offset-1" : ""}`}
-                    >
-                      {d}: {c}
-                    </Badge>
-                  );
-                })}
-              </div>
-              <div className="flex flex-wrap gap-1 items-center">
-                <span className="text-xs text-slate-600">Con fichaje por equipo:</span>
-                {teamCounts.map(([e, c]) => {
-                  const active = filterEquipo !== "__all__" && filterEquipo === e;
-                  return (
-                    <Badge
-                      key={e}
-                      onClick={() => setFilterEquipo(active ? "__all__" : e)}
-                      className={`bg-slate-100 text-slate-700 cursor-pointer hover:bg-slate-200 ${active ? "ring-2 ring-blue-500 ring-offset-1" : ""}`}
-                    >
-                      {e}: {c}
-                    </Badge>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Resultados */}
-          {consulted && result && (
             <>
               {/* KPIs */}
+
               <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-8 gap-2 mb-4">
                 {[
                   { label: "Con fichaje", val: stats.total, color: "blue", tab: "todos" },
