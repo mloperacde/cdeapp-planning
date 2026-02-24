@@ -44,6 +44,7 @@ function parseHora(valor) {
 
 export default function AttendanceControl() {
   const [importing, setImporting] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [importErrors, setImportErrors] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterDate, setFilterDate] = useState(new Date().toISOString().split("T")[0]);
@@ -314,6 +315,34 @@ export default function AttendanceControl() {
     }
   };
 
+  // ── SINCRONIZAR CON CUCO360 ──────────────────────────────────────────────────
+  const handleSyncCuco = async () => {
+    if (!confirm(`¿Sincronizar marcajes de CUCO360 para el día ${filterDate}? Esto sobrescribirá los datos existentes.`)) return;
+    
+    setIsSyncing(true);
+    try {
+      // Llamada a la nueva función de backend (force: true para ejecución manual)
+      const res = await base44.functions.invoke("syncCuco360", { date: filterDate, force: true });
+      
+      if (res.error) throw new Error(res.error);
+      
+      const { success, message, count, error } = res.data || {};
+      
+      if (!success) {
+        throw new Error(error || "Error desconocido al sincronizar con CUCO360");
+      }
+      
+      toast.success(message || `Sincronizados ${count} registros correctamente.`);
+      await queryClient.invalidateQueries({ queryKey: ["attendanceRecords"] });
+      await refetch();
+    } catch (err) {
+      console.error("Error sync CUCO360:", err);
+      toast.error("Error al sincronizar: " + (err.message || "Verifica la conexión o la configuración"));
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   return (
     <div className="p-4 space-y-4">
       {/* Header */}
@@ -323,6 +352,10 @@ export default function AttendanceControl() {
           <p className="text-sm text-slate-500">Importa y analiza los marcajes del sistema de control de acceso</p>
         </div>
         <div className="flex gap-2 flex-wrap">
+          <Button onClick={handleSyncCuco} disabled={isSyncing || importing} className="bg-indigo-600 hover:bg-indigo-700">
+            <RefreshCw className={`w-4 h-4 mr-2 ${isSyncing ? "animate-spin" : ""}`} />
+            {isSyncing ? "Sincronizando..." : "Sincronizar CUCO360"}
+          </Button>
           <input ref={fileInputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleFileImport} />
           <Button onClick={() => fileInputRef.current?.click()} disabled={importing} className="bg-blue-600 hover:bg-blue-700">
             {importing ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
