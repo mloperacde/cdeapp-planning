@@ -135,6 +135,7 @@ const PAGES = {
   Timeline: Timeline,
   WorkCalendarConfig: WorkCalendarConfig,
   Breaks: Breaks,
+  BreaksDebug: BreaksDebug,
   MachinePlanning: DailyProductionPlanningPage,
   DataModelView: DataModelView,
 
@@ -287,6 +288,7 @@ function PagesContent() {
                 <Route path="/WorkCalendarConfig" element={<WorkCalendarConfig />} />
                 
                 <Route path="/Breaks" element={<Breaks />} />
+                <Route path="/BreaksDebug" element={<BreaksDebug />} />
                 <Route path="/MachinePlanning" element={<DailyProductionPlanningPage />} />
                 <Route path="/MachineDailyPlanning" element={<DailyProductionPlanningPage />} />
                 <Route path="/MessagingConfiguration" element={<MessagingConfiguration />} />
