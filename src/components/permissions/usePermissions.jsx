@@ -51,6 +51,14 @@ export const MODULE_DEFINITIONS = {
     support: "Apoyos",
     manageAbsences: "Gestión avanzada de ausencias"
   },
+  Breaks: {
+    viewBreaks: "Ver descansos",
+    editBreaks: "Editar descansos",
+    generateBreaks: "Generar descansos"
+  },
+  BreaksDebug: {
+    viewDebug: "Ver debug de descansos"
+  },
   MachineAssignments: {
     viewAssignments: "Ver asignaciones de máquinas",
     editAssignments: "Editar asignaciones",
