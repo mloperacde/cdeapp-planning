@@ -321,8 +321,8 @@ export default function AttendanceControl() {
     
     setIsSyncing(true);
     try {
-      // Llamada a la nueva función de backend (renombrada a cucoSync para forzar despliegue)
-      const res = await base44.functions.invoke("cucoSync", { date: filterDate, force: true });
+      // Llamada a la nueva función de backend (V2 para evitar caché)
+      const res = await base44.functions.invoke("cucoSyncV2", { date: filterDate, force: true });
       
       if (res.error) throw new Error(res.error);
       
@@ -354,7 +354,7 @@ export default function AttendanceControl() {
         <div className="flex gap-2 flex-wrap">
           <Button onClick={handleSyncCuco} disabled={isSyncing || importing} className="bg-indigo-600 hover:bg-indigo-700">
             <RefreshCw className={`w-4 h-4 mr-2 ${isSyncing ? "animate-spin" : ""}`} />
-            {isSyncing ? "Sincronizando..." : "Sincronizar CUCO360"}
+            {isSyncing ? "Sincronizando..." : "Sincronizar (v2)"}
           </Button>
           <input ref={fileInputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleFileImport} />
           <Button onClick={() => fileInputRef.current?.click()} disabled={importing} className="bg-blue-600 hover:bg-blue-700">
