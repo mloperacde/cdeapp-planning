@@ -69,17 +69,21 @@ Deno.serve(async (req) => {
     const url = `${baseUrl}${endpoint}`;
     const authHeaderValue = apiKeyEnv.startsWith("Bearer ") ? apiKeyEnv : `Bearer ${apiKeyEnv}`;
 
+    console.log(`[cucoSync] Fetching URL: ${url}`);
+    
     const headers = { "Content-Type": "application/json", "APIKey": authHeaderValue };
 
     let response;
     try {
         response = await fetch(url, { headers });
     } catch (netErr: any) {
+        console.error(`[cucoSync] Network Error:`, netErr);
         throw new Error(`Network Error calling CUCO360: ${netErr?.message || String(netErr)}`);
     }
     
     if (!response.ok) {
       const text = await response.text();
+      console.error(`[cucoSync] API Error ${response.status}: ${text}`);
       throw new Error(`CUCO360 API Error (${response.status}): ${text}`);
     }
 
@@ -87,10 +91,11 @@ Deno.serve(async (req) => {
     try {
         json = await response.json();
     } catch (parseErr) {
+        console.error(`[cucoSync] JSON Parse Error`);
         throw new Error(`Invalid JSON response from CUCO360`);
     }
     
-    // Check legacy response format
+    console.log(`[cucoSync] Response OK. Records count: ${Array.isArray(json?.data) ? json.data.length : (Array.isArray(json) ? json.length : 'Unknown')}`);
     if (json.response && json.response !== "ok" && json.response !== "OK") {
       throw new Error(`CUCO360 API returned error: ${JSON.stringify(json)}`);
     }
