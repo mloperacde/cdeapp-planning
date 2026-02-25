@@ -326,87 +326,20 @@ export default function AttendanceControl() {
     
     setIsSyncing(true);
     try {
-      // INTENTO 1: Sincronización directa desde Frontend (Bypass CORS/Server Error)
-      // Nota: Si esto falla por CORS, necesitaremos un proxy o arreglar el servidor.
+      // Llamada a la nueva función de backend (V2 corregida)
+      const res = await base44.functions.invoke("cucoSyncV2", { date: filterDate, force: true });
       
-      const targetUrl = `${CUCO_BASE_URL}/checking/getfullchecks/${CLIENT_CODE}?start_date=${filterDate}&end_date=${filterDate}`;
-      const proxyUrl = `https://corsproxy.io/?url=${encodeURIComponent(targetUrl)}`;
+      if (res.error) throw new Error(res.error);
       
-      console.log("Fetching CUCO via Proxy (corsproxy.io):", proxyUrl);
-
-      const response = await fetch(proxyUrl, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          "APIKey": `Bearer ${CUCO_API_KEY}`
-        }
-      });
-
-      if (!response.ok) {
-        const text = await response.text();
-        throw new Error(`Error CUCO360 (${response.status}): ${text}`);
-      }
-
-      const json = await response.json();
+      const { success, message, count, error } = res.data || {};
       
-      // Validar formato respuesta legacy
-      if (json.response && json.response !== "ok" && json.response !== "OK") {
-        throw new Error(`CUCO360 API Error: ${JSON.stringify(json)}`);
+      if (!success) {
+        throw new Error(error || "Error desconocido al sincronizar con CUCO360");
       }
-
-      const checks = json.data || json;
-      if (!Array.isArray(checks)) {
-         throw new Error("Formato de datos inválido recibido de CUCO360 (no es un array)");
-      }
-
-      if (checks.length === 0) {
-        toast.info("No hay registros nuevos en CUCO360 para esta fecha.");
-        setIsSyncing(false);
-        return;
-      }
-
-      // Procesar datos para guardar
-      const recordsToCreate = checks.map(check => {
-        const employeeId = String(check.cod_empleado || check.employee_id || "");
-        const dateStr = check.fecha || check.date; 
-        const timeStr = check.hora || check.time;
-        
-        let direction = "E";
-        const type = String(check.tipo || check.type || check.sentido || "").toUpperCase();
-        if (type.startsWith("S") || type === "2" || type === "SALIDA" || type === "OUT") {
-          direction = "S";
-        }
-
-        if (!employeeId || !dateStr || !timeStr) return null;
-
-        // Asegurar formato de hora HH:mm
-        const cleanTime = timeStr.length > 5 ? timeStr.slice(0, 5) : timeStr;
-
-        return {
-          employee_id: employeeId,
-          employee_name: check.nombre || check.employee_name || `Empleado ${employeeId}`,
-          record_date: dateStr,
-          record_time: cleanTime,
-          direction: direction,
-          device: check.dispositivo || check.terminal || "API",
-          source: "cuco360_api"
-        };
-      }).filter(Boolean);
-
-      // Eliminar registros previos del día
-      try {
-          await base44.functions.invoke("deleteAttendanceRecords", { record_date: filterDate });
-      } catch (delErr) {
-          console.warn("No se pudieron borrar registros anteriores (quizás no había):", delErr);
-      }
-
-      // Guardar nuevos
-      const { count } = await saveRecords(recordsToCreate, "cuco_sync");
       
-      toast.success(`Sincronización completada. ${count} registros importados.`);
+      toast.success(message || `Sincronizados ${count} registros correctamente.`);
       await queryClient.invalidateQueries({ queryKey: ["attendanceRecords"] });
       await refetch();
-
     } catch (err) {
       console.error("Error sync CUCO360:", err);
       toast.error("Error al sincronizar: " + (err.message || "Verifica la conexión"));

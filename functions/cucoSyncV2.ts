@@ -1,23 +1,19 @@
-// @ts-ignore
-// import { createClientFromRequest } from 'npm:@base44/sdk@0.8.5';
-
-declare const Deno: {
-  serve: (handler: (req: Request) => Promise<Response> | Response) => void;
-  env: { get: (key: string) => string | undefined };
-};
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 Deno.serve(async (req) => {
   try {
-    // const client = createClientFromRequest(req);
+    const client = createClientFromRequest(req);
     const body = await req.json().catch(() => ({}));
     
-    // Minimal "Hello World" check - PURE DENO
-    if (body.debug_mode) {
-      return new Response(JSON.stringify({ 
+    const { date, start_date, end_date, force, debug_mode } = body;
+
+    // Minimal check
+    if (debug_mode) {
+       return Response.json({ 
           success: true, 
-          message: "PURE DENO Function is alive! SDK Removed.",
+          message: "Function cucoSyncV2 is deployed and reachable.",
           has_key: !!Deno.env.get("CUCO360_API_KEY")
-      }), { headers: { "Content-Type": "application/json" } });
+       });
     }
 
     // 1. Validate Configuration & API Key
@@ -31,7 +27,6 @@ Deno.serve(async (req) => {
     const DEFAULT_API_URL = "https://api.cuco360.com/api/ExtApi";
     const baseUrl = Deno.env.get("CUCO_API_URL") || DEFAULT_API_URL;
     
-    const { date, start_date, end_date, force } = body;
     let from = start_date;
     let to = end_date;
     
@@ -41,8 +36,19 @@ Deno.serve(async (req) => {
        from = today; to = today;
     }
 
-    // 3. Automation Logic (SKIPPED FOR NOW - REQUIRES SDK/DB TO CHECK HOLIDAYS)
-    // We assume force=true or simple date range for this test
+    // 3. Automation Logic (Skip weekends/holidays)
+    if (!force && from === to) {
+      const targetDate = new Date(from);
+      const dayOfWeek = targetDate.getDay(); 
+      if (dayOfWeek === 0 || dayOfWeek === 6) {
+        return Response.json({ success: true, message: "Skipped: Weekend", count: 0 });
+      }
+      
+      const holidays = await client.entities.Holiday.filter({ fecha: from }, "id,nombre", 1);
+      if (holidays && holidays.length > 0) {
+        return Response.json({ success: true, message: `Skipped: Holiday (${holidays[0].nombre})`, count: 0 });
+      }
+    }
 
     console.log(`[cucoSyncV2] Syncing client ${CLIENT_CODE} from ${from} to ${to}`);
 
@@ -90,24 +96,71 @@ Deno.serve(async (req) => {
     const checks = json.data || json;
     if (!Array.isArray(checks)) {
       if (!checks) {
-          return new Response(JSON.stringify({ success: true, message: "No data returned from CUCO360", count: 0 }), { headers: { "Content-Type": "application/json" } });
+          return Response.json({ success: true, message: "No data returned from CUCO360", count: 0 });
       }
       throw new Error("Invalid data format from CUCO360: expected array");
     }
 
-    // Return the data directly to frontend (No DB Save yet)
-    return new Response(JSON.stringify({ 
-      success: true, 
-      message: `Fetched ${checks.length} records from CUCO360 (Not saved to DB yet)`,
-      count: checks.length,
-      // data: checks // Uncomment to see raw data if needed
-    }), { headers: { "Content-Type": "application/json" } });
+    // 5. Process & Save
+    const recordsToCreate = checks.map((check: any) => {
+      const employeeId = String(check.cod_empleado || check.employee_id || "");
+      const dateStr = check.fecha || check.date; 
+      const timeStr = check.hora || check.time;
+      
+      let direction = "E";
+      const type = String(check.tipo || check.type || check.sentido || "").toUpperCase();
+      if (type.startsWith("S") || type === "2" || type === "SALIDA" || type === "OUT") {
+        direction = "S";
+      }
 
-    /*
-    // ... DB SAVING LOGIC COMMENTED OUT ...
-    */
+      if (!employeeId || !dateStr || !timeStr) return null;
+
+      return {
+        employee_id: employeeId,
+        employee_name: check.nombre || check.employee_name || `Empleado ${employeeId}`,
+        record_date: dateStr,
+        record_time: timeStr.slice(0, 5),
+        direction: direction,
+        device: check.dispositivo || check.terminal || "API",
+        import_batch: `cuco_sync_${new Date().toISOString().replace(/[:.]/g, '-')}`,
+        source: "cuco360_api"
+      };
+    }).filter((r: any) => r !== null);
+
+    if (recordsToCreate.length === 0) {
+      return Response.json({ success: true, message: "No new records found in CUCO360.", count: 0 });
+    }
+
+    // Use service role for database operations
+    const serviceClient = client.asServiceRole || client;
+
+    // Clean up existing records for the day if syncing single day
+    if (from === to) {
+        const existing = await serviceClient.entities.AttendanceRecord.filter({ record_date: from }, "id", 2000);
+        if (existing && existing.length > 0) {
+            const deletePromises = existing.map((r: any) => serviceClient.entities.AttendanceRecord.delete(r.id));
+            await Promise.all(deletePromises);
+        }
+    }
+
+    // Bulk create
+    const chunkSize = 50; 
+    for (let i = 0; i < recordsToCreate.length; i += chunkSize) {
+      const chunk = recordsToCreate.slice(i, i + chunkSize);
+      await serviceClient.entities.AttendanceRecord.bulkCreate(chunk);
+    }
+
+    return Response.json({ 
+      success: true, 
+      message: `Synced ${recordsToCreate.length} records from CUCO360`,
+      count: recordsToCreate.length
+    });
 
   } catch (err: any) {
-    return new Response(JSON.stringify({ error: err.message }), { status: 500 });
+    console.error("Error:", err);
+    return Response.json({ 
+        success: false, 
+        error: err.message 
+    }, { status: 500 });
   }
 });
