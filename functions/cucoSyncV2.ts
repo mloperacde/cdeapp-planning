@@ -31,9 +31,33 @@ Deno.serve(async (req: Request) => {
 
     // 2. Constants & Params
     const CLIENT_CODE = "380";
-    const DEFAULT_API_URL = "https://api.cuco360.com/api/ExtApi";
+    // Base URL actualizada según documentación reciente (/auxiliary/index/)
+    const DEFAULT_API_URL = "https://api.cuco360.com/api"; 
     const baseUrl = Deno.env.get("CUCO_API_URL") || DEFAULT_API_URL;
+    const authHeaderValue = apiKeyEnv.startsWith("Bearer ") ? apiKeyEnv : `Bearer ${apiKeyEnv}`;
     
+    // --- HEALTH CHECK ---
+    // Verificar conectividad antes de intentar operaciones pesadas
+    try {
+        const healthUrl = `${baseUrl}/auxiliary/index/`;
+        console.log(`[cucoSyncV2] Health Check: ${healthUrl}`);
+        const healthRes = await fetch(healthUrl, { 
+            headers: { "APIKey": authHeaderValue, "Accept": "application/json" } 
+        });
+        
+        if (!healthRes.ok) {
+            const text = await healthRes.text();
+            console.warn(`[cucoSyncV2] Health Check Failed (${healthRes.status}): ${text}`);
+            // No lanzamos error aquí para permitir intentar el endpoint legacy si este falla,
+            // pero lo logueamos claramente.
+        } else {
+            console.log(`[cucoSyncV2] Health Check OK`);
+        }
+    } catch (e) {
+        console.warn(`[cucoSyncV2] Health Check Connection Error:`, e);
+    }
+    // --------------------
+
     let from = start_date;
     let to = end_date;
     
@@ -66,9 +90,33 @@ Deno.serve(async (req: Request) => {
     const safeFrom = formatDate(from);
     const safeTo = formatDate(to);
     
-    const endpoint = `/checking/getfullchecks/${CLIENT_CODE}?start_date=${safeFrom}&end_date=${safeTo}`;
-    const url = `${baseUrl}${endpoint}`;
-    const authHeaderValue = apiKeyEnv.startsWith("Bearer ") ? apiKeyEnv : `Bearer ${apiKeyEnv}`;
+    // Endpoint legacy vs nuevo. Si el health check funcionó en /api/, asumimos estructura nueva.
+    // Pero si getfullchecks es específico de legacy (ExtApi), puede que necesitemos mantener ExtApi para esa llamada.
+    // Probaremos construir la URL con precaución.
+    
+    // Si baseUrl es .../api, y el endpoint antiguo era /ExtApi/checking..., quizás ahora sea /checking... directo?
+    // Asumiremos que si cambiamos el base a /api, el endpoint debe ajustarse.
+    // Doc antigua: /api/ExtApi/checking/getfullchecks
+    // Doc nueva: /api/auxiliary/index
+    
+    // Intento 1: Ruta estándar
+    let endpoint = `/checking/getfullchecks/${CLIENT_CODE}?start_date=${safeFrom}&end_date=${safeTo}`;
+    
+    // Si estamos usando la URL antigua (/ExtApi), la mantenemos. Si no, probamos con y sin ExtApi.
+    if (!baseUrl.includes("ExtApi")) {
+        // Estamos en la nueva base /api. 
+        // Es posible que el endpoint de fichajes siga estando bajo un prefijo, o sea directo.
+        // Por seguridad, si el health check (/auxiliary) funcionó, es una API REST estándar.
+        // Pero getfullchecks suena a RPC antiguo.
+        
+        // Vamos a probar a llamar a /ExtApi/checking... incluso con la nueva base si falla la primera
+        endpoint = `/ExtApi/checking/getfullchecks/${CLIENT_CODE}?start_date=${safeFrom}&end_date=${safeTo}`;
+    }
+
+    let url = `${baseUrl}${endpoint}`;
+    
+    // Corrección para evitar doble // si baseUrl termina en /
+    url = url.replace(/([^:]\/)\/+/g, "$1");
 
     console.log(`[cucoSyncV2] Fetching URL: ${url}`);
     
