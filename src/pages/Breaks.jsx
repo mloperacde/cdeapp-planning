@@ -87,6 +87,12 @@ export default function BreaksPage() {
     initialData: [],
   });
 
+  const { data: allEmployees = [] } = useQuery({
+    queryKey: ['allEmployees'],
+    queryFn: () => base44.entities.EmployeeMasterDatabase.list(undefined, 1000),
+    initialData: [],
+  });
+
   useEffect(() => {
     if (!selectedShift || !selectedDate || teamSchedules.length === 0 || !teams.length) return;
 
@@ -195,6 +201,20 @@ export default function BreaksPage() {
     setAgentMessages([]);
 
     try {
+      // Filtrar empleados del equipo seleccionado
+      const availableEmployees = allEmployees
+        .filter(emp => {
+          if (!emp.equipo && !emp.team_key) return false;
+          // Coincidencia por team_key (prioritario)
+          if (teamObj.team_key && emp.team_key) {
+            return emp.team_key === teamObj.team_key;
+          }
+          // Coincidencia por nombre de equipo
+          const teamName = teamObj.team_name || teamObj.team_key;
+          return emp.equipo === teamName;
+        })
+        .map(e => ({ id: e.id, nombre: e.nombre, puesto: e.puesto }));
+
       // Crear conversación con el agente break_manager
       const conversation = await base44.agents.createConversation({
         agent_name: "break_manager",
@@ -211,14 +231,18 @@ export default function BreaksPage() {
 - Turno: ${selectedShift}
 - Equipo: ${teamObj.team_name || teamObj.team_key} (team_key: ${teamObj.team_key})
 
+IMPORTANTE:
+Si no encuentras empleados asignados en DailyMachinePlanning (porque aún no se ha realizado la asignación diaria), UTILIZA OBLIGATORIAMENTE la siguiente lista de empleados disponibles del equipo para generar el plan:
+${JSON.stringify(availableEmployees, null, 2)}
+
 Por favor:
-1. Lee el planning de DailyMachinePlanning para esa fecha, turno y equipo (activa=true)
-2. Si no hay datos, busca también en DailyMachineStaffing
-3. Lee los BreakShift activos aplicables al turno ${selectedShift}
-4. Agrupa a los empleados por máquina (grupos indivisibles)
-5. Distribuye los grupos respetando la capacidad (personas_por_turno) de cada turno de descanso
-6. Asegúrate de que todos los empleados tengan descanso
-7. Devuelve el resultado en formato JSON como se te indicó en las instrucciones`;
+1. Lee el planning de DailyMachinePlanning para esa fecha, turno y equipo (activa=true).
+2. Si DailyMachinePlanning tiene empleados asignados, úsalos. SI NO TIENE EMPLEADOS ASIGNADOS, usa la lista de empleados proporcionada arriba y repártelos equitativamente entre las máquinas activas que encuentres en el planning.
+3. Lee los BreakShift activos aplicables al turno ${selectedShift}.
+4. Agrupa a los empleados por máquina (grupos indivisibles).
+5. Distribuye los grupos respetando la capacidad (personas_por_turno) de cada turno de descanso.
+6. Asegúrate de que todos los empleados tengan descanso.
+7. Devuelve el resultado en formato JSON como se te indicó en las instrucciones.`;
 
       // Suscribirse a la conversación para recibir actualizaciones
       const unsubscribe = base44.agents.subscribeToConversation(conversation.id, (data) => {
