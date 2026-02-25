@@ -266,22 +266,23 @@ export default function BreaksPage() {
       }));
 
       // Simplificar datos de DailyMachineStaffing para el prompt
+      // OPTIMIZACIÓN: Solo enviamos conteos por máquina, no nombres, para acelerar el proceso
       const staffingData = dailyStaffing.map(ds => {
         const machine = machines.find(m => m.id === ds.machine_id);
-        const getEmpName = (id) => allEmployees.find(e => e.id === id)?.nombre || "Desconocido";
         
-        // Extraer roles asignados
-        const assignments = {};
+        // Contar roles asignados (filtrando nulos y duplicados)
+        const assignedIds = new Set();
         ['responsable_linea', 'segunda_linea', 'operador_1', 'operador_2', 'operador_3', 'operador_4', 'operador_5'].forEach(role => {
-          if (ds[role]) assignments[role] = getEmpName(ds[role]);
+          const empId = ds[role];
+          if (empId) assignedIds.add(empId);
         });
         
         return {
           machine_id: ds.machine_id,
           machine_name: machine?.alias || machine?.nombre || ds.machine_id,
-          assignments: assignments
+          count: assignedIds.size
         };
-      }).filter(d => Object.keys(d.assignments).length > 0);
+      }).filter(d => d.count > 0);
 
       // Crear conversación con el agente break_manager
       const conversation = await base44.agents.createConversation({
@@ -303,21 +304,21 @@ CONTEXTO ADICIONAL:
 1. LISTA DE MÁQUINAS (ID -> Nombre):
 ${JSON.stringify(machinesMap, null, 2)}
 
-2. ASIGNACIONES DE EMPLEADOS CONFIRMADAS (DailyMachineStaffing - PRIORITARIO):
+2. CONTEO DE PERSONAL POR MÁQUINA (DailyMachineStaffing):
 ${JSON.stringify(staffingData, null, 2)}
 
 3. LISTA DE EMPLEADOS DISPONIBLES (Úsala SOLO si no hay asignaciones confirmadas en el punto 2 para alguna máquina activa):
 ${JSON.stringify(availableEmployees, null, 2)}
 
-INSTRUCCIONES:
-1. Lee las asignaciones confirmadas de "DailyMachineStaffing" (punto 2). ESTA ES LA FUENTE DE VERDAD PRINCIPAL.
-2. Si hay asignaciones en el punto 2, úsalas para agrupar a los empleados por máquina.
+INSTRUCCIONES SIMPLIFICADAS:
+1. Tu objetivo es distribuir CARGA DE TRABAJO (número de personas), NO nombres específicos.
+2. Lee los conteos del punto 2. Esa es la cantidad de gente que hay en cada máquina.
 3. Lee el planning de DailyMachinePlanning para ver qué máquinas están activas.
-4. Si hay máquinas activas sin asignación en DailyMachineStaffing, intenta rellenarlas con empleados de la lista de disponibles (punto 3), priorizando "maquinas_habituales".
+4. Si hay máquinas activas sin conteo en el punto 2, estima su personal usando la lista de disponibles (punto 3).
 5. Lee los BreakShift activos aplicables al turno ${selectedShift}.
-6. Agrupa a los empleados por máquina (grupos indivisibles).
+6. Agrupa las MÁQUINAS en turnos de descanso. (Ej: "La Máquina A con 3 personas va al turno 1").
 7. Distribuye los grupos respetando la capacidad (personas_por_turno) de cada turno de descanso.
-8. Asegúrate de que todos los empleados tengan descanso.
+8. Asegúrate de que todas las máquinas activas tengan turno de descanso asignado.
 9. Devuelve el resultado en formato JSON como se te indicó en las instrucciones.`;
 
       // Suscribirse a la conversación para recibir actualizaciones
