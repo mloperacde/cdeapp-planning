@@ -100,20 +100,18 @@ export default function BreaksPage() {
   });
 
   const { data: dailyStaffing = [] } = useQuery({
-    queryKey: ['dailyStaffing', selectedDate, selectedShift, selectedTeamId],
+    queryKey: ['dailyStaffing', selectedDate, selectedShift],
     queryFn: () => {
-      if (!selectedDate || !selectedShift || !selectedTeamId) return [];
-      const teamObj = teams.find(t => String(t.id) === String(selectedTeamId));
+      if (!selectedDate || !selectedShift) return [];
+      // Filtramos solo por fecha y turno, ya que el team_key a veces no se guarda correctamente en Staffing
+      // y lo importante es quién está asignado en ese momento.
       const filters = {
         date: selectedDate,
         shift: selectedShift,
       };
-      if (teamObj) {
-        filters.team_key = teamObj.team_key;
-      }
       return base44.entities.DailyMachineStaffing.filter(filters);
     },
-    enabled: !!selectedDate && !!selectedShift && !!selectedTeamId,
+    enabled: !!selectedDate && !!selectedShift,
   });
 
   useEffect(() => {
