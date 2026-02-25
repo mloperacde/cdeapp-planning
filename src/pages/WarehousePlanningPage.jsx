@@ -15,6 +15,7 @@ import WarehousePlanningTab from "../components/dailyplanning/WarehousePlanningT
 
 export default function WarehousePlanningPage() {
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [selectedShift, setSelectedShift] = useState("Mañana");
   const [selectedTeam, setSelectedTeam] = useState('');
   const [isCalling, setIsCalling] = useState(false);
 
@@ -24,13 +25,6 @@ export default function WarehousePlanningPage() {
     initialData: [],
   });
 
-  // Set default team when teams are loaded
-  useEffect(() => {
-    if (teams.length > 0 && !selectedTeam) {
-        setSelectedTeam(teams[0].team_key);
-    }
-  }, [teams, selectedTeam]);
-
   const { data: teamSchedules = [] } = useQuery({
     queryKey: ['teamWeekSchedules'],
     queryFn: () => base44.entities.TeamWeekSchedule.list(undefined, 2000),
@@ -39,24 +33,42 @@ export default function WarehousePlanningPage() {
     refetchOnMount: true,
   });
 
-  // Get shift for selected date and team
-  const selectedShift = useMemo(() => {
-    const team = teams.find(t => t.team_key === selectedTeam);
-    if (!team) return null;
+  // Auto-select Team based on Date + Shift
+  useEffect(() => {
+    if (!selectedDate || !selectedShift || teamSchedules.length === 0) return;
 
-    // Parse date explicitly to avoid timezone issues with Mondays
     const [year, month, day] = selectedDate.split('-').map(Number);
     const dateObj = new Date(year, month - 1, day);
-    
     const weekStart = startOfWeek(dateObj, { weekStartsOn: 1 });
     const weekStartStr = format(weekStart, 'yyyy-MM-dd');
 
-    const schedule = teamSchedules.find(
-      s => s.team_key === selectedTeam && s.fecha_inicio_semana === weekStartStr
-    );
+    const normalize = (str) => str ? str.toString().trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : "";
+    const targetShift = normalize(selectedShift);
 
-    return schedule?.turno || null;
-  }, [selectedDate, selectedTeam, teams, teamSchedules]);
+    const schedule = teamSchedules.find(s => {
+      if (s.fecha_inicio_semana !== weekStartStr) return false;
+      const turno = normalize(s.turno);
+      if (targetShift.includes("manana") || targetShift.includes("mañana")) {
+        return turno.includes("manana") || turno.includes("mañana") || turno.includes("t1");
+      }
+      if (targetShift.includes("tarde")) {
+        return turno.includes("tarde") || turno.includes("t2");
+      }
+      if (targetShift.includes("noche")) {
+        return turno.includes("noche") || turno.includes("t3");
+      }
+      return turno === targetShift;
+    });
+
+    if (schedule && schedule.team_key) {
+      if (schedule.team_key !== selectedTeam) {
+        setSelectedTeam(schedule.team_key);
+      }
+    } else if (!selectedTeam && teams.length > 0) {
+      // Fallback if no schedule found
+      setSelectedTeam(teams[0].team_key);
+    }
+  }, [selectedDate, selectedShift, teamSchedules, teams, selectedTeam]);
 
   const getTeamColor = (teamKey) => {
     const team = teams.find(t => t.team_key === teamKey);
@@ -136,40 +148,46 @@ export default function WarehousePlanningPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="team">Equipo</Label>
+                <Label htmlFor="shift">Turno</Label>
                 <select
-                  id="team"
-                  value={selectedTeam}
-                  onChange={(e) => setSelectedTeam(e.target.value)}
+                  id="shift"
+                  value={selectedShift}
+                  onChange={(e) => setSelectedShift(e.target.value)}
                   className="w-full h-10 px-3 rounded-md border border-slate-200 bg-white dark:bg-card"
                 >
-                  {teams.map((team) => (
-                    <option key={team.team_key} value={team.team_key}>
-                      {team.team_name}
-                    </option>
-                  ))}
+                  <option value="Mañana">Mañana</option>
+                  <option value="Tarde">Tarde</option>
+                  <option value="Noche">Noche</option>
                 </select>
               </div>
 
               <div className="space-y-2">
-                <Label>Turno Asignado</Label>
-                <div 
-                  className="h-10 px-3 rounded-md border-2 flex items-center font-semibold"
-                  style={{ 
-                    borderColor: getTeamColor(selectedTeam),
-                    backgroundColor: `${getTeamColor(selectedTeam)}10`
-                  }}
-                >
-                  {selectedShift ? (
+                <Label htmlFor="team">Equipo (Calculado)</Label>
+                <div className="relative">
+                  <select
+                    id="team"
+                    value={selectedTeam}
+                    onChange={(e) => setSelectedTeam(e.target.value)}
+                    className="w-full h-10 px-3 rounded-md border border-slate-200 bg-white dark:bg-card appearance-none"
+                    style={{ 
+                      borderColor: getTeamColor(selectedTeam),
+                      backgroundColor: `${getTeamColor(selectedTeam)}10`
+                    }}
+                  >
+                    {teams.map((team) => (
+                      <option key={team.team_key} value={team.team_key}>
+                        {team.team_name}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
                     <Badge 
-                      className="text-base"
+                      className="h-6"
                       style={{ backgroundColor: getTeamColor(selectedTeam) }}
                     >
-                      {selectedShift}
+                      Auto
                     </Badge>
-                  ) : (
-                    <span className="text-slate-500">Sin asignar</span>
-                  )}
+                  </div>
                 </div>
               </div>
             </div>
