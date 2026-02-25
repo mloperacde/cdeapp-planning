@@ -1,6 +1,13 @@
+// @ts-ignore
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
-Deno.serve(async (req) => {
+// Declaraciones para el linter local (no afectan a Deno Deploy)
+declare const Deno: {
+  serve: (handler: (req: Request) => Promise<Response> | Response) => void;
+  env: { get: (key: string) => string | undefined };
+};
+
+Deno.serve(async (req: Request) => {
   try {
     const client = createClientFromRequest(req);
     const body = await req.json().catch(() => ({}));
