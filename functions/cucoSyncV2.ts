@@ -1,5 +1,5 @@
 // @ts-ignore
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.5';
 
 declare const Deno: {
   serve: (handler: (req: Request) => Promise<Response> | Response) => void;
