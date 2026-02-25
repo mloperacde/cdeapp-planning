@@ -38,15 +38,23 @@ export default function QualityPlanningPage() {
     if (!selectedDate || !selectedShift || teamSchedules.length === 0) return;
 
     const [year, month, day] = selectedDate.split('-').map(Number);
-    const dateObj = new Date(year, month - 1, day);
-    const weekStart = startOfWeek(dateObj, { weekStartsOn: 1 });
-    const weekStartStr = format(weekStart, 'yyyy-MM-dd');
+    // Crear fecha local a mediodía para evitar problemas de zona horaria
+    const targetDate = new Date(year, month - 1, day, 12, 0, 0);
 
     const normalize = (str) => str ? str.toString().trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : "";
     const targetShift = normalize(selectedShift);
 
     const schedule = teamSchedules.find(s => {
-      if (s.fecha_inicio_semana !== weekStartStr) return false;
+      // Validar fecha dentro del rango de la semana del schedule
+      if (!s.fecha_inicio_semana) return false;
+      const [sy, sm, sd] = s.fecha_inicio_semana.split('-').map(Number);
+      const startDate = new Date(sy, sm - 1, sd, 0, 0, 0);
+      const endDate = new Date(startDate);
+      endDate.setDate(endDate.getDate() + 6); // Semana completa (Lun-Dom)
+      endDate.setHours(23, 59, 59);
+
+      if (targetDate < startDate || targetDate > endDate) return false;
+
       const turno = normalize(s.turno);
       if (targetShift.includes("manana") || targetShift.includes("mañana")) {
         return turno.includes("manana") || turno.includes("mañana") || turno.includes("t1");
