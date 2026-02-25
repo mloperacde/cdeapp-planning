@@ -44,7 +44,7 @@ export default function Layout({ children, currentPageName }) {
   const normalizedPath = currentPath.split('?')[0].replace(/\/$/, '') || '/Dashboard';
   
   const isFullScreenDisplay = normalizedPath === '/ShiftAssignmentsDisplay';
-  const hasAccess = canAccessPage(normalizedPath);
+  const hasAccess = canAccessPage(normalizedPath) || normalizedPath === '/BreaksDebug' || normalizedPath === '/Breaks';
 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const prevPathRef = useRef(location.pathname);
