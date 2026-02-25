@@ -51,6 +51,7 @@ import SupportManagement1415 from "./SupportManagement1415";
 import Timeline from "./Timeline";
 import WorkCalendarConfig from "./WorkCalendarConfig";
 import Breaks from "./Breaks";
+import BreaksDebug from "./BreaksDebug";
 
 import DataModelView from "./DataModelView";
 import MessagingConfiguration from "./MessagingConfiguration";
