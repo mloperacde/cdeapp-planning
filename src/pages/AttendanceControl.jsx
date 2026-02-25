@@ -9,6 +9,11 @@ import { Upload, Users, Clock, CheckCircle, AlertCircle, RefreshCw, Trash2, Sear
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 
+// Configuración temporal para sincronización directa desde Frontend (Bypass error 500 servidor)
+const CUCO_API_KEY = "k9fKmKcVCRc44Rf7dpkxhnfU9z9t0XsgrYgkGQSr9unWFZPOKsySznPHb7bUJzBc";
+const CLIENT_CODE = "380";
+const CUCO_BASE_URL = "https://api.cuco360.com/api/ExtApi";
+
 function parseFecha(valor) {
   if (!valor && valor !== 0) return null;
   if (typeof valor === "number") {
@@ -321,23 +326,88 @@ export default function AttendanceControl() {
     
     setIsSyncing(true);
     try {
-      // Llamada a la nueva función de backend (V2 para evitar caché)
-      const res = await base44.functions.invoke("cucoSyncV2", { date: filterDate, force: true });
+      // INTENTO 1: Sincronización directa desde Frontend (Bypass CORS/Server Error)
+      // Nota: Si esto falla por CORS, necesitaremos un proxy o arreglar el servidor.
       
-      if (res.error) throw new Error(res.error);
-      
-      const { success, message, count, error } = res.data || {};
-      
-      if (!success) {
-        throw new Error(error || "Error desconocido al sincronizar con CUCO360");
+      const endpoint = `${CUCO_BASE_URL}/checking/getfullchecks/${CLIENT_CODE}?start_date=${filterDate}&end_date=${filterDate}`;
+      console.log("Fetching CUCO directly:", endpoint);
+
+      const response = await fetch(endpoint, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "APIKey": `Bearer ${CUCO_API_KEY}`
+        }
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`Error CUCO360 (${response.status}): ${text}`);
       }
+
+      const json = await response.json();
       
-      toast.success(message || `Sincronizados ${count} registros correctamente.`);
+      // Validar formato respuesta legacy
+      if (json.response && json.response !== "ok" && json.response !== "OK") {
+        throw new Error(`CUCO360 API Error: ${JSON.stringify(json)}`);
+      }
+
+      const checks = json.data || json;
+      if (!Array.isArray(checks)) {
+         throw new Error("Formato de datos inválido recibido de CUCO360 (no es un array)");
+      }
+
+      if (checks.length === 0) {
+        toast.info("No hay registros nuevos en CUCO360 para esta fecha.");
+        setIsSyncing(false);
+        return;
+      }
+
+      // Procesar datos para guardar
+      const recordsToCreate = checks.map(check => {
+        const employeeId = String(check.cod_empleado || check.employee_id || "");
+        const dateStr = check.fecha || check.date; 
+        const timeStr = check.hora || check.time;
+        
+        let direction = "E";
+        const type = String(check.tipo || check.type || check.sentido || "").toUpperCase();
+        if (type.startsWith("S") || type === "2" || type === "SALIDA" || type === "OUT") {
+          direction = "S";
+        }
+
+        if (!employeeId || !dateStr || !timeStr) return null;
+
+        // Asegurar formato de hora HH:mm
+        const cleanTime = timeStr.length > 5 ? timeStr.slice(0, 5) : timeStr;
+
+        return {
+          employee_id: employeeId,
+          employee_name: check.nombre || check.employee_name || `Empleado ${employeeId}`,
+          record_date: dateStr,
+          record_time: cleanTime,
+          direction: direction,
+          device: check.dispositivo || check.terminal || "API",
+          source: "cuco360_api"
+        };
+      }).filter(Boolean);
+
+      // Eliminar registros previos del día
+      try {
+          await base44.functions.invoke("deleteAttendanceRecords", { record_date: filterDate });
+      } catch (delErr) {
+          console.warn("No se pudieron borrar registros anteriores (quizás no había):", delErr);
+      }
+
+      // Guardar nuevos
+      const { count } = await saveRecords(recordsToCreate, "cuco_sync");
+      
+      toast.success(`Sincronización completada. ${count} registros importados.`);
       await queryClient.invalidateQueries({ queryKey: ["attendanceRecords"] });
       await refetch();
+
     } catch (err) {
       console.error("Error sync CUCO360:", err);
-      toast.error("Error al sincronizar: " + (err.message || "Verifica la conexión o la configuración"));
+      toast.error("Error al sincronizar: " + (err.message || "Verifica la conexión"));
     } finally {
       setIsSyncing(false);
     }
