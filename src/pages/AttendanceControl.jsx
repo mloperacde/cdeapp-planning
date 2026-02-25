@@ -329,10 +329,12 @@ export default function AttendanceControl() {
       // INTENTO 1: Sincronización directa desde Frontend (Bypass CORS/Server Error)
       // Nota: Si esto falla por CORS, necesitaremos un proxy o arreglar el servidor.
       
-      const endpoint = `${CUCO_BASE_URL}/checking/getfullchecks/${CLIENT_CODE}?start_date=${filterDate}&end_date=${filterDate}`;
-      console.log("Fetching CUCO directly:", endpoint);
+      const targetUrl = `${CUCO_BASE_URL}/checking/getfullchecks/${CLIENT_CODE}?start_date=${filterDate}&end_date=${filterDate}`;
+      const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`;
+      
+      console.log("Fetching CUCO via Proxy:", proxyUrl);
 
-      const response = await fetch(endpoint, {
+      const response = await fetch(proxyUrl, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
