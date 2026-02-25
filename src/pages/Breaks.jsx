@@ -93,6 +93,29 @@ export default function BreaksPage() {
     initialData: [],
   });
 
+  const { data: machines = [] } = useQuery({
+    queryKey: ['machines'],
+    queryFn: () => base44.entities.MachineMasterDatabase.list(undefined, 1000),
+    initialData: [],
+  });
+
+  const { data: dailyStaffing = [] } = useQuery({
+    queryKey: ['dailyStaffing', selectedDate, selectedShift, selectedTeamId],
+    queryFn: () => {
+      if (!selectedDate || !selectedShift || !selectedTeamId) return [];
+      const teamObj = teams.find(t => String(t.id) === String(selectedTeamId));
+      const filters = {
+        date: selectedDate,
+        shift: selectedShift,
+      };
+      if (teamObj) {
+        filters.team_key = teamObj.team_key;
+      }
+      return base44.entities.DailyMachineStaffing.filter(filters);
+    },
+    enabled: !!selectedDate && !!selectedShift && !!selectedTeamId,
+  });
+
   useEffect(() => {
     if (!selectedShift || !selectedDate || teamSchedules.length === 0 || !teams.length) return;
 
@@ -201,19 +224,66 @@ export default function BreaksPage() {
     setAgentMessages([]);
 
     try {
-      // Filtrar empleados del equipo seleccionado
+      const normalize = (str) =>
+        str ? str.toString().trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : "";
+      
+      const targetTeamKey = teamObj.team_key;
+      const targetTeamName = normalize(teamObj.team_name || teamObj.team_key);
+
+      // Filtrar empleados del equipo seleccionado con lógica robusta
       const availableEmployees = allEmployees
         .filter(emp => {
           if (!emp.equipo && !emp.team_key) return false;
-          // Coincidencia por team_key (prioritario)
-          if (teamObj.team_key && emp.team_key) {
-            return emp.team_key === teamObj.team_key;
+          
+          // 1. Coincidencia exacta por team_key
+          if (targetTeamKey && emp.team_key === targetTeamKey) return true;
+
+          // 2. Coincidencia normalizada por nombre
+          const empTeam = normalize(emp.equipo);
+          if (empTeam === targetTeamName) return true;
+          
+          // 3. Coincidencia parcial (e.g. "Turno 2" vs "Turno 2 - Mañana")
+          // Solo si ambos tienen una longitud razonable para evitar falsos positivos
+          if (empTeam.length > 3 && targetTeamName.length > 3) {
+             if (empTeam.includes(targetTeamName) || targetTeamName.includes(empTeam)) return true;
           }
-          // Coincidencia por nombre de equipo
-          const teamName = teamObj.team_name || teamObj.team_key;
-          return emp.equipo === teamName;
+          
+          return false;
         })
-        .map(e => ({ id: e.id, nombre: e.nombre, puesto: e.puesto }));
+        .map(e => ({ 
+          id: e.id, 
+          nombre: e.nombre, 
+          puesto: e.puesto,
+          // Incluir máquinas habituales si existen
+          maquinas_habituales: [
+            e.maquina_1, e.maquina_2, e.maquina_3, e.maquina_4, e.maquina_5
+          ].filter(Boolean)
+        }));
+      
+      // Crear mapa de máquinas para el agente
+      const machinesMap = machines.map(m => ({
+        id: m.id,
+        nombre: m.alias || m.nombre || `Máquina ${m.codigo_maquina || m.id}`,
+        codigo: m.codigo_maquina
+      }));
+
+      // Simplificar datos de DailyMachineStaffing para el prompt
+      const staffingData = dailyStaffing.map(ds => {
+        const machine = machines.find(m => m.id === ds.machine_id);
+        const getEmpName = (id) => allEmployees.find(e => e.id === id)?.nombre || "Desconocido";
+        
+        // Extraer roles asignados
+        const assignments = {};
+        ['responsable_linea', 'segunda_linea', 'operador_1', 'operador_2', 'operador_3', 'operador_4', 'operador_5'].forEach(role => {
+          if (ds[role]) assignments[role] = getEmpName(ds[role]);
+        });
+        
+        return {
+          machine_id: ds.machine_id,
+          machine_name: machine?.alias || machine?.nombre || ds.machine_id,
+          assignments: assignments
+        };
+      }).filter(d => Object.keys(d.assignments).length > 0);
 
       // Crear conversación con el agente break_manager
       const conversation = await base44.agents.createConversation({
@@ -231,18 +301,26 @@ export default function BreaksPage() {
 - Turno: ${selectedShift}
 - Equipo: ${teamObj.team_name || teamObj.team_key} (team_key: ${teamObj.team_key})
 
-IMPORTANTE:
-Si no encuentras empleados asignados en DailyMachinePlanning (porque aún no se ha realizado la asignación diaria), UTILIZA OBLIGATORIAMENTE la siguiente lista de empleados disponibles del equipo para generar el plan:
+CONTEXTO ADICIONAL:
+1. LISTA DE MÁQUINAS (ID -> Nombre):
+${JSON.stringify(machinesMap, null, 2)}
+
+2. ASIGNACIONES DE EMPLEADOS CONFIRMADAS (DailyMachineStaffing - PRIORITARIO):
+${JSON.stringify(staffingData, null, 2)}
+
+3. LISTA DE EMPLEADOS DISPONIBLES (Úsala SOLO si no hay asignaciones confirmadas en el punto 2 para alguna máquina activa):
 ${JSON.stringify(availableEmployees, null, 2)}
 
-Por favor:
-1. Lee el planning de DailyMachinePlanning para esa fecha, turno y equipo (activa=true).
-2. Si DailyMachinePlanning tiene empleados asignados, úsalos. SI NO TIENE EMPLEADOS ASIGNADOS, usa la lista de empleados proporcionada arriba y repártelos equitativamente entre las máquinas activas que encuentres en el planning.
-3. Lee los BreakShift activos aplicables al turno ${selectedShift}.
-4. Agrupa a los empleados por máquina (grupos indivisibles).
-5. Distribuye los grupos respetando la capacidad (personas_por_turno) de cada turno de descanso.
-6. Asegúrate de que todos los empleados tengan descanso.
-7. Devuelve el resultado en formato JSON como se te indicó en las instrucciones.`;
+INSTRUCCIONES:
+1. Lee las asignaciones confirmadas de "DailyMachineStaffing" (punto 2). ESTA ES LA FUENTE DE VERDAD PRINCIPAL.
+2. Si hay asignaciones en el punto 2, úsalas para agrupar a los empleados por máquina.
+3. Lee el planning de DailyMachinePlanning para ver qué máquinas están activas.
+4. Si hay máquinas activas sin asignación en DailyMachineStaffing, intenta rellenarlas con empleados de la lista de disponibles (punto 3), priorizando "maquinas_habituales".
+5. Lee los BreakShift activos aplicables al turno ${selectedShift}.
+6. Agrupa a los empleados por máquina (grupos indivisibles).
+7. Distribuye los grupos respetando la capacidad (personas_por_turno) de cada turno de descanso.
+8. Asegúrate de que todos los empleados tengan descanso.
+9. Devuelve el resultado en formato JSON como se te indicó en las instrucciones.`;
 
       // Suscribirse a la conversación para recibir actualizaciones
       const unsubscribe = base44.agents.subscribeToConversation(conversation.id, (data) => {
