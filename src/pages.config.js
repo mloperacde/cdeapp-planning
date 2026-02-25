@@ -109,6 +109,7 @@ import Timeline from './pages/Timeline';
 import WarehousePlanningPage from './pages/WarehousePlanningPage';
 import WorkCalendarConfig from './pages/WorkCalendarConfig';
 import index from './pages/index';
+import BreaksDebug from './pages/BreaksDebug';
 import __Layout from './Layout.jsx';
 
 
@@ -175,6 +176,7 @@ export const PAGES = {
     "WarehousePlanningPage": WarehousePlanningPage,
     "WorkCalendarConfig": WorkCalendarConfig,
     "index": index,
+    "BreaksDebug": BreaksDebug,
 }
 
 export const pagesConfig = {
