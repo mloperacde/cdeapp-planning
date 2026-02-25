@@ -330,9 +330,9 @@ export default function AttendanceControl() {
       // Nota: Si esto falla por CORS, necesitaremos un proxy o arreglar el servidor.
       
       const targetUrl = `${CUCO_BASE_URL}/checking/getfullchecks/${CLIENT_CODE}?start_date=${filterDate}&end_date=${filterDate}`;
-      const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`;
+      const proxyUrl = `https://corsproxy.io/?url=${encodeURIComponent(targetUrl)}`;
       
-      console.log("Fetching CUCO via Proxy:", proxyUrl);
+      console.log("Fetching CUCO via Proxy (corsproxy.io):", proxyUrl);
 
       const response = await fetch(proxyUrl, {
         method: "GET",
