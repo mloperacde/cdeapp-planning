@@ -12,6 +12,7 @@ import SeniorityBandManager from "@/components/salary/SeniorityBandManager";
 import AutomaticSalaryRules from "@/components/salary/AutomaticSalaryRules";
 import DepartmentSalarySummary from "@/components/salary/DepartmentSalarySummary";
 import InitialSalarySetup from "@/components/salary/InitialSalarySetup";
+import SalaryConfiguration from "@/components/salary/SalaryConfiguration";
 import { SalaryProvider } from "@/components/salary/SalaryProvider";
 
 export default function SalaryManagement() {
@@ -92,6 +93,13 @@ export default function SalaryManagement() {
                 Reglas Automáticas
               </TabsTrigger>
               <TabsTrigger 
+                value="config" 
+                className="gap-2 h-10 px-4 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-950 data-[state=active]:text-emerald-600 dark:data-[state=active]:text-emerald-400 data-[state=active]:shadow-sm border border-transparent data-[state=active]:border-slate-200 dark:data-[state=active]:border-slate-800 transition-all font-medium"
+              >
+                <Settings className="w-4 h-4" />
+                Configuración
+              </TabsTrigger>
+              <TabsTrigger 
                 value="payroll" 
                 className="gap-2 h-10 px-4 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-950 data-[state=active]:text-emerald-600 dark:data-[state=active]:text-emerald-400 data-[state=active]:shadow-sm border border-transparent data-[state=active]:border-slate-200 dark:data-[state=active]:border-slate-800 transition-all font-medium"
               >
@@ -153,6 +161,10 @@ export default function SalaryManagement() {
 
             <TabsContent value="rules" className="mt-0 h-full">
               <AutomaticSalaryRules />
+            </TabsContent>
+
+            <TabsContent value="config" className="mt-0 h-full">
+              <SalaryConfiguration />
             </TabsContent>
 
             <TabsContent value="payroll" className="mt-0 h-full">

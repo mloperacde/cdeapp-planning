@@ -19,8 +19,11 @@ export default function CompensationPolicyManager() {
     savePolicy, 
     isSavingPolicy,
     getPolicyByPosition,
-    getSalaryCategoriesForPosition
+    getSalaryCategoriesForPosition,
+    globalConfig
   } = useSalaryData();
+
+  const payCount = globalConfig?.annual_pay_count || 14;
 
   const [selectedDeptId, setSelectedDeptId] = useState(null);
   const [selectedPosId, setSelectedPosId] = useState(null);
@@ -502,56 +505,96 @@ export default function CompensationPolicyManager() {
                               <div className="space-y-4">
                                 <div className="grid grid-cols-12 gap-4 text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
                                   <div className="col-span-4">Categoría Profesional</div>
-                                  <div className="col-span-4 text-center">Año Anterior (€)</div>
-                                  <div className="col-span-4 text-center text-emerald-600">Año Actual (€)</div>
+                                  <div className="col-span-4 text-center">Año Anterior ({payCount} pagas)</div>
+                                  <div className="col-span-4 text-center text-emerald-600">Año Actual ({payCount} pagas)</div>
                                 </div>
+                                <div className="grid grid-cols-12 gap-4 text-[10px] font-bold text-slate-300 uppercase tracking-wider mb-2 border-b border-slate-100 pb-2">
+                                  <div className="col-span-4"></div>
+                                  <div className="col-span-2 text-center">Mensual</div>
+                                  <div className="col-span-2 text-center">Anual</div>
+                                  <div className="col-span-2 text-center text-emerald-600">Mensual</div>
+                                  <div className="col-span-2 text-center text-emerald-600">Anual</div>
+                                </div>
+
                                 {positionCategories.map(cat => {
                                   const range = policyForm.category_ranges[cat.id] || { current: 0, prev: 0 };
+                                  
+                                  // Helpers for monthly values
+                                  const monthlyPrev = range.prev ? (range.prev / payCount).toFixed(2) : "";
+                                  const monthlyCurrent = range.current ? (range.current / payCount).toFixed(2) : "";
+
                                   return (
-                                    <div key={cat.id} className="grid grid-cols-12 gap-4 items-center">
+                                    <div key={cat.id} className="grid grid-cols-12 gap-4 items-center hover:bg-slate-50 p-2 rounded-lg transition-colors">
                                       <div className="col-span-4 text-sm font-medium text-slate-700 truncate" title={cat.name}>
                                         {cat.name}
+                                        <div className="text-[10px] text-slate-400 font-normal">{cat.code}</div>
                                       </div>
-                                      <div className="col-span-4">
+                                      
+                                      {/* Previous Year */}
+                                      <div className="col-span-2">
                                         <Input 
                                           type="number" 
-                                          value={range.prev}
-                                          onChange={e => {
+                                          placeholder="0.00"
+                                          defaultValue={monthlyPrev}
+                                          key={`prev-m-${cat.id}-${monthlyPrev}`} // Key forces re-render on external update
+                                          onBlur={e => {
                                             const val = parseFloat(e.target.value) || 0;
+                                            const annual = val * payCount;
                                             setPolicyForm(prev => ({
                                               ...prev,
                                               category_ranges: {
                                                 ...prev.category_ranges,
-                                                [cat.id]: { ...range, prev: val }
+                                                [cat.id]: { ...range, prev: annual }
                                               }
                                             }));
                                           }}
-                                          className="font-mono text-center bg-slate-50 h-8 text-sm"
+                                          className="font-mono text-center bg-slate-50 h-8 text-xs"
+                                        />
+                                      </div>
+                                      <div className="col-span-2">
+                                        <Input 
+                                          type="number" 
+                                          value={range.prev || ""}
+                                          readOnly
+                                          className="font-mono text-center bg-slate-100 h-8 text-xs text-slate-500"
                                           placeholder="0.00"
                                         />
                                       </div>
-                                      <div className="col-span-4">
+
+                                      {/* Current Year */}
+                                      <div className="col-span-2">
                                         <Input 
                                           type="number" 
-                                          value={range.current}
-                                          onChange={e => {
+                                          placeholder="0.00"
+                                          defaultValue={monthlyCurrent}
+                                          key={`curr-m-${cat.id}-${monthlyCurrent}`}
+                                          onBlur={e => {
                                             const val = parseFloat(e.target.value) || 0;
+                                            const annual = val * payCount;
                                             setPolicyForm(prev => ({
                                               ...prev,
                                               category_ranges: {
                                                 ...prev.category_ranges,
-                                                [cat.id]: { ...range, current: val }
+                                                [cat.id]: { ...range, current: annual }
                                               }
                                             }));
                                           }}
-                                          className="font-mono text-center border-emerald-200 bg-emerald-50/30 font-bold h-8 text-sm"
+                                          className="font-mono text-center border-emerald-200 bg-emerald-50/30 font-bold h-8 text-xs"
+                                        />
+                                      </div>
+                                      <div className="col-span-2 relative">
+                                        <Input 
+                                          type="number" 
+                                          value={range.current || ""}
+                                          readOnly
+                                          className="font-mono text-center bg-emerald-50/50 h-8 text-xs font-semibold text-emerald-700"
                                           placeholder={cat.salary_range?.target ? cat.salary_range.target.toString() : "0.00"}
                                         />
-                                        {cat.salary_range?.target > 0 && (
-                                           <div className="text-[10px] text-slate-400 text-center mt-1">
-                                             Target: {cat.salary_range.target}€
-                                           </div>
-                                        )}
+                                         {cat.salary_range?.target > 0 && (
+                                            <div className="absolute -bottom-4 left-0 w-full text-[9px] text-slate-400 text-center truncate">
+                                              Target: {cat.salary_range.target}€
+                                            </div>
+                                         )}
                                       </div>
                                     </div>
                                   );

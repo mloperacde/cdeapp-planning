@@ -122,7 +122,48 @@ export function SalaryProvider({ children }) {
     refetchOnWindowFocus: true
   });
 
+  // --- 4. GLOBAL CONFIGURATION (Virtual Table Strategy) ---
+  const { data: globalConfig = { annual_pay_count: 14, pay_dates: [] }, isLoading: loadingGlobalConfig } = useQuery({
+    queryKey: ['salary_global_config'],
+    queryFn: async () => {
+      try {
+        const configs = await base44.entities.AppConfig.filter({ config_key: "salary_global_config" });
+        if (configs.length > 0) {
+           return JSON.parse(configs[0].value);
+        }
+        return { annual_pay_count: 14, pay_dates: [] };
+      } catch (e) {
+        console.warn("Failed to load global config", e);
+        return { annual_pay_count: 14, pay_dates: [] };
+      }
+    }
+  });
+
   // --- MUTATIONS ---
+
+  // Save Global Config
+  const saveGlobalConfigMutation = useMutation({
+    mutationFn: async (configData) => {
+      const existing = await base44.entities.AppConfig.filter({ config_key: "salary_global_config" });
+      const payload = {
+        config_key: "salary_global_config",
+        value: JSON.stringify(configData),
+        description: "Global Salary Configuration (Pay count, dates)",
+        app_subtitle: "SalaryConfig"
+      };
+
+      if (existing.length > 0) {
+        await base44.entities.AppConfig.update(existing[0].id, payload);
+      } else {
+        await base44.entities.AppConfig.create(payload);
+      }
+      return configData;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['salary_global_config'] });
+      toast.success("Configuración global guardada");
+    }
+  });
 
   // Save Policy (Virtual Table Strategy)
   const savePolicyMutation = useMutation({
@@ -209,6 +250,11 @@ export function SalaryProvider({ children }) {
     loadingComponents,
     loadingCategories,
     loadingPolicies,
+    loadingGlobalConfig,
+
+    // Global Config
+    globalConfig,
+    saveGlobalConfig: saveGlobalConfigMutation.mutate,
 
     // Helpers
     getPolicyByPosition,
