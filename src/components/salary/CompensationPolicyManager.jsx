@@ -233,14 +233,12 @@ export default function CompensationPolicyManager() {
       if (notesSource && typeof notesSource === 'string' && notesSource.trim().startsWith('{')) {
         try {
           const parsed = JSON.parse(notesSource);
-          if (parsed.benefits_slots && Array.isArray(parsed.benefits_slots) && parsed.benefits_slots.length === 4) {
-             loadedBenefitsSlots = parsed.benefits_slots;
-          } else if (parsed.benefits_slots && Array.isArray(parsed.benefits_slots)) {
-             // Pad with empty slots if less than 4
+          // Force 4 slots always
+          if (parsed.benefits_slots && Array.isArray(parsed.benefits_slots)) {
              loadedBenefitsSlots = [
                 ...parsed.benefits_slots,
-                ...Array(4 - parsed.benefits_slots.length).fill({ type: "", amount: 0 })
-             ];
+                ...Array(Math.max(0, 4 - parsed.benefits_slots.length)).fill(null).map(() => ({ type: "", amount: 0 }))
+             ].slice(0, 4);
           }
           if (parsed.benefits_text) loadedBenefitsText = parsed.benefits_text;
         } catch (e) {
@@ -308,12 +306,16 @@ export default function CompensationPolicyManager() {
         benefits_slots: data.benefits_slots
       };
 
+      // Ensure JSON strings are valid and not truncated
+      const salaryRangesJSON = JSON.stringify(salaryRangesPacked);
+      const notesJSON = JSON.stringify(notesPacked);
+
       const payload = {
         // Standard fields (Real Schema)
         target_positions: [selectedPosId], // Array of strings
         target_departments: [selectedDeptId],
-        salary_ranges: JSON.stringify(salaryRangesPacked),
-        notes: JSON.stringify(notesPacked),
+        salary_ranges: salaryRangesJSON,
+        notes: notesJSON, // Using notes field which is TEXT/JSON type
         
         // Metadata
         updated_at: new Date().toISOString(),
@@ -321,7 +323,9 @@ export default function CompensationPolicyManager() {
         policy_name: data.policy_name || `Política ${selectedPos?.name || 'General'}`,
         valid_from: data.valid_from || new Date().toISOString().split('T')[0],
         is_active: true,
-        auto_apply: false
+        auto_apply: false,
+        // Also save to description as backup field if notes is truncated
+        description: notesJSON
       };
 
       let savedRecord = null;
@@ -489,7 +493,7 @@ export default function CompensationPolicyManager() {
   return (
     <div className="flex h-[calc(100vh-100px)] gap-6">
       {/* Left Sidebar: Organization Tree */}
-      <Card className="w-[380px] flex flex-col border-0 shadow-lg bg-white/80 backdrop-blur-sm h-full">
+      <Card className="w-[480px] flex flex-col border-0 shadow-lg bg-white/80 backdrop-blur-sm h-full shrink-0">
         <div className="p-4 border-b border-slate-100">
           <div className="relative">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
