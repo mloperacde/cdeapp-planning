@@ -234,42 +234,31 @@ export default function InitialSalarySetup() {
             </Card>
           )}
 
-          {/* Paso 2: Importar desde datos del empleado */}
-          {baseComponent && (
-            <Card className="border-2 border-blue-300 bg-blue-50">
-              <CardContent className="p-4">
-                <div className="space-y-3">
-                  <div>
-                    <h3 className="font-semibold text-blue-900 mb-1 flex items-center gap-2">
-                      <CheckCircle className="w-5 h-5 text-green-600" />
-                      Paso 2: Importar Salarios desde Ficha de Empleado
-                    </h3>
-                    <p className="text-sm text-blue-700">
-                      Detectados <strong>{employeesWithSalaryInData.length}</strong> empleados con salario_anual en su ficha 
-                      que no tienen salario configurado en el módulo salarial.
-                    </p>
-                  </div>
-
-                  <Button 
-                    onClick={() => importFromEmployeeDataMutation.mutate()}
-                    disabled={importing || employeesWithSalaryInData.length === 0}
-                    className="w-full gap-2"
-                  >
-                    <Upload className="w-4 h-4" />
-                    {importing ? "Importando..." : `Importar ${employeesWithSalaryInData.length} Salarios`}
-                  </Button>
-
-                  {employeesWithSalaryInData.length === 0 && employeesWithoutSalary.length > 0 && (
-                    <div className="bg-amber-50 border border-amber-200 rounded p-3 text-sm text-amber-800">
-                      <AlertCircle className="w-4 h-4 inline mr-2" />
-                      Hay {employeesWithoutSalary.length} empleados sin salario configurado que tampoco tienen salario_anual en su ficha.
-                      Deberás configurarlos manualmente desde la sección "Gestión de Salarios por Empleado".
-                    </div>
-                  )}
+          {/* Paso 2: Importar desde datos del empleado (DEPRECATED) */}
+          <Card className="border-2 border-slate-200 bg-slate-50">
+            <CardContent className="p-6">
+              <div className="flex flex-col items-center justify-center text-center space-y-4">
+                <div className="p-3 bg-blue-100 rounded-full">
+                  <CheckCircle className="w-8 h-8 text-blue-600" />
                 </div>
-              </CardContent>
-            </Card>
-          )}
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900 mb-2">Nuevo Flujo de Configuración Salarial</h3>
+                  <p className="text-sm text-slate-600 max-w-lg mx-auto">
+                    La gestión de salarios ahora se realiza de forma centralizada desde el módulo de <strong>Gestión Salarial</strong>.
+                    <br/><br/>
+                    En lugar de importar datos desde la ficha del empleado, debes configurar las políticas retributivas y asignar salarios directamente en la pestaña "Salarios Empleados".
+                    <br/><br/>
+                    <span className="text-xs text-slate-500 italic">
+                      Nota: Próximamente se habilitará la sincronización automática hacia la ficha maestra del empleado.
+                    </span>
+                  </p>
+                </div>
+                <Button variant="outline" disabled className="opacity-50 cursor-not-allowed">
+                  Importación Deshabilitada
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Resultados de importación */}
           {importResults && (
