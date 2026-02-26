@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,9 +10,16 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { TrendingUp, Target, Search, Building2, Briefcase, Save, Euro, ChevronRight, ChevronDown, Users } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { useSalaryData } from "./SalaryProvider";
 
 export default function CompensationPolicyManager() {
-  const queryClient = useQueryClient();
+  const { 
+    policies, 
+    loadingPolicies, 
+    savePolicy, 
+    isSavingPolicy,
+    getPolicyByPosition 
+  } = useSalaryData();
   const [selectedDeptId, setSelectedDeptId] = useState(null);
   const [selectedPosId, setSelectedPosId] = useState(null);
   const [expandedDepts, setExpandedDepts] = useState(new Set());
@@ -87,63 +94,7 @@ export default function CompensationPolicyManager() {
     queryFn: () => base44.entities.Position.list(),
   });
 
-  const { data: policies = [] } = useQuery({
-    queryKey: ['compensation_policies'],
-    queryFn: async () => {
-      // 1. STRATEGY: Virtual Table in AppConfig (Most reliable)
-      let virtualPolicies = [];
-      try {
-        const virtualRecords = await base44.entities.AppConfig.filter({ app_subtitle: "VirtualPolicy" });
-        virtualPolicies = virtualRecords.map(r => {
-          try {
-            return JSON.parse(r.value);
-          } catch(e) { return null; }
-        }).filter(Boolean);
-        
-        if (virtualPolicies.length > 0) return virtualPolicies;
-      } catch (e) {
-        console.warn("Failed to load virtual policies", e);
-      }
 
-      // 2. Fallback to standard backup
-      let fromBackup = [];
-      try {
-        const backups = await base44.entities.AppConfig.filter({ config_key: "compensation_policies_backup" });
-        if (backups.length > 0 && backups[0].value) {
-          try {
-            fromBackup = JSON.parse(backups[0].value);
-            // Parse benefits_slots if they are strings in JSON
-            fromBackup = fromBackup.map(p => ({
-              ...p,
-              benefits_slots: typeof p.benefits_slots === 'string' ? JSON.parse(p.benefits_slots) : p.benefits_slots
-            }));
-          } catch (e) {
-            console.warn("Error parsing backup JSON", e);
-          }
-        }
-      } catch (e) {
-        console.warn("Failed to load policies from backup", e);
-      }
-
-      // 2. Intentar cargar de entidad
-      let fromEntity = [];
-      try {
-        if (base44.entities.CompensationPolicy) {
-          fromEntity = await base44.entities.CompensationPolicy.list();
-          // Merge logic: Si la entidad tiene menos datos que el backup, usar backup
-          if (fromEntity.length < fromBackup.length) {
-             console.log("Using backup data as it has more records");
-             return fromBackup;
-          }
-        }
-      } catch (e) {
-        console.warn("Failed to load policies from entity", e);
-        if (fromBackup.length > 0) return fromBackup;
-      }
-
-      return fromEntity.length > 0 ? fromEntity : fromBackup;
-    },
-  });
 
   // Derived State: Employee Counts
   const employeeCountByDept = useMemo(() => {
@@ -186,31 +137,8 @@ export default function CompensationPolicyManager() {
 
   const currentPolicy = useMemo(() => {
     if (!selectedPosId) return undefined;
-    
-    // 1. Try finding by code match (most reliable)
-    const codeMatch = policies.find(p => p.code && p.code.includes(selectedPosId.substring(0, 6).toUpperCase()));
-    if (codeMatch) return codeMatch;
-    
-    // 2. Try finding by target_positions (Array or String)
-    const posMatch = policies.find(p => {
-      if (p.target_positions) {
-        if (Array.isArray(p.target_positions)) {
-          if (p.target_positions.includes(selectedPosId)) return true;
-        } else if (typeof p.target_positions === 'string') {
-          if (p.target_positions.includes(selectedPosId)) return true;
-          try {
-             const parsed = JSON.parse(p.target_positions);
-             if (Array.isArray(parsed) && parsed.includes(selectedPosId)) return true;
-          } catch(e) {}
-        }
-      }
-      return false;
-    });
-    if (posMatch) return posMatch;
-    
-    // 3. Legacy Match
-    return policies.find(p => p.position_id === selectedPosId);
-  }, [policies, selectedPosId]);
+    return getPolicyByPosition(selectedPosId);
+  }, [selectedPosId, getPolicyByPosition]);
 
   // Effects
   React.useEffect(() => {
@@ -262,15 +190,26 @@ export default function CompensationPolicyManager() {
         } catch (e) {
           console.warn("Failed to parse packed notes JSON", e);
         }
+      } else if (currentPolicy.benefits_slots && Array.isArray(currentPolicy.benefits_slots)) {
+          // Virtual Table direct access
+          loadedBenefitsSlots = [
+            ...currentPolicy.benefits_slots,
+            ...Array(Math.max(0, 4 - currentPolicy.benefits_slots.length)).fill(null).map(() => ({ type: "", amount: 0 }))
+          ].slice(0, 4);
       } else {
         loadedBenefitsText = notesSource;
       }
 
       setPolicyForm({
         ...loadedRanges,
-        benefits_slots: Array.isArray(currentPolicy.benefits_slots) 
-          ? currentPolicy.benefits_slots 
-          : loadedBenefitsSlots,
+        benefits_slots: Array.isArray(loadedBenefitsSlots) 
+          ? loadedBenefitsSlots 
+          : [
+            { type: "", amount: 0 },
+            { type: "", amount: 0 },
+            { type: "", amount: 0 },
+            { type: "", amount: 0 }
+          ],
         benefits: loadedBenefitsText,
         currency: currentPolicy.currency || "EUR",
         pay_frequency: currentPolicy.pay_frequency || "Mensual"
@@ -300,148 +239,16 @@ export default function CompensationPolicyManager() {
     }
   }, [currentPolicy, selectedPosId]);
 
-  // Mutations
-  const savePolicyMutation = useMutation({
-    mutationFn: async (data) => {
-      if (!selectedPosId) throw new Error("No position selected");
-      
-      // PACKING STRATEGY: Pack into 'salary_ranges' and 'notes'
-      const salaryRangesPacked = {
-        min_salary: data.min_salary,
-        max_salary: data.max_salary,
-        target_salary: data.target_salary,
-        bonus_target: data.bonus_target,
-        variable_percentage: data.variable_percentage,
-        min_salary_prev: data.min_salary_prev,
-        max_salary_prev: data.max_salary_prev,
-        target_salary_prev: data.target_salary_prev,
-        bonus_target_prev: data.bonus_target_prev,
-        variable_percentage_prev: data.variable_percentage_prev
-      };
+  const handleSave = () => {
+    if (!selectedPosId) return;
 
-      const notesPacked = {
-        benefits_text: data.benefits,
-        benefits_slots: data.benefits_slots
-      };
-
-      // Ensure JSON strings are valid and not truncated
-      const salaryRangesJSON = JSON.stringify(salaryRangesPacked);
-      const notesJSON = JSON.stringify(notesPacked);
-
-      const payload = {
-        // Standard fields (Real Schema)
-        target_positions: [selectedPosId], // Array of strings
-        target_departments: [selectedDeptId],
-        salary_ranges: salaryRangesJSON,
-        notes: notesJSON, // Using notes field which is TEXT/JSON type
-        
-        // Metadata
-        updated_at: new Date().toISOString(),
-        code: data.code || `POL-${selectedPosId.substring(0, 6).toUpperCase()}`,
-        policy_name: data.policy_name || `Política ${selectedPos?.name || 'General'}`,
-        valid_from: data.valid_from || new Date().toISOString().split('T')[0],
-        is_active: true,
-        auto_apply: false,
-        // Also save to description as backup field if notes is truncated
-        description: notesJSON
-      };
-
-      let savedRecord = null;
-
-      // 1. Intentar guardar en Entidad
-      try {
-        if (base44.entities.CompensationPolicy) {
-          if (currentPolicy) {
-            savedRecord = await base44.entities.CompensationPolicy.update(currentPolicy.id, payload);
-          } else {
-            savedRecord = await base44.entities.CompensationPolicy.create(payload);
-          }
-        }
-      } catch (e) {
-        console.error("Error saving to entity:", e);
-      }
-
-      // 2. Guardar Backup en AppConfig (Robustez)
-      try {
-        console.log("Attempting to save backup to AppConfig...");
-        // Combinar el registro guardado (o el payload si falló) con los existentes
-        const newPolicies = policies.filter(p => p.position_id !== selectedPosId);
-        // Ensure benefits_slots is stored as object in JSON backup, but maybe stringified for entity
-        const policyToSave = { 
-          ...payload, 
-          id: currentPolicy?.id || Date.now().toString(),
-          benefits_slots: payload.benefits_slots // Keep as array for JSON backup
-        };
-        
-        newPolicies.push(policyToSave);
-        
-        const backupData = JSON.stringify(newPolicies);
-        const backups = await base44.entities.AppConfig.filter({ config_key: "compensation_policies_backup" });
-        
-        if (backups.length > 0) {
-          await base44.entities.AppConfig.update(backups[0].id, {
-            value: backupData,
-            description: "Backup de políticas retributivas",
-            updated_at: new Date().toISOString()
-          });
-          console.log("Backup updated successfully");
-        } else {
-          await base44.entities.AppConfig.create({
-            config_key: "compensation_policies_backup",
-            value: backupData,
-            description: "Backup de políticas retributivas",
-            app_subtitle: "System Backup"
-          });
-          console.log("Backup created successfully");
-        }
-      } catch (e) {
-        console.error("Error saving backup:", e);
-        toast.error("Error crítico: No se pudo guardar el backup");
-      }
-
-      // 3. Virtual Table Persistence (AppConfig) - GUARANTEED
-      try {
-        console.log("Saving to Virtual Table...");
-        const policyCode = payload.code;
-        const virtualKey = `policy_${policyCode}`;
-        
-        // Check if exists
-        const existingVirtual = await base44.entities.AppConfig.filter({ config_key: virtualKey });
-        
-        const virtualPayload = {
-          config_key: virtualKey,
-          value: JSON.stringify(policyToSave),
-          description: `Virtual Policy for ${policyToSave.position_name}`,
-          app_subtitle: "VirtualPolicy" // Marker for filtering
-        };
-
-        if (existingVirtual.length > 0) {
-          await base44.entities.AppConfig.update(existingVirtual[0].id, virtualPayload);
-        } else {
-          await base44.entities.AppConfig.create(virtualPayload);
-        }
-        console.log("Virtual Table save success");
-      } catch (e) {
-        console.error("Virtual Table save failed", e);
-      }
-
-      if (!savedRecord && !base44.entities.CompensationPolicy) {
-        // Si no hay entidad pero se guardó en backup, devolver éxito simulado
-        return payload;
-      } else if (!savedRecord) {
-        // Si hay entidad pero falló, pero el backup funcionó (no lanzó error), asumimos éxito parcial
-        console.warn("Entity save failed, but backup likely succeeded");
-        return payload; 
-      }
-      
-      return savedRecord;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['compensation_policies'] });
-      toast.success("Política guardada correctamente (Backup Activo)");
-    },
-    onError: (e) => toast.error("Error al guardar: " + e.message)
-  });
+    savePolicy({
+      ...policyForm,
+      position_id: selectedPosId,
+      position_name: selectedPos?.name,
+      department_id: selectedDeptId,
+    });
+  };
 
   // Tree Logic
   const toggleExpand = (deptId) => {
@@ -635,12 +442,12 @@ export default function CompensationPolicyManager() {
                           <p className="text-sm text-slate-500 mt-1">Definición de rangos salariales y beneficios</p>
                         </div>
                         <Button 
-                          onClick={() => savePolicyMutation.mutate(policyForm)} 
-                          disabled={savePolicyMutation.isPending}
+                          onClick={handleSave} 
+                          disabled={isSavingPolicy}
                           className="bg-indigo-600 hover:bg-indigo-700"
                         >
                           <Save className="w-4 h-4 mr-2" />
-                          {savePolicyMutation.isPending ? "Guardando..." : "Guardar Política"}
+                          {isSavingPolicy ? "Guardando..." : "Guardar Política"}
                         </Button>
                       </div>
                     </div>

@@ -12,14 +12,16 @@ import SeniorityBandManager from "@/components/salary/SeniorityBandManager";
 import AutomaticSalaryRules from "@/components/salary/AutomaticSalaryRules";
 import DepartmentSalarySummary from "@/components/salary/DepartmentSalarySummary";
 import InitialSalarySetup from "@/components/salary/InitialSalarySetup";
+import { SalaryProvider } from "@/components/salary/SalaryProvider";
 
 export default function SalaryManagement() {
   const [activeTab, setActiveTab] = useState("employees");
 
   return (
-    <div className="h-full flex flex-col bg-slate-50 dark:bg-background overflow-hidden">
-      {/* Header */}
-      <div className="bg-white dark:bg-card border-b border-slate-200 dark:border-border p-6 shadow-sm">
+    <SalaryProvider>
+      <div className="h-full flex flex-col bg-slate-50 dark:bg-background overflow-hidden">
+        {/* Header */}
+        <div className="bg-white dark:bg-card border-b border-slate-200 dark:border-border p-6 shadow-sm">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
             <DollarSign className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
@@ -172,5 +174,6 @@ export default function SalaryManagement() {
         </Tabs>
       </div>
     </div>
+    </SalaryProvider>
   );
 }
