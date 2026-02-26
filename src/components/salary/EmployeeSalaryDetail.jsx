@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Plus, Trash2, History, AlertCircle, Edit } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, History, AlertCircle, Edit, Calculator, CheckCircle2 } from "lucide-react";
 import SalaryAuditHistory from "./SalaryAuditHistory";
 import { useAppData } from "@/components/data/DataProvider";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -14,10 +14,19 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { useSalaryData, calculateTheoreticalSalary } from "./SalaryProvider";
 
 export default function EmployeeSalaryDetail({ employee, onBack }) {
   const queryClient = useQueryClient();
   const { user } = useAppData();
+  const { 
+    salaryCategories, 
+    salaryRules, 
+    seniorityBands, 
+    positions, 
+    getPolicyByPosition 
+  } = useSalaryData();
+
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [formData, setFormData] = useState({
@@ -203,6 +212,29 @@ export default function EmployeeSalaryDetail({ employee, onBack }) {
   const jornadaFactor = useMemo(() => Math.max(0, hoursPerDay / 8), [hoursPerDay]);
   const adjustedTotal = useMemo(() => totalSalary * jornadaFactor, [totalSalary, jornadaFactor]);
 
+  // Theoretical Salary Calculation
+  const theoreticalData = useMemo(() => {
+    if (!employee || !positions.length) return null;
+    
+    // Find position
+    const position = positions.find(p => p.name === employee.puesto) || 
+                     positions.find(p => p.id === employee.position_id); // Fallback if id exists
+    
+    if (!position) return null;
+
+    const policy = getPolicyByPosition(position.id);
+    if (!policy) return null;
+
+    return calculateTheoreticalSalary(
+      employee, 
+      position, 
+      policy, 
+      salaryCategories, 
+      salaryRules, 
+      seniorityBands
+    );
+  }, [employee, positions, salaryCategories, salaryRules, seniorityBands, getPolicyByPosition]);
+
   if (showHistory) {
     return (
       <div className="space-y-4">
@@ -243,12 +275,42 @@ export default function EmployeeSalaryDetail({ employee, onBack }) {
             <div className="text-xs text-slate-500 mt-1">Anual: {(adjustedTotal * 14).toFixed(2)}€</div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="text-sm text-slate-500 mb-1">Componentes Activos</div>
-            <div className="text-3xl font-bold">{currentSalaries.length}</div>
-          </CardContent>
-        </Card>
+        
+        {theoreticalData ? (
+          <Card className="border-indigo-100 bg-indigo-50/30">
+            <CardContent className="p-6 relative">
+              <div className="absolute top-4 right-4">
+                <Calculator className="w-5 h-5 text-indigo-400" />
+              </div>
+              <div className="text-sm text-indigo-600 font-medium mb-1">Salario Teórico (Política)</div>
+              <div className="text-3xl font-bold text-indigo-700">{theoreticalData.total.toFixed(2)}€</div>
+              
+              <div className="mt-2 space-y-1">
+                {theoreticalData.breakdown.map((item, idx) => (
+                  <div key={idx} className="flex justify-between text-xs text-slate-600">
+                    <span>{item.name}</span>
+                    <span className="font-mono">{item.amount.toFixed(2)}€</span>
+                  </div>
+                ))}
+              </div>
+              
+              {Math.abs(totalSalary - theoreticalData.total) > 0.01 && (
+                <div className="mt-3 pt-2 border-t border-indigo-100 text-xs text-amber-600 font-medium flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  Diferencia: {(totalSalary - theoreticalData.total).toFixed(2)}€
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        ) : (
+          <Card>
+            <CardContent className="p-6 flex flex-col justify-center items-center text-center text-slate-400">
+              <AlertCircle className="w-8 h-8 mb-2 opacity-20" />
+              <p className="text-sm">No hay política salarial definida para este puesto</p>
+            </CardContent>
+          </Card>
+        )}
+
         <Card>
           <CardContent className="p-6">
             <div className="text-sm text-slate-500 mb-1">Categoría Actual</div>

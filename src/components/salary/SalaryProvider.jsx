@@ -22,6 +22,27 @@ export function SalaryProvider({ children }) {
     staleTime: 5 * 60 * 1000,
   });
 
+  // --- NEW: SENIORITY BANDS ---
+  const { data: seniorityBands = [], isLoading: loadingSeniority } = useQuery({
+    queryKey: ['seniorityBands'],
+    queryFn: () => base44.entities.SeniorityBand.list(),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // --- NEW: AUTOMATIC RULES ---
+  const { data: salaryRules = [], isLoading: loadingRules } = useQuery({
+    queryKey: ['salaryRules'],
+    queryFn: () => base44.entities.AutomaticSalaryRule.list(),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // --- NEW: POSITIONS (For linking employees to policies) ---
+  const { data: positions = [], isLoading: loadingPositions } = useQuery({
+    queryKey: ['positions'],
+    queryFn: () => base44.entities.Position.list(),
+    staleTime: 5 * 60 * 1000,
+  });
+
   // --- 3. COMPENSATION POLICIES (Virtual Table Strategy) ---
   // We use AppConfig as a Virtual Table to bypass schema limitations
   const { data: policies = [], isLoading: loadingPolicies, refetch: refetchPolicies } = useQuery({
@@ -128,6 +149,9 @@ export function SalaryProvider({ children }) {
     salaryComponents,
     salaryCategories,
     policies,
+    seniorityBands,
+    salaryRules,
+    positions,
     
     // Loading States
     loadingComponents,
