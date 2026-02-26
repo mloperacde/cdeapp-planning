@@ -329,11 +329,12 @@ Deno.serve(async (req: Request) => {
           const madridDate = new Date(madridDateStr);
           const nowMin = madridDate.getHours() * 60 + madridDate.getMinutes();
 
-          // Si la hora actual es anterior a la hora de entrada + margen de cortesía (ej. 30 min), NO es ausente todavía.
-          // Ejemplo: Entrada a las 14:00. Son las 13:50. No es ausente.
-          // Ejemplo: Entrada a las 14:00. Son las 14:15. Es ausente (si no ha fichado).
-          // Damos 30 minutos de margen DESPUÉS de la hora de entrada para considerarlo definitivamente ausente en el reporte en tiempo real
-          const margenCortesía = 30; 
+          // Si la hora actual es anterior a la hora de entrada + margen de cortesía configurado, NO es ausente todavía.
+          // Usamos la configuración de tolerancia (estricta o normal) según el departamento.
+          const departamento = m.departamento || "";
+          const esEstricto = departamentosEstrictos.includes(departamento);
+          // Convertir a número por seguridad, aunque ya deberían serlo
+          const margenCortesía = Number(esEstricto ? toleranciaReducida : toleranciaEntrada) || 10;
           
           if (nowMin < (entradaMin + margenCortesía)) return false;
         }
