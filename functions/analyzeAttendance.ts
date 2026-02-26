@@ -321,12 +321,21 @@ Deno.serve(async (req: Request) => {
           // Convertir horaEntrada (HH:mm) a minutos
           const [h, min] = horaEntrada.split(':').map(Number);
           const entradaMin = h * 60 + min;
-          const nowMin = now.getHours() * 60 + now.getMinutes();
+          // Hora actual en minutos, ajustada a zona horaria del usuario (Madrid por defecto)
+          // La función new Date() en Deno Deploy usa UTC por defecto. Necesitamos hora local.
+          // Usamos una aproximación segura sumando offset o Intl.DateTimeFormat
+          
+          const madridDateStr = new Date().toLocaleString("en-US", { timeZone: "Europe/Madrid" });
+          const madridDate = new Date(madridDateStr);
+          const nowMin = madridDate.getHours() * 60 + madridDate.getMinutes();
 
-          // Si la hora actual es anterior a la hora de entrada, NO es ausente todavía.
-          // Damos 15 minutos de cortesía después de la hora de entrada para considerarlo "ausente" en tiempo real
-          // O simplemente: si now < horaEntrada, no lo mostramos.
-          if (nowMin < entradaMin) return false;
+          // Si la hora actual es anterior a la hora de entrada + margen de cortesía (ej. 30 min), NO es ausente todavía.
+          // Ejemplo: Entrada a las 14:00. Son las 13:50. No es ausente.
+          // Ejemplo: Entrada a las 14:00. Son las 14:15. Es ausente (si no ha fichado).
+          // Damos 30 minutos de margen DESPUÉS de la hora de entrada para considerarlo definitivamente ausente en el reporte en tiempo real
+          const margenCortesía = 30; 
+          
+          if (nowMin < (entradaMin + margenCortesía)) return false;
         }
 
         return true;
