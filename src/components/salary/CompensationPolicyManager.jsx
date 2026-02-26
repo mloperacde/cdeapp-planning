@@ -109,7 +109,11 @@ export default function CompensationPolicyManager() {
         position_id: selectedPosId,
         position_name: selectedPos?.name,
         department_id: selectedDeptId,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
+        // Required fields fallback
+        code: data.code || `POL-${selectedPosId.substring(0, 6).toUpperCase()}`,
+        policy_name: data.policy_name || `Política ${selectedPos?.name || 'General'}`,
+        valid_from: data.valid_from || new Date().toISOString().split('T')[0]
       };
 
       if (currentPolicy) {
