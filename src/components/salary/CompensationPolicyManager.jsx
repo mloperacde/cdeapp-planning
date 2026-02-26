@@ -157,6 +157,7 @@ export default function CompensationPolicyManager() {
       ];
       let loadedBenefitsText = currentPolicy.notes || currentPolicy.benefits || "";
       let loadedRanges = {
+        category_ranges: {}, // Initialize to avoid undefined errors
         min_salary: 0, max_salary: 0, target_salary: 0,
         bonus_target: 0, variable_percentage: 0,
         min_salary_prev: 0, max_salary_prev: 0, target_salary_prev: 0,
@@ -171,11 +172,8 @@ export default function CompensationPolicyManager() {
            // Check if it has the new structure 'category_ranges'
            if (parsed.category_ranges) {
              loadedRanges.category_ranges = parsed.category_ranges;
-           } else {
-             // Migrate legacy flat structure to a default category if needed, or just keep as is for backward compat?
-             // We can try to map legacy values to all categories or just init empty.
-             loadedRanges.category_ranges = {}; 
            }
+           // Else keeps initialized empty object
            
            loadedRanges.bonus_target = parsed.bonus_target || 0;
            loadedRanges.variable_percentage = parsed.variable_percentage || 0;
@@ -184,7 +182,6 @@ export default function CompensationPolicyManager() {
          } catch(e) { console.warn("Error parsing salary_ranges", e); }
       } else {
          // Legacy Fallback
-         loadedRanges.category_ranges = {};
          loadedRanges.bonus_target = currentPolicy.bonus_target || 0;
          loadedRanges.variable_percentage = currentPolicy.variable_percentage || 0;
       }
@@ -517,7 +514,7 @@ export default function CompensationPolicyManager() {
                                 </div>
 
                                 {positionCategories.map(cat => {
-                                  const range = policyForm.category_ranges[cat.id] || { current: 0, prev: 0 };
+                                  const range = policyForm.category_ranges?.[cat.id] || { current: 0, prev: 0 };
                                   
                                   // Helpers for monthly values
                                   const monthlyPrev = range.prev ? (range.prev / payCount).toFixed(2) : "";
@@ -543,7 +540,7 @@ export default function CompensationPolicyManager() {
                                             setPolicyForm(prev => ({
                                               ...prev,
                                               category_ranges: {
-                                                ...prev.category_ranges,
+                                                ...(prev.category_ranges || {}),
                                                 [cat.id]: { ...range, prev: annual }
                                               }
                                             }));
@@ -574,7 +571,7 @@ export default function CompensationPolicyManager() {
                                             setPolicyForm(prev => ({
                                               ...prev,
                                               category_ranges: {
-                                                ...prev.category_ranges,
+                                                ...(prev.category_ranges || {}),
                                                 [cat.id]: { ...range, current: annual }
                                               }
                                             }));
