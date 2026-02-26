@@ -505,7 +505,7 @@ export default function CompensationPolicyManager() {
                       </div>
                     </div>
 
-                    <ScrollArea className="flex-1 p-6">
+                    <div className="flex-1 overflow-y-auto p-6">
                       <div className="grid gap-6 max-w-4xl">
                         {/* Salary Ranges */}
                         <Card>
@@ -698,10 +698,10 @@ export default function CompensationPolicyManager() {
                             </div>
                           </CardContent>
                         </Card>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ) : (
+                  ) : (
                   <div className="flex flex-col items-center justify-center h-full text-slate-400">
                     <Briefcase className="w-12 h-12 mb-4 opacity-20" />
                     <p>Selecciona un puesto para definir su política retributiva</p>
