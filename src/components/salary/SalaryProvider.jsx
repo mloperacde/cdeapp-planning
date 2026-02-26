@@ -145,6 +145,88 @@ export function SalaryProvider({ children }) {
   return <SalaryContext.Provider value={value}>{children}</SalaryContext.Provider>;
 }
 
+/**
+ * Calculates the theoretical salary for an employee based on their position, policy, and category.
+ */
+export const calculateTheoreticalSalary = (employee, position, policy, salaryCategories = [], salaryRules = [], seniorityBands = []) => {
+  if (!employee || !position || !policy) return { total: 0, breakdown: [] };
+
+  const breakdown = [];
+  let total = 0;
+
+  // 1. Base Salary from Category
+  // Assuming employee has a 'categoria_profesional' field or similar ID
+  // If policy has category_ranges, we look up the value.
+  // Fallback: Use min/target/max if category not found or legacy data.
+  // For now, let's assume we need to match employee category name/id to policy.category_ranges
+  
+  let baseSalary = 0;
+  const empCategoryName = employee.categoria_profesional || "";
+  
+  // Find category ID if possible
+  const categoryObj = salaryCategories.find(c => c.name === empCategoryName);
+  const categoryId = categoryObj?.id;
+
+  if (policy.category_ranges && categoryId && policy.category_ranges[categoryId]) {
+     baseSalary = Number(policy.category_ranges[categoryId].current) || 0;
+     breakdown.push({ name: `Salario Base (${empCategoryName})`, amount: baseSalary, type: 'base' });
+  } else if (policy.target_salary) {
+     // Legacy Fallback
+     baseSalary = Number(policy.target_salary) || 0;
+     breakdown.push({ name: `Salario Base (Target Puesto)`, amount: baseSalary, type: 'base' });
+  } else {
+     breakdown.push({ name: `Salario Base (No definido)`, amount: 0, type: 'base' });
+  }
+  total += baseSalary;
+
+  // 2. Benefits
+  if (policy.benefits_slots && Array.isArray(policy.benefits_slots)) {
+    policy.benefits_slots.forEach(slot => {
+      const amt = Number(slot.amount) || 0;
+      if (amt > 0) {
+        total += amt;
+        breakdown.push({ name: `Beneficio: ${slot.type}`, amount: amt, type: 'benefit' });
+      }
+    });
+  }
+
+  // 3. Automatic Rules
+  // Filter rules that apply to this position
+  // This requires fetching AutomaticSalaryRules. Assuming they are passed in or we have logic.
+  // Simple implementation:
+  if (salaryRules && salaryRules.length > 0) {
+     salaryRules.forEach(rule => {
+        // Check if rule applies to position
+        if (rule.target_positions && (rule.target_positions.includes(position.id) || rule.target_positions.includes('ALL'))) {
+           const amt = Number(rule.amount) || 0;
+           total += amt;
+           breakdown.push({ name: `Regla: ${rule.name}`, amount: amt, type: 'rule' });
+        }
+     });
+  }
+
+  // 4. Seniority
+  // Calculate years of service
+  if (employee.fecha_antiguedad) {
+    const start = new Date(employee.fecha_antiguedad);
+    const now = new Date();
+    const diffTime = Math.abs(now - start);
+    const years = Math.floor(diffTime / (1000 * 60 * 60 * 24 * 365.25)); 
+    
+    // Find matching band
+    const band = seniorityBands.find(b => years >= b.min_years && years <= (b.max_years || 999));
+    if (band) {
+       const amt = Number(band.amount) || 0; // Assuming band has an amount field
+       if (amt > 0) {
+         total += amt;
+         breakdown.push({ name: `Antigüedad (${years} años)`, amount: amt, type: 'seniority' });
+       }
+    }
+  }
+
+  return { total, breakdown };
+};
+
 export function useSalaryData() {
   const context = useContext(SalaryContext);
   if (!context) {

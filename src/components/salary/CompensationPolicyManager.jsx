@@ -18,23 +18,22 @@ export default function CompensationPolicyManager() {
     loadingPolicies, 
     savePolicy, 
     isSavingPolicy,
-    getPolicyByPosition 
+    getPolicyByPosition,
+    salaryCategories // Get categories from provider
   } = useSalaryData();
+
   const [selectedDeptId, setSelectedDeptId] = useState(null);
   const [selectedPosId, setSelectedPosId] = useState(null);
   const [expandedDepts, setExpandedDepts] = useState(new Set());
   const [searchTerm, setSearchTerm] = useState("");
 
   const [policyForm, setPolicyForm] = useState({
-    min_salary: 0,
-    max_salary: 0,
-    target_salary: 0,
+    // REPLACED: min/max/target with category_ranges
+    category_ranges: {}, // { [categoryId]: { current: 0, prev: 0 } }
+    
     bonus_target: 0,
     variable_percentage: 0,
-    // Previous Year Fields
-    min_salary_prev: 0,
-    max_salary_prev: 0,
-    target_salary_prev: 0,
+    // Previous Year Fields (Variables)
     bonus_target_prev: 0,
     variable_percentage_prev: 0,
     // Benefits Slots
@@ -44,7 +43,7 @@ export default function CompensationPolicyManager() {
       { type: "", amount: 0 },
       { type: "", amount: 0 }
     ],
-    benefits: "", // Keeping for observations/compatibility
+    benefits: "", 
     currency: "EUR",
     pay_frequency: "Mensual"
   });
@@ -161,13 +160,24 @@ export default function CompensationPolicyManager() {
       if (currentPolicy.salary_ranges) {
          try {
            const parsed = typeof currentPolicy.salary_ranges === 'string' ? JSON.parse(currentPolicy.salary_ranges) : currentPolicy.salary_ranges;
-           loadedRanges = { ...loadedRanges, ...parsed };
+           
+           // Check if it has the new structure 'category_ranges'
+           if (parsed.category_ranges) {
+             loadedRanges.category_ranges = parsed.category_ranges;
+           } else {
+             // Migrate legacy flat structure to a default category if needed, or just keep as is for backward compat?
+             // We can try to map legacy values to all categories or just init empty.
+             loadedRanges.category_ranges = {}; 
+           }
+           
+           loadedRanges.bonus_target = parsed.bonus_target || 0;
+           loadedRanges.variable_percentage = parsed.variable_percentage || 0;
+           loadedRanges.bonus_target_prev = parsed.bonus_target_prev || 0;
+           loadedRanges.variable_percentage_prev = parsed.variable_percentage_prev || 0;
          } catch(e) { console.warn("Error parsing salary_ranges", e); }
       } else {
          // Legacy Fallback
-         loadedRanges.min_salary = currentPolicy.min_salary || 0;
-         loadedRanges.max_salary = currentPolicy.max_salary || 0;
-         loadedRanges.target_salary = currentPolicy.target_salary || 0;
+         loadedRanges.category_ranges = {};
          loadedRanges.bonus_target = currentPolicy.bonus_target || 0;
          loadedRanges.variable_percentage = currentPolicy.variable_percentage || 0;
       }
@@ -242,8 +252,29 @@ export default function CompensationPolicyManager() {
   const handleSave = () => {
     if (!selectedPosId) return;
 
+    // PACKING STRATEGY: Pack into 'salary_ranges' and 'notes'
+    const salaryRangesPacked = {
+      category_ranges: policyForm.category_ranges, // New Structure
+      bonus_target: policyForm.bonus_target,
+      variable_percentage: policyForm.variable_percentage,
+      bonus_target_prev: policyForm.bonus_target_prev,
+      variable_percentage_prev: policyForm.variable_percentage_prev
+    };
+
+    const notesPacked = {
+      benefits_text: policyForm.benefits,
+      benefits_slots: policyForm.benefits_slots
+    };
+
+    // Ensure JSON strings are valid and not truncated
+    const salaryRangesJSON = JSON.stringify(salaryRangesPacked);
+    const notesJSON = JSON.stringify(notesPacked);
+
     savePolicy({
       ...policyForm,
+      salary_ranges: salaryRangesJSON,
+      notes: notesJSON,
+      description: notesJSON, // Backup
       position_id: selectedPosId,
       position_name: selectedPos?.name,
       department_id: selectedDeptId,
@@ -454,78 +485,75 @@ export default function CompensationPolicyManager() {
 
                     <div className="flex-1 overflow-y-auto p-6 pb-32">
                       <div className="grid gap-6 max-w-4xl">
-                        {/* Salary Ranges */}
+                        {/* Salary Categories */}
                         <Card>
                           <CardHeader className="pb-3">
                             <CardTitle className="text-sm font-semibold flex items-center gap-2">
                               <Euro className="w-4 h-4 text-emerald-600" />
-                              Salario Base Anual Bruto
+                              Bandas Salariales por Categoría
                             </CardTitle>
                           </CardHeader>
                           <CardContent>
-                            <div className="grid grid-cols-3 gap-6">
-                              {/* Header Row */}
-                              <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Concepto</div>
-                              <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 text-center">Año Anterior</div>
-                              <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 text-center text-emerald-600">Año Actual</div>
-
-                              {/* Min Salary Row */}
-                              <div className="flex items-center text-sm font-medium text-slate-600">Mínimo (€)</div>
-                              <div>
-                                <Input 
-                                  type="number" 
-                                  value={policyForm.min_salary_prev}
-                                  onChange={e => setPolicyForm({...policyForm, min_salary_prev: parseFloat(e.target.value) || 0})}
-                                  className="font-mono text-center bg-slate-50"
-                                />
+                            {salaryCategories.length > 0 ? (
+                              <div className="space-y-4">
+                                <div className="grid grid-cols-12 gap-4 text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
+                                  <div className="col-span-4">Categoría Profesional</div>
+                                  <div className="col-span-4 text-center">Año Anterior (€)</div>
+                                  <div className="col-span-4 text-center text-emerald-600">Año Actual (€)</div>
+                                </div>
+                                {salaryCategories.map(cat => {
+                                  const range = policyForm.category_ranges[cat.id] || { current: 0, prev: 0 };
+                                  return (
+                                    <div key={cat.id} className="grid grid-cols-12 gap-4 items-center">
+                                      <div className="col-span-4 text-sm font-medium text-slate-700 truncate" title={cat.name}>
+                                        {cat.name}
+                                      </div>
+                                      <div className="col-span-4">
+                                        <Input 
+                                          type="number" 
+                                          value={range.prev}
+                                          onChange={e => {
+                                            const val = parseFloat(e.target.value) || 0;
+                                            setPolicyForm(prev => ({
+                                              ...prev,
+                                              category_ranges: {
+                                                ...prev.category_ranges,
+                                                [cat.id]: { ...range, prev: val }
+                                              }
+                                            }));
+                                          }}
+                                          className="font-mono text-center bg-slate-50 h-8 text-sm"
+                                          placeholder="0.00"
+                                        />
+                                      </div>
+                                      <div className="col-span-4">
+                                        <Input 
+                                          type="number" 
+                                          value={range.current}
+                                          onChange={e => {
+                                            const val = parseFloat(e.target.value) || 0;
+                                            setPolicyForm(prev => ({
+                                              ...prev,
+                                              category_ranges: {
+                                                ...prev.category_ranges,
+                                                [cat.id]: { ...range, current: val }
+                                              }
+                                            }));
+                                          }}
+                                          className="font-mono text-center border-emerald-200 bg-emerald-50/30 font-bold h-8 text-sm"
+                                          placeholder="0.00"
+                                        />
+                                      </div>
+                                    </div>
+                                  );
+                                })}
                               </div>
-                              <div>
-                                <Input 
-                                  type="number" 
-                                  value={policyForm.min_salary}
-                                  onChange={e => setPolicyForm({...policyForm, min_salary: parseFloat(e.target.value) || 0})}
-                                  className="font-mono text-center border-emerald-200"
-                                />
+                            ) : (
+                              <div className="text-center py-8 text-slate-400 text-sm">
+                                No hay categorías profesionales configuradas. 
+                                <br/>Ve a "Categorías Profesionales" para crearlas.
                               </div>
-
-                              {/* Target Salary Row */}
-                              <div className="flex items-center text-sm font-bold text-emerald-700">Target / Objetivo (€)</div>
-                              <div>
-                                <Input 
-                                  type="number" 
-                                  value={policyForm.target_salary_prev}
-                                  onChange={e => setPolicyForm({...policyForm, target_salary_prev: parseFloat(e.target.value) || 0})}
-                                  className="font-mono text-center bg-slate-50"
-                                />
-                              </div>
-                              <div>
-                                <Input 
-                                  type="number" 
-                                  value={policyForm.target_salary}
-                                  onChange={e => setPolicyForm({...policyForm, target_salary: parseFloat(e.target.value) || 0})}
-                                  className="font-mono text-center border-emerald-200 bg-emerald-50/30 font-bold"
-                                />
-                              </div>
-
-                              {/* Max Salary Row */}
-                              <div className="flex items-center text-sm font-medium text-slate-600">Máximo (€)</div>
-                              <div>
-                                <Input 
-                                  type="number" 
-                                  value={policyForm.max_salary_prev}
-                                  onChange={e => setPolicyForm({...policyForm, max_salary_prev: parseFloat(e.target.value) || 0})}
-                                  className="font-mono text-center bg-slate-50"
-                                />
-                              </div>
-                              <div>
-                                <Input 
-                                  type="number" 
-                                  value={policyForm.max_salary}
-                                  onChange={e => setPolicyForm({...policyForm, max_salary: parseFloat(e.target.value) || 0})}
-                                  className="font-mono text-center border-emerald-200"
-                                />
-                              </div>
-                            </div>
+                            )}
                           </CardContent>
                         </Card>
 
