@@ -4,23 +4,67 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Plus, Edit, Trash2, Award, TrendingUp, ArrowUp, ArrowDown } from "lucide-react";
+import { 
+  Plus, Edit, Trash2, Award, TrendingUp, ArrowUp, ArrowDown, 
+  ChevronRight, ChevronDown, Building2, User, Search, Save, AlertTriangle
+} from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+
+// --- PERSISTENCE HELPERS (Virtual Table Strategy) ---
+const fetchStoreCategories = async () => {
+  try {
+    const store = await base44.entities.AppConfig.filter({ config_key: "salary_categories_store" });
+    const record = store[0];
+    if (!record) return [];
+    let raw = record.value || record.description || record.app_subtitle || "[]";
+    if (typeof raw === "string") {
+      try { return JSON.parse(raw) || []; } catch { return []; }
+    }
+    return Array.isArray(raw) ? raw : [];
+  } catch {
+    return [];
+  }
+};
+
+const writeStoreCategories = async (arr) => {
+  try {
+    const serialized = JSON.stringify(arr);
+    const store = await base44.entities.AppConfig.filter({ config_key: "salary_categories_store" });
+    const record = store[0];
+    const payloadCfg = {
+      config_key: "salary_categories_store",
+      value: serialized,
+      description: serialized,
+      app_subtitle: serialized
+    };
+    if (record?.id) {
+      await base44.entities.AppConfig.update(record.id, payloadCfg);
+    } else {
+      await base44.entities.AppConfig.create(payloadCfg);
+    }
+  } catch (e) {
+    console.error("Backup persistence failed", e);
+  }
+};
 
 export default function SalaryCategoryManager() {
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
-  const [selectedDepartment, setSelectedDepartment] = useState("__ALL__");
-  const [usingFallback, setUsingFallback] = useState(false);
+  
+  // Selection State
+  const [selectedPosition, setSelectedPosition] = useState(null);
+  const [expandedDepts, setExpandedDepts] = useState({});
+  const [searchTerm, setSearchTerm] = useState("");
 
+  // Form State
   const [formData, setFormData] = useState({
     name: "",
     code: "",
@@ -30,586 +74,209 @@ export default function SalaryCategoryManager() {
     required_experience_years: 0,
     is_active: true,
     order: 0,
-    department: ""
+    position_id: null
   });
 
+  // --- DATA FETCHING ---
+  
+  // 1. Departments & Positions for the Tree
   const { data: departments = [] } = useQuery({
     queryKey: ['departments'],
     queryFn: () => base44.entities.Department.list(),
   });
 
-  const normalizeDeptName = (name) => {
-    const s = (name || "").toString().trim().replace(/\s+/g, " ");
-    return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
-  };
-  const findDeptByName = (name) => {
-    const target = normalizeDeptName(name);
-    return departments.find(d => normalizeDeptName(d.name) === target) || null;
-  };
-
-  const normalizeText = (s) =>
-    (s || "")
-      .toString()
-      .trim()
-      .replace(/\s+/g, " ")
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .toUpperCase();
-
-  const normalizeCategoryRecord = (cat) => {
-    const dName = (cat.department || cat.department_name || "").toString().trim();
-    const dObj = !dName && cat.department_id ? departments.find(d => d.id === cat.department_id) : null;
-    const finalDept = dName || dObj?.name || "";
-    const finalNorm = finalDept ? normalizeDeptName(finalDept) : (cat.department_normalized || "");
-    return {
-      ...cat,
-      department: finalDept || cat.department || cat.department_name || "",
-      department_name: finalDept || cat.department_name || "",
-      department_normalized: finalNorm || "",
-      department_id: cat.department_id || dObj?.id || null
-    };
-  };
-
-  const consolidateByBaseKey = (arr) => {
-    const getBaseKey = (x) =>
-      `${normalizeText(x.code)}|${normalizeText(x.name)}`;
-    const hasDept = (x) => {
-      const s = (x.department || x.department_name || "").toString().trim();
-      return Boolean(s) || Boolean(x.department_id);
-    };
-    const score = (x) => (x.id ? 2 : 0) + (hasDept(x) ? 1 : 0);
-    const bestByKey = new Map();
-    const bestDeptByKey = new Map();
-    for (const item of arr) {
-      const key = getBaseKey(item);
-      if (!key.trim()) continue;
-      const normalized = normalizeCategoryRecord(item);
-      const prev = bestByKey.get(key);
-      if (!prev || score(normalized) > score(prev)) {
-        bestByKey.set(key, normalized);
-      }
-      // track any department information available in the group
-      if (hasDept(normalized)) {
-        const deptName = (normalized.department || normalized.department_name).toString();
-        if (deptName) bestDeptByKey.set(key, deptName);
-      }
-    }
-    // finalize and fill missing department from group knowledge
-    const result = [];
-    for (const [key, item] of bestByKey.entries()) {
-      if (!item.department && !item.department_name && bestDeptByKey.has(key)) {
-        const deptName = bestDeptByKey.get(key);
-        const dObj = findDeptByName(deptName);
-        result.push({
-          ...item,
-          department: deptName,
-          department_name: deptName,
-          department_normalized: normalizeDeptName(deptName),
-          department_id: item.department_id || dObj?.id || null
-        });
-      } else {
-        result.push(item);
-      }
-    }
-    return result;
-  };
-
-  const fetchStoreCategories = async () => {
-    try {
-      const store = await base44.entities.AppConfig.filter({ config_key: "salary_categories_store" });
-      const record = store[0];
-      if (!record) return [];
-      let raw = record.value || record.description || record.app_subtitle || "[]";
-      if (typeof raw === "string") {
-        try { return JSON.parse(raw) || []; } catch { return []; }
-      }
-      return Array.isArray(raw) ? raw : [];
-    } catch {
-      return [];
-    }
-  };
-
-  const writeStoreCategories = async (arr) => {
-    try {
-      const serialized = JSON.stringify(arr);
-      const store = await base44.entities.AppConfig.filter({ config_key: "salary_categories_store" });
-      const record = store[0];
-      const payloadCfg = {
-        config_key: "salary_categories_store",
-        value: serialized,
-        description: serialized,
-        app_subtitle: serialized
-      };
-      if (record?.id) {
-        await base44.entities.AppConfig.update(record.id, payloadCfg);
-      } else {
-        await base44.entities.AppConfig.create(payloadCfg);
-      }
-    } catch {
-      /* ignore */
-    }
-  };
-
-  const backupStoreCategories = async () => {
-    try {
-      const arr = await fetchStoreCategories();
-      const serialized = JSON.stringify({ timestamp: new Date().toISOString(), data: arr });
-      const store = await base44.entities.AppConfig.filter({ config_key: "salary_categories_store_backup" });
-      const record = store[0];
-      const payloadCfg = {
-        config_key: "salary_categories_store_backup",
-        value: serialized,
-        description: serialized,
-        app_subtitle: serialized
-      };
-      if (record?.id) {
-        await base44.entities.AppConfig.update(record.id, payloadCfg);
-      } else {
-        await base44.entities.AppConfig.create(payloadCfg);
-      }
-    } catch {
-      /* ignore */
-    }
-  };
-
-  const fetchBackup = async () => {
-    try {
-      const store = await base44.entities.AppConfig.filter({ config_key: "salary_categories_store_backup" });
-      const record = store[0];
-      if (!record) return null;
-      let raw = record.value || record.description || record.app_subtitle || "";
-      if (typeof raw === "string") {
-        try { return JSON.parse(raw); } catch { return null; }
-      }
-      return raw;
-    } catch {
-      return null;
-    }
-  };
-
-  const getDefaultRestoreDepartment = () => {
-    // Prioridad: PRODUCCIÓN/PRODUCCION -> selectedDepartment -> primero de la lista
-    const findByName = (name) => departments.find(d => normalizeDeptName(d.name) === normalizeDeptName(name));
-    return (
-      findByName("PRODUCCIÓN") ||
-      findByName("PRODUCCION") ||
-      (selectedDepartment ? findByName(selectedDepartment) : null) ||
-      departments[0] ||
-      null
-    );
-  };
-
-  const restoreFromBackup = async () => {
-    try {
-      const backup = await fetchBackup();
-      if (!backup?.data) {
-        toast.error("No hay copia de seguridad para restaurar");
-        return;
-      }
-      const dept = getDefaultRestoreDepartment();
-      const assigned = backup.data.map(c => {
-        const base = { ...c };
-        const d = c.department || c.department_name || c.department_id ? findDeptByName(c.department || c.department_name) : dept;
-        return {
-          ...base,
-          department: d?.name || dept?.name || base.department || base.department_name || "",
-          department_name: d?.name || dept?.name || base.department || base.department_name || "",
-          department_normalized: normalizeDeptName(d?.name || dept?.name || base.department || base.department_name || ""),
-          department_id: d?.id || dept?.id || base.department_id || null,
-          updated_at: new Date().toISOString()
-        };
-      });
-      // Fusionar con lo actual sin duplicar
-      const current = await fetchStoreCategories();
-      const unionMap = new Map();
-      const put = (c, source) => {
-        const key = c.id || `${(c.code || "").toString().trim().toUpperCase()}|${normalizeDeptName(c.department || c.department_name || "")}|${(c.name || "").toString().trim().toUpperCase()}`;
-        if (!unionMap.has(key) || source === 'restore') unionMap.set(key, c);
-      };
-      current.forEach(c => put(c, 'current'));
-      assigned.forEach(c => put(c, 'restore'));
-      const merged = Array.from(unionMap.values());
-      await writeStoreCategories(merged);
-      // Intentar upsert en entidad si está disponible
-      try {
-        for (const c of assigned) {
-          if (c.id) {
-            await base44.entities.SalaryCategory.update(c.id, c);
-          } else {
-            const created = await base44.entities.SalaryCategory.create(c);
-            c.id = created?.id || c.id;
-          }
-        }
-      } catch {
-        // Ignorar si la entidad no está disponible
-      }
-      queryClient.invalidateQueries({
-        predicate: (q) => Array.isArray(q.queryKey) && (q.queryKey[0] === 'salaryCategories' || q.queryKey[0] === 'salaryCategoriesAll')
-      });
-      toast.success(`Categorías restauradas y asignadas a ${getDefaultRestoreDepartment()?.name || 'departamento por defecto'}`);
-    } catch {
-      toast.error("No se pudo restaurar la copia de seguridad");
-    }
-  };
-
-  const upsertStoreCategory = async (cat) => {
-    // Asegurar campos de departamento completos antes de persistir
-    const deptName = (cat.department || cat.department_name || selectedDepartment || "").toString();
-    const deptObj = findDeptByName(deptName);
-    const normalizedDept = normalizeDeptName(deptName);
-    const safeCat = {
-      ...cat,
-      department: deptName,
-      department_name: deptName,
-      department_normalized: normalizedDept,
-      department_id: cat.department_id || deptObj?.id || null,
-    };
-    const arr = await fetchStoreCategories();
-    const key = safeCat.id || `${(safeCat.code || "").toString().trim().toUpperCase()}|${normalizeDeptName(safeCat.department || safeCat.department_name || "")}|${(safeCat.name || "").toString().trim().toUpperCase()}`;
-    let updated = false;
-    const next = arr.map(c => {
-      const k = c.id || `${(c.code || "").toString().trim().toUpperCase()}|${normalizeDeptName(c.department || c.department_name || "")}|${(c.name || "").toString().trim().toUpperCase()}`;
-      if (k === key) {
-        updated = true;
-        return { ...c, ...safeCat, updated_at: new Date().toISOString() };
-      }
-      return c;
-    });
-    if (!updated) {
-      next.push({ id: safeCat.id || Math.random().toString(36).slice(2), ...safeCat, created_at: new Date().toISOString(), updated_at: new Date().toISOString() });
-    }
-    // Dedupe por (code|name): si existe versión con y sin departamento, conservar la que TIENE departamento
-    const makeBaseKey = (x) => `${(x.code || "").toString().trim().toUpperCase()}|${(x.name || "").toString().trim().toUpperCase()}`;
-    const groups = new Map();
-    for (const item of next) {
-      const bk = makeBaseKey(item);
-      if (!bk) continue;
-      if (!groups.has(bk)) groups.set(bk, []);
-      groups.get(bk).push(item);
-    }
-    const toRemoveIds = new Set();
-    for (const [_, list] of groups.entries()) {
-      if (list.length <= 1) continue;
-      const withDept = list.filter(x => (x.department || x.department_name || "").toString().trim());
-      const withoutDept = list.filter(x => !(x.department || x.department_name || "").toString().trim());
-      if (withDept.length > 0 && withoutDept.length > 0) {
-        // Mantener el más reciente con departamento, eliminar los sin departamento
-        withoutDept.forEach(x => { if (x.id) toRemoveIds.add(x.id); });
-      }
-    }
-    const deduped = next.filter(x => !toRemoveIds.has(x.id));
-    await writeStoreCategories(deduped);
-  };
-
-  const removeFromStore = async (id) => {
-    const arr = await fetchStoreCategories();
-    const next = arr.filter(c => c.id !== id);
-    await writeStoreCategories(next);
-  };
-
-  const { data: categories = [] } = useQuery({
-    queryKey: ['salaryCategories', selectedDepartment],
-    queryFn: async () => {
-      if (!selectedDepartment) return [];
-      const dept = findDeptByName(selectedDepartment);
-      const normalized = normalizeDeptName(selectedDepartment);
-      let db = [];
-      let store = [];
-      let dbOk = false;
-      try {
-        db = await base44.entities.SalaryCategory.list('level');
-        dbOk = true;
-      } catch {
-        db = [];
-      }
-      store = await fetchStoreCategories();
-      const unionMap = new Map();
-      const put = (c, source) => {
-        const key = `${normalizeText(c.code)}|${normalizeText(c.name)}`;
-        // prefer db over store; prefer record with department fields
-        if (!unionMap.has(key)) {
-          unionMap.set(key, c);
-        } else if (source === 'db') {
-          unionMap.set(key, c);
-        } else {
-          const prev = unionMap.get(key);
-          const prevHasDept = Boolean((prev.department || prev.department_name || "").toString().trim()) || Boolean(prev.department_id);
-          const currHasDept = Boolean((c.department || c.department_name || "").toString().trim()) || Boolean(c.department_id);
-          if (!prevHasDept && currHasDept) unionMap.set(key, c);
-        }
-      };
-      db.forEach(c => put(c, 'db'));
-      store.forEach(c => put(c, 'store'));
-      const baseMerged = Array.from(unionMap.values()).map(normalizeCategoryRecord);
-      const merged = consolidateByBaseKey(baseMerged);
-      if (selectedDepartment === "__ALL__") {
-        setUsingFallback(!dbOk);
-        return merged;
-      }
-      const res = merged.filter(c => {
-        const cDept = c.department || c.department_name || "";
-        const cNorm = c.department_normalized || normalizeDeptName(cDept);
-        const hasDept = Boolean((cDept && cDept.trim()) || c.department_id || (cNorm && cNorm.trim()));
-        const matchesName = cDept === selectedDepartment || normalizeDeptName(cDept) === normalized;
-        const matchesId = !!dept && (c.department_id === dept.id);
-        const matchesNorm = cNorm === normalized;
-        // Mostrar categorías "huérfanas" (sin departamento) para poder reasignarlas
-        return matchesName || matchesId || matchesNorm || !hasDept;
-      });
-      setUsingFallback(!dbOk);
-      return res;
-    },
-    enabled: true
+  const { data: positions = [] } = useQuery({
+    queryKey: ['positions'],
+    queryFn: () => base44.entities.Position.list(),
   });
 
-  const { data: allCategories = [] } = useQuery({
+  // 2. Categories (Hybrid: DB + Store)
+  const { data: categories = [], isLoading: loadingCategories, refetch: refetchCategories } = useQuery({
     queryKey: ['salaryCategoriesAll'],
     queryFn: async () => {
       let db = [];
       let store = [];
-      let dbOk = false;
+      
+      // Attempt DB Fetch
       try {
         db = await base44.entities.SalaryCategory.list('level');
-        dbOk = true;
-      } catch {
-        db = [];
+      } catch (e) {
+        console.warn("DB Fetch failed, using store only", e);
       }
+
+      // Always fetch Store Backup
       store = await fetchStoreCategories();
-      const unionMap = new Map();
-      const put = (c, source) => {
-        const key = `${normalizeText(c.code)}|${normalizeText(c.name)}`;
-        if (!unionMap.has(key)) {
-          unionMap.set(key, c);
-        } else if (source === 'db') {
-          unionMap.set(key, c);
+
+      // Merge Strategy: Store wins if newer or DB missing
+      const categoryMap = new Map();
+      
+      // Populate with DB first
+      db.forEach(c => categoryMap.set(c.id, { ...c, source: 'db' }));
+
+      // Overlay Store data (Virtual Table)
+      store.forEach(c => {
+        // If it exists in DB, merge properties, but prefer Store for dynamic fields that might be stripped
+        if (categoryMap.has(c.id)) {
+          const existing = categoryMap.get(c.id);
+          categoryMap.set(c.id, { ...existing, ...c, source: 'merged' });
         } else {
-          const prev = unionMap.get(key);
-          const prevHasDept = Boolean((prev.department || prev.department_name || "").toString().trim()) || Boolean(prev.department_id);
-          const currHasDept = Boolean((c.department || c.department_name || "").toString().trim()) || Boolean(c.department_id);
-          if (!prevHasDept && currHasDept) unionMap.set(key, c);
+          categoryMap.set(c.id, { ...c, source: 'store' });
         }
-      };
-      db.forEach(c => put(c, 'db'));
-      store.forEach(c => put(c, 'store'));
-      const baseMerged = Array.from(unionMap.values()).map(normalizeCategoryRecord);
-      const merged = consolidateByBaseKey(baseMerged);
-      setUsingFallback(!dbOk);
-      return merged;
-    },
-  });
-
-  const { data: currentAssignments = [] } = useQuery({
-    queryKey: ['employeeCategoryAssignments'],
-    queryFn: async () => {
-      try {
-        return await base44.entities.EmployeeCategory.filter({ is_current: true });
-      } catch {
-        return [];
-      }
-    }
-  });
-
-  const categoryCounts = useMemo(() => {
-    const byId = new Map();
-    const byNameDept = new Map();
-    currentAssignments.forEach(a => {
-      if (a.category_id) {
-        byId.set(a.category_id, (byId.get(a.category_id) || 0) + 1);
-      }
-      const nm = normalizeText(a.category_name || a.name || "");
-      const dept = normalizeDeptName(a.department || a.department_name || "");
-      if (nm) {
-        const k = `${nm}|${dept}`;
-        byNameDept.set(k, (byNameDept.get(k) || 0) + 1);
-      }
-    });
-    return { byId, byNameDept };
-  }, [currentAssignments]);
-
-  const getDeptNameForCat = (c) => {
-    return (
-      (c.department || c.department_name) ||
-      (departments.find(d => d.id === c.department_id)?.name) ||
-      "Sin departamento"
-    ).toString();
-  };
-
-  const categoriesByDept = useMemo(() => {
-    const source = selectedDepartment === "__ALL__" ? allCategories : categories;
-    const map = new Map();
-    source.forEach(c => {
-      const dept = getDeptNameForCat(c);
-      if (!map.has(dept)) map.set(dept, []);
-      map.get(dept).push(c);
-    });
-    // sort categories by level then name
-    for (const [k, arr] of map.entries()) {
-      arr.sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || (a.level || 0) - (b.level || 0) || (a.name || "").localeCompare(b.name || ""));
-      map.set(k, arr);
-    }
-    return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
-  }, [allCategories, categories, selectedDepartment, departments]);
-
-  const sortedCategories = useMemo(() => {
-    const arr = [...categories];
-    arr.sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || (a.level ?? 0) - (b.level ?? 0) || (a.name || "").localeCompare(b.name || ""));
-    return arr;
-  }, [categories]);
-
-  const moveMutation = useMutation({
-    mutationFn: async ({ a, b }) => {
-      try {
-        if (a?.id) await base44.entities.SalaryCategory.update(a.id, a);
-        if (b?.id) await base44.entities.SalaryCategory.update(b.id, b);
-      } catch {
-        /* ignore backend failures */
-      }
-      await upsertStoreCategory(a);
-      if (b) await upsertStoreCategory(b);
-      return true;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        predicate: (q) => Array.isArray(q.queryKey) && (q.queryKey[0] === 'salaryCategories' || q.queryKey[0] === 'salaryCategoriesAll')
       });
-    }
+
+      return Array.from(categoryMap.values());
+    },
   });
 
-  const handleMove = (cat, direction) => {
-    const deptName = (cat.department || cat.department_name || "").toString();
-    const sameDept = categories.filter(c => (c.department || c.department_name || "") === deptName);
-    const list = [...sameDept].sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || (a.level ?? 0) - (b.level ?? 0));
-    const idx = list.findIndex(c => c.id === cat.id);
-    if (idx === -1) return;
-    const targetIdx = direction === 'up' ? idx - 1 : idx + 1;
-    if (targetIdx < 0 || targetIdx >= list.length) return;
-    const neighbor = list[targetIdx];
-    const a = { ...cat, order: neighbor.order ?? targetIdx };
-    const b = { ...neighbor, order: cat.order ?? idx };
-    moveMutation.mutate({ a, b });
+  // --- TREE VIEW LOGIC ---
+  const treeData = useMemo(() => {
+    const deptMap = new Map();
+    
+    // Initialize Departments
+    departments.forEach(d => {
+      deptMap.set(d.id, { ...d, positions: [] });
+    });
+
+    // Assign Positions to Departments
+    positions.forEach(p => {
+      if (p.department_id && deptMap.has(p.department_id)) {
+        deptMap.get(p.department_id).positions.push(p);
+      } else {
+        // Handle orphan positions or unknown depts if needed
+      }
+    });
+
+    // Convert to array and filter by search
+    return Array.from(deptMap.values())
+      .filter(d => {
+        if (!searchTerm) return true;
+        const term = searchTerm.toLowerCase();
+        const deptMatch = d.name.toLowerCase().includes(term);
+        const posMatch = d.positions.some(p => p.name.toLowerCase().includes(term));
+        return deptMatch || posMatch;
+      })
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [departments, positions, searchTerm]);
+
+  // Toggle Department Expansion
+  const toggleDept = (deptId) => {
+    setExpandedDepts(prev => ({ ...prev, [deptId]: !prev[deptId] }));
   };
 
+  // Auto-expand if searching
+  useEffect(() => {
+    if (searchTerm) {
+      const allIds = {};
+      treeData.forEach(d => allIds[d.id] = true);
+      setExpandedDepts(allIds);
+    }
+  }, [searchTerm, treeData]);
+
+  // --- FILTERED CATEGORIES FOR SELECTED POSITION ---
+  const positionCategories = useMemo(() => {
+    if (!selectedPosition) return [];
+    return categories
+      .filter(c => c.position_id === selectedPosition.id)
+      .sort((a, b) => (a.level || 0) - (b.level || 0) || (a.order || 0) - (b.order || 0));
+  }, [categories, selectedPosition]);
+
+
+  // --- MUTATIONS ---
   const saveMutation = useMutation({
     mutationFn: async (data) => {
-      const dept = findDeptByName(data.department || data.department_name || selectedDepartment);
+      if (!selectedPosition) throw new Error("No position selected");
+      
       const payload = {
         ...data,
-        department: data.department || data.department_name || selectedDepartment,
-        department_name: data.department || data.department_name || selectedDepartment,
-        department_normalized: normalizeDeptName(data.department || data.department_name || selectedDepartment),
-        department_id: dept?.id || data.department_id || null
+        position_id: selectedPosition.id,
+        // Also save denormalized names for easier debugging/display if relational fetch fails
+        position_name: selectedPosition.name, 
+        updated_at: new Date().toISOString()
       };
+
+      let savedRecord = null;
+      
+      // 1. Try DB Save
       try {
-        const dbResult = editingCategory
-          ? await base44.entities.SalaryCategory.update(editingCategory.id, payload)
-          : await base44.entities.SalaryCategory.create(payload);
-        // Combinar resultado DB con payload para no perder campos de departamento
-        const merged = { ...payload, ...(dbResult || {}) };
-        if (!merged.department_name) merged.department_name = merged.department || selectedDepartment || "";
-        if (!merged.department_normalized) merged.department_normalized = normalizeDeptName(merged.department || merged.department_name || "");
-        if (!merged.department_id && dept?.id) merged.department_id = dept.id;
-        await upsertStoreCategory(merged);
-        setUsingFallback(false);
-        return merged;
-      } catch {
-        try {
-          await upsertStoreCategory(payload);
-          setUsingFallback(true);
-          return payload;
-        } catch {
-          throw new Error("No se pudo guardar la categoría");
+        if (editingCategory?.id) {
+          await base44.entities.SalaryCategory.update(editingCategory.id, payload);
+          savedRecord = { ...payload, id: editingCategory.id };
+        } else {
+          const res = await base44.entities.SalaryCategory.create(payload);
+          savedRecord = { ...payload, id: res.id };
         }
+      } catch (e) {
+        console.error("DB Save failed, falling back to virtual ID", e);
+        // Fallback: Generate a virtual ID if DB fails
+        savedRecord = { ...payload, id: editingCategory?.id || `virt_${Date.now()}` };
       }
+
+      // 2. Update Backup Store (Virtual Table)
+      const currentStore = await fetchStoreCategories();
+      const otherCategories = currentStore.filter(c => c.id !== savedRecord.id);
+      await writeStoreCategories([...otherCategories, savedRecord]);
+
+      return savedRecord;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        predicate: (q) => Array.isArray(q.queryKey) && (q.queryKey[0] === 'salaryCategories' || q.queryKey[0] === 'salaryCategoriesAll')
-      });
+      queryClient.invalidateQueries(['salaryCategoriesAll']);
       toast.success(editingCategory ? "Categoría actualizada" : "Categoría creada");
-      handleCloseDialog();
+      setIsDialogOpen(false);
+      setEditingCategory(null);
     },
     onError: () => {
-      toast.error("Error al guardar la categoría");
+      toast.error("Error al guardar. Se intentará usar persistencia local.");
     }
   });
 
   const deleteMutation = useMutation({
     mutationFn: async (id) => {
+      // 1. Try DB Delete
       try {
-        const res = await base44.entities.SalaryCategory.delete(id);
-        await removeFromStore(id);
-        return res;
-      } catch {
-        try {
-          await removeFromStore(id);
-          setUsingFallback(true);
-          return { success: true };
-        } catch {
-          throw new Error("No se pudo eliminar la categoría");
-        }
+        await base44.entities.SalaryCategory.delete(id);
+      } catch (e) {
+        console.warn("DB Delete failed", e);
       }
+
+      // 2. Update Backup Store
+      const currentStore = await fetchStoreCategories();
+      const newStore = currentStore.filter(c => c.id !== id);
+      await writeStoreCategories(newStore);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        predicate: (q) => Array.isArray(q.queryKey) && (q.queryKey[0] === 'salaryCategories' || q.queryKey[0] === 'salaryCategoriesAll')
-      });
+      queryClient.invalidateQueries(['salaryCategoriesAll']);
       toast.success("Categoría eliminada");
-    },
-    onError: () => {
-      toast.error("Error al eliminar la categoría");
     }
   });
 
+  // --- HANDLERS ---
   const handleOpenDialog = (category = null) => {
     if (category) {
       setEditingCategory(category);
       setFormData({
         ...category,
-        salary_range: category.salary_range || { min: 0, max: 0, target: 0 },
-        department: category.department || category.department_name || selectedDepartment || "",
-        department_id: category.department_id || findDeptByName(category.department || category.department_name || selectedDepartment || "")?.id || null
+        salary_range: category.salary_range || { min: 0, max: 0, target: 0 }
       });
     } else {
       setEditingCategory(null);
-      const maxLevel = Math.max(0, ...categories.map(c => c.level || 0));
+      // Auto-increment level based on existing
+      const nextLevel = positionCategories.length > 0 
+        ? Math.max(...positionCategories.map(c => c.level || 0)) + 1 
+        : 1;
+
       setFormData({
         name: "",
-        code: "",
-        level: maxLevel + 1,
+        code: `${selectedPosition.name.substring(0, 3).toUpperCase()}-L${nextLevel}`,
+        level: nextLevel,
         description: "",
         salary_range: { min: 0, max: 0, target: 0 },
         required_experience_years: 0,
         is_active: true,
-        order: categories.length,
-        department: selectedDepartment || "",
-        department_id: findDeptByName(selectedDepartment || "")?.id || null
+        order: positionCategories.length,
+        position_id: selectedPosition.id
       });
     }
     setIsDialogOpen(true);
-  };
-
-  const handleCloseDialog = () => {
-    setIsDialogOpen(false);
-    setEditingCategory(null);
-  };
-
-  const handleSave = () => {
-    if (!formData.name || !formData.code) {
-      toast.error("Nombre y código son obligatorios");
-      return;
-    }
-    if (!formData.department) {
-      toast.error("Selecciona un departamento");
-      return;
-    }
-    const dept = findDeptByName(formData.department);
-    saveMutation.mutate({
-      ...formData,
-      department: formData.department,
-      department_name: formData.department,
-      department_normalized: normalizeDeptName(formData.department),
-      department_id: dept?.id || null
-    });
   };
 
   const getLevelColor = (level) => {
@@ -620,294 +287,272 @@ export default function SalaryCategoryManager() {
       "bg-purple-100 text-purple-700",
       "bg-pink-100 text-pink-700"
     ];
-    return colors[level - 1] || colors[0];
+    return colors[(level - 1) % colors.length] || colors[0];
   };
 
-  const orphanCategories = useMemo(() => {
-    return allCategories.filter(c => {
-      const deptStr = (c.department || c.department_name || "").toString().trim();
-      const hasDept = Boolean(deptStr) || Boolean(c.department_id);
-      const keyName = (c.name || "").toString().trim().toUpperCase();
-      const deptNorm = normalizeDeptName(c.department || c.department_name || "");
-      const count = categoryCounts.byId.get(c.id) ?? categoryCounts.byNameDept.get(`${keyName}|${deptNorm}`) ?? 0;
-      return !hasDept && count === 0;
-    });
-  }, [allCategories, categoryCounts]);
-
-  const cleanupMutation = useMutation({
-    mutationFn: async () => {
-      await backupStoreCategories();
-      // Recalcular huérfanas desde el almacén actual para evitar borrar reasignadas por id
-      const arr = await fetchStoreCategories();
-      const isOrphanLocal = (x) => {
-        const deptStr = (x.department || x.department_name || "").toString().trim();
-        return !(deptStr) && !x.department_id;
-      };
-      // Además, si existe duplicado por (code|name) y una tiene departamento, eliminar la que no lo tenga
-      const makeBaseKey = (x) => `${(x.code || "").toString().trim().toUpperCase()}|${(x.name || "").toString().trim().toUpperCase()}`;
-      const groups = new Map();
-      for (const item of arr) {
-        const bk = makeBaseKey(item);
-        if (!bk) continue;
-        if (!groups.has(bk)) groups.set(bk, []);
-        groups.get(bk).push(item);
-      }
-      const toRemoveIds = new Set();
-      for (const [_, list] of groups.entries()) {
-        if (list.length <= 1) continue;
-        const withDept = list.filter(x => (x.department || x.department_name || "").toString().trim());
-        const withoutDept = list.filter(x => !(x.department || x.department_name || "").toString().trim());
-        if (withDept.length > 0 && withoutDept.length > 0) {
-          withoutDept.forEach(x => { if (x.id) toRemoveIds.add(x.id); });
-        }
-      }
-      const next = arr.filter(x => !isOrphanLocal(x) && !toRemoveIds.has(x.id));
-      await writeStoreCategories(next);
-      return true;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        predicate: (q) => Array.isArray(q.queryKey) && (q.queryKey[0] === 'salaryCategories' || q.queryKey[0] === 'salaryCategoriesAll')
-      });
-      toast.success("Categorías sin departamento eliminadas");
-    },
-    onError: () => {
-      toast.error("No se pudieron limpiar las categorías huérfanas");
-    }
-  });
-
   return (
-    <div className="h-full">
-      <div className="space-y-4">
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Award className="w-5 h-5 text-purple-600" />
-              Categorías Profesionales
-            </CardTitle>
-            <div className="flex items-center gap-3">
-              <div className="w-64">
-                <Label className="text-xs text-slate-500 mb-1 block">Departamento</Label>
-                <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar departamento" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__ALL__">Todos</SelectItem>
-                    {departments.map(d => (
-                      <SelectItem key={d.id} value={d.name}>{d.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <Button onClick={() => handleOpenDialog()} className="gap-2" disabled={!selectedDepartment || selectedDepartment === "__ALL__"}>
-                <Plus className="w-4 h-4" />
-                Nueva Categoría
-              </Button>
+    <div className="h-[calc(100vh-100px)] flex flex-col md:flex-row gap-4 p-2">
+      
+      {/* LEFT PANEL: Department/Position Tree */}
+      <Card className="w-full md:w-1/3 flex flex-col h-full">
+        <CardHeader className="py-3 px-4 border-b bg-slate-50">
+          <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <Building2 className="w-4 h-4 text-slate-500" />
+            Estructura Organizativa
+          </CardTitle>
+          <div className="pt-2">
+            <div className="relative">
+              <Search className="absolute left-2 top-2 w-3.5 h-3.5 text-slate-400" />
+              <Input 
+                placeholder="Buscar puesto..." 
+                className="h-8 pl-8 text-xs"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
             </div>
           </div>
         </CardHeader>
-        <CardContent>
-          {!selectedDepartment && (
-            <div className="text-sm text-slate-500">Selecciona un departamento para gestionar sus categorías profesionales.</div>
-          )}
-          {selectedDepartment === "__ALL__" && (
-            <ScrollArea className="h-[calc(100vh-280px)]">
-              <div className="space-y-4">
-                {categoriesByDept.map(([dept, cats]) => (
-                  <div key={dept} className="border rounded-lg p-3">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <Badge variant="secondary">{dept}</Badge>
-                        <span className="text-xs text-slate-500">{cats.length} categorías</span>
-                      </div>
-                    </div>
-                    {cats.length > 0 ? (
-                      <div className="flex flex-wrap gap-2">
-                        {cats.map(c => {
-                          const deptKey = normalizeDeptName(getDeptNameForCat(c));
-                          const count = categoryCounts.byId.get(c.id) ?? categoryCounts.byNameDept.get(`${(c.name || '').toString().trim().toUpperCase()}|${deptKey}`) ?? 0;
-                          return (
-                            <Badge
-                              key={c.id || `${(c.code || '').toString().trim().toUpperCase()}|${(c.name || '').toString().trim().toUpperCase()}`}
-                              variant="secondary"
-                              className="text-xs cursor-pointer hover:bg-slate-200"
-                              onClick={() => handleOpenDialog(c)}
-                              title="Editar / Asignar departamento"
-                            >
-                              {((c.code || "").toString().trim().toUpperCase() || (c.name || "")).toString()} ({count})
-                            </Badge>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <div className="text-xs text-slate-400">Sin categorías</div>
+        <CardContent className="flex-1 p-0 overflow-hidden">
+          <ScrollArea className="h-full">
+            <div className="p-2 space-y-1">
+              {treeData.map(dept => (
+                <div key={dept.id} className="select-none">
+                  {/* Department Node */}
+                  <div 
+                    className={cn(
+                      "flex items-center gap-2 p-2 rounded-md cursor-pointer hover:bg-slate-100 transition-colors",
+                      expandedDepts[dept.id] && "bg-slate-50"
                     )}
+                    onClick={() => toggleDept(dept.id)}
+                  >
+                    {expandedDepts[dept.id] ? (
+                      <ChevronDown className="w-3 h-3 text-slate-400" />
+                    ) : (
+                      <ChevronRight className="w-3 h-3 text-slate-400" />
+                    )}
+                    <Building2 className="w-3.5 h-3.5 text-indigo-500" />
+                    <span className="text-sm font-medium text-slate-700 truncate">{dept.name}</span>
+                    <Badge variant="secondary" className="ml-auto text-[10px] h-5 px-1.5">
+                      {dept.positions.length}
+                    </Badge>
                   </div>
-                ))}
-              </div>
-            </ScrollArea>
-          )}
-          {selectedDepartment && selectedDepartment !== "__ALL__" && (
-            <ScrollArea className="h-[calc(100vh-280px)]">
-              <div className="space-y-3">
-                {sortedCategories.map((category, index) => (
-                <Card key={category.id} className="hover:shadow-md transition-shadow">
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-3">
-                          <Badge className={getLevelColor(category.level)} variant="secondary">
-                            Nivel {category.level}
-                          </Badge>
-                          <h3 className="font-semibold text-lg">{category.name}</h3>
-                          <Badge variant="outline" className="font-mono text-xs">
-                            {category.code}
-                          </Badge>
-                          <Badge variant="secondary" className="text-xs">
-                            {(categoryCounts.byId.get(category.id) ?? categoryCounts.byNameDept.get(`${(category.name || '').toString().trim().toUpperCase()}|${normalizeDeptName(getDeptNameForCat(category))}`) ?? 0)} empleados
-                          </Badge>
-                          <Badge variant="secondary" className="text-xs">
-                            {getDeptNameForCat(category)}
-                          </Badge>
-                          {!category.is_active && (
-                            <Badge variant="destructive">Inactivo</Badge>
+
+                  {/* Positions List */}
+                  {expandedDepts[dept.id] && (
+                    <div className="ml-6 border-l border-slate-200 pl-2 mt-1 space-y-0.5">
+                      {dept.positions.map(pos => (
+                        <div
+                          key={pos.id}
+                          onClick={() => setSelectedPosition(pos)}
+                          className={cn(
+                            "flex items-center gap-2 p-1.5 rounded-md cursor-pointer transition-all text-sm",
+                            selectedPosition?.id === pos.id 
+                              ? "bg-blue-50 text-blue-700 font-medium shadow-sm border border-blue-100" 
+                              : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                           )}
-                        </div>
-
-                        {category.description && (
-                          <p className="text-sm text-slate-600 mb-3">{category.description}</p>
-                        )}
-
-                        <div className="grid grid-cols-3 gap-4 bg-slate-50 dark:bg-slate-900 p-3 rounded-lg">
-                          <div>
-                            <span className="text-xs text-slate-500 block mb-1">Rango Salarial</span>
-                            <div className="flex items-center gap-2">
-                              <TrendingUp className="w-4 h-4 text-emerald-600" />
-                              <span className="font-semibold">
-                                {category.salary_range?.min || 0}€ - {category.salary_range?.max || 0}€
+                        >
+                          <User className="w-3 h-3 opacity-70" />
+                          <span className="truncate">{pos.name}</span>
+                          {/* Count categories for this position */}
+                          {(() => {
+                            const count = categories.filter(c => c.position_id === pos.id).length;
+                            return count > 0 && (
+                              <span className="ml-auto text-[10px] bg-slate-200 text-slate-600 px-1.5 rounded-full">
+                                {count}
                               </span>
-                            </div>
-                            <div className="text-[11px] text-slate-500 ml-6">
-                              {(category.salary_range?.min || 0) * 14}€ - {(category.salary_range?.max || 0) * 14}€/año
-                            </div>
-                          </div>
-                          <div>
-                            <span className="text-xs text-slate-500 block mb-1">Salario Objetivo</span>
-                            <div className="font-semibold text-emerald-600">
-                              {category.salary_range?.target || 0}€
-                            </div>
-                            <div className="text-[11px] text-slate-500">
-                              {(category.salary_range?.target || 0) * 14}€/año
-                            </div>
-                          </div>
-                          <div>
-                            <span className="text-xs text-slate-500 block mb-1">Experiencia Requerida</span>
-                            <span className="font-semibold">
-                              {category.required_experience_years || 0} años
-                            </span>
-                          </div>
+                            );
+                          })()}
                         </div>
-                      </div>
-
-                      <div className="flex gap-2 ml-4">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          disabled={index === 0}
-                          onClick={() => handleMove(category, 'up')}
-                          title="Subir"
-                        >
-                          <ArrowUp className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          disabled={index === sortedCategories.length - 1}
-                          onClick={() => handleMove(category, 'down')}
-                          title="Bajar"
-                        >
-                          <ArrowDown className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleOpenDialog(category)}
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => {
-                            if (confirm("¿Eliminar esta categoría?")) {
-                              deleteMutation.mutate(category.id);
-                            }
-                          }}
-                        >
-                          <Trash2 className="w-4 h-4 text-red-500" />
-                        </Button>
-                      </div>
+                      ))}
+                      {dept.positions.length === 0 && (
+                        <div className="text-xs text-slate-400 p-2 italic">Sin puestos definidos</div>
+                      )}
                     </div>
-                  </CardContent>
-                </Card>
-                ))}
+                  )}
+                </div>
+              ))}
+              {treeData.length === 0 && (
+                <div className="p-4 text-center text-sm text-slate-500">
+                  No se encontraron departamentos
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+        </CardContent>
+      </Card>
 
-                {categories.length === 0 && (
-                  <div className="text-center py-12 text-slate-400">
-                    <Award className="w-12 h-12 mx-auto mb-3 opacity-20" />
-                    <p>No hay categorías profesionales configuradas para {selectedDepartment}</p>
-                    <Button variant="link" onClick={() => handleOpenDialog()}>
-                      Crear la primera
+      {/* RIGHT PANEL: Categories List */}
+      <Card className="w-full md:w-2/3 flex flex-col h-full border-l-4 border-l-blue-500/20">
+        <CardHeader className="py-4 px-6 border-b">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-xl">
+                {selectedPosition ? (
+                  <>
+                    <User className="w-5 h-5 text-blue-600" />
+                    {selectedPosition.name}
+                  </>
+                ) : (
+                  <>
+                    <Award className="w-5 h-5 text-slate-400" />
+                    Categorías Profesionales
+                  </>
+                )}
+              </CardTitle>
+              <CardDescription className="mt-1">
+                {selectedPosition 
+                  ? `Gestiona los niveles salariales para ${selectedPosition.name}`
+                  : "Selecciona un puesto de la lista para ver sus categorías"
+                }
+              </CardDescription>
+            </div>
+            
+            {selectedPosition && (
+              <Button onClick={() => handleOpenDialog()} className="gap-2 shadow-sm">
+                <Plus className="w-4 h-4" />
+                Nueva Categoría
+              </Button>
+            )}
+          </div>
+        </CardHeader>
+        
+        <CardContent className="flex-1 p-0 bg-slate-50/50">
+          {!selectedPosition ? (
+            <div className="h-full flex flex-col items-center justify-center text-slate-400 p-8">
+              <Building2 className="w-16 h-16 mb-4 opacity-10" />
+              <p className="text-lg font-medium">Selecciona un puesto</p>
+              <p className="text-sm max-w-xs text-center mt-2">
+                Navega por la estructura organizativa a la izquierda y selecciona un puesto para configurar sus bandas salariales.
+              </p>
+            </div>
+          ) : (
+            <ScrollArea className="h-full p-4">
+              <div className="space-y-4 max-w-4xl mx-auto">
+                {positionCategories.length === 0 ? (
+                  <div className="text-center py-12 bg-white rounded-lg border border-dashed border-slate-300">
+                    <TrendingUp className="w-12 h-12 mx-auto mb-3 text-slate-300" />
+                    <h3 className="text-lg font-medium text-slate-900">Sin categorías definidas</h3>
+                    <p className="text-slate-500 mb-6">No hay niveles salariales configurados para este puesto.</p>
+                    <Button variant="outline" onClick={() => handleOpenDialog()}>
+                      Crear primera categoría
                     </Button>
                   </div>
+                ) : (
+                  positionCategories.map((category) => (
+                    <Card key={category.id} className="group hover:shadow-md transition-all duration-200 border-slate-200">
+                      <CardContent className="p-5">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            {/* Header Row */}
+                            <div className="flex items-center gap-3 mb-3">
+                              <Badge className={cn("px-2.5 py-0.5", getLevelColor(category.level))}>
+                                Nivel {category.level}
+                              </Badge>
+                              <h3 className="font-semibold text-lg text-slate-900">{category.name}</h3>
+                              <Badge variant="outline" className="font-mono text-xs text-slate-500 bg-slate-50">
+                                {category.code}
+                              </Badge>
+                              {!category.is_active && (
+                                <Badge variant="destructive" className="text-[10px]">Inactivo</Badge>
+                              )}
+                            </div>
+
+                            {/* Description */}
+                            {category.description && (
+                              <p className="text-sm text-slate-600 mb-4 leading-relaxed max-w-2xl">
+                                {category.description}
+                              </p>
+                            )}
+
+                            {/* Salary Grid */}
+                            <div className="grid grid-cols-3 gap-px bg-slate-200 rounded-lg overflow-hidden border border-slate-200">
+                              <div className="bg-white p-3">
+                                <span className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold block mb-1">Rango Min</span>
+                                <div className="text-sm font-medium text-slate-700">
+                                  {Number(category.salary_range?.min || 0).toLocaleString('es-ES')} €
+                                </div>
+                              </div>
+                              <div className="bg-blue-50/50 p-3">
+                                <span className="text-[10px] uppercase tracking-wider text-blue-600 font-semibold block mb-1">Objetivo</span>
+                                <div className="text-lg font-bold text-blue-700">
+                                  {Number(category.salary_range?.target || 0).toLocaleString('es-ES')} €
+                                </div>
+                              </div>
+                              <div className="bg-white p-3">
+                                <span className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold block mb-1">Rango Max</span>
+                                <div className="text-sm font-medium text-slate-700">
+                                  {Number(category.salary_range?.max || 0).toLocaleString('es-ES')} €
+                                </div>
+                              </div>
+                            </div>
+                            
+                            {/* Footer Info */}
+                            <div className="mt-3 flex items-center gap-4 text-xs text-slate-500">
+                              <div className="flex items-center gap-1.5">
+                                <Award className="w-3.5 h-3.5" />
+                                <span>Exp. requerida: <strong>{category.required_experience_years} años</strong></span>
+                              </div>
+                              {category.source === 'store' && (
+                                <div className="flex items-center gap-1.5 text-amber-600" title="Datos guardados localmente">
+                                  <AlertTriangle className="w-3.5 h-3.5" />
+                                  <span>Copia local</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Actions */}
+                          <div className="flex flex-col gap-2 ml-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-slate-500 hover:text-blue-600 hover:bg-blue-50"
+                              onClick={() => handleOpenDialog(category)}
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-slate-500 hover:text-red-600 hover:bg-red-50"
+                              onClick={() => {
+                                if (confirm("¿Eliminar esta categoría?")) {
+                                  deleteMutation.mutate(category.id);
+                                }
+                              }}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
                 )}
               </div>
             </ScrollArea>
           )}
-          {usingFallback && selectedDepartment && selectedDepartment !== "__ALL__" && (
-            <div className="mt-2 text-xs text-amber-600">Mostrando datos persistidos en configuración mientras la entidad SalaryCategory no está disponible.</div>
-          )}
         </CardContent>
       </Card>
-      </div>
 
+      {/* DIALOG */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-xl">
           <DialogHeader>
             <DialogTitle>
-              {editingCategory ? "Editar Categoría" : "Nueva Categoría Profesional"}
+              {editingCategory ? "Editar Categoría" : "Nueva Categoría"}
+              {selectedPosition && <span className="text-slate-500 font-normal text-sm ml-2">para {selectedPosition.name}</span>}
             </DialogTitle>
           </DialogHeader>
 
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 gap-4">
+          <div className="grid gap-5 py-4">
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Departamento *</Label>
-                <Select
-                  value={formData.department}
-                  onValueChange={(v) => {
-                    const d = findDeptByName(v);
-                    setFormData({ ...formData, department: v, department_id: d?.id || null });
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {departments.map(d => (
-                      <SelectItem key={d.id} value={d.name}>{d.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Nombre *</Label>
+                <Label>Nombre de Categoría *</Label>
                 <Input
                   value={formData.name}
                   onChange={(e) => setFormData({...formData, name: e.target.value})}
-                  placeholder="Ej. Técnico Senior"
+                  placeholder="Ej. Senior, Junior, Lead..."
                 />
               </div>
               <div className="space-y-2">
@@ -915,17 +560,41 @@ export default function SalaryCategoryManager() {
                 <Input
                   value={formData.code}
                   onChange={(e) => setFormData({...formData, code: e.target.value.toUpperCase()})}
-                  placeholder="Ej. TEC-SR"
+                  placeholder="Ej. DEV-SR"
                 />
               </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label>Nivel</Label>
+                <Label>Nivel (Jerarquía)</Label>
                 <Input
                   type="number"
                   min="1"
                   value={formData.level}
                   onChange={(e) => setFormData({...formData, level: parseInt(e.target.value) || 1})}
                 />
+              </div>
+              <div className="space-y-2">
+                <Label>Exp. Mínima (Años)</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={formData.required_experience_years}
+                  onChange={(e) => setFormData({...formData, required_experience_years: parseInt(e.target.value) || 0})}
+                />
+              </div>
+               <div className="flex items-end pb-2">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="is_active"
+                    checked={formData.is_active}
+                    onCheckedChange={(checked) => setFormData({...formData, is_active: checked})}
+                  />
+                  <label htmlFor="is_active" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                    Activo
+                  </label>
+                </div>
               </div>
             </div>
 
@@ -934,19 +603,23 @@ export default function SalaryCategoryManager() {
               <Textarea
                 value={formData.description}
                 onChange={(e) => setFormData({...formData, description: e.target.value})}
-                placeholder="Describe las responsabilidades y requisitos..."
-                rows={3}
+                placeholder="Responsabilidades principales..."
+                rows={2}
               />
             </div>
 
-            <div className="space-y-3">
-              <Label>Rango Salarial</Label>
+            <div className="bg-slate-50 p-4 rounded-lg border space-y-3">
+              <Label className="text-blue-700 font-semibold flex items-center gap-2">
+                <TrendingUp className="w-4 h-4" />
+                Banda Salarial (Bruto Anual)
+              </Label>
               <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-xs text-slate-500">Mínimo (€)</Label>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-slate-500">Mínimo</Label>
                   <Input
                     type="number"
                     step="100"
+                    className="bg-white"
                     value={formData.salary_range.min}
                     onChange={(e) => setFormData({
                       ...formData,
@@ -954,11 +627,12 @@ export default function SalaryCategoryManager() {
                     })}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label className="text-xs text-slate-500">Objetivo (€)</Label>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-blue-600 font-bold">Objetivo (Target)</Label>
                   <Input
                     type="number"
                     step="100"
+                    className="bg-white border-blue-200 ring-offset-blue-50"
                     value={formData.salary_range.target}
                     onChange={(e) => setFormData({
                       ...formData,
@@ -966,11 +640,12 @@ export default function SalaryCategoryManager() {
                     })}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label className="text-xs text-slate-500">Máximo (€)</Label>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-slate-500">Máximo</Label>
                   <Input
                     type="number"
                     step="100"
+                    className="bg-white"
                     value={formData.salary_range.max}
                     onChange={(e) => setFormData({
                       ...formData,
@@ -980,35 +655,12 @@ export default function SalaryCategoryManager() {
                 </div>
               </div>
             </div>
-
-            <div className="space-y-2">
-              <Label>Años de Experiencia Requeridos</Label>
-              <Input
-                type="number"
-                min="0"
-                value={formData.required_experience_years}
-                onChange={(e) => setFormData({...formData, required_experience_years: parseInt(e.target.value) || 0})}
-              />
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="is_active"
-                checked={formData.is_active}
-                onCheckedChange={(checked) => setFormData({...formData, is_active: checked})}
-              />
-              <label htmlFor="is_active" className="text-sm font-medium">
-                Categoría Activa
-              </label>
-            </div>
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={handleCloseDialog}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSave} disabled={saveMutation.isPending}>
-              {saveMutation.isPending ? "Guardando..." : "Guardar"}
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={() => saveMutation.mutate(formData)} disabled={saveMutation.isPending}>
+              {saveMutation.isPending ? "Guardando..." : "Guardar Categoría"}
             </Button>
           </DialogFooter>
         </DialogContent>

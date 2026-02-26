@@ -19,13 +19,17 @@ export default function CompensationPolicyManager() {
     savePolicy, 
     isSavingPolicy,
     getPolicyByPosition,
-    salaryCategories // Get categories from provider
+    getSalaryCategoriesForPosition
   } = useSalaryData();
 
   const [selectedDeptId, setSelectedDeptId] = useState(null);
   const [selectedPosId, setSelectedPosId] = useState(null);
   const [expandedDepts, setExpandedDepts] = useState(new Set());
   const [searchTerm, setSearchTerm] = useState("");
+
+  const positionCategories = useMemo(() => {
+    return getSalaryCategoriesForPosition(selectedPosId);
+  }, [selectedPosId, getSalaryCategoriesForPosition]);
 
   const [policyForm, setPolicyForm] = useState({
     // REPLACED: min/max/target with category_ranges
@@ -494,14 +498,14 @@ export default function CompensationPolicyManager() {
                             </CardTitle>
                           </CardHeader>
                           <CardContent>
-                            {salaryCategories.length > 0 ? (
+                            {positionCategories.length > 0 ? (
                               <div className="space-y-4">
                                 <div className="grid grid-cols-12 gap-4 text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
                                   <div className="col-span-4">Categoría Profesional</div>
                                   <div className="col-span-4 text-center">Año Anterior (€)</div>
                                   <div className="col-span-4 text-center text-emerald-600">Año Actual (€)</div>
                                 </div>
-                                {salaryCategories.map(cat => {
+                                {positionCategories.map(cat => {
                                   const range = policyForm.category_ranges[cat.id] || { current: 0, prev: 0 };
                                   return (
                                     <div key={cat.id} className="grid grid-cols-12 gap-4 items-center">
@@ -541,8 +545,13 @@ export default function CompensationPolicyManager() {
                                             }));
                                           }}
                                           className="font-mono text-center border-emerald-200 bg-emerald-50/30 font-bold h-8 text-sm"
-                                          placeholder="0.00"
+                                          placeholder={cat.salary_range?.target ? cat.salary_range.target.toString() : "0.00"}
                                         />
+                                        {cat.salary_range?.target > 0 && (
+                                           <div className="text-[10px] text-slate-400 text-center mt-1">
+                                             Target: {cat.salary_range.target}€
+                                           </div>
+                                        )}
                                       </div>
                                     </div>
                                   );
@@ -550,7 +559,7 @@ export default function CompensationPolicyManager() {
                               </div>
                             ) : (
                               <div className="text-center py-8 text-slate-400 text-sm">
-                                No hay categorías profesionales configuradas. 
+                                No hay categorías configuradas para este puesto. 
                                 <br/>Ve a "Categorías Profesionales" para crearlas.
                               </div>
                             )}

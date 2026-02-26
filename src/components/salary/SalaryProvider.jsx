@@ -5,6 +5,22 @@ import { toast } from "sonner";
 
 const SalaryContext = createContext(null);
 
+// Helper for Hybrid Persistence (Shared Logic)
+const fetchStoreCategories = async () => {
+  try {
+    const store = await base44.entities.AppConfig.filter({ config_key: "salary_categories_store" });
+    const record = store[0];
+    if (!record) return [];
+    let raw = record.value || record.description || record.app_subtitle || "[]";
+    if (typeof raw === "string") {
+      try { return JSON.parse(raw) || []; } catch { return []; }
+    }
+    return Array.isArray(raw) ? raw : [];
+  } catch {
+    return [];
+  }
+};
+
 export function SalaryProvider({ children }) {
   const queryClient = useQueryClient();
 
@@ -15,10 +31,41 @@ export function SalaryProvider({ children }) {
     staleTime: 5 * 60 * 1000,
   });
 
-  // --- 2. SALARY CATEGORIES (Standard Entity) ---
+  // --- 2. SALARY CATEGORIES (Hybrid Persistence) ---
   const { data: salaryCategories = [], isLoading: loadingCategories } = useQuery({
-    queryKey: ['salaryCategories'],
-    queryFn: () => base44.entities.SalaryCategory.list('level'),
+    queryKey: ['salaryCategoriesAll'], // Key matches SalaryCategoryManager
+    queryFn: async () => {
+      let db = [];
+      let store = [];
+      
+      // Attempt DB Fetch
+      try {
+        db = await base44.entities.SalaryCategory.list('level');
+      } catch (e) {
+        console.warn("SalaryProvider: DB Fetch failed for categories", e);
+      }
+
+      // Always fetch Store Backup
+      store = await fetchStoreCategories();
+
+      // Merge Strategy
+      const categoryMap = new Map();
+      
+      // Populate with DB first
+      db.forEach(c => categoryMap.set(c.id, { ...c, source: 'db' }));
+
+      // Overlay Store data
+      store.forEach(c => {
+        if (categoryMap.has(c.id)) {
+          const existing = categoryMap.get(c.id);
+          categoryMap.set(c.id, { ...existing, ...c, source: 'merged' });
+        } else {
+          categoryMap.set(c.id, { ...c, source: 'store' });
+        }
+      });
+
+      return Array.from(categoryMap.values());
+    },
     staleTime: 5 * 60 * 1000,
   });
 
@@ -144,6 +191,11 @@ export function SalaryProvider({ children }) {
     return posMatch || null;
   };
 
+  const getSalaryCategoriesForPosition = (positionId) => {
+    if (!positionId) return [];
+    return salaryCategories.filter(c => c.position_id === positionId);
+  };
+
   const value = {
     // Data
     salaryComponents,
@@ -160,6 +212,7 @@ export function SalaryProvider({ children }) {
 
     // Helpers
     getPolicyByPosition,
+    getSalaryCategoriesForPosition,
     
     // Actions
     savePolicy: savePolicyMutation.mutate,
@@ -179,31 +232,43 @@ export const calculateTheoreticalSalary = (employee, position, policy, salaryCat
   let total = 0;
 
   // 1. Base Salary from Category
-  // Assuming employee has a 'categoria_profesional' field or similar ID
-  // If policy has category_ranges, we look up the value.
-  // Fallback: Use min/target/max if category not found or legacy data.
-  // For now, let's assume we need to match employee category name/id to policy.category_ranges
+  // We need to find the specific category assigned to this employee
+  // AND ensure it belongs to the position.
   
   let baseSalary = 0;
-  const empCategoryName = employee.categoria_profesional || "";
+  const empCategoryName = (employee.categoria_profesional || "").trim();
   
-  // Find category ID if possible
-  const categoryObj = salaryCategories.find(c => c.name === empCategoryName);
+  // Filter categories relevant to this position
+  const positionCategories = salaryCategories.filter(c => c.position_id === position.id);
+  
+  // Find category ID matching the employee's category name within this position
+  // Logic: Employee "Senior" -> Position "Dev" -> Category "Dev Senior" (name "Senior")
+  const categoryObj = positionCategories.find(c => 
+    (c.name || "").toLowerCase() === empCategoryName.toLowerCase() ||
+    (c.code || "").toLowerCase() === empCategoryName.toLowerCase()
+  );
+  
   const categoryId = categoryObj?.id;
 
   if (policy.category_ranges && categoryId && policy.category_ranges[categoryId]) {
+     // Use the value defined in the Policy (Current Year)
      baseSalary = Number(policy.category_ranges[categoryId].current) || 0;
-     breakdown.push({ name: `Salario Base (${empCategoryName})`, amount: baseSalary, type: 'base' });
+     breakdown.push({ name: `Salario Base (${categoryObj.name})`, amount: baseSalary, type: 'base' });
+  } else if (categoryObj && categoryObj.salary_range?.target) {
+     // Fallback to Category Definition Target if Policy override is missing
+     baseSalary = Number(categoryObj.salary_range.target) || 0;
+     breakdown.push({ name: `Salario Base (${categoryObj.name} - Estándar)`, amount: baseSalary, type: 'base' });
   } else if (policy.target_salary) {
-     // Legacy Fallback
+     // Legacy Fallback (General Policy Target)
      baseSalary = Number(policy.target_salary) || 0;
-     breakdown.push({ name: `Salario Base (Target Puesto)`, amount: baseSalary, type: 'base' });
+     breakdown.push({ name: `Salario Base (Puesto Genérico)`, amount: baseSalary, type: 'base' });
   } else {
      breakdown.push({ name: `Salario Base (No definido)`, amount: 0, type: 'base' });
   }
   total += baseSalary;
 
   // 2. Benefits
+  // Only add benefits if amount > 0
   if (policy.benefits_slots && Array.isArray(policy.benefits_slots)) {
     policy.benefits_slots.forEach(slot => {
       const amt = Number(slot.amount) || 0;
@@ -215,12 +280,9 @@ export const calculateTheoreticalSalary = (employee, position, policy, salaryCat
   }
 
   // 3. Automatic Rules
-  // Filter rules that apply to this position
-  // This requires fetching AutomaticSalaryRules. Assuming they are passed in or we have logic.
-  // Simple implementation:
   if (salaryRules && salaryRules.length > 0) {
      salaryRules.forEach(rule => {
-        // Check if rule applies to position
+        // Check if rule applies to position (by ID or 'ALL')
         if (rule.target_positions && (rule.target_positions.includes(position.id) || rule.target_positions.includes('ALL'))) {
            const amt = Number(rule.amount) || 0;
            total += amt;
@@ -230,17 +292,17 @@ export const calculateTheoreticalSalary = (employee, position, policy, salaryCat
   }
 
   // 4. Seniority
-  // Calculate years of service
   if (employee.fecha_antiguedad) {
     const start = new Date(employee.fecha_antiguedad);
     const now = new Date();
+    // Calculate full years
     const diffTime = Math.abs(now - start);
     const years = Math.floor(diffTime / (1000 * 60 * 60 * 24 * 365.25)); 
     
     // Find matching band
     const band = seniorityBands.find(b => years >= b.min_years && years <= (b.max_years || 999));
     if (band) {
-       const amt = Number(band.amount) || 0; // Assuming band has an amount field
+       const amt = Number(band.amount) || 0;
        if (amt > 0) {
          total += amt;
          breakdown.push({ name: `Antigüedad (${years} años)`, amount: amt, type: 'seniority' });
