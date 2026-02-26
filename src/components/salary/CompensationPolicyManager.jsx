@@ -56,29 +56,43 @@ export default function CompensationPolicyManager() {
   const { data: policies = [] } = useQuery({
     queryKey: ['compensation_policies'],
     queryFn: async () => {
-      // Intentar cargar de entidad
+      // 1. Intentar cargar de backup (AppConfig) - Prioridad por robustez
+      let fromBackup = [];
+      try {
+        const backups = await base44.entities.AppConfig.filter({ config_key: "compensation_policies_backup" });
+        if (backups.length > 0 && backups[0].value) {
+          try {
+            fromBackup = JSON.parse(backups[0].value);
+            // Parse benefits_slots if they are strings in JSON
+            fromBackup = fromBackup.map(p => ({
+              ...p,
+              benefits_slots: typeof p.benefits_slots === 'string' ? JSON.parse(p.benefits_slots) : p.benefits_slots
+            }));
+          } catch (e) {
+            console.warn("Error parsing backup JSON", e);
+          }
+        }
+      } catch (e) {
+        console.warn("Failed to load policies from backup", e);
+      }
+
+      // 2. Intentar cargar de entidad
       let fromEntity = [];
       try {
         if (base44.entities.CompensationPolicy) {
           fromEntity = await base44.entities.CompensationPolicy.list();
+          // Merge logic: Si la entidad tiene menos datos que el backup, usar backup
+          if (fromEntity.length < fromBackup.length) {
+             console.log("Using backup data as it has more records");
+             return fromBackup;
+          }
         }
       } catch (e) {
         console.warn("Failed to load policies from entity", e);
+        if (fromBackup.length > 0) return fromBackup;
       }
 
-      // Si no hay datos, intentar cargar de backup (AppConfig)
-      if (fromEntity.length === 0) {
-        try {
-          const backups = await base44.entities.AppConfig.filter({ config_key: "compensation_policies_backup" });
-          if (backups.length > 0 && backups[0].value) {
-            return JSON.parse(backups[0].value);
-          }
-        } catch (e) {
-          console.warn("Failed to load policies from backup", e);
-        }
-      }
-      
-      return fromEntity;
+      return fromEntity.length > 0 ? fromEntity : fromBackup;
     },
   });
 
@@ -102,28 +116,55 @@ export default function CompensationPolicyManager() {
   // Effects
   React.useEffect(() => {
     if (currentPolicy) {
+      let loadedBenefitsSlots = [
+        { type: "", amount: 0 },
+        { type: "", amount: 0 },
+        { type: "", amount: 0 },
+        { type: "", amount: 0 }
+      ];
+      let loadedBenefitsText = currentPolicy.benefits || "";
+      let loadedPrevValues = {
+        min_salary_prev: 0,
+        max_salary_prev: 0,
+        target_salary_prev: 0,
+        bonus_target_prev: 0,
+        variable_percentage_prev: 0
+      };
+
+      // Try to unpack JSON from benefits field if it looks like JSON
+      if (loadedBenefitsText.trim().startsWith('{')) {
+        try {
+          const parsed = JSON.parse(loadedBenefitsText);
+          if (parsed.benefits_slots) loadedBenefitsSlots = parsed.benefits_slots;
+          if (parsed.benefits_text) loadedBenefitsText = parsed.benefits_text;
+          // Load packed prev values
+          if (parsed.min_salary_prev) loadedPrevValues.min_salary_prev = parsed.min_salary_prev;
+          if (parsed.max_salary_prev) loadedPrevValues.max_salary_prev = parsed.max_salary_prev;
+          if (parsed.target_salary_prev) loadedPrevValues.target_salary_prev = parsed.target_salary_prev;
+          if (parsed.bonus_target_prev) loadedPrevValues.bonus_target_prev = parsed.bonus_target_prev;
+          if (parsed.variable_percentage_prev) loadedPrevValues.variable_percentage_prev = parsed.variable_percentage_prev;
+        } catch (e) {
+          console.warn("Failed to parse packed benefits JSON", e);
+        }
+      }
+
       setPolicyForm({
         min_salary: currentPolicy.min_salary || 0,
         max_salary: currentPolicy.max_salary || 0,
         target_salary: currentPolicy.target_salary || 0,
         bonus_target: currentPolicy.bonus_target || 0,
         variable_percentage: currentPolicy.variable_percentage || 0,
-        // Load Prev Year
-        min_salary_prev: currentPolicy.min_salary_prev || 0,
-        max_salary_prev: currentPolicy.max_salary_prev || 0,
-        target_salary_prev: currentPolicy.target_salary_prev || 0,
-        bonus_target_prev: currentPolicy.bonus_target_prev || 0,
-        variable_percentage_prev: currentPolicy.variable_percentage_prev || 0,
+        // Load Prev Year (Prefer real columns if exist, else packed values)
+        min_salary_prev: currentPolicy.min_salary_prev || loadedPrevValues.min_salary_prev,
+        max_salary_prev: currentPolicy.max_salary_prev || loadedPrevValues.max_salary_prev,
+        target_salary_prev: currentPolicy.target_salary_prev || loadedPrevValues.target_salary_prev,
+        bonus_target_prev: currentPolicy.bonus_target_prev || loadedPrevValues.bonus_target_prev,
+        variable_percentage_prev: currentPolicy.variable_percentage_prev || loadedPrevValues.variable_percentage_prev,
         // Load Benefits Slots
         benefits_slots: Array.isArray(currentPolicy.benefits_slots) 
           ? currentPolicy.benefits_slots 
-          : [
-              { type: "", amount: 0 },
-              { type: "", amount: 0 },
-              { type: "", amount: 0 },
-              { type: "", amount: 0 }
-            ],
-        benefits: currentPolicy.benefits || "",
+          : loadedBenefitsSlots,
+        benefits: loadedBenefitsText,
         currency: currentPolicy.currency || "EUR",
         pay_frequency: currentPolicy.pay_frequency || "Mensual"
       });
@@ -157,16 +198,36 @@ export default function CompensationPolicyManager() {
     mutationFn: async (data) => {
       if (!selectedPosId) throw new Error("No position selected");
       
+      // PACKING STRATEGY: Pack extended fields into 'benefits' (Text field) to bypass strict schema
+      const packedData = {
+        benefits_text: data.benefits,
+        benefits_slots: data.benefits_slots,
+        min_salary_prev: data.min_salary_prev,
+        max_salary_prev: data.max_salary_prev,
+        target_salary_prev: data.target_salary_prev,
+        bonus_target_prev: data.bonus_target_prev,
+        variable_percentage_prev: data.variable_percentage_prev
+      };
+
       const payload = {
-        ...data,
+        // Standard fields (Known Schema)
         position_id: selectedPosId,
         position_name: selectedPos?.name,
         department_id: selectedDeptId,
+        min_salary: data.min_salary,
+        max_salary: data.max_salary,
+        target_salary: data.target_salary,
+        bonus_target: data.bonus_target,
+        variable_percentage: data.variable_percentage,
+        currency: data.currency,
+        pay_frequency: data.pay_frequency,
         updated_at: new Date().toISOString(),
         // Required fields fallback
         code: data.code || `POL-${selectedPosId.substring(0, 6).toUpperCase()}`,
         policy_name: data.policy_name || `Política ${selectedPos?.name || 'General'}`,
-        valid_from: data.valid_from || new Date().toISOString().split('T')[0]
+        valid_from: data.valid_from || new Date().toISOString().split('T')[0],
+        // PACKED FIELD
+        benefits: JSON.stringify(packedData)
       };
 
       let savedRecord = null;
@@ -188,7 +249,14 @@ export default function CompensationPolicyManager() {
       try {
         // Combinar el registro guardado (o el payload si falló) con los existentes
         const newPolicies = policies.filter(p => p.position_id !== selectedPosId);
-        newPolicies.push(savedRecord || { ...payload, id: currentPolicy?.id || Date.now().toString() });
+        // Ensure benefits_slots is stored as object in JSON backup, but maybe stringified for entity
+        const policyToSave = { 
+          ...payload, 
+          id: currentPolicy?.id || Date.now().toString(),
+          benefits_slots: payload.benefits_slots // Keep as array for JSON backup
+        };
+        
+        newPolicies.push(policyToSave);
         
         const backupData = JSON.stringify(newPolicies);
         const backups = await base44.entities.AppConfig.filter({ config_key: "compensation_policies_backup" });
@@ -299,7 +367,7 @@ export default function CompensationPolicyManager() {
   };
 
   return (
-    <div className="flex h-[calc(100vh-100px)] gap-6">
+    <div className="flex h-[85vh] gap-6">
       {/* Left Sidebar: Organization Tree */}
       <Card className="w-[380px] flex flex-col border-0 shadow-lg bg-white/80 backdrop-blur-sm h-full">
         <div className="p-4 border-b border-slate-100">
