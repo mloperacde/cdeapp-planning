@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { TrendingUp, Target, Search, Building2, Briefcase, Save, Euro, ChevronRight, ChevronDown } from "lucide-react";
+import { TrendingUp, Target, Search, Building2, Briefcase, Save, Euro, ChevronRight, ChevronDown, Users } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 
@@ -42,11 +42,45 @@ export default function CompensationPolicyManager() {
     pay_frequency: "Mensual"
   });
 
+  // State for chart logic
+  const [localOrder, setLocalOrder] = useState(new Map());
+
   // Queries
   const { data: departments = [] } = useQuery({
     queryKey: ['departments'],
     queryFn: () => base44.entities.Department.list(),
   });
+
+  const { data: employees = [] } = useQuery({
+    queryKey: ['employees'],
+    queryFn: async () => {
+      const all = await base44.entities.EmployeeMasterDatabase.list('nombre');
+      // Solo mostrar empleados activos (permitir 'ALTA' o 'ACTIVO')
+      const isActive = (s) => {
+        const v = (s || "").toString().trim().toUpperCase();
+        return v === "ALTA" || v === "ACTIVO";
+      };
+      return all.filter(emp => isActive(emp.estado_empleado));
+    },
+  });
+
+  // Effect to set local order
+  useEffect(() => {
+    const m = new Map();
+    departments.forEach(d => {
+      const val = Number.isFinite(d.orden) ? d.orden : (d.orden ? Number(d.orden) : undefined);
+      if (val !== undefined) m.set(d.id, val);
+    });
+    setLocalOrder(m);
+  }, [departments]);
+
+  // Effect to expand all departments by default
+  useEffect(() => {
+    if (departments.length > 0 && expandedDepts.size === 0) {
+      const allIds = departments.map(d => d.id);
+      setExpandedDepts(new Set(allIds));
+    }
+  }, [departments]);
 
   const { data: positions = [] } = useQuery({
     queryKey: ['positions'],
@@ -95,6 +129,32 @@ export default function CompensationPolicyManager() {
       return fromEntity.length > 0 ? fromEntity : fromBackup;
     },
   });
+
+  // Derived State: Employee Counts
+  const employeeCountByDept = useMemo(() => {
+    const map = new Map();
+    departments.forEach(dept => {
+      const normalizedDeptName = (dept.name || "").trim().toUpperCase();
+      let deptEmps;
+
+      if (normalizedDeptName === "PRODUCCIÓN T1" || normalizedDeptName === "PRODUCCIÓN T1.1") {
+        deptEmps = employees.filter(e => {
+          const empDept = (e.departamento || "").trim().toUpperCase();
+          return empDept === "PRODUCCIÓN" && e.team_key === "team_1";
+        });
+      } else if (normalizedDeptName === "PRODUCCIÓN T2" || normalizedDeptName === "PRODUCCIÓN T2.2") {
+        deptEmps = employees.filter(e => {
+          const empDept = (e.departamento || "").trim().toUpperCase();
+          return empDept === "PRODUCCIÓN" && e.team_key === "team_2";
+        });
+      } else {
+        deptEmps = employees.filter(e => (e.departamento || "").trim().toUpperCase() === normalizedDeptName);
+      }
+
+      map.set(dept.id, deptEmps.length);
+    });
+    return map;
+  }, [departments, employees]);
 
   // Derived State
   const selectedDept = useMemo(() => 
@@ -366,6 +426,7 @@ export default function CompensationPolicyManager() {
 
     const isExpanded = expandedDepts.has(dept.id) || (searchTerm && hasMatchingChildrenRes);
     const isSelected = selectedDeptId === dept.id;
+    const employeeCount = employeeCountByDept.get(dept.id) ?? 0;
 
     return (
       <div className="select-none">
@@ -379,7 +440,6 @@ export default function CompensationPolicyManager() {
             setSelectedDeptId(dept.id);
             setSelectedPosId(null);
           }}
-          style={{ marginLeft: `${level * 12}px` }}
         >
           <div 
             className="p-1 rounded-sm hover:bg-slate-200 text-slate-400"
@@ -392,14 +452,32 @@ export default function CompensationPolicyManager() {
           
           <div className="w-2 h-2 rounded-full mr-1 shrink-0" style={{ backgroundColor: dept.color || '#ccc' }}></div>
           
-          <div className="flex-1 truncate">
-            <span className="font-medium text-sm truncate">{dept.name}</span>
+          <div className="flex-1 truncate flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="font-medium text-sm truncate">{dept.name}</span>
+              {dept.code && (
+                <span className="ml-1 text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                  {dept.code}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-1 shrink-0 text-xs text-slate-500">
+              <Users className="w-3 h-3 text-slate-400" />
+              <span>{employeeCount}</span>
+            </div>
           </div>
         </div>
         
         {isExpanded && hasChildren && (
-          <div className="mt-1">
-            {children.map(child => (
+          <div className="mt-1 ml-3 pl-3 border-l border-slate-200">
+            {children
+              .sort((a, b) => {
+                 const ao = localOrder.get(a.id) ?? (a.orden || 0);
+                 const bo = localOrder.get(b.id) ?? (b.orden || 0);
+                 if (ao !== bo) return ao - bo;
+                 return (a.name || "").localeCompare(b.name || "");
+              })
+              .map(child => (
               <DeptTreeItem key={child.id} dept={child} level={level + 1} />
             ))}
           </div>
@@ -427,10 +505,16 @@ export default function CompensationPolicyManager() {
         <ScrollArea className="flex-1 p-3">
           <div className="space-y-1">
             {departments
-              .filter(d => !d.parent_id)
-              .map(dept => (
-                <DeptTreeItem key={dept.id} dept={dept} />
-              ))}
+                  .filter(d => !d.parent_id)
+                  .sort((a, b) => {
+                    const ao = localOrder.get(a.id) ?? (a.orden || 0);
+                    const bo = localOrder.get(b.id) ?? (b.orden || 0);
+                    if (ao !== bo) return ao - bo;
+                    return (a.name || "").localeCompare(b.name || "");
+                  })
+                  .map(dept => (
+                    <DeptTreeItem key={dept.id} dept={dept} />
+                  ))}
             
             {departments.length === 0 && (
               <div className="text-center py-10 text-slate-400 text-sm">
