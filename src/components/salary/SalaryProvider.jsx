@@ -144,8 +144,10 @@ export function SalaryProvider({ children }) {
   // Save Global Config
   const saveGlobalConfigMutation = useMutation({
     mutationFn: async (configData) => {
-      // Fetch all records with this key to handle duplicates
+      // 1. Fetch ALL records with this key (don't limit to 1)
+      // The base44.entities.AppConfig.filter returns an array
       const existing = await base44.entities.AppConfig.filter({ config_key: "salary_global_config" });
+      
       const payload = {
         config_key: "salary_global_config",
         value: JSON.stringify(configData),
@@ -153,24 +155,26 @@ export function SalaryProvider({ children }) {
         app_subtitle: "SalaryConfig"
       };
 
-      if (existing.length > 0) {
-        // Update the first one
-        await base44.entities.AppConfig.update(existing[0].id, payload);
+      if (existing && existing.length > 0) {
+        // Update the FIRST one found
+        const firstId = existing[0].id;
+        await base44.entities.AppConfig.update(firstId, payload);
         
-        // Clean up duplicates if any
+        // AGGRESSIVE CLEANUP: Delete ANY other duplicates found
         if (existing.length > 1) {
-          for (let i = 1; i < existing.length; i++) {
-            try {
-               await base44.entities.AppConfig.delete(existing[i].id);
-            } catch(e) { console.warn("Failed to delete duplicate config", e); }
-          }
+          const deletePromises = existing.slice(1).map(record => 
+             base44.entities.AppConfig.delete(record.id).catch(e => console.warn("Cleanup error", e))
+          );
+          await Promise.all(deletePromises);
         }
       } else {
+        // Create new if none exist
         await base44.entities.AppConfig.create(payload);
       }
       return configData;
     },
     onSuccess: async () => {
+      // Force hard refetch
       await queryClient.invalidateQueries({ queryKey: ['salary_global_config'] });
       toast.success("Configuración global guardada");
     }
@@ -204,18 +208,20 @@ export function SalaryProvider({ children }) {
       };
 
       // 2. Determine ID to Update
+      // Use passed virtual ID if available, otherwise search
       let idToUpdate = policyData._virtual_id;
 
-      // If no explicit ID, try to find by key
       if (!idToUpdate) {
         const existingVirtual = await base44.entities.AppConfig.filter({ config_key: virtualKey });
-        if (existingVirtual.length > 0) {
+        if (existingVirtual && existingVirtual.length > 0) {
           idToUpdate = existingVirtual[0].id;
-          // Cleanup duplicates
+          
+          // Cleanup duplicates if any found during search
           if (existingVirtual.length > 1) {
-             for (let i = 1; i < existingVirtual.length; i++) {
-                try { await base44.entities.AppConfig.delete(existingVirtual[i].id); } catch(e) {}
-             }
+             const deletePromises = existingVirtual.slice(1).map(record => 
+                base44.entities.AppConfig.delete(record.id).catch(e => console.warn("Policy cleanup error", e))
+             );
+             await Promise.all(deletePromises);
           }
         }
       }
