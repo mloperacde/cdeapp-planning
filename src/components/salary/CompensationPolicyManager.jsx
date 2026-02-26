@@ -276,6 +276,9 @@ export default function CompensationPolicyManager() {
 
     savePolicy({
       ...policyForm,
+      // Ensure we pass the virtual ID to update the correct record
+      _virtual_id: currentPolicy?._virtual_id,
+      code: currentPolicy?.code, // Preserve code to maintain key stability
       salary_ranges: salaryRangesJSON,
       notes: notesJSON,
       description: notesJSON, // Backup

@@ -144,6 +144,7 @@ export function SalaryProvider({ children }) {
   // Save Global Config
   const saveGlobalConfigMutation = useMutation({
     mutationFn: async (configData) => {
+      // Fetch all records with this key to handle duplicates
       const existing = await base44.entities.AppConfig.filter({ config_key: "salary_global_config" });
       const payload = {
         config_key: "salary_global_config",
@@ -153,14 +154,24 @@ export function SalaryProvider({ children }) {
       };
 
       if (existing.length > 0) {
+        // Update the first one
         await base44.entities.AppConfig.update(existing[0].id, payload);
+        
+        // Clean up duplicates if any
+        if (existing.length > 1) {
+          for (let i = 1; i < existing.length; i++) {
+            try {
+               await base44.entities.AppConfig.delete(existing[i].id);
+            } catch(e) { console.warn("Failed to delete duplicate config", e); }
+          }
+        }
       } else {
         await base44.entities.AppConfig.create(payload);
       }
       return configData;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['salary_global_config'] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['salary_global_config'] });
       toast.success("Configuración global guardada");
     }
   });
@@ -168,7 +179,7 @@ export function SalaryProvider({ children }) {
   // Save Policy (Virtual Table Strategy)
   const savePolicyMutation = useMutation({
     mutationFn: async (policyData) => {
-      // Generate a stable key based on position code or ID
+      // 1. Determine Key
       const policyCode = policyData.code || `POL-${policyData.position_id.substring(0, 6).toUpperCase()}`;
       const virtualKey = `policy_${policyCode}`;
       
@@ -185,9 +196,6 @@ export function SalaryProvider({ children }) {
         updated_at: new Date().toISOString()
       };
 
-      // Check if exists by key
-      const existingVirtual = await base44.entities.AppConfig.filter({ config_key: virtualKey });
-      
       const appConfigPayload = {
         config_key: virtualKey,
         value: JSON.stringify(payloadToSave),
@@ -195,16 +203,34 @@ export function SalaryProvider({ children }) {
         app_subtitle: "VirtualPolicy"
       };
 
-      if (existingVirtual.length > 0) {
-        await base44.entities.AppConfig.update(existingVirtual[0].id, appConfigPayload);
+      // 2. Determine ID to Update
+      let idToUpdate = policyData._virtual_id;
+
+      // If no explicit ID, try to find by key
+      if (!idToUpdate) {
+        const existingVirtual = await base44.entities.AppConfig.filter({ config_key: virtualKey });
+        if (existingVirtual.length > 0) {
+          idToUpdate = existingVirtual[0].id;
+          // Cleanup duplicates
+          if (existingVirtual.length > 1) {
+             for (let i = 1; i < existingVirtual.length; i++) {
+                try { await base44.entities.AppConfig.delete(existingVirtual[i].id); } catch(e) {}
+             }
+          }
+        }
+      }
+
+      // 3. Perform Write
+      if (idToUpdate) {
+        await base44.entities.AppConfig.update(idToUpdate, appConfigPayload);
       } else {
         await base44.entities.AppConfig.create(appConfigPayload);
       }
       
       return payloadToSave;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['compensation_policies_virtual'] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['compensation_policies_virtual'] });
       toast.success("Política guardada correctamente");
     },
     onError: (e) => {
