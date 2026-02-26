@@ -12,7 +12,7 @@ import { Upload, X, Plus, FileText } from "lucide-react";
 import { toast } from "sonner";
 import SearchableSelect from "../common/SearchableSelect";
 
-export default function EnhancedDocumentForm({ document, onClose }) {
+export default function EnhancedDocumentForm({ document, onClose, currentFolderId }) {
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [tags, setTags] = useState(document?.etiquetas || []);
@@ -84,6 +84,7 @@ export default function EnhancedDocumentForm({ document, onClose }) {
         etiquetas: tags,
         tipo_archivo: file?.type || document?.tipo_archivo,
         tamano_bytes: file?.size || document?.tamano_bytes,
+        folder_id: document?.folder_id || currentFolderId || null,
       };
 
       if (document?.id) {
