@@ -173,7 +173,15 @@ export default function CompensationPolicyManager() {
       if (notesSource && typeof notesSource === 'string' && notesSource.trim().startsWith('{')) {
         try {
           const parsed = JSON.parse(notesSource);
-          if (parsed.benefits_slots) loadedBenefitsSlots = parsed.benefits_slots;
+          if (parsed.benefits_slots && Array.isArray(parsed.benefits_slots) && parsed.benefits_slots.length === 4) {
+             loadedBenefitsSlots = parsed.benefits_slots;
+          } else if (parsed.benefits_slots && Array.isArray(parsed.benefits_slots)) {
+             // Pad with empty slots if less than 4
+             loadedBenefitsSlots = [
+                ...parsed.benefits_slots,
+                ...Array(4 - parsed.benefits_slots.length).fill({ type: "", amount: 0 })
+             ];
+          }
           if (parsed.benefits_text) loadedBenefitsText = parsed.benefits_text;
         } catch (e) {
           console.warn("Failed to parse packed notes JSON", e);
@@ -505,7 +513,7 @@ export default function CompensationPolicyManager() {
                       </div>
                     </div>
 
-                    <div className="flex-1 overflow-y-auto p-6">
+                    <div className="flex-1 overflow-y-auto p-6 pb-32">
                       <div className="grid gap-6 max-w-4xl">
                         {/* Salary Ranges */}
                         <Card>
