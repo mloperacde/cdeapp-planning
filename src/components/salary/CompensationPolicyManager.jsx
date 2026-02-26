@@ -41,14 +41,14 @@ export default function CompensationPolicyManager() {
   });
 
   const { data: policies = [] } = useQuery({
-    queryKey: ['position_compensation_policies'],
+    queryKey: ['compensation_policies'],
     queryFn: async () => {
       // Safety check for entity existence
-      if (!base44.entities.PositionCompensationPolicy) {
-        console.warn("Entity PositionCompensationPolicy not found in SDK");
+      if (!base44.entities.CompensationPolicy) {
+        console.warn("Entity CompensationPolicy not found in SDK");
         return [];
       }
-      return base44.entities.PositionCompensationPolicy.list();
+      return base44.entities.CompensationPolicy.list();
     },
   });
 
@@ -99,8 +99,8 @@ export default function CompensationPolicyManager() {
   // Mutations
   const savePolicyMutation = useMutation({
     mutationFn: async (data) => {
-      if (!base44.entities.PositionCompensationPolicy) {
-        throw new Error("La entidad PositionCompensationPolicy no está definida en el sistema");
+      if (!base44.entities.CompensationPolicy) {
+        throw new Error("La entidad CompensationPolicy no está definida en el sistema");
       }
       if (!selectedPosId) throw new Error("No position selected");
       
@@ -113,12 +113,12 @@ export default function CompensationPolicyManager() {
       };
 
       if (currentPolicy) {
-        return base44.entities.PositionCompensationPolicy.update(currentPolicy.id, payload);
+        return base44.entities.CompensationPolicy.update(currentPolicy.id, payload);
       }
-      return base44.entities.PositionCompensationPolicy.create(payload);
+      return base44.entities.CompensationPolicy.create(payload);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['position_compensation_policies'] });
+      queryClient.invalidateQueries({ queryKey: ['compensation_policies'] });
       toast.success("Política retributiva guardada");
     },
     onError: (e) => toast.error("Error al guardar: " + e.message)
