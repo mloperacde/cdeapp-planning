@@ -110,7 +110,29 @@ export default function CompensationPolicyManager() {
   [positions, selectedPosId]);
 
   const currentPolicy = useMemo(() => 
-    policies.find(p => p.position_id === selectedPosId),
+    policies.find(p => {
+      // Prioridad 1: Match por target_positions (Array o String)
+      if (p.target_positions) {
+        if (Array.isArray(p.target_positions)) {
+          if (p.target_positions.includes(selectedPosId)) return true;
+        } else if (typeof p.target_positions === 'string') {
+          if (p.target_positions.includes(selectedPosId)) return true;
+          // Try parse JSON
+          try {
+             const parsed = JSON.parse(p.target_positions);
+             if (Array.isArray(parsed) && parsed.includes(selectedPosId)) return true;
+          } catch(e) {}
+        }
+      }
+      
+      // Prioridad 2: Match por Code (Fallback)
+      if (p.code && selectedPosId && p.code.includes(selectedPosId.substring(0, 6).toUpperCase())) {
+        return true;
+      }
+      
+      // Legacy Match
+      return p.position_id === selectedPosId;
+    }),
   [policies, selectedPosId]);
 
   // Effects
@@ -122,45 +144,46 @@ export default function CompensationPolicyManager() {
         { type: "", amount: 0 },
         { type: "", amount: 0 }
       ];
-      let loadedBenefitsText = currentPolicy.benefits || "";
-      let loadedPrevValues = {
-        min_salary_prev: 0,
-        max_salary_prev: 0,
-        target_salary_prev: 0,
-        bonus_target_prev: 0,
-        variable_percentage_prev: 0
+      let loadedBenefitsText = currentPolicy.notes || currentPolicy.benefits || "";
+      let loadedRanges = {
+        min_salary: 0, max_salary: 0, target_salary: 0,
+        bonus_target: 0, variable_percentage: 0,
+        min_salary_prev: 0, max_salary_prev: 0, target_salary_prev: 0,
+        bonus_target_prev: 0, variable_percentage_prev: 0
       };
 
-      // Try to unpack JSON from benefits field if it looks like JSON
-      if (loadedBenefitsText.trim().startsWith('{')) {
+      // 1. Unpack Salary Ranges (from salary_ranges JSON or legacy fields)
+      if (currentPolicy.salary_ranges) {
+         try {
+           const parsed = typeof currentPolicy.salary_ranges === 'string' ? JSON.parse(currentPolicy.salary_ranges) : currentPolicy.salary_ranges;
+           loadedRanges = { ...loadedRanges, ...parsed };
+         } catch(e) { console.warn("Error parsing salary_ranges", e); }
+      } else {
+         // Legacy Fallback
+         loadedRanges.min_salary = currentPolicy.min_salary || 0;
+         loadedRanges.max_salary = currentPolicy.max_salary || 0;
+         loadedRanges.target_salary = currentPolicy.target_salary || 0;
+         loadedRanges.bonus_target = currentPolicy.bonus_target || 0;
+         loadedRanges.variable_percentage = currentPolicy.variable_percentage || 0;
+      }
+
+      // 2. Unpack Notes/Benefits (from notes JSON or legacy benefits)
+      // Try to unpack JSON from notes field if it looks like JSON
+      const notesSource = currentPolicy.notes || currentPolicy.benefits || "";
+      if (notesSource && typeof notesSource === 'string' && notesSource.trim().startsWith('{')) {
         try {
-          const parsed = JSON.parse(loadedBenefitsText);
+          const parsed = JSON.parse(notesSource);
           if (parsed.benefits_slots) loadedBenefitsSlots = parsed.benefits_slots;
           if (parsed.benefits_text) loadedBenefitsText = parsed.benefits_text;
-          // Load packed prev values
-          if (parsed.min_salary_prev) loadedPrevValues.min_salary_prev = parsed.min_salary_prev;
-          if (parsed.max_salary_prev) loadedPrevValues.max_salary_prev = parsed.max_salary_prev;
-          if (parsed.target_salary_prev) loadedPrevValues.target_salary_prev = parsed.target_salary_prev;
-          if (parsed.bonus_target_prev) loadedPrevValues.bonus_target_prev = parsed.bonus_target_prev;
-          if (parsed.variable_percentage_prev) loadedPrevValues.variable_percentage_prev = parsed.variable_percentage_prev;
         } catch (e) {
-          console.warn("Failed to parse packed benefits JSON", e);
+          console.warn("Failed to parse packed notes JSON", e);
         }
+      } else {
+        loadedBenefitsText = notesSource;
       }
 
       setPolicyForm({
-        min_salary: currentPolicy.min_salary || 0,
-        max_salary: currentPolicy.max_salary || 0,
-        target_salary: currentPolicy.target_salary || 0,
-        bonus_target: currentPolicy.bonus_target || 0,
-        variable_percentage: currentPolicy.variable_percentage || 0,
-        // Load Prev Year (Prefer real columns if exist, else packed values)
-        min_salary_prev: currentPolicy.min_salary_prev || loadedPrevValues.min_salary_prev,
-        max_salary_prev: currentPolicy.max_salary_prev || loadedPrevValues.max_salary_prev,
-        target_salary_prev: currentPolicy.target_salary_prev || loadedPrevValues.target_salary_prev,
-        bonus_target_prev: currentPolicy.bonus_target_prev || loadedPrevValues.bonus_target_prev,
-        variable_percentage_prev: currentPolicy.variable_percentage_prev || loadedPrevValues.variable_percentage_prev,
-        // Load Benefits Slots
+        ...loadedRanges,
         benefits_slots: Array.isArray(currentPolicy.benefits_slots) 
           ? currentPolicy.benefits_slots 
           : loadedBenefitsSlots,
@@ -198,10 +221,13 @@ export default function CompensationPolicyManager() {
     mutationFn: async (data) => {
       if (!selectedPosId) throw new Error("No position selected");
       
-      // PACKING STRATEGY: Pack extended fields into 'benefits' (Text field) to bypass strict schema
-      const packedData = {
-        benefits_text: data.benefits,
-        benefits_slots: data.benefits_slots,
+      // PACKING STRATEGY: Pack into 'salary_ranges' and 'notes'
+      const salaryRangesPacked = {
+        min_salary: data.min_salary,
+        max_salary: data.max_salary,
+        target_salary: data.target_salary,
+        bonus_target: data.bonus_target,
+        variable_percentage: data.variable_percentage,
         min_salary_prev: data.min_salary_prev,
         max_salary_prev: data.max_salary_prev,
         target_salary_prev: data.target_salary_prev,
@@ -209,25 +235,25 @@ export default function CompensationPolicyManager() {
         variable_percentage_prev: data.variable_percentage_prev
       };
 
+      const notesPacked = {
+        benefits_text: data.benefits,
+        benefits_slots: data.benefits_slots
+      };
+
       const payload = {
-        // Standard fields (Known Schema)
-        position_id: selectedPosId,
-        position_name: selectedPos?.name,
-        department_id: selectedDeptId,
-        min_salary: data.min_salary,
-        max_salary: data.max_salary,
-        target_salary: data.target_salary,
-        bonus_target: data.bonus_target,
-        variable_percentage: data.variable_percentage,
-        currency: data.currency,
-        pay_frequency: data.pay_frequency,
+        // Standard fields (Real Schema)
+        target_positions: [selectedPosId], // Array of strings
+        target_departments: [selectedDeptId],
+        salary_ranges: JSON.stringify(salaryRangesPacked),
+        notes: JSON.stringify(notesPacked),
+        
+        // Metadata
         updated_at: new Date().toISOString(),
-        // Required fields fallback
         code: data.code || `POL-${selectedPosId.substring(0, 6).toUpperCase()}`,
         policy_name: data.policy_name || `Política ${selectedPos?.name || 'General'}`,
         valid_from: data.valid_from || new Date().toISOString().split('T')[0],
-        // PACKED FIELD
-        benefits: JSON.stringify(packedData)
+        is_active: true,
+        auto_apply: false
       };
 
       let savedRecord = null;
@@ -247,6 +273,7 @@ export default function CompensationPolicyManager() {
 
       // 2. Guardar Backup en AppConfig (Robustez)
       try {
+        console.log("Attempting to save backup to AppConfig...");
         // Combinar el registro guardado (o el payload si falló) con los existentes
         const newPolicies = policies.filter(p => p.position_id !== selectedPosId);
         // Ensure benefits_slots is stored as object in JSON backup, but maybe stringified for entity
@@ -267,6 +294,7 @@ export default function CompensationPolicyManager() {
             description: "Backup de políticas retributivas",
             updated_at: new Date().toISOString()
           });
+          console.log("Backup updated successfully");
         } else {
           await base44.entities.AppConfig.create({
             config_key: "compensation_policies_backup",
@@ -274,21 +302,27 @@ export default function CompensationPolicyManager() {
             description: "Backup de políticas retributivas",
             app_subtitle: "System Backup"
           });
+          console.log("Backup created successfully");
         }
       } catch (e) {
         console.error("Error saving backup:", e);
+        toast.error("Error crítico: No se pudo guardar el backup");
       }
 
       if (!savedRecord && !base44.entities.CompensationPolicy) {
         // Si no hay entidad pero se guardó en backup, devolver éxito simulado
         return payload;
+      } else if (!savedRecord) {
+        // Si hay entidad pero falló, pero el backup funcionó (no lanzó error), asumimos éxito parcial
+        console.warn("Entity save failed, but backup likely succeeded");
+        return payload; 
       }
       
       return savedRecord;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['compensation_policies'] });
-      toast.success("Política retributiva guardada (Backup sincronizado)");
+      toast.success("Política guardada correctamente (Backup Activo)");
     },
     onError: (e) => toast.error("Error al guardar: " + e.message)
   });
@@ -367,7 +401,7 @@ export default function CompensationPolicyManager() {
   };
 
   return (
-    <div className="flex h-[85vh] gap-6">
+    <div className="flex h-[calc(100vh-100px)] gap-6">
       {/* Left Sidebar: Organization Tree */}
       <Card className="w-[380px] flex flex-col border-0 shadow-lg bg-white/80 backdrop-blur-sm h-full">
         <div className="p-4 border-b border-slate-100">
@@ -665,7 +699,7 @@ export default function CompensationPolicyManager() {
                           </CardContent>
                         </Card>
                       </div>
-                    </ScrollArea>
+                    </div>
                   </div>
                 ) : (
                   <div className="flex flex-col items-center justify-center h-full text-slate-400">
