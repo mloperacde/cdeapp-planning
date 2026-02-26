@@ -17,10 +17,12 @@ export default function DocumentViewer({ document, onClose, onEdit, roles = [], 
           <div className="flex items-center justify-between">
             <DialogTitle>{document.titulo}</DialogTitle>
             <div className="flex gap-2">
-              <Button onClick={onEdit} variant="outline" size="sm">
-                <Edit className="w-4 h-4 mr-2" />
-                Editar
-              </Button>
+              {onEdit && (
+                <Button onClick={onEdit} variant="outline" size="sm">
+                  <Edit className="w-4 h-4 mr-2" />
+                  Editar
+                </Button>
+              )}
               <Button onClick={() => window.open(document.archivo_url, '_blank')} size="sm">
                 <Download className="w-4 h-4 mr-2" />
                 Descargar

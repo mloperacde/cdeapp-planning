@@ -11,6 +11,7 @@ import { es } from "date-fns/locale";
 import DocumentViewer from "../components/documents/DocumentViewer";
 import EnhancedDocumentForm from "../components/documents/EnhancedDocumentForm";
 import AdvancedDocumentSearch from "../components/documents/AdvancedDocumentSearch";
+import { usePermissions } from "../components/permissions/usePermissions";
 import { toast } from "sonner";
 
 const NATIVE_ROLES = [
@@ -193,10 +194,12 @@ export default function DocumentManagementPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button onClick={() => setShowForm(true)} size="sm" className="h-8 gap-2 bg-blue-600 hover:bg-blue-700 text-white">
-            <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline">Subir Documento</span>
-          </Button>
+          {permissions.createDocuments && (
+            <Button onClick={() => setShowForm(true)} size="sm" className="h-8 gap-2 bg-blue-600 hover:bg-blue-700 text-white">
+              <Plus className="w-4 h-4" />
+              <span className="hidden sm:inline">Subir Documento</span>
+            </Button>
+          )}
         </div>
       </div>
 
@@ -353,14 +356,16 @@ export default function DocumentManagementPage() {
                                 <History className="w-4 h-4" />
                               </Button>
                             )}
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => handleDelete(doc.id)}
-                              className="hover:text-red-600"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
+                            {permissions.deleteDocuments && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleDelete(doc.id)}
+                                className="hover:text-red-600"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -398,11 +403,11 @@ export default function DocumentManagementPage() {
           roles={NATIVE_ROLES}
           departments={departments}
           onClose={() => setViewingDocument(null)}
-          onEdit={() => {
+          onEdit={permissions.editDocuments ? () => {
             setEditingDocument(viewingDocument);
             setShowForm(true);
             setViewingDocument(null);
-          }}
+          } : undefined}
         />
       )}
     </div>

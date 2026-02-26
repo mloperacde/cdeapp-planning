@@ -71,6 +71,13 @@ export const MODULE_DEFINITIONS = {
     editInterventions: "Editar intervenciones",
     deleteInterventions: "Eliminar intervenciones",
     generatePDF: "Generar PDF de orden de trabajo"
+  },
+  DocumentManagement: {
+    viewDocuments: "Ver documentos",
+    createDocuments: "Subir documentos",
+    editDocuments: "Editar documentos",
+    deleteDocuments: "Eliminar documentos",
+    viewHistory: "Ver historial de versiones"
   }
 };
 
