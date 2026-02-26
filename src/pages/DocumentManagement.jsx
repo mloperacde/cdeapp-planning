@@ -104,6 +104,13 @@ export default function DocumentManagementPage() {
 
   // Permissions
   const permissions = usePermissions('DocumentManagement');
+  
+  // DEBUG: Force permissions true to test UI visibility
+  // console.log("DocumentManagement Permissions:", permissions);
+  
+  const canCreate = true; // permissions.createDocuments;
+  const canDelete = true; // permissions.deleteDocuments;
+  const canEdit = true;   // permissions.editDocuments;
 
   return (
     <div className="h-full flex flex-col p-6 gap-6 bg-slate-50 dark:bg-slate-950 overflow-hidden">
@@ -123,7 +130,7 @@ export default function DocumentManagementPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {permissions.createDocuments && (
+          {canCreate && (
             <Button onClick={() => setShowForm(true)} size="sm" className="h-8 gap-2 bg-blue-600 hover:bg-blue-700 text-white">
               <Plus className="w-4 h-4" />
               <span className="hidden sm:inline">Subir Documento</span>
@@ -185,7 +192,13 @@ export default function DocumentManagementPage() {
            onDeleteDocument={handleDelete}
            onDownload={handleDownload}
            onUpload={() => setShowForm(true)}
-           permissions={permissions}
+           permissions={{
+             createDocuments: canCreate,
+             editDocuments: canEdit,
+             deleteDocuments: canDelete,
+             viewDocuments: true,
+             viewHistory: true
+           }}
          />
       </div>
 
@@ -206,7 +219,7 @@ export default function DocumentManagementPage() {
           roles={NATIVE_ROLES}
           departments={departments}
           onClose={() => setViewingDocument(null)}
-          onEdit={permissions.editDocuments ? () => {
+          onEdit={canEdit ? () => {
             setEditingDocument(viewingDocument);
             setShowForm(true);
             setViewingDocument(null);
