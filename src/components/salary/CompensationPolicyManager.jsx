@@ -90,7 +90,22 @@ export default function CompensationPolicyManager() {
   const { data: policies = [] } = useQuery({
     queryKey: ['compensation_policies'],
     queryFn: async () => {
-      // 1. Intentar cargar de backup (AppConfig) - Prioridad por robustez
+      // 1. STRATEGY: Virtual Table in AppConfig (Most reliable)
+      let virtualPolicies = [];
+      try {
+        const virtualRecords = await base44.entities.AppConfig.filter({ app_subtitle: "VirtualPolicy" });
+        virtualPolicies = virtualRecords.map(r => {
+          try {
+            return JSON.parse(r.value);
+          } catch(e) { return null; }
+        }).filter(Boolean);
+        
+        if (virtualPolicies.length > 0) return virtualPolicies;
+      } catch (e) {
+        console.warn("Failed to load virtual policies", e);
+      }
+
+      // 2. Fallback to standard backup
       let fromBackup = [];
       try {
         const backups = await base44.entities.AppConfig.filter({ config_key: "compensation_policies_backup" });
@@ -384,6 +399,32 @@ export default function CompensationPolicyManager() {
         toast.error("Error crítico: No se pudo guardar el backup");
       }
 
+      // 3. Virtual Table Persistence (AppConfig) - GUARANTEED
+      try {
+        console.log("Saving to Virtual Table...");
+        const policyCode = payload.code;
+        const virtualKey = `policy_${policyCode}`;
+        
+        // Check if exists
+        const existingVirtual = await base44.entities.AppConfig.filter({ config_key: virtualKey });
+        
+        const virtualPayload = {
+          config_key: virtualKey,
+          value: JSON.stringify(policyToSave),
+          description: `Virtual Policy for ${policyToSave.position_name}`,
+          app_subtitle: "VirtualPolicy" // Marker for filtering
+        };
+
+        if (existingVirtual.length > 0) {
+          await base44.entities.AppConfig.update(existingVirtual[0].id, virtualPayload);
+        } else {
+          await base44.entities.AppConfig.create(virtualPayload);
+        }
+        console.log("Virtual Table save success");
+      } catch (e) {
+        console.error("Virtual Table save failed", e);
+      }
+
       if (!savedRecord && !base44.entities.CompensationPolicy) {
         // Si no hay entidad pero se guardó en backup, devolver éxito simulado
         return payload;
@@ -494,7 +535,7 @@ export default function CompensationPolicyManager() {
   };
 
   return (
-    <div className="flex h-[calc(100vh-100px)] gap-6">
+    <div className="flex h-[110vh] gap-6">
       {/* Left Sidebar: Organization Tree */}
       <Card className="w-[480px] flex flex-col border-0 shadow-lg bg-white/80 backdrop-blur-sm h-full shrink-0">
         <div className="p-4 border-b border-slate-100">
