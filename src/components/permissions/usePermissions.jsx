@@ -92,6 +92,13 @@ export const ROLE_PERMISSIONS = {
     canManageMachines: true,
     canViewReports: true,
     canConfigureSystem: true,
+    DocumentManagement: {
+      viewDocuments: true,
+      createDocuments: true,
+      editDocuments: true,
+      deleteDocuments: true,
+      viewHistory: true
+    }
   },
   hr_manager: {
     isAdmin: false,
@@ -180,6 +187,13 @@ export const ROLE_PERMISSIONS = {
     canManageMachines: false,
     canViewReports: true,
     canConfigureSystem: false,
+    DocumentManagement: {
+      viewDocuments: true,
+      createDocuments: false,
+      editDocuments: false,
+      deleteDocuments: false,
+      viewHistory: false
+    }
   },
 };
 
@@ -311,10 +325,15 @@ export function usePermissions() {
         if (roleModulePerms[moduleName] !== undefined) return roleModulePerms[moduleName];
         return false;
       }
+      // Fallback a permisos estáticos (ROLE_PERMISSIONS) si no hay configuración dinámica
+      if (ROLE_PERMISSIONS[effectiveRoleKey]?.[pageName]?.[moduleName] !== undefined) {
+        return ROLE_PERMISSIONS[effectiveRoleKey][pageName][moduleName];
+      }
       return true;
     };
 
     base.getModulePermissions = (pageName) => {
+      // Si es admin, dar todo
       if (isAdminUser) {
         const allPerms = {};
         if (MODULE_DEFINITIONS[pageName]) {
@@ -322,9 +341,13 @@ export function usePermissions() {
         }
         return allPerms;
       }
+
+      // Mezclar permisos dinámicos con estáticos
+      const staticPerms = ROLE_PERMISSIONS[effectiveRoleKey]?.[pageName] || {};
       const userModulePerms = user.module_permissions?.[pageName] || {};
       const roleModulePerms = roleConfig?.module_permissions?.[pageName] || {};
-      return { ...roleModulePerms, ...userModulePerms };
+      
+      return { ...staticPerms, ...roleModulePerms, ...userModulePerms };
     };
 
     return base;
