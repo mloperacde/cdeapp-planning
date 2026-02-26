@@ -535,7 +535,7 @@ export default function CompensationPolicyManager() {
   };
 
   return (
-    <div className="flex h-[110vh] gap-6">
+    <div className="flex h-[125vh] gap-6">
       {/* Left Sidebar: Organization Tree */}
       <Card className="w-[480px] flex flex-col border-0 shadow-lg bg-white/80 backdrop-blur-sm h-full shrink-0">
         <div className="p-4 border-b border-slate-100">
