@@ -24,7 +24,20 @@ export default function CompensationPolicyManager() {
     target_salary: 0,
     bonus_target: 0,
     variable_percentage: 0,
-    benefits: "",
+    // Previous Year Fields
+    min_salary_prev: 0,
+    max_salary_prev: 0,
+    target_salary_prev: 0,
+    bonus_target_prev: 0,
+    variable_percentage_prev: 0,
+    // Benefits Slots
+    benefits_slots: [
+      { type: "", amount: 0 },
+      { type: "", amount: 0 },
+      { type: "", amount: 0 },
+      { type: "", amount: 0 }
+    ],
+    benefits: "", // Keeping for observations/compatibility
     currency: "EUR",
     pay_frequency: "Mensual"
   });
@@ -78,6 +91,21 @@ export default function CompensationPolicyManager() {
         target_salary: currentPolicy.target_salary || 0,
         bonus_target: currentPolicy.bonus_target || 0,
         variable_percentage: currentPolicy.variable_percentage || 0,
+        // Load Prev Year
+        min_salary_prev: currentPolicy.min_salary_prev || 0,
+        max_salary_prev: currentPolicy.max_salary_prev || 0,
+        target_salary_prev: currentPolicy.target_salary_prev || 0,
+        bonus_target_prev: currentPolicy.bonus_target_prev || 0,
+        variable_percentage_prev: currentPolicy.variable_percentage_prev || 0,
+        // Load Benefits Slots
+        benefits_slots: Array.isArray(currentPolicy.benefits_slots) 
+          ? currentPolicy.benefits_slots 
+          : [
+              { type: "", amount: 0 },
+              { type: "", amount: 0 },
+              { type: "", amount: 0 },
+              { type: "", amount: 0 }
+            ],
         benefits: currentPolicy.benefits || "",
         currency: currentPolicy.currency || "EUR",
         pay_frequency: currentPolicy.pay_frequency || "Mensual"
@@ -89,6 +117,17 @@ export default function CompensationPolicyManager() {
         target_salary: 0,
         bonus_target: 0,
         variable_percentage: 0,
+        min_salary_prev: 0,
+        max_salary_prev: 0,
+        target_salary_prev: 0,
+        bonus_target_prev: 0,
+        variable_percentage_prev: 0,
+        benefits_slots: [
+          { type: "", amount: 0 },
+          { type: "", amount: 0 },
+          { type: "", amount: 0 },
+          { type: "", amount: 0 }
+        ],
         benefits: "",
         currency: "EUR",
         pay_frequency: "Mensual"
@@ -307,7 +346,7 @@ export default function CompensationPolicyManager() {
                     </div>
 
                     <ScrollArea className="flex-1 p-6">
-                      <div className="grid gap-6 max-w-3xl">
+                      <div className="grid gap-6 max-w-4xl">
                         {/* Salary Ranges */}
                         <Card>
                           <CardHeader className="pb-3">
@@ -316,33 +355,69 @@ export default function CompensationPolicyManager() {
                               Salario Base Anual Bruto
                             </CardTitle>
                           </CardHeader>
-                          <CardContent className="grid grid-cols-3 gap-4">
-                            <div className="space-y-2">
-                              <Label className="text-xs text-slate-500">Mínimo (€)</Label>
-                              <Input 
-                                type="number" 
-                                value={policyForm.min_salary}
-                                onChange={e => setPolicyForm({...policyForm, min_salary: parseFloat(e.target.value) || 0})}
-                                className="font-mono"
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label className="text-xs text-slate-500 font-bold text-emerald-700">Target / Objetivo (€)</Label>
-                              <Input 
-                                type="number" 
-                                value={policyForm.target_salary}
-                                onChange={e => setPolicyForm({...policyForm, target_salary: parseFloat(e.target.value) || 0})}
-                                className="font-mono border-emerald-200 bg-emerald-50/30"
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label className="text-xs text-slate-500">Máximo (€)</Label>
-                              <Input 
-                                type="number" 
-                                value={policyForm.max_salary}
-                                onChange={e => setPolicyForm({...policyForm, max_salary: parseFloat(e.target.value) || 0})}
-                                className="font-mono"
-                              />
+                          <CardContent>
+                            <div className="grid grid-cols-3 gap-6">
+                              {/* Header Row */}
+                              <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Concepto</div>
+                              <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 text-center">Año Anterior</div>
+                              <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 text-center text-emerald-600">Año Actual</div>
+
+                              {/* Min Salary Row */}
+                              <div className="flex items-center text-sm font-medium text-slate-600">Mínimo (€)</div>
+                              <div>
+                                <Input 
+                                  type="number" 
+                                  value={policyForm.min_salary_prev}
+                                  onChange={e => setPolicyForm({...policyForm, min_salary_prev: parseFloat(e.target.value) || 0})}
+                                  className="font-mono text-center bg-slate-50"
+                                />
+                              </div>
+                              <div>
+                                <Input 
+                                  type="number" 
+                                  value={policyForm.min_salary}
+                                  onChange={e => setPolicyForm({...policyForm, min_salary: parseFloat(e.target.value) || 0})}
+                                  className="font-mono text-center border-emerald-200"
+                                />
+                              </div>
+
+                              {/* Target Salary Row */}
+                              <div className="flex items-center text-sm font-bold text-emerald-700">Target / Objetivo (€)</div>
+                              <div>
+                                <Input 
+                                  type="number" 
+                                  value={policyForm.target_salary_prev}
+                                  onChange={e => setPolicyForm({...policyForm, target_salary_prev: parseFloat(e.target.value) || 0})}
+                                  className="font-mono text-center bg-slate-50"
+                                />
+                              </div>
+                              <div>
+                                <Input 
+                                  type="number" 
+                                  value={policyForm.target_salary}
+                                  onChange={e => setPolicyForm({...policyForm, target_salary: parseFloat(e.target.value) || 0})}
+                                  className="font-mono text-center border-emerald-200 bg-emerald-50/30 font-bold"
+                                />
+                              </div>
+
+                              {/* Max Salary Row */}
+                              <div className="flex items-center text-sm font-medium text-slate-600">Máximo (€)</div>
+                              <div>
+                                <Input 
+                                  type="number" 
+                                  value={policyForm.max_salary_prev}
+                                  onChange={e => setPolicyForm({...policyForm, max_salary_prev: parseFloat(e.target.value) || 0})}
+                                  className="font-mono text-center bg-slate-50"
+                                />
+                              </div>
+                              <div>
+                                <Input 
+                                  type="number" 
+                                  value={policyForm.max_salary}
+                                  onChange={e => setPolicyForm({...policyForm, max_salary: parseFloat(e.target.value) || 0})}
+                                  className="font-mono text-center border-emerald-200"
+                                />
+                              </div>
                             </div>
                           </CardContent>
                         </Card>
@@ -355,27 +430,52 @@ export default function CompensationPolicyManager() {
                               Retribución Variable
                             </CardTitle>
                           </CardHeader>
-                          <CardContent className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <Label className="text-xs text-slate-500">Bonus Objetivo Anual (€)</Label>
-                              <Input 
-                                type="number" 
-                                value={policyForm.bonus_target}
-                                onChange={e => setPolicyForm({...policyForm, bonus_target: parseFloat(e.target.value) || 0})}
-                                className="font-mono"
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label className="text-xs text-slate-500">% Variable sobre Fijo</Label>
-                              <div className="relative">
+                          <CardContent>
+                            <div className="grid grid-cols-3 gap-6">
+                               {/* Header Row */}
+                               <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Concepto</div>
+                               <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 text-center">Año Anterior</div>
+                               <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 text-center text-amber-600">Año Actual</div>
+
+                               {/* Bonus Target Row */}
+                               <div className="flex items-center text-sm font-medium text-slate-600">Bonus Objetivo Anual (€)</div>
+                               <div>
+                                <Input 
+                                  type="number" 
+                                  value={policyForm.bonus_target_prev}
+                                  onChange={e => setPolicyForm({...policyForm, bonus_target_prev: parseFloat(e.target.value) || 0})}
+                                  className="font-mono text-center bg-slate-50"
+                                />
+                               </div>
+                               <div>
+                                <Input 
+                                  type="number" 
+                                  value={policyForm.bonus_target}
+                                  onChange={e => setPolicyForm({...policyForm, bonus_target: parseFloat(e.target.value) || 0})}
+                                  className="font-mono text-center border-amber-200"
+                                />
+                               </div>
+
+                               {/* Variable Percentage Row */}
+                               <div className="flex items-center text-sm font-medium text-slate-600">% Variable sobre Fijo</div>
+                               <div className="relative">
+                                <Input 
+                                  type="number" 
+                                  value={policyForm.variable_percentage_prev}
+                                  onChange={e => setPolicyForm({...policyForm, variable_percentage_prev: parseFloat(e.target.value) || 0})}
+                                  className="font-mono text-center bg-slate-50 pr-8"
+                                />
+                                <span className="absolute right-3 top-2.5 text-slate-400 text-xs">%</span>
+                               </div>
+                               <div className="relative">
                                 <Input 
                                   type="number" 
                                   value={policyForm.variable_percentage}
                                   onChange={e => setPolicyForm({...policyForm, variable_percentage: parseFloat(e.target.value) || 0})}
-                                  className="font-mono pr-8"
+                                  className="font-mono text-center border-amber-200 pr-8"
                                 />
                                 <span className="absolute right-3 top-2.5 text-slate-400 text-xs">%</span>
-                              </div>
+                               </div>
                             </div>
                           </CardContent>
                         </Card>
@@ -388,13 +488,54 @@ export default function CompensationPolicyManager() {
                               Beneficios Sociales y Observaciones
                             </CardTitle>
                           </CardHeader>
-                          <CardContent>
-                            <Textarea 
-                              value={policyForm.benefits}
-                              onChange={e => setPolicyForm({...policyForm, benefits: e.target.value})}
-                              placeholder="Seguro médico, coche de empresa, tickets restaurante, teletrabajo..."
-                              className="min-h-[100px]"
-                            />
+                          <CardContent className="space-y-4">
+                            <div className="space-y-2">
+                              <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Configuración de Beneficios (4 Slots)</Label>
+                              <div className="grid gap-3">
+                                {policyForm.benefits_slots.map((slot, index) => (
+                                  <div key={index} className="grid grid-cols-12 gap-3 items-center">
+                                    <div className="col-span-1 text-xs font-mono text-slate-400 pt-2 text-center">#{index + 1}</div>
+                                    <div className="col-span-7">
+                                      <Label className="text-[10px] text-slate-400 mb-1 block">Tipo de Beneficio</Label>
+                                      <Input 
+                                        placeholder="Ej. Seguro Médico, Ticket Restaurante..."
+                                        value={slot.type}
+                                        onChange={e => {
+                                          const newSlots = [...policyForm.benefits_slots];
+                                          newSlots[index] = { ...newSlots[index], type: e.target.value };
+                                          setPolicyForm({ ...policyForm, benefits_slots: newSlots });
+                                        }}
+                                        className="h-8 text-sm"
+                                      />
+                                    </div>
+                                    <div className="col-span-4">
+                                      <Label className="text-[10px] text-slate-400 mb-1 block">Importe Anual (€)</Label>
+                                      <Input 
+                                        type="number"
+                                        placeholder="0.00"
+                                        value={slot.amount}
+                                        onChange={e => {
+                                          const newSlots = [...policyForm.benefits_slots];
+                                          newSlots[index] = { ...newSlots[index], amount: parseFloat(e.target.value) || 0 };
+                                          setPolicyForm({ ...policyForm, benefits_slots: newSlots });
+                                        }}
+                                        className="h-8 text-sm font-mono text-right"
+                                      />
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+
+                            <div className="space-y-2 pt-2 border-t border-slate-100">
+                              <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Observaciones Adicionales</Label>
+                              <Textarea 
+                                value={policyForm.benefits}
+                                onChange={e => setPolicyForm({...policyForm, benefits: e.target.value})}
+                                placeholder="Notas adicionales sobre la política retributiva..."
+                                className="min-h-[80px] text-sm"
+                              />
+                            </div>
                           </CardContent>
                         </Card>
                       </div>
