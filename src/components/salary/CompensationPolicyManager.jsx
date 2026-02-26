@@ -169,31 +169,33 @@ export default function CompensationPolicyManager() {
     positions.find(p => p.id === selectedPosId),
   [positions, selectedPosId]);
 
-  const currentPolicy = useMemo(() => 
-    policies.find(p => {
-      // Prioridad 1: Match por target_positions (Array o String)
+  const currentPolicy = useMemo(() => {
+    if (!selectedPosId) return undefined;
+    
+    // 1. Try finding by code match (most reliable)
+    const codeMatch = policies.find(p => p.code && p.code.includes(selectedPosId.substring(0, 6).toUpperCase()));
+    if (codeMatch) return codeMatch;
+    
+    // 2. Try finding by target_positions (Array or String)
+    const posMatch = policies.find(p => {
       if (p.target_positions) {
         if (Array.isArray(p.target_positions)) {
           if (p.target_positions.includes(selectedPosId)) return true;
         } else if (typeof p.target_positions === 'string') {
           if (p.target_positions.includes(selectedPosId)) return true;
-          // Try parse JSON
           try {
              const parsed = JSON.parse(p.target_positions);
              if (Array.isArray(parsed) && parsed.includes(selectedPosId)) return true;
           } catch(e) {}
         }
       }
-      
-      // Prioridad 2: Match por Code (Fallback)
-      if (p.code && selectedPosId && p.code.includes(selectedPosId.substring(0, 6).toUpperCase())) {
-        return true;
-      }
-      
-      // Legacy Match
-      return p.position_id === selectedPosId;
-    }),
-  [policies, selectedPosId]);
+      return false;
+    });
+    if (posMatch) return posMatch;
+    
+    // 3. Legacy Match
+    return policies.find(p => p.position_id === selectedPosId);
+  }, [policies, selectedPosId]);
 
   // Effects
   React.useEffect(() => {
@@ -229,8 +231,9 @@ export default function CompensationPolicyManager() {
 
       // 2. Unpack Notes/Benefits (from notes JSON or legacy benefits)
       // Try to unpack JSON from notes field if it looks like JSON
-      const notesSource = currentPolicy.notes || currentPolicy.benefits || "";
-      if (notesSource && typeof notesSource === 'string' && notesSource.trim().startsWith('{')) {
+      // Also try description as backup source
+      const notesSource = currentPolicy.notes || currentPolicy.description || currentPolicy.benefits || "";
+      if (notesSource && typeof notesSource === 'string' && (notesSource.trim().startsWith('{') || notesSource.trim().startsWith('['))) {
         try {
           const parsed = JSON.parse(notesSource);
           // Force 4 slots always
