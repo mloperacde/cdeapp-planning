@@ -47,7 +47,7 @@ export default function UnpaidLeaveTracker({ employees = [] }) {
 
   const selectedEmployee = useMemo(() => {
     if (!selectedEmployeeId) return null;
-    return employees.find((e) => e.id === selectedEmployeeId) || null;
+    return employees.find((e) => String(e.id) === String(selectedEmployeeId)) || null;
   }, [employees, selectedEmployeeId]);
 
   const employeeLimit = useMemo(() => {
@@ -68,7 +68,7 @@ export default function UnpaidLeaveTracker({ employees = [] }) {
   // Historial desde UnpaidLeaveBalance (tratando 'dias' como 'horas' en la estructura existente)
   const employeeHistory = useMemo(() => {
     if (!selectedEmployeeId) return [];
-    const balance = balances.find(b => b.employee_id === selectedEmployeeId);
+    const balance = balances.find(b => String(b.employee_id) === String(selectedEmployeeId));
     return balance?.consumos || [];
   }, [balances, selectedEmployeeId]);
 
@@ -107,7 +107,7 @@ export default function UnpaidLeaveTracker({ employees = [] }) {
 
       // 2. Guardar historial en UnpaidLeaveBalance (reutilizando entidad)
       // Buscamos si existe balance para este año
-      const existingBalance = balances.find(b => b.employee_id === selectedEmployeeId);
+      const existingBalance = balances.find(b => String(b.employee_id) === String(selectedEmployeeId));
       
       const newEntry = {
         fecha: requestDate,

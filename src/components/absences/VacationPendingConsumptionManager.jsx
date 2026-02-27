@@ -34,7 +34,7 @@ export default function VacationPendingConsumptionManager({ employees = [] }) {
     balances.forEach((balance) => {
       if (!balance || !balance.employee_id) return;
 
-      const employee = employees.find((e) => e.id === balance.employee_id);
+      const employee = employees.find((e) => String(e.id) === String(balance.employee_id));
       if (!employee) return;
 
       const diasPendientes = balance.dias_pendientes || 0;
@@ -139,7 +139,7 @@ export default function VacationPendingConsumptionManager({ employees = [] }) {
   const selectedBalance = useMemo(() => {
     if (!selectedEmployeeId) return null;
     return employeesWithBalance.find(
-      (b) => b.employee_id === selectedEmployeeId
+      (b) => String(b.employee_id) === String(selectedEmployeeId)
     );
   }, [employeesWithBalance, selectedEmployeeId]);
 

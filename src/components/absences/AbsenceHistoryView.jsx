@@ -76,9 +76,10 @@ export default function AbsenceHistoryView() {
         return tb - ta;
       })
       .filter((abs) => {
-        const emp = employees.find((e) => e.id === abs.employee_id);
+        // Robust comparison (String vs Number)
+        const emp = employees.find((e) => String(e.id) === String(abs.employee_id));
 
-        if (filters.empleado_id !== "all" && abs.employee_id !== filters.empleado_id) {
+        if (filters.empleado_id !== "all" && String(abs.employee_id) !== String(filters.empleado_id)) {
           return false;
         }
 
@@ -245,7 +246,7 @@ export default function AbsenceHistoryView() {
                 </TableHeader>
                 <TableBody>
                   {filteredAbsences.map((abs) => {
-                    const emp = employees.find((e) => e.id === abs.employee_id);
+                    const emp = employees.find((e) => String(e.id) === String(abs.employee_id));
                     return (
                       <TableRow key={abs.id}>
                         <TableCell className="text-xs font-medium">
