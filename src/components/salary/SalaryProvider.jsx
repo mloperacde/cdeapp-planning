@@ -98,11 +98,17 @@ export function SalaryProvider({ children }) {
       console.log("SalaryProvider: Loading Virtual Policies...");
       try {
         // Fetch all virtual records marked as 'VirtualPolicy'
-        const virtualRecords = await base44.entities.AppConfig.filter({ app_subtitle: "VirtualPolicy" });
+        // TRIPLE READ FALLBACK: app_subtitle might be used as backup
+        const virtualRecords = await base44.entities.AppConfig.filter({ config_key: { contains: "policy_" } });
         
         const parsedPolicies = virtualRecords.map(r => {
           try {
-            const parsed = JSON.parse(r.value);
+            // Try parsing value first
+            let raw = r.value;
+            if (!raw || raw.trim() === "") raw = r.description;
+            if (!raw || raw.trim() === "") raw = r.app_subtitle;
+            
+            const parsed = JSON.parse(raw);
             // Ensure ID from AppConfig record is preserved for updates
             return { ...parsed, _virtual_id: r.id };
           } catch(e) { 
@@ -129,7 +135,10 @@ export function SalaryProvider({ children }) {
       try {
         const configs = await base44.entities.AppConfig.filter({ config_key: "salary_global_config" });
         if (configs.length > 0) {
-           return JSON.parse(configs[0].value);
+           const r = configs[0];
+           let raw = r.value;
+           if (!raw || raw.trim() === "") raw = r.description;
+           try { return JSON.parse(raw); } catch { return { annual_pay_count: 14, pay_dates: [] }; }
         }
         return { annual_pay_count: 14, pay_dates: [] };
       } catch (e) {
@@ -144,12 +153,14 @@ export function SalaryProvider({ children }) {
   // Save Global Config
   const saveGlobalConfigMutation = useMutation({
     mutationFn: async (configData) => {
-      // 1. Fetch ALL records with this key (don't limit to 1)
-      // The base44.entities.AppConfig.filter returns an array
-      const existing = await base44.entities.AppConfig.filter({ config_key: "salary_global_config" });
+      // 1. Determine Key
+      const CONFIG_KEY = "salary_global_config";
+      
+      // 2. Fetch existing to check for ID
+      const existing = await base44.entities.AppConfig.filter({ config_key: CONFIG_KEY });
       
       const payload = {
-        config_key: "salary_global_config",
+        config_key: CONFIG_KEY,
         value: JSON.stringify(configData),
         description: "Global Salary Configuration (Pay count, dates)",
         app_subtitle: "SalaryConfig"
@@ -200,11 +211,14 @@ export function SalaryProvider({ children }) {
         updated_at: new Date().toISOString()
       };
 
+      // TRIPLE WRITE STRATEGY: Backup JSON in description and subtitle
+      const serializedData = JSON.stringify(payloadToSave);
+      
       const appConfigPayload = {
         config_key: virtualKey,
-        value: JSON.stringify(payloadToSave),
-        description: `Virtual Policy for ${policyData.position_name}`,
-        app_subtitle: "VirtualPolicy"
+        value: serializedData,
+        description: serializedData, // Backup 1
+        app_subtitle: serializedData // Backup 2 (might be truncated but useful)
       };
 
       // 2. Determine ID to Update
