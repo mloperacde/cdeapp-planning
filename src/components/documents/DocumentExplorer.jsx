@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge"; // Added missing import
 import { useDropzone } from "react-dropzone";
 import { toast } from "sonner";
 import { format } from "date-fns";
