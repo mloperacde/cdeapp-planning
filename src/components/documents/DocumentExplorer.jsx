@@ -43,8 +43,23 @@ export default function DocumentExplorer({
     try {
       const config = await base44.entities.AppConfig.filter({ config_key: "document_folders_structure" });
       if (config.length > 0) {
-        let raw = config[0].value || config[0].description || config[0].app_subtitle;
-        return JSON.parse(raw);
+        // Try all fields (Triple Read)
+        const candidates = [
+          config[0].value,
+          config[0].description,
+          config[0].app_subtitle
+        ];
+
+        for (const raw of candidates) {
+          if (raw && typeof raw === 'string') {
+            try {
+              const parsed = JSON.parse(raw);
+              if (Array.isArray(parsed)) return parsed;
+            } catch (e) {
+              // Continue to next candidate
+            }
+          }
+        }
       }
       return [];
     } catch (e) {
@@ -60,11 +75,12 @@ export default function DocumentExplorer({
     
     const existing = await base44.entities.AppConfig.filter({ config_key: APP_KEY });
     
+    // Triple Write Strategy (Value + Description + Subtitle)
     const payload = {
       config_key: APP_KEY,
       value: jsonVal,
       description: jsonVal,
-      app_subtitle: "VirtualFolders"
+      app_subtitle: jsonVal 
     };
 
     if (existing.length > 0) {
