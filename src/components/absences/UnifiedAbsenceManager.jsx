@@ -219,8 +219,8 @@ export default function UnifiedAbsenceManager(props) {
   });
 
   const employeesWithActiveAbsence = useMemo(() => {
-    const ids = new Set(activeAbsencesConsolidated.map(abs => abs.employee_id));
-    return employees.filter(e => ids.has(e.id));
+    const ids = new Set(activeAbsencesConsolidated.map(abs => String(abs.employee_id)));
+    return employees.filter(e => ids.has(String(e.id)));
   }, [activeAbsencesConsolidated, employees]);
 
   const deptOptions = useMemo(() => {
@@ -349,13 +349,13 @@ export default function UnifiedAbsenceManager(props) {
   };
 
   const getEmployeeName = (employeeId) => {
-    const emp = employees.find(e => e.id === employeeId);
+    const emp = employees.find(e => String(e.id) === String(employeeId));
     return emp?.nombre || "Desconocido";
   };
 
   const filteredAbsences = useMemo(() => {
     return activeAbsencesConsolidated.filter(abs => {
-      const employee = employees.find(e => e.id === abs.employee_id);
+      const employee = employees.find(e => String(e.id) === String(abs.employee_id));
       
       const searchTerm = filters.searchTerm || "";
       const matchesSearch = !searchTerm || 
@@ -532,7 +532,7 @@ export default function UnifiedAbsenceManager(props) {
               </TableHeader>
               <TableBody>
                 {filteredAbsences.map(abs => {
-                  const emp = employees.find(e => e.id === abs.employee_id);
+                  const emp = employees.find(e => String(e.id) === String(abs.employee_id));
                   const auditRow = attendanceRowsByEmployeeId.get(String(abs.employee_id));
                   const canFinalizeByPunch = !!auditRow?.primerMarcaje && (abs.fecha_fin_desconocida || !abs.fecha_fin);
                   return (

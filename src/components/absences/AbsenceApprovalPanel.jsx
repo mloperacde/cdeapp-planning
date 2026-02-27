@@ -96,7 +96,7 @@ export default function AbsenceApprovalPanel({ absences, employees, masterEmploy
   };
 
   const getEmployeeName = (employeeId) => {
-    const emp = employees.find(e => e.id === employeeId) || masterEmployees.find(e => e.id === employeeId);
+    const emp = employees.find(e => String(e.id) === String(employeeId)) || masterEmployees.find(e => String(e.id) === String(employeeId));
     return emp?.nombre || "Desconocido";
   };
 
