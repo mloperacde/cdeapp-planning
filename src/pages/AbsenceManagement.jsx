@@ -397,7 +397,7 @@ export default function AbsenceManagementPage() {
           </TabsContent>
 
           <TabsContent value="history" className="space-y-6">
-            <AbsenceHistoryView />
+            <AbsenceHistoryView employees={employees} absences={absences} />
           </TabsContent>
 
           <TabsContent value="approval">

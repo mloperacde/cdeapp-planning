@@ -62,7 +62,8 @@ export function DataProvider({ children }) {
     queryFn: async () => {
       if (isLocal) return [];
       try {
-        const data = await base44.entities.EmployeeMasterDatabase.list('nombre', 500);
+        // Increase limit to 2000 to avoid "Unknown" names in large datasets
+        const data = await base44.entities.EmployeeMasterDatabase.list('nombre', 2000);
         if (!Array.isArray(data)) {
           console.warn('EmployeeMasterDatabase no retornó array:', data);
           return [];

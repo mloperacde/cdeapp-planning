@@ -12,15 +12,20 @@ import { CalendarDays } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
-export default function AbsenceHistoryView() {
-  const { data: absences = [] } = useSharedAbsences();
+export default function AbsenceHistoryView({ employees: propEmployees, absences: propAbsences }) {
+  const { data: sharedAbsences = [] } = useSharedAbsences();
   const { data: absenceTypes = [] } = useSharedAbsenceTypes();
 
-  const { data: employees = [] } = useQuery({
+  // Use props if provided (from DataProvider), otherwise fetch locally (fallback)
+  const { data: fetchedEmployees = [] } = useQuery({
     queryKey: ["employees"],
-    queryFn: () => base44.entities.EmployeeMasterDatabase.list("nombre", 500),
+    queryFn: () => base44.entities.EmployeeMasterDatabase.list("nombre", 2000),
     initialData: [],
+    enabled: !propEmployees
   });
+
+  const employees = propEmployees || fetchedEmployees;
+  const absences = propAbsences || sharedAbsences;
 
   const [filters, setFilters] = useState({
     empleado_id: "all",
