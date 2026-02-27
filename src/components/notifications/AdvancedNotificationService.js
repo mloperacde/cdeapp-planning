@@ -30,3 +30,18 @@ export const notifyAbsenceRequestRealtime = async (absenceId, employeeName, abse
     console.error("Failed to notify absence request", e);
   }
 };
+
+export const notifyAbsenceDecisionAdvanced = async (absenceId, employeeId, isApproved, comment, absenceType) => {
+  console.log(`Notifying absence decision: ${absenceId} - ${isApproved ? "Approved" : "Rejected"} - ${comment}`);
+  try {
+    /*
+    await base44.integrations.Core.SendEmail({
+      to: "employee@example.com",
+      subject: `Solicitud de Ausencia ${isApproved ? "Aprobada" : "Rechazada"}`,
+      body: `Tu solicitud de ${absenceType?.nombre} ha sido ${isApproved ? "aprobada" : "rechazada"}.\n\nComentario: ${comment}`
+    });
+    */
+  } catch (e) {
+    console.error("Failed to notify absence decision", e);
+  }
+};
