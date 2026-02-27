@@ -1,9 +1,14 @@
+import { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import IncidentManager from "@/components/committee/IncidentManager";
-import { AlertTriangle } from "lucide-react";
+import ConductIncidentManager from "@/components/shift-manager/ConductIncidentManager";
+import { AlertTriangle, HardHat, Gavel } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 export default function ShiftIncidentManagement() {
+  const [activeTab, setActiveTab] = useState("operational");
+
   const { data: employees = [] } = useQuery({
     queryKey: ["employees"],
     queryFn: async () => {
@@ -35,6 +40,9 @@ export default function ShiftIncidentManagement() {
     retry: 1,
   });
 
+  const operationalIncidents = incidents.filter(i => i.tipo !== "Conducta");
+  const conductIncidents = incidents.filter(i => i.tipo === "Conducta");
+
   return (
     <div className="h-full flex flex-col p-6 gap-6 bg-slate-50 dark:bg-slate-950 overflow-y-auto">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 shrink-0 bg-white dark:bg-slate-900 p-2 px-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
@@ -44,16 +52,35 @@ export default function ShiftIncidentManagement() {
           </div>
           <div>
             <h1 className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-tight">
-              Incidencias de turno
+              Gestión de Incidencias
             </h1>
             <p className="text-[10px] text-slate-500 dark:text-slate-400 hidden sm:block">
-              Comunicación, registro y seguimiento de incidencias de máquinas, instalaciones, técnicas y operarios
+              Registro y seguimiento de incidencias operativas y disciplinarias
             </p>
           </div>
         </div>
       </div>
 
-      <IncidentManager incidents={incidents} employees={employees} />
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-4">
+        <TabsList className="grid w-full grid-cols-2 lg:w-[400px]">
+          <TabsTrigger value="operational" className="flex items-center gap-2">
+            <HardHat className="w-4 h-4" />
+            Operativas / Seguridad
+          </TabsTrigger>
+          <TabsTrigger value="conduct" className="flex items-center gap-2">
+            <Gavel className="w-4 h-4" />
+            Conducta / Normas
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="operational" className="space-y-4">
+          <IncidentManager incidents={operationalIncidents} employees={employees} />
+        </TabsContent>
+
+        <TabsContent value="conduct" className="space-y-4">
+          <ConductIncidentManager incidents={conductIncidents} employees={employees} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
