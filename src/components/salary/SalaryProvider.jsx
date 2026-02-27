@@ -143,18 +143,52 @@ export function SalaryProvider({ children }) {
     refetchOnWindowFocus: true
   });
 
-  // --- 4. GLOBAL CONFIGURATION (AppConfig) ---
+  // --- 4. GLOBAL CONFIGURATION (MIGRATED TO TaxConfiguration) ---
+  // We use TaxConfiguration as a stable place to store global payroll settings
+  // Identify by tax_type = 'GLOBAL_PAYROLL_CONFIG'
   const { data: globalConfig = { annual_pay_count: 14, pay_dates: [] }, isLoading: loadingGlobalConfig } = useQuery({
     queryKey: ['salary_global_config'],
     queryFn: async () => {
       try {
-        // Use a simpler, dedicated key
-        const configs = await base44.entities.AppConfig.filter({ config_key: "GLOBAL_PAYROLL_CONFIG" });
-        if (configs.length > 0) {
+        // 1. Try TaxConfiguration (Preferred Native Table)
+        const configs = await base44.entities.TaxConfiguration.filter({ tax_type: "GLOBAL_PAYROLL_CONFIG" });
+        if (configs && configs.length > 0) {
            const r = configs[0];
-           let raw = r.value || r.description || r.app_subtitle;
-           try { return JSON.parse(raw); } catch { return { annual_pay_count: 14, pay_dates: [] }; }
+           // Pack data might be in 'deductions' or special field? No, let's use 'social_security_rates' or 'deductions'
+           // Or simply assume we packed it into 'deductions' list as a special item
+           // Actually, let's look at the schema provided:
+           /*
+             TaxConfiguration: 
+             - name
+             - tax_type
+             - irpf_brackets (List)
+             - social_security_rates (List)
+             - deductions (List)
+           */
+           // We can pack our JSON into the first item of 'deductions' description or similar?
+           // OR better: Since we don't have a generic text field in TaxConfiguration visible in the prompt (except maybe name?),
+           // Wait, let's look closer at TaxConfiguration schema provided:
+           // "name", "year", "country", "tax_type", "irpf_brackets", "social_security_rates", "deductions", "valid_from", "valid_to"
+           
+           // Strategy: Use 'deductions' array to store a special item
+           // item: { name: "PAY_CONFIG_JSON", amount: 0, description: JSON_STRING }
+           
+           if (r.deductions && Array.isArray(r.deductions)) {
+              const configItem = r.deductions.find(d => d.name === "PAY_CONFIG_JSON");
+              if (configItem && configItem.description) {
+                 try { return JSON.parse(configItem.description); } catch {}
+              }
+           }
         }
+
+        // 2. Fallback to AppConfig (Legacy)
+        const appConfigs = await base44.entities.AppConfig.filter({ config_key: "GLOBAL_PAYROLL_CONFIG" });
+        if (appConfigs.length > 0) {
+           const r = appConfigs[0];
+           let raw = r.value || r.description || r.app_subtitle;
+           try { return JSON.parse(raw); } catch {}
+        }
+        
         return { annual_pay_count: 14, pay_dates: [] };
       } catch (e) {
         console.warn("Failed to load global config", e);
@@ -168,26 +202,57 @@ export function SalaryProvider({ children }) {
   // Save Global Config
   const saveGlobalConfigMutation = useMutation({
     mutationFn: async (configData) => {
-      const CONFIG_KEY = "GLOBAL_PAYROLL_CONFIG";
-      const existing = await base44.entities.AppConfig.filter({ config_key: CONFIG_KEY });
-      
+      const CONFIG_TYPE = "GLOBAL_PAYROLL_CONFIG";
       const jsonVal = JSON.stringify(configData);
-      const payload = {
-        config_key: CONFIG_KEY,
-        value: jsonVal,
-        description: jsonVal, 
-        app_subtitle: "PayrollConfig"
-      };
+      
+      // 1. Try to save to TaxConfiguration
+      try {
+        const existing = await base44.entities.TaxConfiguration.filter({ tax_type: CONFIG_TYPE });
+        
+        // Prepare the "Packed" deduction item
+        const configItem = {
+          name: "PAY_CONFIG_JSON",
+          amount: 0,
+          description: jsonVal
+        };
 
-      if (existing && existing.length > 0) {
-        await base44.entities.AppConfig.update(existing[0].id, payload);
-        // Cleanup duplicates
-        if (existing.length > 1) {
-           existing.slice(1).forEach(r => base44.entities.AppConfig.delete(r.id).catch(()=>{}));
+        const payload = {
+          name: "Global Payroll Configuration",
+          year: new Date().getFullYear(),
+          country: "España",
+          tax_type: CONFIG_TYPE,
+          is_active: true,
+          valid_from: new Date().toISOString().split('T')[0],
+          // Store our config in the deductions list
+          deductions: [configItem]
+        };
+
+        if (existing && existing.length > 0) {
+          await base44.entities.TaxConfiguration.update(existing[0].id, payload);
+        } else {
+          await base44.entities.TaxConfiguration.create(payload);
         }
-      } else {
-        await base44.entities.AppConfig.create(payload);
+      } catch (nativeError) {
+        console.warn("Native Config Save Failed, falling back to AppConfig", nativeError);
+        
+        // 2. Fallback to AppConfig
+        const APP_KEY = "GLOBAL_PAYROLL_CONFIG";
+        const appExisting = await base44.entities.AppConfig.filter({ config_key: APP_KEY });
+        
+        const appPayload = {
+          config_key: APP_KEY,
+          value: jsonVal,
+          description: jsonVal, 
+          app_subtitle: "PayrollConfig"
+        };
+
+        if (appExisting && appExisting.length > 0) {
+          await base44.entities.AppConfig.update(appExisting[0].id, appPayload);
+        } else {
+          await base44.entities.AppConfig.create(appPayload);
+        }
       }
+      
       return configData;
     },
     onSuccess: async () => {
@@ -200,20 +265,13 @@ export function SalaryProvider({ children }) {
   const savePolicyMutation = useMutation({
     mutationFn: async (policyData) => {
       // 1. Prepare Payload for Native Table (Mega-Pack Strategy)
-      // We pack EVERYTHING into 'notes' because we confirmed 'salary_ranges' exists but is likely simple
-      // and we need to store complex category maps.
       
       const packedData = {
-        // Core Data
         category_ranges: policyData.category_ranges || {},
         bonus_target: policyData.bonus_target,
         variable_percentage: policyData.variable_percentage,
-        
-        // Benefits
         benefits_slots: policyData.benefits_slots || [],
         benefits_text: policyData.benefits_text || "",
-        
-        // Legacy/Standard fields just in case
         currency: policyData.currency || "EUR",
         pay_frequency: policyData.pay_frequency || "Mensual",
         updated_at: new Date().toISOString()
@@ -221,38 +279,46 @@ export function SalaryProvider({ children }) {
 
       const packedJSON = JSON.stringify(packedData);
 
+      // REQUIRED FIELDS FIX:
+      // 1. policy_name: Generate from position/code
+      // 2. valid_from: Current date
+      // 3. salary_ranges: Pass as OBJECT, not string (Base44 handles serialization if it's a JSON field, or rejects string if it expects Dict)
+      
       const nativePayload = {
-        // Use target_positions array instead of single ID
-        target_positions: [policyData.position_id], 
+        // Essential Identity
+        policy_name: `Política ${policyData.position_name || policyData.code}`,
         code: policyData.code,
+        target_positions: [policyData.position_id], 
         
-        // MEGA-PACK: Put everything in notes
+        // Required Dates
+        valid_from: new Date().toISOString().split('T')[0], // YYYY-MM-DD
+        is_active: true,
+
+        // MEGA-PACK (Storage)
         notes: packedJSON,
         
-        // Also try to put partial data in salary_ranges if it exists
-        // We put a simplified version here just in case other modules read it
-        salary_ranges: JSON.stringify({
+        // Field 'salary_ranges' expects a Dictionary/Object, not a JSON string?
+        // Let's pass the object directly. Base44 client might handle it.
+        salary_ranges: {
            min: 0, 
            max: 0, 
            target: 0,
            category_ranges: policyData.category_ranges
-        }),
+        },
         
-        // Map top-level fields for visibility in standard views
+        // Map top-level fields for visibility
         min_salary: 0,
         max_salary: 0,
         target_salary: 0,
-        is_active: true
       };
 
       // 2. Check if update or create
       let idToUpdate = policyData._native_id;
 
-      // If no ID, try to find existing record for this position
       if (!idToUpdate && policyData.position_id) {
          const existing = policies.find(p => 
             (p.target_positions && p.target_positions.includes(policyData.position_id)) ||
-            p.position_id === policyData.position_id // Legacy check
+            p.position_id === policyData.position_id 
          );
          if (existing) idToUpdate = existing._native_id;
       }
@@ -265,7 +331,7 @@ export function SalaryProvider({ children }) {
         }
       } catch (nativeError) {
         console.warn("Native Policy Save Failed", nativeError);
-        throw nativeError; // Propagate error to trigger toast
+        throw nativeError; 
       }
       
       return policyData;
