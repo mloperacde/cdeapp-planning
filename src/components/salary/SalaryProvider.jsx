@@ -373,7 +373,14 @@ export function SalaryProvider({ children }) {
 
   const getSalaryCategoriesForPosition = (positionId) => {
     if (!positionId) return [];
-    return salaryCategories.filter(c => c.position_id === positionId);
+    return salaryCategories.filter(c => {
+      // 1. Check new array field
+      if (Array.isArray(c.applicable_positions) && c.applicable_positions.includes(positionId)) {
+        return true;
+      }
+      // 2. Fallback to legacy field
+      return c.position_id === positionId;
+    });
   };
 
   const value = {

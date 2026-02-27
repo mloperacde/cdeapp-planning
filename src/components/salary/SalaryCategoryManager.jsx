@@ -177,12 +177,10 @@ export default function SalaryCategoryManager() {
     if (!selectedPosition) return [];
     return categories
       .filter(c => {
-         // Check if position ID is in applicable_positions array
-         if (c.applicable_positions && Array.isArray(c.applicable_positions)) {
-            return c.applicable_positions.includes(selectedPosition.id);
-         }
-         // Legacy fallback
-         return c.position_id === selectedPosition.id;
+         // Check if position ID is in applicable_positions array OR matches legacy position_id
+         const inArray = Array.isArray(c.applicable_positions) && c.applicable_positions.includes(selectedPosition.id);
+         const isLegacyMatch = c.position_id === selectedPosition.id;
+         return inArray || isLegacyMatch;
       })
       .sort((a, b) => (a.level || 0) - (b.level || 0) || (a.order || 0) - (b.order || 0));
   }, [categories, selectedPosition]);
