@@ -4,7 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { 
   Folder, FileText, ChevronRight, Upload, Plus, 
   MoreVertical, Trash2, Edit, Download, CornerLeftUp, 
-  FolderPlus, Home, Search
+  FolderPlus, Home, Search, Eye
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
