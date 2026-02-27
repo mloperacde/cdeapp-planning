@@ -38,21 +38,50 @@ export default function DocumentExplorer({
 
   // --- QUERIES ---
 
-  // Fetch Folders
-  const { data: folders = [], isLoading: isLoadingFolders } = useQuery({
-    queryKey: ['documentFolders', currentFolder?.id],
-    queryFn: async () => {
-      try {
-        const allFolders = await base44.entities.DocumentFolder.list();
-        const targetId = currentFolder?.id || null;
-        return allFolders.filter(f => (f.parent_folder_id || null) === targetId);
-      } catch (e) {
-        console.warn("Error fetching folders:", e);
-        return [];
+  // Helper to fetch folders from AppConfig (Virtual Folders)
+  const fetchFolders = async () => {
+    try {
+      const config = await base44.entities.AppConfig.filter({ config_key: "document_folders_structure" });
+      if (config.length > 0) {
+        let raw = config[0].value || config[0].description || config[0].app_subtitle;
+        return JSON.parse(raw);
       }
-    },
+      return [];
+    } catch (e) {
+      console.warn("Error fetching virtual folders:", e);
+      return [];
+    }
+  };
+
+  // Helper to save folders to AppConfig
+  const saveFolders = async (newFolders) => {
+    const jsonVal = JSON.stringify(newFolders);
+    const APP_KEY = "document_folders_structure";
+    
+    const existing = await base44.entities.AppConfig.filter({ config_key: APP_KEY });
+    
+    const payload = {
+      config_key: APP_KEY,
+      value: jsonVal,
+      description: jsonVal,
+      app_subtitle: "VirtualFolders"
+    };
+
+    if (existing.length > 0) {
+      await base44.entities.AppConfig.update(existing[0].id, payload);
+    } else {
+      await base44.entities.AppConfig.create(payload);
+    }
+  };
+
+  // Fetch Folders (Virtual)
+  const { data: allFolders = [], isLoading: isLoadingFolders, refetch: refetchFolders } = useQuery({
+    queryKey: ['documentFolders'],
+    queryFn: fetchFolders,
     initialData: []
   });
+
+  const folders = allFolders.filter(f => (f.parent_folder_id || null) === (currentFolder?.id || null));
 
   // Fetch Documents
   const { data: documents = [], isLoading: isLoadingDocs } = useQuery({
@@ -69,14 +98,21 @@ export default function DocumentExplorer({
 
   const createFolderMutation = useMutation({
     mutationFn: async (name) => {
-      return base44.entities.DocumentFolder.create({
+      const newFolder = {
+        id: `folder_${Date.now()}`,
         nombre: name,
         parent_folder_id: currentFolder?.id || null,
         created_at: new Date().toISOString()
-      });
+      };
+      
+      const updatedFolders = [...allFolders, newFolder];
+      await saveFolders(updatedFolders);
+      return newFolder;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['documentFolders'] });
+      queryClient.invalidateQueries({ queryKey: ['documentFolders'] }); // This will trigger refetch of 'documentFolders'
+      // We also need to refetch the local query if key matches, but here we use a global key 'documentFolders'
+      // and filter locally. So invalidating 'documentFolders' is enough.
       setIsCreateFolderOpen(false);
       setNewFolderName("");
       toast.success("Carpeta creada");
