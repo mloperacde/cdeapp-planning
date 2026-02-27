@@ -90,54 +90,65 @@ export function SalaryProvider({ children }) {
     staleTime: 5 * 60 * 1000,
   });
 
-  // --- 3. COMPENSATION POLICIES (Virtual Table Strategy) ---
-  // We use AppConfig as a Virtual Table to bypass schema limitations
+  // --- 3. COMPENSATION POLICIES (Native Table) ---
   const { data: policies = [], isLoading: loadingPolicies, refetch: refetchPolicies } = useQuery({
-    queryKey: ['compensation_policies_virtual'],
+    queryKey: ['compensation_policies_native'],
     queryFn: async () => {
-      console.log("SalaryProvider: Loading Virtual Policies...");
+      console.log("SalaryProvider: Loading Native Policies...");
       try {
-        // Fetch all virtual records marked as 'VirtualPolicy'
-        // TRIPLE READ FALLBACK: app_subtitle might be used as backup
-        const virtualRecords = await base44.entities.AppConfig.filter({ config_key: { contains: "policy_" } });
+        const nativeRecords = await base44.entities.CompensationPolicy.list();
         
-        const parsedPolicies = virtualRecords.map(r => {
+        const parsedPolicies = nativeRecords.map(r => {
           try {
-            // Try parsing value first
-            let raw = r.value;
-            if (!raw || raw.trim() === "") raw = r.description;
-            if (!raw || raw.trim() === "") raw = r.app_subtitle;
+            // Unpack fields if they are JSON strings
+            let ranges = r.salary_ranges;
+            let notes = r.notes;
             
-            const parsed = JSON.parse(raw);
-            // Ensure ID from AppConfig record is preserved for updates
-            return { ...parsed, _virtual_id: r.id };
-          } catch(e) { 
-            console.warn("Failed to parse virtual policy:", r.id);
-            return null; 
-          }
-        }).filter(Boolean);
+            // Try to parse if string, otherwise keep as is
+            if (typeof ranges === 'string') {
+              try { ranges = JSON.parse(ranges); } catch {}
+            }
+            if (typeof notes === 'string') {
+               try { notes = JSON.parse(notes); } catch {}
+            }
 
-        console.log(`SalaryProvider: Loaded ${parsedPolicies.length} virtual policies`);
+            // Merge unpacked data back into object
+            // Priority: Unpacked > Native
+            return {
+              ...r,
+              salary_ranges: ranges || {},
+              category_ranges: ranges?.category_ranges || {}, // Shortcut
+              benefits_slots: notes?.benefits_slots || [],
+              benefits_text: notes?.benefits_text || "",
+              _native_id: r.id
+            };
+          } catch(e) { 
+            console.warn("Failed to parse policy record:", r.id);
+            return r; 
+          }
+        });
+
+        console.log(`SalaryProvider: Loaded ${parsedPolicies.length} native policies`);
         return parsedPolicies;
       } catch (e) {
-        console.error("SalaryProvider: Error loading virtual policies", e);
+        console.error("SalaryProvider: Error loading native policies", e);
         return [];
       }
     },
-    staleTime: 0, // Always fresh for critical financial data
+    staleTime: 0, 
     refetchOnWindowFocus: true
   });
 
-  // --- 4. GLOBAL CONFIGURATION (Virtual Table Strategy) ---
+  // --- 4. GLOBAL CONFIGURATION (AppConfig) ---
   const { data: globalConfig = { annual_pay_count: 14, pay_dates: [] }, isLoading: loadingGlobalConfig } = useQuery({
     queryKey: ['salary_global_config'],
     queryFn: async () => {
       try {
-        const configs = await base44.entities.AppConfig.filter({ config_key: "salary_global_config" });
+        // Use a simpler, dedicated key
+        const configs = await base44.entities.AppConfig.filter({ config_key: "GLOBAL_PAYROLL_CONFIG" });
         if (configs.length > 0) {
            const r = configs[0];
-           let raw = r.value;
-           if (!raw || raw.trim() === "") raw = r.description;
+           let raw = r.value || r.description || r.app_subtitle;
            try { return JSON.parse(raw); } catch { return { annual_pay_count: 14, pay_dates: [] }; }
         }
         return { annual_pay_count: 14, pay_dates: [] };
@@ -153,105 +164,86 @@ export function SalaryProvider({ children }) {
   // Save Global Config
   const saveGlobalConfigMutation = useMutation({
     mutationFn: async (configData) => {
-      // 1. Determine Key
-      const CONFIG_KEY = "salary_global_config";
-      
-      // 2. Fetch existing to check for ID
+      const CONFIG_KEY = "GLOBAL_PAYROLL_CONFIG";
       const existing = await base44.entities.AppConfig.filter({ config_key: CONFIG_KEY });
       
+      const jsonVal = JSON.stringify(configData);
       const payload = {
         config_key: CONFIG_KEY,
-        value: JSON.stringify(configData),
-        description: "Global Salary Configuration (Pay count, dates)",
-        app_subtitle: "SalaryConfig"
+        value: jsonVal,
+        description: jsonVal, 
+        app_subtitle: "PayrollConfig"
       };
 
       if (existing && existing.length > 0) {
-        // Update the FIRST one found
-        const firstId = existing[0].id;
-        await base44.entities.AppConfig.update(firstId, payload);
-        
-        // AGGRESSIVE CLEANUP: Delete ANY other duplicates found
+        await base44.entities.AppConfig.update(existing[0].id, payload);
+        // Cleanup duplicates
         if (existing.length > 1) {
-          const deletePromises = existing.slice(1).map(record => 
-             base44.entities.AppConfig.delete(record.id).catch(e => console.warn("Cleanup error", e))
-          );
-          await Promise.all(deletePromises);
+           existing.slice(1).forEach(r => base44.entities.AppConfig.delete(r.id).catch(()=>{}));
         }
       } else {
-        // Create new if none exist
         await base44.entities.AppConfig.create(payload);
       }
       return configData;
     },
     onSuccess: async () => {
-      // Force hard refetch
       await queryClient.invalidateQueries({ queryKey: ['salary_global_config'] });
       toast.success("Configuración global guardada");
     }
   });
 
-  // Save Policy (Virtual Table Strategy)
+  // Save Policy (Native Table)
   const savePolicyMutation = useMutation({
     mutationFn: async (policyData) => {
-      // 1. Determine Key
-      const policyCode = policyData.code || `POL-${policyData.position_id.substring(0, 6).toUpperCase()}`;
-      const virtualKey = `policy_${policyCode}`;
+      // 1. Prepare Payload for Native Table
+      // We need to pack our complex objects into the text fields
       
-      // Ensure benefits_slots has 4 items (Padding)
-      const paddedBenefits = [
-        ...(policyData.benefits_slots || []),
-        ...Array(Math.max(0, 4 - (policyData.benefits_slots?.length || 0))).fill({ type: "", amount: 0 })
-      ].slice(0, 4);
+      const salaryRangesPacked = JSON.stringify({
+        category_ranges: policyData.category_ranges || {},
+        bonus_target: policyData.bonus_target,
+        variable_percentage: policyData.variable_percentage
+      });
 
-      const payloadToSave = {
-        ...policyData,
-        code: policyCode,
-        benefits_slots: paddedBenefits,
-        updated_at: new Date().toISOString()
+      const notesPacked = JSON.stringify({
+        benefits_slots: policyData.benefits_slots || [],
+        benefits_text: policyData.benefits_text || ""
+      });
+
+      const nativePayload = {
+        position_id: policyData.position_id,
+        code: policyData.code,
+        // Pack data into available fields
+        salary_ranges: salaryRangesPacked, 
+        notes: notesPacked,
+        // Legacy fields if they exist, set to 0 or sane defaults
+        min_salary: 0,
+        max_salary: 0,
+        target_salary: 0,
+        is_active: true
       };
 
-      // TRIPLE WRITE STRATEGY: Backup JSON in description and subtitle
-      const serializedData = JSON.stringify(payloadToSave);
-      
-      const appConfigPayload = {
-        config_key: virtualKey,
-        value: serializedData,
-        description: serializedData, // Backup 1
-        app_subtitle: serializedData // Backup 2 (might be truncated but useful)
-      };
+      // 2. Check if update or create
+      let idToUpdate = policyData._native_id;
 
-      // 2. Determine ID to Update
-      // Use passed virtual ID if available, otherwise search
-      let idToUpdate = policyData._virtual_id;
-
-      if (!idToUpdate) {
-        const existingVirtual = await base44.entities.AppConfig.filter({ config_key: virtualKey });
-        if (existingVirtual && existingVirtual.length > 0) {
-          idToUpdate = existingVirtual[0].id;
-          
-          // Cleanup duplicates if any found during search
-          if (existingVirtual.length > 1) {
-             const deletePromises = existingVirtual.slice(1).map(record => 
-                base44.entities.AppConfig.delete(record.id).catch(e => console.warn("Policy cleanup error", e))
-             );
-             await Promise.all(deletePromises);
-          }
-        }
+      // If no ID, try to find existing record for this position
+      if (!idToUpdate && policyData.position_id) {
+         // We can't filter directly by position_id easily if not indexed, but let's try
+         // Or rely on our loaded list
+         const existing = policies.find(p => p.position_id === policyData.position_id);
+         if (existing) idToUpdate = existing._native_id;
       }
 
-      // 3. Perform Write
       if (idToUpdate) {
-        await base44.entities.AppConfig.update(idToUpdate, appConfigPayload);
+        await base44.entities.CompensationPolicy.update(idToUpdate, nativePayload);
       } else {
-        await base44.entities.AppConfig.create(appConfigPayload);
+        await base44.entities.CompensationPolicy.create(nativePayload);
       }
       
-      return payloadToSave;
+      return policyData;
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['compensation_policies_virtual'] });
-      toast.success("Política guardada correctamente");
+      await queryClient.invalidateQueries({ queryKey: ['compensation_policies_native'] });
+      toast.success("Política guardada correctamente (Nativa)");
     },
     onError: (e) => {
       console.error("Save Policy Failed", e);

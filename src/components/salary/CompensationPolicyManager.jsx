@@ -149,102 +149,67 @@ export default function CompensationPolicyManager() {
   // Effects
   React.useEffect(() => {
     if (currentPolicy) {
-      let loadedBenefitsSlots = [
-        { type: "", amount: 0 },
-        { type: "", amount: 0 },
-        { type: "", amount: 0 },
-        { type: "", amount: 0 }
-      ];
-      let loadedBenefitsText = currentPolicy.notes || currentPolicy.benefits || "";
+      // Unpack Salary Ranges
       let loadedRanges = {
-        category_ranges: {}, // Initialize to avoid undefined errors
-        min_salary: 0, max_salary: 0, target_salary: 0,
+        category_ranges: {}, 
         bonus_target: 0, variable_percentage: 0,
-        min_salary_prev: 0, max_salary_prev: 0, target_salary_prev: 0,
         bonus_target_prev: 0, variable_percentage_prev: 0
       };
 
-      // 1. Unpack Salary Ranges (from salary_ranges JSON or legacy fields)
       if (currentPolicy.salary_ranges) {
-         try {
-           const parsed = typeof currentPolicy.salary_ranges === 'string' ? JSON.parse(currentPolicy.salary_ranges) : currentPolicy.salary_ranges;
-           
-           // Check if it has the new structure 'category_ranges'
-           if (parsed.category_ranges) {
-             loadedRanges.category_ranges = parsed.category_ranges;
-           }
-           // Else keeps initialized empty object
-           
-           loadedRanges.bonus_target = parsed.bonus_target || 0;
-           loadedRanges.variable_percentage = parsed.variable_percentage || 0;
-           loadedRanges.bonus_target_prev = parsed.bonus_target_prev || 0;
-           loadedRanges.variable_percentage_prev = parsed.variable_percentage_prev || 0;
-         } catch(e) { console.warn("Error parsing salary_ranges", e); }
-      } else {
-         // Legacy Fallback
-         loadedRanges.bonus_target = currentPolicy.bonus_target || 0;
-         loadedRanges.variable_percentage = currentPolicy.variable_percentage || 0;
+        // Already parsed by Provider, but check just in case
+        const ranges = typeof currentPolicy.salary_ranges === 'string' 
+          ? JSON.parse(currentPolicy.salary_ranges) 
+          : currentPolicy.salary_ranges;
+
+        loadedRanges.category_ranges = ranges.category_ranges || {};
+        loadedRanges.bonus_target = ranges.bonus_target || 0;
+        loadedRanges.variable_percentage = ranges.variable_percentage || 0;
+        // Check legacy fields in range object
+        loadedRanges.bonus_target_prev = ranges.bonus_target_prev || 0;
+        loadedRanges.variable_percentage_prev = ranges.variable_percentage_prev || 0;
       }
 
-      // 2. Unpack Notes/Benefits (from notes JSON or legacy benefits)
-      // Try to unpack JSON from notes field if it looks like JSON
-      // Also try description as backup source
-      const notesSource = currentPolicy.notes || currentPolicy.description || currentPolicy.benefits || "";
-      if (notesSource && typeof notesSource === 'string' && (notesSource.trim().startsWith('{') || notesSource.trim().startsWith('['))) {
-        try {
-          const parsed = JSON.parse(notesSource);
-          // Force 4 slots always
-          if (parsed.benefits_slots && Array.isArray(parsed.benefits_slots)) {
-             loadedBenefitsSlots = [
-                ...parsed.benefits_slots,
-                ...Array(Math.max(0, 4 - parsed.benefits_slots.length)).fill(null).map(() => ({ type: "", amount: 0 }))
-             ].slice(0, 4);
-          }
-          if (parsed.benefits_text) loadedBenefitsText = parsed.benefits_text;
-        } catch (e) {
-          console.warn("Failed to parse packed notes JSON", e);
-        }
-      } else if (currentPolicy.benefits_slots && Array.isArray(currentPolicy.benefits_slots)) {
-          // Virtual Table direct access
+      // Unpack Benefits
+      let loadedBenefitsSlots = [
+        { type: "", amount: 0 }, { type: "", amount: 0 },
+        { type: "", amount: 0 }, { type: "", amount: 0 }
+      ];
+      let loadedBenefitsText = "";
+
+      if (currentPolicy.notes) {
+        const notes = typeof currentPolicy.notes === 'string'
+          ? JSON.parse(currentPolicy.notes)
+          : currentPolicy.notes;
+
+        if (notes.benefits_slots && Array.isArray(notes.benefits_slots)) {
           loadedBenefitsSlots = [
-            ...currentPolicy.benefits_slots,
-            ...Array(Math.max(0, 4 - currentPolicy.benefits_slots.length)).fill(null).map(() => ({ type: "", amount: 0 }))
+            ...notes.benefits_slots,
+            ...Array(Math.max(0, 4 - notes.benefits_slots.length)).fill(null).map(() => ({ type: "", amount: 0 }))
           ].slice(0, 4);
-      } else {
-        loadedBenefitsText = notesSource;
+        }
+        if (notes.benefits_text) loadedBenefitsText = notes.benefits_text;
+      } else if (currentPolicy.benefits) {
+         // Legacy fallback
+         loadedBenefitsText = currentPolicy.benefits;
       }
 
       setPolicyForm({
         ...loadedRanges,
-        benefits_slots: Array.isArray(loadedBenefitsSlots) 
-          ? loadedBenefitsSlots 
-          : [
-            { type: "", amount: 0 },
-            { type: "", amount: 0 },
-            { type: "", amount: 0 },
-            { type: "", amount: 0 }
-          ],
+        benefits_slots: loadedBenefitsSlots,
         benefits: loadedBenefitsText,
         currency: currentPolicy.currency || "EUR",
         pay_frequency: currentPolicy.pay_frequency || "Mensual"
       });
     } else {
+      // Reset form
       setPolicyForm({
-        min_salary: 0,
-        max_salary: 0,
-        target_salary: 0,
-        bonus_target: 0,
-        variable_percentage: 0,
-        min_salary_prev: 0,
-        max_salary_prev: 0,
-        target_salary_prev: 0,
-        bonus_target_prev: 0,
-        variable_percentage_prev: 0,
+        category_ranges: {},
+        bonus_target: 0, variable_percentage: 0,
+        bonus_target_prev: 0, variable_percentage_prev: 0,
         benefits_slots: [
-          { type: "", amount: 0 },
-          { type: "", amount: 0 },
-          { type: "", amount: 0 },
-          { type: "", amount: 0 }
+          { type: "", amount: 0 }, { type: "", amount: 0 },
+          { type: "", amount: 0 }, { type: "", amount: 0 }
         ],
         benefits: "",
         currency: "EUR",
@@ -256,35 +221,19 @@ export default function CompensationPolicyManager() {
   const handleSave = () => {
     if (!selectedPosId) return;
 
-    // PACKING STRATEGY: Pack into 'salary_ranges' and 'notes'
-    const salaryRangesPacked = {
-      category_ranges: policyForm.category_ranges, // New Structure
-      bonus_target: policyForm.bonus_target,
-      variable_percentage: policyForm.variable_percentage,
-      bonus_target_prev: policyForm.bonus_target_prev,
-      variable_percentage_prev: policyForm.variable_percentage_prev
-    };
-
-    const notesPacked = {
-      benefits_text: policyForm.benefits,
-      benefits_slots: policyForm.benefits_slots
-    };
-
-    // Ensure JSON strings are valid and not truncated
-    const salaryRangesJSON = JSON.stringify(salaryRangesPacked);
-    const notesJSON = JSON.stringify(notesPacked);
-
+    // We don't need to stringify here anymore, the mutation handles packing
+    // Just pass the raw objects
     savePolicy({
       ...policyForm,
-      // Ensure we pass the virtual ID to update the correct record
-      _virtual_id: currentPolicy?._virtual_id,
-      code: currentPolicy?.code, // Preserve code to maintain key stability
-      salary_ranges: salaryRangesJSON,
-      notes: notesJSON,
-      description: notesJSON, // Backup
+      _native_id: currentPolicy?._native_id, // Use native ID
+      code: currentPolicy?.code || `POL-${selectedPosId.substring(0,6).toUpperCase()}`,
       position_id: selectedPosId,
       position_name: selectedPos?.name,
       department_id: selectedDeptId,
+      // Pass raw data for packing in mutation
+      category_ranges: policyForm.category_ranges,
+      benefits_slots: policyForm.benefits_slots,
+      benefits_text: policyForm.benefits
     });
   };
 
