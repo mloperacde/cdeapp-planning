@@ -104,8 +104,17 @@ export default function DocumentExplorer({
     queryKey: ['documents', currentFolder?.id],
     queryFn: async () => {
       const allDocs = await base44.entities.Document.list();
+      
+      // Debug: Log total documents
+      // console.log("Total docs in DB:", allDocs.length);
+
       const targetId = currentFolder?.id || null;
-      return allDocs.filter(d => (d.folder_id || null) === targetId);
+      
+      // Fix: Handle 'undefined' and empty strings as null for root folder
+      return allDocs.filter(d => {
+        const docFolderId = d.folder_id || null; // Convert undefined/"" to null
+        return docFolderId === targetId;
+      });
     },
     initialData: []
   });
