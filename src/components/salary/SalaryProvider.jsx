@@ -104,22 +104,26 @@ export function SalaryProvider({ children }) {
             let ranges = r.salary_ranges;
             let notes = r.notes;
             
-            // Try to parse if string, otherwise keep as is
+            // Try to parse if string, otherwise keep as is (e.g. legacy or other format)
             if (typeof ranges === 'string') {
-              try { ranges = JSON.parse(ranges); } catch {}
+               // Try parsing JSON first
+               try { ranges = JSON.parse(ranges); } catch { /* Keep as string if not JSON */ }
             }
             if (typeof notes === 'string') {
-               try { notes = JSON.parse(notes); } catch {}
+               // The notes field is used as Mega-Pack, so we MUST try to parse it
+               try { notes = JSON.parse(notes); } catch { /* Keep as string if just text */ }
             }
 
             // Merge unpacked data back into object
-            // Priority: Unpacked > Native
+            // Priority: Notes (Mega-Pack) > SalaryRanges > Native Fields
             return {
               ...r,
               salary_ranges: ranges || {},
-              category_ranges: ranges?.category_ranges || {}, // Shortcut
+              category_ranges: notes?.category_ranges || ranges?.category_ranges || {}, // Prioritize Mega-Pack
               benefits_slots: notes?.benefits_slots || [],
-              benefits_text: notes?.benefits_text || "",
+              benefits_text: notes?.benefits_text || (typeof notes === 'string' ? notes : ""),
+              bonus_target: notes?.bonus_target || r.bonus_target,
+              variable_percentage: notes?.variable_percentage || r.variable_percentage,
               _native_id: r.id
             };
           } catch(e) { 
@@ -195,27 +199,46 @@ export function SalaryProvider({ children }) {
   // Save Policy (Native Table)
   const savePolicyMutation = useMutation({
     mutationFn: async (policyData) => {
-      // 1. Prepare Payload for Native Table
-      // We need to pack our complex objects into the text fields
+      // 1. Prepare Payload for Native Table (Mega-Pack Strategy)
+      // We pack EVERYTHING into 'notes' because we confirmed 'salary_ranges' exists but is likely simple
+      // and we need to store complex category maps.
       
-      const salaryRangesPacked = JSON.stringify({
+      const packedData = {
+        // Core Data
         category_ranges: policyData.category_ranges || {},
         bonus_target: policyData.bonus_target,
-        variable_percentage: policyData.variable_percentage
-      });
-
-      const notesPacked = JSON.stringify({
+        variable_percentage: policyData.variable_percentage,
+        
+        // Benefits
         benefits_slots: policyData.benefits_slots || [],
-        benefits_text: policyData.benefits_text || ""
-      });
+        benefits_text: policyData.benefits_text || "",
+        
+        // Legacy/Standard fields just in case
+        currency: policyData.currency || "EUR",
+        pay_frequency: policyData.pay_frequency || "Mensual",
+        updated_at: new Date().toISOString()
+      };
+
+      const packedJSON = JSON.stringify(packedData);
 
       const nativePayload = {
-        position_id: policyData.position_id,
+        // Use target_positions array instead of single ID
+        target_positions: [policyData.position_id], 
         code: policyData.code,
-        // Pack data into available fields
-        salary_ranges: salaryRangesPacked, 
-        notes: notesPacked,
-        // Legacy fields if they exist, set to 0 or sane defaults
+        
+        // MEGA-PACK: Put everything in notes
+        notes: packedJSON,
+        
+        // Also try to put partial data in salary_ranges if it exists
+        // We put a simplified version here just in case other modules read it
+        salary_ranges: JSON.stringify({
+           min: 0, 
+           max: 0, 
+           target: 0,
+           category_ranges: policyData.category_ranges
+        }),
+        
+        // Map top-level fields for visibility in standard views
         min_salary: 0,
         max_salary: 0,
         target_salary: 0,
@@ -227,23 +250,29 @@ export function SalaryProvider({ children }) {
 
       // If no ID, try to find existing record for this position
       if (!idToUpdate && policyData.position_id) {
-         // We can't filter directly by position_id easily if not indexed, but let's try
-         // Or rely on our loaded list
-         const existing = policies.find(p => p.position_id === policyData.position_id);
+         const existing = policies.find(p => 
+            (p.target_positions && p.target_positions.includes(policyData.position_id)) ||
+            p.position_id === policyData.position_id // Legacy check
+         );
          if (existing) idToUpdate = existing._native_id;
       }
 
-      if (idToUpdate) {
-        await base44.entities.CompensationPolicy.update(idToUpdate, nativePayload);
-      } else {
-        await base44.entities.CompensationPolicy.create(nativePayload);
+      try {
+        if (idToUpdate) {
+          await base44.entities.CompensationPolicy.update(idToUpdate, nativePayload);
+        } else {
+          await base44.entities.CompensationPolicy.create(nativePayload);
+        }
+      } catch (nativeError) {
+        console.warn("Native Policy Save Failed", nativeError);
+        throw nativeError; // Propagate error to trigger toast
       }
       
       return policyData;
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['compensation_policies_native'] });
-      toast.success("Política guardada correctamente (Nativa)");
+      toast.success("Política guardada correctamente");
     },
     onError: (e) => {
       console.error("Save Policy Failed", e);
@@ -260,10 +289,11 @@ export function SalaryProvider({ children }) {
     const codeMatch = policies.find(p => p.code === derivedCode);
     if (codeMatch) return codeMatch;
 
-    // 2. Try target_positions array
+    // 2. Try target_positions array (Standard)
     const posMatch = policies.find(p => {
        if (Array.isArray(p.target_positions) && p.target_positions.includes(positionId)) return true;
-       if (p.position_id === positionId) return true; // Legacy
+       // Legacy fallback
+       if (p.position_id === positionId) return true; 
        return false;
     });
     

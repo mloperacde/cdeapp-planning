@@ -176,7 +176,14 @@ export default function SalaryCategoryManager() {
   const positionCategories = useMemo(() => {
     if (!selectedPosition) return [];
     return categories
-      .filter(c => c.position_id === selectedPosition.id)
+      .filter(c => {
+         // Check if position ID is in applicable_positions array
+         if (c.applicable_positions && Array.isArray(c.applicable_positions)) {
+            return c.applicable_positions.includes(selectedPosition.id);
+         }
+         // Legacy fallback
+         return c.position_id === selectedPosition.id;
+      })
       .sort((a, b) => (a.level || 0) - (b.level || 0) || (a.order || 0) - (b.order || 0));
   }, [categories, selectedPosition]);
 
@@ -188,7 +195,8 @@ export default function SalaryCategoryManager() {
       
       const payload = {
         ...data,
-        position_id: selectedPosition.id,
+        // Use applicable_positions array instead of single ID
+        applicable_positions: [selectedPosition.id],
         // Also save denormalized names for easier debugging/display if relational fetch fails
         position_name: selectedPosition.name, 
         updated_at: new Date().toISOString()
