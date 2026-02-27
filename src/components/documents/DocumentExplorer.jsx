@@ -42,13 +42,11 @@ export default function DocumentExplorer({
     queryKey: ['documentFolders', currentFolder?.id],
     queryFn: async () => {
       try {
-        // Intenta listar carpetas. Si la entidad no existe, esto podría fallar.
-        // Asumimos que base44 maneja colecciones dinámicas o que la tabla existe.
         const allFolders = await base44.entities.DocumentFolder.list();
-        // Filtrar en cliente por ahora si la API no soporta filtro directo
-        return allFolders.filter(f => f.parent_folder_id === (currentFolder?.id || null));
+        const targetId = currentFolder?.id || null;
+        return allFolders.filter(f => (f.parent_folder_id || null) === targetId);
       } catch (e) {
-        console.warn("Error fetching folders (entity might not exist yet):", e);
+        console.warn("Error fetching folders:", e);
         return [];
       }
     },
@@ -60,7 +58,8 @@ export default function DocumentExplorer({
     queryKey: ['documents', currentFolder?.id],
     queryFn: async () => {
       const allDocs = await base44.entities.Document.list();
-      return allDocs.filter(d => d.folder_id === (currentFolder?.id || null));
+      const targetId = currentFolder?.id || null;
+      return allDocs.filter(d => (d.folder_id || null) === targetId);
     },
     initialData: []
   });
