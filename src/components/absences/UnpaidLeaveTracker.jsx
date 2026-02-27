@@ -22,6 +22,7 @@ import {
 const DEFAULT_MAX_HOURS_PER_YEAR = 0; // Por defecto 0, debe configurarse
 
 export default function UnpaidLeaveTracker({ employees = [] }) {
+  console.log("UnpaidLeaveTracker loaded");
   const queryClient = useQueryClient();
   const currentYear = new Date().getFullYear();
 

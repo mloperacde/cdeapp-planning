@@ -21,6 +21,8 @@ import { es } from "date-fns/locale";
 import { toast } from "sonner";
 
 export default function AttendanceAnalyzer() {
+  // Debug: Component Loaded
+  console.log("AttendanceAnalyzer loaded");
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const queryClient = useQueryClient();
 

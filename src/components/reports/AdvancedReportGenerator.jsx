@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 export default function AdvancedReportGenerator() {
+  console.log("AdvancedReportGenerator loaded");
   const [filters, setFilters] = useState({
     tipo_reporte: "ausencias",
     fecha_inicio: format(new Date(new Date().getFullYear(), 0, 1), 'yyyy-MM-dd'),

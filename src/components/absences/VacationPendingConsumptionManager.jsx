@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { syncEmployeeVacationProtection } from "./VacationPendingCalculator";
 
 export default function VacationPendingConsumptionManager({ employees = [] }) {
+  console.log("VacationPendingConsumptionManager loaded");
   const queryClient = useQueryClient();
   const [selectedEmployeeId, setSelectedEmployeeId] = useState("");
   const [daysToConsume, setDaysToConsume] = useState("");
