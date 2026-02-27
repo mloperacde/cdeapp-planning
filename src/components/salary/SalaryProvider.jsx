@@ -103,27 +103,34 @@ export function SalaryProvider({ children }) {
             // Unpack fields if they are JSON strings
             let ranges = r.salary_ranges;
             let notes = r.notes;
+            let description = r.description;
             
-            // Try to parse if string, otherwise keep as is (e.g. legacy or other format)
+            // Try to parse if string
             if (typeof ranges === 'string') {
-               // Try parsing JSON first
-               try { ranges = JSON.parse(ranges); } catch { /* Keep as string if not JSON */ }
+               try { ranges = JSON.parse(ranges); } catch { /* Keep as string */ }
             }
+            
+            // Try parsing Notes (Primary Mega-Pack)
+            let packedData = null;
             if (typeof notes === 'string') {
-               // The notes field is used as Mega-Pack, so we MUST try to parse it
-               try { notes = JSON.parse(notes); } catch { /* Keep as string if just text */ }
+               try { packedData = JSON.parse(notes); } catch { /* Failed to parse notes */ }
+            }
+            
+            // Fallback: Try parsing Description (Backup Mega-Pack)
+            if (!packedData && typeof description === 'string') {
+               try { packedData = JSON.parse(description); } catch { /* Failed to parse description */ }
             }
 
             // Merge unpacked data back into object
-            // Priority: Notes (Mega-Pack) > SalaryRanges > Native Fields
+            // Priority: PackedData (Notes/Desc) > SalaryRanges > Native Fields
             return {
               ...r,
               salary_ranges: ranges || {},
-              category_ranges: notes?.category_ranges || ranges?.category_ranges || {}, // Prioritize Mega-Pack
-              benefits_slots: notes?.benefits_slots || [],
-              benefits_text: notes?.benefits_text || (typeof notes === 'string' ? notes : ""),
-              bonus_target: notes?.bonus_target || r.bonus_target,
-              variable_percentage: notes?.variable_percentage || r.variable_percentage,
+              category_ranges: packedData?.category_ranges || ranges?.category_ranges || {},
+              benefits_slots: packedData?.benefits_slots || [],
+              benefits_text: packedData?.benefits_text || (typeof notes === 'string' && !packedData ? notes : ""),
+              bonus_target: packedData?.bonus_target || r.bonus_target,
+              variable_percentage: packedData?.variable_percentage || r.variable_percentage,
               _native_id: r.id
             };
           } catch(e) { 
@@ -296,9 +303,12 @@ export function SalaryProvider({ children }) {
         valid_from: new Date().toISOString().split('T')[0], // YYYY-MM-DD
         is_active: true,
 
-        // MEGA-PACK (Storage)
+        // MEGA-PACK (Primary Storage)
         notes: packedJSON,
         
+        // TRIPLE WRITE (Backup Storage)
+        description: packedJSON, 
+
         // Native Fields (Best Effort)
         salary_ranges: {
            min: 0, 
