@@ -214,7 +214,7 @@ export function SalaryProvider({ children }) {
           name: "PAY_CONFIG_JSON",
           amount: 0,
           description: jsonVal,
-          deduction_type: "CONFIG" // Added type for robustness
+          deduction_type: "CONFIG" 
         };
 
         const payload = {
@@ -224,6 +224,9 @@ export function SalaryProvider({ children }) {
           tax_type: CONFIG_TYPE,
           is_active: true,
           valid_from: new Date().toISOString().split('T')[0],
+          // Required list fields (schema compliance)
+          irpf_brackets: [],
+          social_security_rates: [],
           // Store our config in the deductions list
           deductions: [configItem]
         };
@@ -237,7 +240,7 @@ export function SalaryProvider({ children }) {
       } catch (nativeError) {
         console.warn("Native Config Save Failed, falling back to AppConfig", nativeError);
         
-        // 2. Fallback to AppConfig
+        // 2. Fallback to AppConfig (Triple Write Strategy)
         const APP_KEY = "GLOBAL_PAYROLL_CONFIG";
         const appExisting = await base44.entities.AppConfig.filter({ config_key: APP_KEY });
         
@@ -245,7 +248,7 @@ export function SalaryProvider({ children }) {
           config_key: APP_KEY,
           value: jsonVal,
           description: jsonVal, 
-          app_subtitle: "PayrollConfig"
+          app_subtitle: jsonVal // Triple Write: Backup in subtitle
         };
 
         if (appExisting && appExisting.length > 0) {
@@ -253,7 +256,7 @@ export function SalaryProvider({ children }) {
         } else {
           await base44.entities.AppConfig.create(appPayload);
         }
-        console.log("Saved Global Config to AppConfig");
+        console.log("Saved Global Config to AppConfig (Triple Write)");
       }
       
       return configData;
@@ -398,7 +401,35 @@ export function SalaryProvider({ children }) {
     
     // Actions
     savePolicy: savePolicyMutation.mutate,
-    isSavingPolicy: savePolicyMutation.isPending
+    isSavingPolicy: savePolicyMutation.isPending,
+    
+    // Entity Mutations (Direct Access)
+    saveSalaryComponent: async (data) => {
+      if (data.id) {
+        return await base44.entities.SalaryComponent.update(data.id, data);
+      }
+      return await base44.entities.SalaryComponent.create(data);
+    },
+    saveEmployeeSalary: async (data) => {
+      // Ensure required fields
+      const payload = {
+        employee_id: data.employee_id,
+        component_id: data.component_id,
+        amount: Number(data.amount) || 0,
+        is_current: data.is_current !== undefined ? data.is_current : true,
+        start_date: data.start_date || new Date().toISOString().split('T')[0],
+        end_date: data.end_date || null,
+        ...data // Allow overrides
+      };
+      
+      if (data.id) {
+        return await base44.entities.EmployeeSalary.update(data.id, payload);
+      }
+      return await base44.entities.EmployeeSalary.create(payload);
+    },
+    deleteEmployeeSalary: async (id) => {
+      return await base44.entities.EmployeeSalary.delete(id);
+    }
   };
 
   return <SalaryContext.Provider value={value}>{children}</SalaryContext.Provider>;
