@@ -213,7 +213,8 @@ export function SalaryProvider({ children }) {
         const configItem = {
           name: "PAY_CONFIG_JSON",
           amount: 0,
-          description: jsonVal
+          description: jsonVal,
+          deduction_type: "CONFIG" // Added type for robustness
         };
 
         const payload = {
@@ -232,6 +233,7 @@ export function SalaryProvider({ children }) {
         } else {
           await base44.entities.TaxConfiguration.create(payload);
         }
+        console.log("Saved Global Config to TaxConfiguration");
       } catch (nativeError) {
         console.warn("Native Config Save Failed, falling back to AppConfig", nativeError);
         
@@ -251,6 +253,7 @@ export function SalaryProvider({ children }) {
         } else {
           await base44.entities.AppConfig.create(appPayload);
         }
+        console.log("Saved Global Config to AppConfig");
       }
       
       return configData;
@@ -264,8 +267,9 @@ export function SalaryProvider({ children }) {
   // Save Policy (Native Table)
   const savePolicyMutation = useMutation({
     mutationFn: async (policyData) => {
-      // 1. Prepare Payload for Native Table (Mega-Pack Strategy)
+      console.log("Saving Policy Data:", policyData);
       
+      // 1. Prepare Payload for Native Table (Mega-Pack Strategy)
       const packedData = {
         category_ranges: policyData.category_ranges || {},
         bonus_target: policyData.bonus_target,
@@ -278,11 +282,6 @@ export function SalaryProvider({ children }) {
       };
 
       const packedJSON = JSON.stringify(packedData);
-
-      // REQUIRED FIELDS FIX:
-      // 1. policy_name: Generate from position/code
-      // 2. valid_from: Current date
-      // 3. salary_ranges: Pass as OBJECT, not string (Base44 handles serialization if it's a JSON field, or rejects string if it expects Dict)
       
       const nativePayload = {
         // Essential Identity
@@ -297,16 +296,16 @@ export function SalaryProvider({ children }) {
         // MEGA-PACK (Storage)
         notes: packedJSON,
         
-        // Field 'salary_ranges' expects a Dictionary/Object, not a JSON string?
-        // Let's pass the object directly. Base44 client might handle it.
+        // Native Fields (Best Effort)
         salary_ranges: {
            min: 0, 
            max: 0, 
            target: 0,
+           // We also send category_ranges here just in case schema allows it, 
+           // but 'notes' is our primary source of truth.
            category_ranges: policyData.category_ranges
         },
         
-        // Map top-level fields for visibility
         min_salary: 0,
         max_salary: 0,
         target_salary: 0,
@@ -325,17 +324,20 @@ export function SalaryProvider({ children }) {
 
       try {
         if (idToUpdate) {
+          console.log("Updating Policy:", idToUpdate);
           await base44.entities.CompensationPolicy.update(idToUpdate, nativePayload);
         } else {
+          console.log("Creating Policy");
           await base44.entities.CompensationPolicy.create(nativePayload);
         }
       } catch (nativeError) {
-        console.warn("Native Policy Save Failed", nativeError);
+        console.error("Native Policy Save Failed", nativeError);
         throw nativeError; 
       }
       
       return policyData;
     },
+
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['compensation_policies_native'] });
       toast.success("Política guardada correctamente");

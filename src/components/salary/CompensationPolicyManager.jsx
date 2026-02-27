@@ -156,19 +156,26 @@ export default function CompensationPolicyManager() {
         bonus_target_prev: 0, variable_percentage_prev: 0
       };
 
+      // 1. Load Category Ranges (Prioritize Provider's unpacked 'category_ranges' from Mega-Pack)
+      loadedRanges.category_ranges = currentPolicy.category_ranges || {};
+
+      // 2. Load other fields from salary_ranges if available
       if (currentPolicy.salary_ranges) {
-        // Already parsed by Provider, but check just in case
         const ranges = typeof currentPolicy.salary_ranges === 'string' 
           ? JSON.parse(currentPolicy.salary_ranges) 
           : currentPolicy.salary_ranges;
 
-        loadedRanges.category_ranges = ranges.category_ranges || {};
+        // Only fallback to ranges.category_ranges if not already found in top-level
+        if (Object.keys(loadedRanges.category_ranges).length === 0 && ranges.category_ranges) {
+           loadedRanges.category_ranges = ranges.category_ranges;
+        }
+
         loadedRanges.bonus_target = ranges.bonus_target || 0;
         loadedRanges.variable_percentage = ranges.variable_percentage || 0;
-        // Check legacy fields in range object
         loadedRanges.bonus_target_prev = ranges.bonus_target_prev || 0;
         loadedRanges.variable_percentage_prev = ranges.variable_percentage_prev || 0;
       }
+
 
       // Unpack Benefits
       let loadedBenefitsSlots = [
