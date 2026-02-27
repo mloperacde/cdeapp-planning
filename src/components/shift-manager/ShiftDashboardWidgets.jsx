@@ -148,22 +148,35 @@ export function TeamStatusWidget({ teamStats, absencesByTeam, machines, dailySta
         const leaderMap = manufacturingConfig.assignments[shiftKey].leaderMap;
         const areasMap = manufacturingConfig.assignments[shiftKey].areas || {};
         
-        return Object.entries(leaderMap).map(([role, empId]) => {
+        // Use Set to prevent duplicates if a leader is assigned to multiple roles
+        const uniqueLeaders = new Map();
+
+        Object.entries(leaderMap).forEach(([role, empId]) => {
+            if (!empId) return;
             const emp = sourceEmployees.find(e => String(e.id) === String(empId));
+            
+            if (uniqueLeaders.has(empId)) {
+                // If leader already exists, just merge role/areas info if needed, or skip
+                // For this widget, we just want unique names, so we can skip
+                return;
+            }
+
             const areaIds = areasMap[role] || [];
             const areaNames = areaIds.map(id => {
                 const area = manufacturingConfig.areas?.find(a => a.id === id);
                 return area?.name;
             }).filter(Boolean);
 
-            return {
-                    role,
-                    name: emp ? `${emp.nombre} ${emp.apellidos || ''}` : `Empleado ${empId} (No encontrado)`,
-                    id: empId,
-                    areas: areaNames
-                };
+            uniqueLeaders.set(empId, {
+                role,
+                name: emp ? `${emp.nombre} ${emp.apellidos || ''}` : `Empleado ${empId} (No encontrado)`,
+                id: empId,
+                areas: areaNames
             });
-        };
+        });
+
+        return Array.from(uniqueLeaders.values());
+    };
 
     return (
         <Card className="mb-6 shadow-lg border-0 bg-white dark:bg-card/80 backdrop-blur-sm">
