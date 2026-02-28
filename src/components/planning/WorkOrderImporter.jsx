@@ -637,54 +637,87 @@ export default function WorkOrderImporter({
         toast.success(`Planificación anterior eliminada (${existingOrders.length} registros)`);
 
         // 2. IMPORT NEW ORDERS
-        const batchSize = 10; // Slightly increased batch size
+        // Adaptive Batching Logic
+        let currentBatchSize = 20; // Start optimistic
+        let processedCount = 0;
+        const total = validRows.length;
+
+        // Use a pointer instead of slicing array repeatedly
+        let i = 0;
         
-        for (let i = 0; i < validRows.length; i += batchSize) {
-            const batch = validRows.slice(i, i + batchSize);
-            
-            await Promise.all(batch.map(async (row) => {
-                try {
-                    await retryOperation(async () => {
-                        await base44.entities.WorkOrder.create({
-                            // Required Standard Fields
-                            order_number: row.order_number,
-                            machine_id: row.machineId,
-                            process_id: row.processId,
-                            priority: parseInt(row.priority) || 3,
-                            status: row.status,
-                            
-                            // Date Logic
-                            start_date: row.modifiedStartDate || row.startDate,
-                            committed_delivery_date: row.newDeliveryDate || row.deliveryDate,
-                            planned_end_date: row.endDate,
-                            
-                            // Extended Fields
-                            client_name: row.client,
-                            product_article_code: row.part_number,
-                            quantity: row.quantity,
-                            product_name: row.description,
-                            material_type: row.material,
-                            product_category: row.product,
-                            production_cadence: parseQuantity(row.cadence),
-                            
-                            // Notes
-                            notes: row.notes,
-                            ...(row.part_status ? { notes: (row.notes ? row.notes + '\n' : '') + `Edo. Art.: ${row.part_status}` } : {})
+        while (i < total) {
+            const batch = validRows.slice(i, i + currentBatchSize);
+            const batchStartTime = Date.now();
+            let batchSuccess = true;
+
+            try {
+                // Execute batch in parallel
+                const promises = batch.map(async (row) => {
+                    try {
+                        await retryOperation(async () => {
+                            await base44.entities.WorkOrder.create({
+                                // Required Standard Fields
+                                order_number: row.order_number,
+                                machine_id: row.machineId,
+                                process_id: row.processId,
+                                priority: parseInt(row.priority) || 3,
+                                status: row.status,
+                                
+                                // Date Logic
+                                start_date: row.modifiedStartDate || row.startDate,
+                                committed_delivery_date: row.newDeliveryDate || row.deliveryDate,
+                                planned_end_date: row.endDate,
+                                
+                                // Extended Fields
+                                client_name: row.client,
+                                product_article_code: row.part_number,
+                                quantity: row.quantity,
+                                product_name: row.description,
+                                material_type: row.material,
+                                product_category: row.product,
+                                production_cadence: parseQuantity(row.cadence),
+                                
+                                // Notes
+                                notes: row.notes,
+                                ...(row.part_status ? { notes: (row.notes ? row.notes + '\n' : '') + `Edo. Art.: ${row.part_status}` } : {})
+                            });
                         });
-                    });
-                    successCount++;
-                } catch (err) {
-                    console.error("Import Error for row:", row, err);
-                    failedCount++;
-                    errors.push({ order: row.order_number, error: err.message || JSON.stringify(err) });
-                }
-            }));
-            
-            if (i + batchSize < validRows.length) {
-                await sleep(200); 
+                        successCount++;
+                    } catch (err) {
+                        console.error("Import Error for row:", row, err);
+                        failedCount++;
+                        errors.push({ order: row.order_number, error: err.message || JSON.stringify(err) });
+                        throw err; // Re-throw to trigger batch adjustment
+                    }
+                });
+
+                // Wait for all in batch
+                await Promise.allSettled(promises);
+                
+            } catch (err) {
+                batchSuccess = false;
             }
 
-            setProgress(Math.round(((i + batch.length) / validRows.length) * 100));
+            const batchEndTime = Date.now();
+            const duration = batchEndTime - batchStartTime;
+            
+            // Adaptive Logic: Adjust batch size based on performance and errors
+            if (batchSuccess && duration < 1000) {
+                // Too fast? Maybe we can handle more
+                currentBatchSize = Math.min(currentBatchSize + 5, 50);
+            } else if (!batchSuccess || duration > 5000) {
+                // Too slow or errors? Throttle down
+                currentBatchSize = Math.max(Math.floor(currentBatchSize / 2), 5);
+                // Add a small cool-down if we hit limits
+                await sleep(1000);
+            }
+
+            i += batch.length; // Advance pointer by actual batch size processed
+            processedCount += batch.length;
+            setProgress(Math.round((processedCount / total) * 100));
+            
+            // Minimal delay to yield event loop
+            await sleep(50);
         }
 
         setImportResults({ success: successCount, failed: failedCount, errors });
