@@ -623,7 +623,10 @@ export default function WorkOrderImporter({
         // Otherwise, list all and delete in parallel batches.
         
         toast.info("Limpiando planificación anterior...");
-        const existingOrders = await base44.entities.WorkOrder.list();
+        // List with limit 5000 to ensure we get ALL orders
+        const existingOrders = await base44.entities.WorkOrder.list(undefined, 5000);
+        console.log(`Found ${existingOrders.length} existing orders to delete`);
+        
         const deletePromises = existingOrders.map(o => base44.entities.WorkOrder.delete(o.id));
         
         // Delete in batches of 20 to avoid overwhelming the server
@@ -631,7 +634,7 @@ export default function WorkOrderImporter({
             await Promise.all(deletePromises.slice(i, i + 20));
         }
         
-        toast.success("Planificación anterior eliminada correctamente");
+        toast.success(`Planificación anterior eliminada (${existingOrders.length} registros)`);
 
         // 2. IMPORT NEW ORDERS
         const batchSize = 10; // Slightly increased batch size
