@@ -603,6 +603,11 @@ export default function WorkOrderImporter({
     const validRows = validatedData.filter(r => r._errors.length === 0);
     if (validRows.length === 0) return toast.error("No hay registros válidos para importar");
 
+    // CONFIRMATION DIALOG for "Clean Slate" Import
+    if (!window.confirm("ATENCIÓN: Esta acción BORRARÁ TODAS las órdenes de fabricación existentes antes de importar las nuevas.\n\n¿Estás seguro de que deseas reemplazar completamente la planificación actual con estos nuevos datos?")) {
+        return;
+    }
+
     setImporting(true);
     setStep(4);
     setProgress(0);
@@ -610,62 +615,84 @@ export default function WorkOrderImporter({
     let successCount = 0;
     let failedCount = 0;
     const errors = [];
-    const batchSize = 5; // Reduced to avoid rate limits
     
-    for (let i = 0; i < validRows.length; i += batchSize) {
-        const batch = validRows.slice(i, i + batchSize);
+    try {
+        // 1. DELETE ALL EXISTING ORDERS (Clean Slate)
+        // We need to fetch all IDs first to delete them, as Base44 might not support "delete all" natively
+        // Optimization: If API supports bulk delete or truncate, use that. 
+        // Otherwise, list all and delete in parallel batches.
         
-        await Promise.all(batch.map(async (row) => {
-            try {
-                await retryOperation(async () => {
-                    await base44.entities.WorkOrder.create({
-                        // Required Standard Fields
-                        order_number: row.order_number,
-                        machine_id: row.machineId,
-                        process_id: row.processId,
-                        priority: parseInt(row.priority) || 3,
-                        status: row.status,
-                        
-                        // Date Logic: Prefer modified/new dates if available
-                        start_date: row.modifiedStartDate || row.startDate,
-                        committed_delivery_date: row.newDeliveryDate || row.deliveryDate,
-                        planned_end_date: row.endDate,
-                        
-                        // Extended Fields (Backend Schema)
-                        client_name: row.client,
-                        product_article_code: row.part_number,
-                        quantity: row.quantity,
-                        product_name: row.description,
-                        material_type: row.material,
-                        product_category: row.product,
-                        production_cadence: parseQuantity(row.cadence), // Ensure number
-                        
-                        // Notes & Other
-                        notes: row.notes,
-                        
-                        // Fields without direct backend match (or complex mapping) -> Append to notes
-                        // "Edo. Art." (part_status)
-                        ...(row.part_status ? { notes: (row.notes ? row.notes + '\n' : '') + `Edo. Art.: ${row.part_status}` } : {})
+        toast.info("Limpiando planificación anterior...");
+        const existingOrders = await base44.entities.WorkOrder.list();
+        const deletePromises = existingOrders.map(o => base44.entities.WorkOrder.delete(o.id));
+        
+        // Delete in batches of 20 to avoid overwhelming the server
+        for (let i = 0; i < deletePromises.length; i += 20) {
+            await Promise.all(deletePromises.slice(i, i + 20));
+        }
+        
+        toast.success("Planificación anterior eliminada correctamente");
+
+        // 2. IMPORT NEW ORDERS
+        const batchSize = 10; // Slightly increased batch size
+        
+        for (let i = 0; i < validRows.length; i += batchSize) {
+            const batch = validRows.slice(i, i + batchSize);
+            
+            await Promise.all(batch.map(async (row) => {
+                try {
+                    await retryOperation(async () => {
+                        await base44.entities.WorkOrder.create({
+                            // Required Standard Fields
+                            order_number: row.order_number,
+                            machine_id: row.machineId,
+                            process_id: row.processId,
+                            priority: parseInt(row.priority) || 3,
+                            status: row.status,
+                            
+                            // Date Logic
+                            start_date: row.modifiedStartDate || row.startDate,
+                            committed_delivery_date: row.newDeliveryDate || row.deliveryDate,
+                            planned_end_date: row.endDate,
+                            
+                            // Extended Fields
+                            client_name: row.client,
+                            product_article_code: row.part_number,
+                            quantity: row.quantity,
+                            product_name: row.description,
+                            material_type: row.material,
+                            product_category: row.product,
+                            production_cadence: parseQuantity(row.cadence),
+                            
+                            // Notes
+                            notes: row.notes,
+                            ...(row.part_status ? { notes: (row.notes ? row.notes + '\n' : '') + `Edo. Art.: ${row.part_status}` } : {})
+                        });
                     });
-                });
-                successCount++;
-            } catch (err) {
-                console.error("Import Error for row:", row, err);
-                failedCount++;
-                errors.push({ order: row.order_number, error: err.message || JSON.stringify(err) });
+                    successCount++;
+                } catch (err) {
+                    console.error("Import Error for row:", row, err);
+                    failedCount++;
+                    errors.push({ order: row.order_number, error: err.message || JSON.stringify(err) });
+                }
+            }));
+            
+            if (i + batchSize < validRows.length) {
+                await sleep(200); 
             }
-        }));
-        
-        if (i + batchSize < validRows.length) {
-            await sleep(500); // Small delay between batches
+
+            setProgress(Math.round(((i + batch.length) / validRows.length) * 100));
         }
 
-        setProgress(Math.round(((i + batch.length) / validRows.length) * 100));
+        setImportResults({ success: successCount, failed: failedCount, errors });
+    } catch (criticalError) {
+        console.error("Critical Import Error:", criticalError);
+        toast.error("Error crítico durante la importación: " + criticalError.message);
+        setImportResults({ success: successCount, failed: failedCount, errors: [...errors, { order: "CRITICAL", error: criticalError.message }] });
+    } finally {
+        setImporting(false);
+        queryClient.invalidateQueries(['workOrders']);
     }
-
-    setImportResults({ success: successCount, failed: failedCount, errors });
-    setImporting(false);
-    queryClient.invalidateQueries(['workOrders']);
   };
 
   // --- Render Helpers ---
