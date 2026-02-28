@@ -662,7 +662,9 @@ export default function WorkOrderImporter({
         }
         
         toast.success(`Base de datos limpia. Iniciando importación...`);
-
+        
+        // Wait 1 second before starting import to ensure deletion propagation
+        await sleep(1000);
 
         // 2. IMPORT NEW ORDERS
         // Adaptive Batching Logic
