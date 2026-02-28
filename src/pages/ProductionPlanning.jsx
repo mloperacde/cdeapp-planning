@@ -184,9 +184,27 @@ export default function ProductionPlanningPage() {
 
   // Derived Data
   const filteredOrders = useMemo(() => {
+    // 1. Identify Latest Batch ID to implement "Clean Slate" view
+    // This ensures we only show the most recent import, effectively hiding "ghost" records from failed deletions.
+    const batchIds = new Set();
+    workOrders.forEach(o => {
+        if (o.import_batch_id) batchIds.add(o.import_batch_id);
+    });
+    
+    let targetBatchId = null;
+    if (batchIds.size > 0) {
+        // Sort and pick latest (batch_TIMESTAMP format ensures lexical sort works correctly)
+        targetBatchId = Array.from(batchIds).sort().pop();
+    }
+
     // Las fechas effective_start_date y effective_delivery_date ya vienen calculadas
     // correctamente desde el query de workOrders (con horas precisas). NO sobreescribir.
     const filtered = workOrders.filter(order => {
+      // Clean Slate Filter: If a fresh import exists, hide everything else (including old ghosts)
+      if (targetBatchId && order.import_batch_id !== targetBatchId) {
+          return false;
+      }
+
       // Filter by Machine
       if (selectedMachine !== "all" && order.machine_id !== selectedMachine) return false;
       

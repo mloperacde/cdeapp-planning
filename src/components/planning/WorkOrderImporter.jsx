@@ -680,7 +680,10 @@ export default function WorkOrderImporter({
         // Wait 1 second before starting import to ensure deletion propagation
         await sleep(1000);
 
-        // 2. IMPORT NEW ORDERS
+    // 2. IMPORT NEW ORDERS
+        // Generate a unique batch ID for this import session
+        const currentBatchId = `batch_${Date.now()}`;
+        
         // Adaptive Batching Logic
         let currentBatchSize = 20; // Start optimistic
         let processedCount = 0;
@@ -700,6 +703,9 @@ export default function WorkOrderImporter({
                     try {
                         await retryOperation(async () => {
                             await base44.entities.WorkOrder.create({
+                                // Metadata for filtering
+                                import_batch_id: currentBatchId, // NEW FIELD
+                                
                                 // Required Standard Fields
                                 order_number: row.order_number,
                                 machine_id: row.machineId,
@@ -721,9 +727,13 @@ export default function WorkOrderImporter({
                                 product_category: row.product,
                                 production_cadence: parseQuantity(row.cadence),
                                 
-                                // Notes
-                                notes: row.notes,
-                                ...(row.part_status ? { notes: (row.notes ? row.notes + '\n' : '') + `Edo. Art.: ${row.part_status}` } : {})
+                                // Notes: Serialized JSON to guarantee field survival
+                                notes: JSON.stringify({
+                                    original_text: row.notes,
+                                    import_batch_id: currentBatchId,
+                                    part_status: row.part_status,
+                                    legacy_note: (row.notes ? row.notes + '\n' : '') + (row.part_status ? `Edo. Art.: ${row.part_status}` : '')
+                                })
                             });
                         });
                         successCount++;
