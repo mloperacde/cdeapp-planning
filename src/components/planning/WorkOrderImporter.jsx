@@ -623,18 +623,45 @@ export default function WorkOrderImporter({
         // Otherwise, list all and delete in parallel batches.
         
         toast.info("Limpiando planificación anterior...");
-        // List with limit 5000 to ensure we get ALL orders
-        const existingOrders = await base44.entities.WorkOrder.list(undefined, 5000);
-        console.log(`Found ${existingOrders.length} existing orders to delete`);
         
-        const deletePromises = existingOrders.map(o => base44.entities.WorkOrder.delete(o.id));
+        // ROBUST DELETION LOOP
+        // Fetch and delete in chunks until no more records exist
+        let deletedTotal = 0;
+        let hasMore = true;
         
-        // Delete in batches of 20 to avoid overwhelming the server
-        for (let i = 0; i < deletePromises.length; i += 20) {
-            await Promise.all(deletePromises.slice(i, i + 20));
+        while (hasMore) {
+            // Fetch a batch of orders (limit 500 to be safe/efficient)
+            // We pass undefined for sort, 500 for limit
+            const ordersBatch = await base44.entities.WorkOrder.list(undefined, 500);
+            
+            if (!ordersBatch || ordersBatch.length === 0) {
+                hasMore = false;
+                break;
+            }
+
+            console.log(`Deleting batch of ${ordersBatch.length} orders...`);
+            
+            // Delete the current batch
+            // Chunk the deletions to avoid rate limits
+            const chunkDeleteSize = 20;
+            for (let i = 0; i < ordersBatch.length; i += chunkDeleteSize) {
+                const chunk = ordersBatch.slice(i, i + chunkDeleteSize);
+                await Promise.all(chunk.map(o => base44.entities.WorkOrder.delete(o.id)));
+            }
+            
+            deletedTotal += ordersBatch.length;
+            
+            // Safety break to prevent infinite loops if API is misbehaving
+            if (deletedTotal > 10000) {
+                 console.warn("Safety break: Exceeded 10000 deletions. Aborting cleanup.");
+                 break;
+            }
+            
+            // Wait a bit before next fetch to let backend catch up
+            await sleep(200);
         }
         
-        toast.success(`Planificación anterior eliminada (${existingOrders.length} registros)`);
+        toast.success(`Planificación anterior eliminada (${deletedTotal} registros)`);
 
         // 2. IMPORT NEW ORDERS
         // Adaptive Batching Logic
