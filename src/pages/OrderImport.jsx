@@ -105,18 +105,37 @@ export default function OrderImport() {
         machines.forEach(m => machinesMap.set(m.id, getMachineAlias(m)));
 
         if (orders.length > 0) {
+            // 0. Pre-process orders to extract JSON fields (crucial for finding import_batch_id)
+            const hydratedOrders = orders.map(o => {
+                let sourceData = { ...o };
+                try {
+                    if (o.notes && typeof o.notes === 'string' && o.notes.trim().startsWith('{')) {
+                        const parsed = JSON.parse(o.notes);
+                        sourceData = { ...parsed, ...o };
+                        // Ensure batch ID is hoisted from JSON if missing on root
+                        if (!sourceData.import_batch_id && parsed.import_batch_id) {
+                            sourceData.import_batch_id = parsed.import_batch_id;
+                        }
+                    }
+                } catch (e) { /* ignore */ }
+                return sourceData;
+            });
+
             // 1. Identify Latest Batch ID (Clean Slate View)
             const batchIds = new Set();
-            orders.forEach(o => { if (o.import_batch_id) batchIds.add(o.import_batch_id); });
+            hydratedOrders.forEach(o => { if (o.import_batch_id) batchIds.add(o.import_batch_id); });
+            
             let targetBatchId = null;
             if (batchIds.size > 0) {
                 targetBatchId = Array.from(batchIds).sort().pop();
             }
 
             const uniqueOrders = new Map();
-            orders.forEach(o => {
+            hydratedOrders.forEach(o => {
                 // Filter out ghosts from old batches
-                if (targetBatchId && o.import_batch_id && o.import_batch_id !== targetBatchId) return;
+                // Strict check: if a target batch exists, ONLY allow records with that ID
+                // Old records (undefined import_batch_id) will be excluded
+                if (targetBatchId && o.import_batch_id !== targetBatchId) return;
 
                 if (!o.order_number) return;
                 const existing = uniqueOrders.get(o.order_number);
@@ -129,18 +148,11 @@ export default function OrderImport() {
             });
             const deduped = Array.from(uniqueOrders.values());
             const formatted = deduped.map(o => {
-                let sourceData = { ...o };
-                try {
-                    if (o.notes && typeof o.notes === 'string' && o.notes.trim().startsWith('{')) {
-                        const parsed = JSON.parse(o.notes);
-                        sourceData = { ...parsed, ...o };
-                        sourceData.notes = parsed.notes !== o.notes ? (parsed.notes || '') : '';
-                    }
-                } catch (e) { /* ignore */ }
-                const newRow = { ...sourceData };
+                // Mapping logic (already hydrated, but re-running SYSTEM_FIELDS extraction)
+                const newRow = { ...o };
                 SYSTEM_FIELDS.forEach(field => {
-                    let val = sourceData[field.key];
-                    if (val === undefined) val = extractValue(sourceData, field);
+                    let val = o[field.key];
+                    if (val === undefined) val = extractValue(o, field);
                     if (val !== undefined) newRow[field.key] = val;
                 });
                 newRow.id = o.id;
