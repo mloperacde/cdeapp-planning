@@ -707,12 +707,15 @@ export default function WorkOrderImporter({
       </Button>
 
       <Dialog open={isOpen} onOpenChange={(open) => {
-        if (!open && step === 4 && !importing) {
-            // Reset on close if finished
+        if (!open) {
+            // Always reset state when closing the dialog to prevent data persistence across sessions
             setStep(1);
             setFile(null);
             setValidatedData([]);
             setRawData([]);
+            setRawHeaders([]);
+            setColumnMapping({});
+            setImportResults({ success: 0, failed: 0, errors: [] });
         }
         setIsOpen(open);
       }}>
