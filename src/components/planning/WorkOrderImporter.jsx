@@ -624,44 +624,45 @@ export default function WorkOrderImporter({
         
         toast.info("Limpiando planificación anterior...");
         
-        // ROBUST DELETION LOOP
-        // Fetch and delete in chunks until no more records exist
-        let deletedTotal = 0;
-        let hasMore = true;
-        
-        while (hasMore) {
-            // Fetch a batch of orders (limit 500 to be safe/efficient)
-            // We pass undefined for sort, 500 for limit
-            const ordersBatch = await base44.entities.WorkOrder.list(undefined, 500);
+        // --- PARANOID DELETION STRATEGY ---
+        // 1. Loop until Count is 0 or max retries reached
+        let retries = 0;
+        const MAX_CLEAN_RETRIES = 5;
+        let isClean = false;
+
+        while (retries < MAX_CLEAN_RETRIES && !isClean) {
+            // Fetch current orders (Large limit)
+            const existingOrders = await base44.entities.WorkOrder.list(undefined, 2000);
             
-            if (!ordersBatch || ordersBatch.length === 0) {
-                hasMore = false;
+            if (existingOrders.length === 0) {
+                isClean = true;
                 break;
             }
 
-            console.log(`Deleting batch of ${ordersBatch.length} orders...`);
+            console.log(`[CleanSlate] Attempt ${retries + 1}: Found ${existingOrders.length} records to delete.`);
             
-            // Delete the current batch
-            // Chunk the deletions to avoid rate limits
-            const chunkDeleteSize = 20;
-            for (let i = 0; i < ordersBatch.length; i += chunkDeleteSize) {
-                const chunk = ordersBatch.slice(i, i + chunkDeleteSize);
-                await Promise.all(chunk.map(o => base44.entities.WorkOrder.delete(o.id)));
+            // Delete in chunks
+            const chunkDeleteSize = 50; // Increased chunk size
+            for (let i = 0; i < existingOrders.length; i += chunkDeleteSize) {
+                const chunk = existingOrders.slice(i, i + chunkDeleteSize);
+                await Promise.allSettled(chunk.map(o => base44.entities.WorkOrder.delete(o.id)));
+                // Small breathing room for server
+                await sleep(50);
             }
             
-            deletedTotal += ordersBatch.length;
-            
-            // Safety break to prevent infinite loops if API is misbehaving
-            if (deletedTotal > 10000) {
-                 console.warn("Safety break: Exceeded 10000 deletions. Aborting cleanup.");
-                 break;
-            }
-            
-            // Wait a bit before next fetch to let backend catch up
-            await sleep(200);
+            // Wait for consistency
+            await sleep(500);
+            retries++;
+        }
+
+        // Final Verification
+        const finalCheck = await base44.entities.WorkOrder.list(undefined, 10);
+        if (finalCheck.length > 0) {
+            throw new Error(`No se pudo limpiar la base de datos completamente. Quedan ${finalCheck.length}+ registros. Inténtalo de nuevo.`);
         }
         
-        toast.success(`Planificación anterior eliminada (${deletedTotal} registros)`);
+        toast.success(`Base de datos limpia. Iniciando importación...`);
+
 
         // 2. IMPORT NEW ORDERS
         // Adaptive Batching Logic
