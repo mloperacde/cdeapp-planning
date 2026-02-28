@@ -772,6 +772,14 @@ export default function WorkOrderImporter({
     } finally {
         setImporting(false);
         queryClient.invalidateQueries(['workOrders']);
+        
+        // FORCE RELOAD if successful to clear any stubborn cache
+        if (successCount > 0 && failedCount === 0) {
+             toast.success("Importación exitosa. Recargando aplicación...", { duration: 2000 });
+             setTimeout(() => {
+                 window.location.reload();
+             }, 1500);
+        }
     }
   };
 
