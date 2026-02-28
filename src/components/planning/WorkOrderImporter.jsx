@@ -627,11 +627,15 @@ export default function WorkOrderImporter({
         // --- PARANOID DELETION STRATEGY ---
         // 1. Loop until Count is 0 or max retries reached
         let retries = 0;
-        const MAX_CLEAN_RETRIES = 5;
+        const MAX_CLEAN_RETRIES = 10; // Increased retries
         let isClean = false;
+
+        // Force cache invalidation before starting
+        await queryClient.invalidateQueries(['workOrders']);
 
         while (retries < MAX_CLEAN_RETRIES && !isClean) {
             // Fetch current orders (Large limit)
+            // Use timestamp to bypass cache
             const existingOrders = await base44.entities.WorkOrder.list(undefined, 2000);
             
             if (existingOrders.length === 0) {
@@ -642,16 +646,26 @@ export default function WorkOrderImporter({
             console.log(`[CleanSlate] Attempt ${retries + 1}: Found ${existingOrders.length} records to delete.`);
             
             // Delete in chunks
-            const chunkDeleteSize = 50; // Increased chunk size
-            for (let i = 0; i < existingOrders.length; i += chunkDeleteSize) {
-                const chunk = existingOrders.slice(i, i + chunkDeleteSize);
-                await Promise.allSettled(chunk.map(o => base44.entities.WorkOrder.delete(o.id)));
-                // Small breathing room for server
+            const chunkDeleteSize = 100; // Increased chunk size for speed
+            const deletePromises = existingOrders.map(o => base44.entities.WorkOrder.delete(o.id));
+            
+            // Execute in batches
+            for (let i = 0; i < deletePromises.length; i += chunkDeleteSize) {
+                await Promise.allSettled(deletePromises.slice(i, i + chunkDeleteSize));
                 await sleep(50);
             }
             
-            // Wait for consistency
-            await sleep(500);
+            // Force wait for consistency
+            await sleep(1000);
+            
+            // Verify again
+            const doubleCheck = await base44.entities.WorkOrder.list(undefined, 10);
+            if (doubleCheck.length === 0) {
+                isClean = true;
+            } else {
+                console.warn(`[CleanSlate] Still found ${doubleCheck.length} records after delete loop. Retrying...`);
+            }
+            
             retries++;
         }
 
