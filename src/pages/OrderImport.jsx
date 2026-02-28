@@ -105,8 +105,19 @@ export default function OrderImport() {
         machines.forEach(m => machinesMap.set(m.id, getMachineAlias(m)));
 
         if (orders.length > 0) {
+            // 1. Identify Latest Batch ID (Clean Slate View)
+            const batchIds = new Set();
+            orders.forEach(o => { if (o.import_batch_id) batchIds.add(o.import_batch_id); });
+            let targetBatchId = null;
+            if (batchIds.size > 0) {
+                targetBatchId = Array.from(batchIds).sort().pop();
+            }
+
             const uniqueOrders = new Map();
             orders.forEach(o => {
+                // Filter out ghosts from old batches
+                if (targetBatchId && o.import_batch_id && o.import_batch_id !== targetBatchId) return;
+
                 if (!o.order_number) return;
                 const existing = uniqueOrders.get(o.order_number);
                 if (!existing) { uniqueOrders.set(o.order_number, o); }
@@ -333,22 +344,26 @@ export default function OrderImport() {
 
   const saveOrders = async () => {
       if (filteredOrders.length === 0) { toast.warning("No hay órdenes visibles para guardar."); return; }
-      if (!confirm(`Se van a guardar ${filteredOrders.length} registros visibles. ¿Continuar?`)) return;
+      if (!confirm(`Se van a guardar ${filteredOrders.length} registros y se ELIMINARÁN los que no estén en esta lista. ¿Continuar?`)) return;
 
       setSaving(true);
       setProgress(0);
-      const toastId = toast.loading("Preparando datos...");
+      const toastId = toast.loading("Iniciando sincronización completa...");
+      
+      // GENERATE BATCH ID
+      const currentBatchId = `batch_${Date.now()}`;
 
       try {
           const { resolve } = await buildMachinesMap();
-          toast.loading(`Guardando ${filteredOrders.length} órdenes...`, { id: toastId });
+          toast.loading(`Guardando ${filteredOrders.length} órdenes (Lote: ${currentBatchId})...`, { id: toastId });
 
           let successCount = 0, failCount = 0, processed = 0;
           const total = filteredOrders.length;
           const skippedItems = [];
-          const CHUNK_SIZE = 2;
-          const CHUNK_DELAY = 500;
+          const CHUNK_SIZE = 5; // Increased chunk size for speed
+          const CHUNK_DELAY = 100;
 
+          // 1. UPSERT NEW ORDERS WITH BATCH ID
           for (let i = 0; i < total; i += CHUNK_SIZE) {
               const chunk = filteredOrders.slice(i, i + CHUNK_SIZE);
               await Promise.all(chunk.map(async (row) => {
@@ -358,9 +373,6 @@ export default function OrderImport() {
 
                   const isDbId = (v) => v && /^[a-f0-9]{24}$/i.test(String(v).trim());
 
-                  // PRIORIDAD 1: Si el row ya tiene un machine_id hex válido de BD (24 hex chars), usarlo directamente
-                  // Esto cubre tanto órdenes ya guardadas localmente como datos CDE que ya fueron resueltos
-                  // PRIORIDAD 2: Resolver por nombre/código usando la función robusta (para órdenes nuevas sin ID resuelto)
                   let machineId = null;
                   const rawMachineId = row.machine_id || row._db_machine_id;
                   if (isDbId(rawMachineId)) {
@@ -371,19 +383,24 @@ export default function OrderImport() {
 
                   if (!orderNumber || !machineId) {
                       const reason = !orderNumber ? 'Falta número de orden' : `Máquina no encontrada: "${machineName || machineIdSource || 'N/A'}"`;
-                      console.warn(`Skipping order: ${reason}`, { order_number: orderNumber, machine_name: machineName, machine_id_source: machineIdSource });
+                      console.warn(`Skipping order: ${reason}`, { order_number: orderNumber, machine_name: machineName });
                       skippedItems.push({ ...row, _skipReason: reason });
                       failCount++;
                       processed++;
-                      setProgress(Math.round((processed / total) * 100));
+                      setProgress(Math.round((processed / total) * 90)); // Reserve last 10% for cleanup
                       return;
                   }
 
-                  const serializedData = JSON.stringify(row);
+                  const serializedData = JSON.stringify({
+                      ...row,
+                      import_batch_id: currentBatchId // Save batch ID in notes JSON too
+                  });
+                  
                   const payload = {
                       ...row,
                       order_number: String(orderNumber),
                       machine_id: machineId,
+                      import_batch_id: currentBatchId, // CRITICAL: Tag with batch ID
                       status: row.status || 'Pendiente',
                       priority: parseInt(row.priority) || 0,
                       quantity: parseInt(row.quantity) || 0,
@@ -394,10 +411,13 @@ export default function OrderImport() {
                   };
 
                   try {
+                      // Upsert logic: Check existence by Order Number
                       let existing = [];
                       try { existing = await base44.entities.WorkOrder.filter({ order_number: String(orderNumber) }); } catch (e) { /* ignore */ }
+                      
                       if (existing && existing.length > 0) {
                           await base44.entities.WorkOrder.update(existing[0].id, payload);
+                          // Deduplicate immediately if multiples found
                           if (existing.length > 1) {
                               for (let k = 1; k < existing.length; k++) {
                                   try { await base44.entities.WorkOrder.delete(existing[k].id); } catch (delErr) { /* ignore */ }
@@ -412,20 +432,36 @@ export default function OrderImport() {
                       failCount++;
                   } finally {
                       processed++;
-                      setProgress(Math.round((processed / total) * 100));
+                      setProgress(Math.round((processed / total) * 90));
                   }
               }));
               if (i + CHUNK_SIZE < total) await new Promise(resolve => setTimeout(resolve, CHUNK_DELAY));
           }
 
-          if (skippedItems.length > 0) {
-              console.error("Registros omitidos:", skippedItems);
-              // Mostrar cuales maquinas no se encontraron para ayudar al diagnóstico
-              const missingMachines = [...new Set(skippedItems.map(r => r._skipReason).filter(Boolean))];
-              toast.warning(`${skippedItems.length} órdenes omitidas. Máquinas no encontradas: ${missingMachines.slice(0,3).join(', ')}${missingMachines.length > 3 ? '...' : ''}`, { duration: 15000 });
+          // 2. CLEANUP: DELETE ORDERS NOT IN THIS BATCH
+          toast.loading("Limpiando registros antiguos...", { id: toastId });
+          
+          // Fetch ALL orders (using a large limit to be safe, or iterate)
+          // Since filtering by !== is hard, we fetch all and check locally
+          const allOrders = await base44.entities.WorkOrder.list(undefined, 5000);
+          const ordersToDelete = allOrders.filter(o => o.import_batch_id !== currentBatchId);
+          
+          if (ordersToDelete.length > 0) {
+             console.log(`[Cleanup] Deleting ${ordersToDelete.length} old records...`);
+             const DELETE_CHUNK = 10;
+             for (let i = 0; i < ordersToDelete.length; i += DELETE_CHUNK) {
+                 const chunk = ordersToDelete.slice(i, i + DELETE_CHUNK);
+                 await Promise.allSettled(chunk.map(o => base44.entities.WorkOrder.delete(o.id)));
+                 setProgress(90 + Math.round(((i + DELETE_CHUNK) / ordersToDelete.length) * 10));
+             }
           }
 
-          toast.success(`Completado: ${successCount} guardadas, ${failCount} omitidas.`, { id: toastId });
+          if (skippedItems.length > 0) {
+              const missingMachines = [...new Set(skippedItems.map(r => r._skipReason).filter(Boolean))];
+              toast.warning(`${skippedItems.length} órdenes omitidas. Máquinas no encontradas: ${missingMachines.slice(0,3).join(', ')}...`, { duration: 15000 });
+          }
+
+          toast.success(`Sincronización completa. Activos: ${successCount}. Eliminados: ${ordersToDelete.length}.`, { id: toastId });
           await fetchLocalData();
       } catch (error) {
           console.error("Error saving orders:", error);
