@@ -244,7 +244,13 @@ export default function ProductionPlanningPage() {
         const orderEnd = order.effective_delivery_date ? new Date(order.effective_delivery_date) : orderStart;
         const rangeStart = new Date(dateRange.start);
         const rangeEnd = new Date(dateRange.end);
+        
+        // Adjust range end to end of day
+        rangeEnd.setHours(23, 59, 59, 999);
+
         if (isNaN(orderStart.getTime())) return false;
+        
+        // Overlap logic: Start <= RangeEnd AND End >= RangeStart
         return orderStart <= rangeEnd && orderEnd >= rangeStart;
       }
       
