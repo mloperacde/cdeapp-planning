@@ -33,7 +33,7 @@ export const buildMachinesMap = (machinesRaw) => {
     /**
      * Resuelve un ID de máquina a partir de su nombre o ID de origen.
      */
-    const resolveMachine = (machineName, machineIdSource) => {
+    const resolveMachine = (machineName, machineIdSource, useFallback = false) => {
         // PRIORIDAD 0: solo usar cdeIdMap si la máquina tiene cde_machine_id explícito en BD
         if (machineIdSource != null) {
             const src = String(machineIdSource).trim();
@@ -69,6 +69,16 @@ export const buildMachinesMap = (machinesRaw) => {
                 if (key.length < 3) continue;
                 if (s.includes(key) || key.includes(s)) return id;
             }
+        }
+
+        // 4. FALLBACK LOGIC
+        if (useFallback && Array.isArray(machinesRaw) && machinesRaw.length > 0) {
+            const generic = machinesRaw.find(m =>
+                normStr(m.nombre_maquina) === 'sin asignar' ||
+                normStr(m.codigo_maquina) === '000' ||
+                normStr(m.nombre) === 'sin asignar'
+            );
+            return generic ? generic.id : machinesRaw[0].id;
         }
 
         return null;

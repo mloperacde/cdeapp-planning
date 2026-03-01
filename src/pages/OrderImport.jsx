@@ -3,6 +3,7 @@ import { cdeApp } from '../api/cdeAppClient';
 import { base44 } from '../api/base44Client';
 import { getMachineAlias } from "@/utils/machineAlias";
 import { buildMachinesMap, normStr } from "@/utils/machineResolution";
+import { SYSTEM_FIELDS, extractValue, normalizeOrder } from "@/utils/orderNormalization";
 import { toast } from 'sonner';
 import { Download, Table as TableIcon, Save, Search, X, RefreshCw, Loader2 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
@@ -19,65 +20,7 @@ import {
 } from "@/components/ui/table";
 import { Label } from "@/components/ui/label";
 
-const SYSTEM_FIELDS = [
-    { key: 'production_id', label: 'Production ID', aliases: ['production_id', 'id', 'PRODUCTION_ID'] },
-    { key: 'machine_id_source', label: 'machine_id', aliases: ['machine_id', 'id_maquina', 'MACHINE_ID'] },
-    { key: 'priority', label: 'Prioridad', aliases: ['priority', 'Prioridad', 'urgencia'] },
-    { key: 'type', label: 'Tipo', aliases: ['type', 'Tipo', 'TIPO'] },
-    { key: 'status', label: 'Estado', aliases: ['status', 'Estado', 'situacion', 'estatus'] },
-    { key: 'room', label: 'Sala', aliases: ['room', 'Sala', 'SALA', 'Nave', 'Zona'] },
-    { key: 'machine_name', label: 'Máquina', required: true, aliases: ['machine_name', 'Máquina', 'maquina', 'machine', 'recurso', 'MÁQUINA', 'MAQUINA', 'Sala / Máquina'] },
-    { key: 'client_order_ref', label: 'Su Pedido', aliases: ['client_order_ref', 'Su Pedido'] },
-    { key: 'internal_order_ref', label: 'Pedido', aliases: ['internal_order_ref', 'Pedido'] },
-    { key: 'order_number', label: 'Orden', required: true, aliases: ['order_number', 'Orden', 'numero_orden', 'wo'] },
-    { key: 'product_article_code', label: 'Artículo', aliases: ['product_article_code', 'Artículo', 'article', 'referencia'] },
-    { key: 'product_name', label: 'Nombre', aliases: ['product_name', 'Nombre', 'Descripción', 'description'] },
-    { key: 'article_status', label: 'Edo. Art.', aliases: ['article_status', 'Edo. Art.'] },
-    { key: 'client_name', label: 'Cliente', aliases: ['client_name', 'Cliente', 'client', 'customer'] },
-    { key: 'material', label: 'Material', aliases: ['material', 'Material'] },
-    { key: 'product_family', label: 'Producto', aliases: ['product_family', 'Producto', 'product'] },
-    { key: 'shortages', label: 'Faltas', aliases: ['shortages', 'Faltas'] },
-    { key: 'quantity', label: 'Cantidad', aliases: ['quantity', 'Cantidad', 'qty'] },
-    { key: 'effective_delivery_date', label: 'Fecha Entrega (Vigente)', aliases: [] },
-    { key: 'committed_delivery_date', label: 'Fecha Entrega', aliases: ['committed_delivery_date', 'Fecha Entrega'] },
-    { key: 'new_delivery_date', label: 'Nueva Fecha Entrega', aliases: ['new_delivery_date', 'Nueva Fecha Entrega'] },
-    { key: 'delivery_compliance', label: 'Cumplimiento', aliases: ['delivery_compliance', 'Cumplimiento entrega'] },
-    { key: 'multi_unit', label: 'MultUnid', aliases: ['multi_unit', 'MultUnid'] },
-    { key: 'multi_qty', label: 'Mult x Cantidad', aliases: ['multi_qty', 'Mult x Cantidad'] },
-    { key: 'production_cadence', label: 'Cadencia', aliases: ['production_cadence', 'Cadencia'] },
-    { key: 'delay_reason', label: 'Motivo Retraso', aliases: ['delay_reason', 'Motivo Retraso'] },
-    { key: 'components_deadline', label: 'Fec. limite comp.', aliases: ['components_deadline', 'Fecha limite componentes'] },
-    { key: 'effective_start_date', label: 'Inicio (Vigente)', aliases: [] },
-    { key: 'start_date', label: 'Fecha Inicio Limite', aliases: ['start_date', 'Fecha Inicio Limite'] },
-    { key: 'modified_start_date', label: 'Fecha Inicio Modif.', aliases: ['modified_start_date', 'Fecha Inicio Modificada'] },
-    { key: 'planned_end_date', label: 'Fecha Fin', aliases: ['planned_end_date', 'Fecha Fin'] },
-    { key: 'notes', label: 'Observación', aliases: ['notes', 'Observación', 'notas'] }
-];
-
 const COLUMN_DISPLAY_ORDER = SYSTEM_FIELDS.map(f => f.key);
-
-const extractValue = (obj, fieldDef) => {
-    if (!obj) return undefined;
-    if (obj[fieldDef.key] !== undefined && obj[fieldDef.key] !== null) return obj[fieldDef.key];
-    const normalizeKey = (k) => String(k).toLowerCase().replace(/[^a-z0-9]/g, '');
-    const normalizedObjKeys = Object.keys(obj).reduce((acc, k) => { acc[normalizeKey(k)] = k; return acc; }, {});
-    for (const key of (fieldDef.aliases || [])) {
-        if (obj[key] !== undefined && obj[key] !== null) return obj[key];
-        const normKey = normalizeKey(key);
-        const realKey = normalizedObjKeys[normKey];
-        if (realKey && obj[realKey] !== undefined && obj[realKey] !== null) return obj[realKey];
-    }
-    const searchTerms = [fieldDef.key, fieldDef.label].filter(Boolean).map(normalizeKey);
-    for (const term of searchTerms) {
-        if (term.length < 3) continue;
-        const matchingKey = Object.keys(normalizedObjKeys).find(k => k.includes(term));
-        if (matchingKey) {
-            const realKey = normalizedObjKeys[matchingKey];
-            if (obj[realKey] !== undefined && obj[realKey] !== null) return obj[realKey];
-        }
-    }
-    return undefined;
-};
 
 export default function OrderImport() {
   const [rawOrders, setRawOrders] = useState([]);
@@ -192,26 +135,7 @@ export default function OrderImport() {
       else if (response?.data && Array.isArray(response.data)) data = response.data;
       else if (response?.data) data = [response.data];
       
-      const normalize = (row) => {
-          // Preservar machine_id original (hex de BD) ANTES de normalizar, para no perderlo
-          const originalMachineId = row.machine_id;
-          const newRow = { ...row };
-          SYSTEM_FIELDS.forEach(field => { const val = extractValue(row, field); if (val !== undefined) newRow[field.key] = val; });
-          // Restaurar machine_id si era un hex de BD válido (24 chars)
-          if (originalMachineId && /^[a-f0-9]{24}$/i.test(String(originalMachineId).trim())) {
-              newRow.machine_id = originalMachineId;
-          }
-          newRow.priority = parseInt(newRow.priority) || 0;
-          newRow.quantity = parseInt(newRow.quantity) || 0;
-          newRow.status = newRow.status || 'Pendiente';
-          newRow.multi_unit = parseInt(newRow.multi_unit) || 0;
-          newRow.multi_qty = parseFloat(newRow.multi_qty) || 0;
-          newRow.production_cadence = parseFloat(newRow.production_cadence) || 0;
-          newRow.effective_delivery_date = (newRow.new_delivery_date && !String(newRow.new_delivery_date).startsWith('0000')) ? newRow.new_delivery_date : newRow.committed_delivery_date;
-          newRow.effective_start_date = (newRow.modified_start_date && !String(newRow.modified_start_date).startsWith('0000')) ? newRow.modified_start_date : newRow.start_date;
-          return newRow;
-      };
-      if (data.length > 0) data = data.map(normalize);
+      if (data.length > 0) data = data.map(normalizeOrder);
       setRawOrders(data);
       toast.success(`${data.length} registros obtenidos.`, { id: toastId });
     } catch (error) {
@@ -298,26 +222,7 @@ export default function OrderImport() {
                   if (isDbId(rawMachineId)) {
                       machineId = String(rawMachineId).trim();
                   } else {
-                      machineId = resolveMachine(machineName, machineIdSource);
-                  }
-
-                  // Fallback: If machine not found, assign to "Sin Asignar" / "General" machine
-                  // We must ensure this machine exists. If not, we'll create/find a placeholder.
-                  // For now, let's try to find a machine with code '000' or similar, or just pick the first one.
-                  // Better yet, we should probably warn but NOT skip if we want 480/480.
-                  // But WorkOrder requires a valid machine_id foreign key usually.
-                  // Strategy: If machine not found, look for a "Sin Asignar" machine. If not exists, use the first available machine as fallback 
-                  // to avoid data loss, but mark it in notes.
-                  
-                  if (!machineId) {
-                      // Try to find a generic machine
-                      const genericMachine = machinesRaw.find(m => m.nombre_maquina === 'Sin Asignar' || m.codigo_maquina === '000');
-                      if (genericMachine) {
-                          machineId = genericMachine.id;
-                      } else if (machinesRaw.length > 0) {
-                          // Ultimate fallback: First machine in DB
-                          machineId = machinesRaw[0].id;
-                      }
+                      machineId = resolveMachine(machineName, machineIdSource, true); // Use fallback
                   }
 
                   if (!orderNumber || !machineId) {

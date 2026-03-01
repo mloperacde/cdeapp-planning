@@ -2,6 +2,7 @@ import { cdeApp } from '../api/cdeAppClient';
 import { base44 } from '../api/base44Client';
 import { localDataService } from '../components/process-configurator/services/localDataService';
 import { buildMachinesMap } from '@/utils/machineResolution';
+import { normalizeOrder } from '@/utils/orderNormalization';
 import { toast } from 'sonner';
 
 const generateId = () => Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
@@ -286,51 +287,38 @@ export const SyncService = {
       
       const { resolveMachine } = buildMachinesMap(machinesRaw);
 
-      // Helper to extract value with aliases (minimal version of what's in OrderImport.jsx)
-      const extractValueMinimal = (obj, key, aliases = []) => {
-          if (obj[key] !== undefined) return obj[key];
-          for (const alias of aliases) { if (obj[alias] !== undefined) return obj[alias]; }
-          return undefined;
-      };
-
       // 3. Process Orders (Upsert Logic with Batch Tagging)
       let successCount = 0;
       let failCount = 0;
 
-      const CHUNK_SIZE = 2;
-      const CHUNK_DELAY = 500;
+      const CHUNK_SIZE = 5;
+      const CHUNK_DELAY = 100;
 
       for (let i = 0; i < rawData.length; i += CHUNK_SIZE) {
           const chunk = rawData.slice(i, i + CHUNK_SIZE);
           
           await Promise.all(chunk.map(async (rawRow) => {
-              const orderNumber = extractValueMinimal(rawRow, 'order_number', ['Orden', 'numero_orden', 'wo', 'ORDEN']);
-              const machineName = extractValueMinimal(rawRow, 'machine_name', ['Máquina', 'maquina', 'machine', 'recurso']);
-              const machineIdSource = extractValueMinimal(rawRow, 'machine_id_source', ['machine_id', 'id_maquina', 'MACHINE_ID']);
+              const row = normalizeOrder(rawRow);
+              const orderNumber = row.order_number;
+              const machineName = row.machine_name;
+              const machineIdSource = row.machine_id_source;
               
-              let machineId = resolveMachine(machineName, machineIdSource);
+              let machineId = resolveMachine(machineName, machineIdSource, true); // Use fallback
 
-              // Fallback to "Sin Asignar" if possible
-              if (!machineId && machinesRaw.length > 0) {
-                  const fallback = machinesRaw.find(m => m.nombre_maquina === 'Sin Asignar' || m.codigo_maquina === '000') || machinesRaw[0];
-                  machineId = fallback.id;
+              if (!orderNumber || !machineId) {
+                  console.warn(`[BG Sync] Skipping order: missing orderNumber or machineId`, { orderNumber, machineName });
+                  failCount++;
+                  return;
               }
 
-              if (!orderNumber || !machineId) { failCount++; return; }
-
-              // Normalize payload
+              // Normalize payload and include FULL data in notes for Gantt compatibility
+              const notesData = { ...row, import_batch_id: currentBatchId };
               const payload = {
+                  ...row,
                   order_number: String(orderNumber),
                   machine_id: machineId,
                   import_batch_id: currentBatchId,
-                  status: rawRow.status || rawRow.Estado || 'Pendiente',
-                  priority: parseInt(rawRow.priority || rawRow.Prioridad) || 0,
-                  quantity: parseInt(rawRow.quantity || rawRow.Cantidad) || 0,
-                  client_name: rawRow.client_name || rawRow.Cliente || '',
-                  product_name: rawRow.product_name || rawRow.Nombre || rawRow.Descripción || '',
-                  product_article_code: rawRow.product_article_code || rawRow.Artículo || '',
-                  committed_delivery_date: rawRow.committed_delivery_date || rawRow['Fecha Entrega'] || '',
-                  notes: JSON.stringify({ ...rawRow, import_batch_id: currentBatchId })
+                  notes: JSON.stringify(notesData)
               };
 
               try {

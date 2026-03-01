@@ -19,6 +19,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cdeApp } from "@/api/cdeAppClient";
+import { buildMachinesMap } from "@/utils/machineResolution";
+import { normalizeOrder } from "@/utils/orderNormalization";
 
 import { Link } from "react-router-dom";
 
@@ -350,79 +352,30 @@ export default function ProductionPlanningPage() {
       const response = await cdeApp.syncProductions();
       
       // 2. Normalizar respuesta (Headers -> Objetos)
-      // Robust Normalization: Handle cases where data is already objects OR arrays
-      let rows = [];
-      
-      console.log("[Sync] Raw Response Structure:", {
-        headers: response.headers,
-        dataType: response.data ? (Array.isArray(response.data) ? 'Array' : typeof response.data) : 'undefined',
-        firstItemType: response.data && response.data[0] ? typeof response.data[0] : 'undefined',
-        firstItemIsArray: response.data && Array.isArray(response.data[0]),
-        firstItem: response.data && response.data[0]
-      });
-
+      let rawRows = [];
       if (response.data && Array.isArray(response.data)) {
-        // Case 1: Data is already objects (ignore headers mapping if so)
         if (response.data.length > 0 && typeof response.data[0] === 'object' && !Array.isArray(response.data[0])) {
-            console.log("[Sync] Data detected as Objects. Using directly.");
-            rows = response.data;
-        } 
-        // Case 2: Data is arrays of values (needs headers mapping)
-        else if (response.headers && Array.isArray(response.headers)) {
-            console.log("[Sync] Data detected as Arrays. Mapping with headers.");
-             rows = response.data.map(r => {
+            rawRows = response.data;
+        } else if (response.headers && Array.isArray(response.headers)) {
+             rawRows = response.data.map(r => {
                  const obj = {};
-                 // Fix: Ensure headers and data align. If data has more columns than headers, or vice versa, handle gracefully.
-                 response.headers.forEach((h, i) => {
-                    if (r[i] !== undefined) {
-                        obj[h] = r[i];
-                    }
-                 });
+                 response.headers.forEach((h, i) => { if (r[i] !== undefined) obj[h] = r[i]; });
                  return obj;
              });
-        }
-        // Case 3: Unknown format, try to use as is
-        else {
-             rows = response.data;
-        }
-      } else if (Array.isArray(response)) {
-          rows = response;
-      } else if (typeof response === 'object' && response !== null) {
-           // Fallback for single object or weird structure
-           console.log("[Sync] Response is a single object or unknown structure", response);
-           if (response.data) {
-               if (Array.isArray(response.data)) rows = response.data;
-               else rows = [response.data];
-           } else {
-               rows = [response];
-           }
-      }
+        } else { rawRows = response.data; }
+      } else if (Array.isArray(response)) { rawRows = response; }
+      else if (response?.data) { rawRows = Array.isArray(response.data) ? response.data : [response.data]; }
 
-      console.log("[Sync] First row structure:", rows[0]);
-
-      if (rows.length === 0) {
+      if (rawRows.length === 0) {
         toast.warning("CDEApp devolvió 0 órdenes.");
         setIsSyncing(false);
         return;
       }
 
-      // 3. Preparar mapeo de máquinas (Recargar frescas después del sync de máquinas)
+      // 3. Preparar mapeo de máquinas y normalización de órdenes
       const freshMachines = await base44.entities.MachineMasterDatabase.list(undefined, 1000);
-      const machineMap = new Map();
-      
-      // Función helper de normalización estricta para matching
-      const normalizeKey = (str) => String(str).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-
-      freshMachines.forEach(m => {
-          // 1. Mapeo por ID externo (cde_machine_id) -> Local ID (Prioridad Absoluta)
-          if (m.cde_machine_id) machineMap.set(String(m.cde_machine_id), m.id);
-
-          // 2. Mapeos Legacy (Fallback por Nombre/Código)
-          if (m.codigo) machineMap.set(normalizeKey(m.codigo), m.id);
-          if (m.nombre) machineMap.set(normalizeKey(m.nombre), m.id);
-          // También mapear por ID directo si es numérico (casos legacy)
-          if (m.id) machineMap.set(String(m.id), m.id);
-      });
+      const { resolveMachine } = buildMachinesMap(freshMachines);
+      const rows = rawRows.map(normalizeOrder);
 
       // 4. Limpiar órdenes existentes antes de insertar nuevas (Estrategia "Full Refresh")
       // Esto elimina duplicados, órdenes obsoletas y conflictos de prioridad.
@@ -515,170 +468,34 @@ export default function ProductionPlanningPage() {
       const totalToCreate = rows.length;
       console.log(`[Sync] Iniciando importación de ${totalToCreate} órdenes.`);
       
-      if (toastId) {
-          toast.loading(`Importando ${totalToCreate} órdenes...`, { id: toastId });
-      } else {
-          toastId = toast.loading(`Importando ${totalToCreate} órdenes...`);
-      }
+      const currentBatchId = `batch_${Date.now()}`;
+      if (toastId) { toast.loading(`Importando ${totalToCreate} órdenes...`, { id: toastId }); }
+      else { toastId = toast.loading(`Importando ${totalToCreate} órdenes...`); }
       
-      // 5. Procesar e Insertar (Secuencial para evitar Rate Limit)
-      // Helper para normalizar nombres (extraer código o limpiar texto)
-      const normalizeMachineName = (val) => {
-           if (!val) return "";
-           const s = String(val).toLowerCase().trim();
-           // Si viene formato "119 - Nombre", intentar extraer "119" o "nombre"
-           if (s.includes(' - ')) {
-              const parts = s.split(' - ');
-              return parts[0].trim(); // Retorna el código (ej: 119)
-           }
-           return s;
-      };
-
-      // Helper para parsear fechas DD/MM/YYYY a ISO YYYY-MM-DD
-      const parseImportDate = (val) => {
-          if (!val) return null;
-          // Si ya es ISO (contiene guiones y empieza por año o tiene T)
-          if (val.includes('-') && (val.length === 10 || val.includes('T'))) return val;
-          
-          // Intentar parsear DD/MM/YYYY o DD/MM/YYYY HH:mm
-          if (val.includes('/')) {
-              const parts = val.split(' ')[0].split('/'); // Tomar solo la fecha, ignorar hora
-              if (parts.length === 3) {
-                  const [day, month, year] = parts;
-                  // Validar que sean números
-                  if (!isNaN(day) && !isNaN(month) && !isNaN(year)) {
-                      // Asegurar formato YYYY-MM-DD
-                      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-                  }
-              }
-          }
-          return val; // Devolver original si no se pudo parsear (fallback)
-      };
-
       for (let i = 0; i < rows.length; i++) {
           const row = rows[i];
-
-          // Update progress every 5 items
           if (i % 5 === 0) {
               const percent = Math.round((i / totalToCreate) * 100);
               toast.loading(`Importando: ${percent}% (${i}/${totalToCreate})`, { id: toastId });
           }
 
-          console.log(`Procesando fila ${i}:`, row); // Ver qué tiene cada fila
+          const orderNumber = row.order_number;
+          if (!orderNumber) continue;
 
-          // Intenta encontrar el número de orden en varios campos posibles
-          const orderNumber = row['Orden'] || row['production_id'] || row['order_number'] || row['id'] || row['order'];
-          if (!orderNumber) {
-              // Solo loguear si no es la cabecera vacía o algo así
-              if (Object.keys(row).length > 2) console.warn("[Sync] Fila ignorada (sin ID de orden):", row);
-              continue;
-          }
+          const machineId = resolveMachine(row.machine_name, row.machine_id_source, true); // Fallback to 'Sin Asignar'
 
-          // Resolver Máquina - Estrategia robusta con IDs y Matching Avanzado
-          let machineId = null;
-          
-          const rowMachineId = String(row['machine_id'] || row['maquina_id'] || row['id_maquina'] || '').trim();
-          const rowMachineName = String(row['Máquina'] || row['machine_name'] || row['maquina'] || row['machine'] || rowMachineId).trim();
-          const rowSala = String(row['Sala'] || row['sala'] || row['room'] || '').trim();
-
-          // 1. Prioridad: ID explícito de máquina (machine_id)
-          if (rowMachineId && machineMap.has(rowMachineId)) {
-               machineId = machineMap.get(rowMachineId);
-          }
-
-          // 2. Fallback: Matching por Nombre/Código/Sala
-          if (!machineId) {
-              // A. Matching exacto o normalizado (existente)
-              if (rowMachineName) {
-                  const name = normalizeKey(rowMachineName);
-                  if (machineMap.has(name)) machineId = machineMap.get(name);
-                  
-                  // Try code from machine name
-                  if (!machineId) {
-                      const code = normalizeKey(normalizeMachineName(rowMachineName));
-                      if (machineMap.has(code)) machineId = machineMap.get(code);
-                  }
-              }
-
-              // B. Matching por parsing de Sala (Code extraction)
-              // Example: "104C 130 - BELCA" -> Code "130"
-              if (!machineId && rowSala) {
-                   // Strategy: Look for digits that match a known machine code
-                   // Iterate all known machine codes to see if they appear in Sala string
-                   // This is safer than regex guessing
-                   
-                   // freshMachines is available
-                   for (const m of freshMachines) {
-                       if (!m.codigo) continue;
-                       const codeStr = String(m.codigo).trim();
-                       if (codeStr.length < 2) continue; // Skip too short codes to avoid false positives (e.g. "1")
-                       
-                       // Check if Sala contains the code as a distinct word
-                       const regex = new RegExp(`\\b${codeStr}\\b`);
-                       if (regex.test(rowSala)) {
-                           machineId = m.id;
-                           break; // Found matching code in Sala
-                       }
-                   }
-              }
-
-              // C. Matching por Substring (Fuzzy) - Solves "001A 119 - B1600..." vs "B1600..."
-              if (!machineId && rowMachineName) {
-                   const searchName = normalizeKey(rowMachineName);
-                   
-                   for (const m of freshMachines) {
-                       const mName = normalizeKey(m.nombre);
-                       const mAlias = normalizeKey(getMachineAlias(m));
-                       
-                       // Check if machine name contains the imported name (e.g. DB has full name, Import has partial)
-                       // OR if imported name contains the machine name (Import has full info, DB has partial)
-                       // Enforce min length 4 to avoid matching short codes like "1" or "A" loosely
-                       if (mName.includes(searchName) || (mName.length > 3 && searchName.includes(mName)) ||
-                           mAlias.includes(searchName) || (mAlias.length > 3 && searchName.includes(mAlias))) {
-                           machineId = m.id;
-                           break; 
-                       }
-                   }
-              }
-          }
-
-          if (!machineId) {
-              skipped++;
-              if (skipped <= 5) console.warn(`[Sync] Máquina no encontrada para orden ${orderNumber}. Valor máquina: "${rowMachineName}"`);
-              continue;
-          }
-
-          const rawPriority = parseInt(row['Prioridad'] || row['priority']);
           const payload = {
+              ...row,
               order_number: String(orderNumber),
               machine_id: machineId,
-              client_name: row['Cliente'] || row['client_name'] || row['client'],
-              product_article_code: row['Artículo'] || row['product_article_code'] || row['article'],
-            product_name: row['Nombre'] || row['Descripción'] || row['product_name'] || row['description'],
-            quantity: parseInt(row['Cantidad'] || row['quantity']) || 0,
-            material_type: row['Material'] || row['material_type'] || row['material'] || '',
-            multi_qty: row['Multiplo x Cantidad'] || row['Multiplo'] || row['multi_qty'] || '',
-            priority: isNaN(rawPriority) ? 3 : rawPriority,
-              status: row['Estado'] || row['status'] || 'Pendiente',
-              start_date: parseImportDate(row['Fecha Inicio Limite'] || row['Fecha Inicio Modificada'] || row['start_date']),
-            committed_delivery_date: parseImportDate(row['Fecha Entrega'] || row['committed_delivery_date'] || row['delivery_date']),
-            new_delivery_date: parseImportDate(row['Nueva Fecha Entrega'] || row['new_delivery_date']),
-            planned_end_date: parseImportDate(row['Fecha Fin'] || row['planned_end_date'] || row['end_date']),
-            production_cadence: parseFloat(row['Cadencia'] || row['production_cadence'] || row['cadence']) || 0,
-            notes: row['Observación'] || row['notes'] || ''
+              import_batch_id: currentBatchId,
+              notes: JSON.stringify({ ...row, import_batch_id: currentBatchId })
           };
-
-          // Debug payload for first few items to check dates
-          if (created < 3) {
-             console.log(`[Sync] Payload example for ${orderNumber}:`, payload);
-          }
 
           try {
               await base44.entities.WorkOrder.create(payload);
               created++;
-          } catch (e) {
-              console.error(`Error creating order ${orderNumber}:`, e);
-          }
+          } catch (e) { console.error(`Error creating order ${orderNumber}:`, e); }
           
           // Delay to be gentle with API (200ms)
           await new Promise(resolve => setTimeout(resolve, 200));
