@@ -197,7 +197,7 @@ export default function ProductionPlanningPage() {
     // correctamente desde el query de workOrders (con horas precisas). NO sobreescribir.
     const filtered = workOrders.filter(order => {
       // Filter by Machine
-      if (selectedMachine !== "all" && order.machine_id !== selectedMachine) return false;
+      if (selectedMachine !== "all" && String(order.machine_id) !== String(selectedMachine)) return false;
       
       // Filter by Status
       if (selectedStatus !== "all" && order.status !== selectedStatus) return false;

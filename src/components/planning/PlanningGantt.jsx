@@ -54,7 +54,8 @@ export default function PlanningGantt({ orders = [], machines = [], dateRange, o
   const machineRows = useMemo(() => {
     if (!Array.isArray(machines) || machines.length === 0) return [];
     return machines.map(machine => {
-      const machineOrders = orders.filter(o => o.machine_id === machine.id);
+      // Loose comparison for ID (String vs Number safety)
+      const machineOrders = orders.filter(o => String(o.machine_id) === String(machine.id));
       
       // Scheduled: Has effective_start_date — sorted by start date, then priority
       const scheduled = machineOrders
