@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { cdeApp } from '../api/cdeAppClient';
 import { base44 } from '../api/base44Client';
 import { getMachineAlias } from "@/utils/machineAlias";
+import { buildMachinesMap, normStr } from "@/utils/machineResolution";
 import { toast } from 'sonner';
 import { Download, Table as TableIcon, Save, Search, X, RefreshCw, Loader2 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
@@ -77,9 +78,6 @@ const extractValue = (obj, fieldDef) => {
     }
     return undefined;
 };
-
-// Normaliza string para comparación: minúsculas, sin tildes, sin paréntesis, solo alfanumérico y espacios
-const normStr = (s) => String(s || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, '').replace(/[()]/g, '').replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
 
 export default function OrderImport() {
   const [rawOrders, setRawOrders] = useState([]);
@@ -262,76 +260,6 @@ export default function OrderImport() {
       }
   };
 
-  // Construye mapa de maquinas y funcion de resolucion robusta
-  const buildMachinesMap = async () => {
-      let machinesRaw = [];
-      const map = new Map();
-      const cdeIdMap = new Map(); // ID numérico CDE → ID base44
-
-      try {
-          machinesRaw = await base44.entities.MachineMasterDatabase.list(undefined, 1000);
-          if (!Array.isArray(machinesRaw)) machinesRaw = [];
-          machinesRaw.forEach(m => {
-              // Mapa por ID de BD directo (para resolver órdenes cargadas de la BD local)
-              if (m.id) map.set(m.id, m.id);
-              // Mapa por nombre normalizado
-              [m.nombre, m.codigo_maquina, m.codigo, m.descripcion, m.nombre_maquina].forEach(v => {
-                  if (v) map.set(normStr(v), m.id);
-              });
-              const alias = getMachineAlias(m);
-              if (alias) map.set(normStr(alias), m.id);
-              // Mapa por cde_machine_id explícito
-              if (m.cde_machine_id) cdeIdMap.set(String(m.cde_machine_id).trim(), m.id);
-              // Mapa por orden_visualizacion (suele coincidir con ID CDE)
-              if (m.orden_visualizacion != null) cdeIdMap.set(String(Math.round(m.orden_visualizacion)), m.id);
-          });
-      } catch (e) { console.error("Error cargando maquinas:", e); }
-
-      const resolve = (machineName, machineIdSource) => {
-          // PRIORIDAD 0: solo usar cdeIdMap si la máquina tiene cde_machine_id explícito en BD
-          // (NO usar orden_visualizacion porque no es fiable como ID CDE)
-          if (machineIdSource != null) {
-              const src = String(machineIdSource).trim();
-              if (cdeIdMap.has(src)) return cdeIdMap.get(src);
-          }
-
-          const name = String(machineName || '');
-          // Limpiar paréntesis envolventes: "(1SANI - X)" → "1SANI - X"
-          const cleanName = name.replace(/^\(+/, '').replace(/\)+$/, '').trim();
-          const s = normStr(cleanName);
-
-          // 1. Exacto por nombre normalizado
-          if (s && map.has(s)) return map.get(s);
-
-          // 2. Formato "SALA CODIGO - NOMBRE_MAQUINA": buscar por la parte después del " - "
-          if (cleanName.includes(' - ')) {
-              const parts = cleanName.split(' - ');
-              // Parte derecha (nombre de máquina real)
-              const afterDash = normStr(parts.slice(1).join(' - '));
-              // Último token de la parte izquierda (suele ser el código numérico)
-              const beforeTokens = parts[0].trim().split(/\s+/);
-              const codeToken = normStr(beforeTokens[beforeTokens.length - 1]);
-              const beforeAll = normStr(parts[0]);
-
-              if (afterDash && map.has(afterDash)) return map.get(afterDash);
-              if (codeToken && map.has(codeToken)) return map.get(codeToken);
-              if (beforeAll && map.has(beforeAll)) return map.get(beforeAll);
-          }
-
-          // 3. Fuzzy: alguna clave del mapa está contenida en el nombre o viceversa
-          if (s.length >= 3) {
-              for (const [key, id] of map.entries()) {
-                  if (key.length < 3) continue;
-                  if (s.includes(key) || key.includes(s)) return id;
-              }
-          }
-
-          return null;
-      };
-
-      return { map, cdeIdMap, machinesRaw, resolve };
-  };
-
   const saveOrders = async () => {
       if (filteredOrders.length === 0) { toast.warning("No hay órdenes visibles para guardar."); return; }
       if (!confirm(`Se van a guardar ${filteredOrders.length} registros y se ELIMINARÁN los que no estén en esta lista. ¿Continuar?`)) return;
@@ -344,7 +272,8 @@ export default function OrderImport() {
       const currentBatchId = `batch_${Date.now()}`;
 
       try {
-          const { resolve } = await buildMachinesMap();
+          const raw = await base44.entities.MachineMasterDatabase.list(undefined, 2000);
+          const { resolveMachine, machinesRaw } = buildMachinesMap(raw);
           toast.loading(`Guardando ${filteredOrders.length} órdenes (Lote: ${currentBatchId})...`, { id: toastId });
 
           let successCount = 0, failCount = 0, processed = 0;
@@ -369,7 +298,7 @@ export default function OrderImport() {
                   if (isDbId(rawMachineId)) {
                       machineId = String(rawMachineId).trim();
                   } else {
-                      machineId = resolve(machineName, machineIdSource);
+                      machineId = resolveMachine(machineName, machineIdSource);
                   }
 
                   // Fallback: If machine not found, assign to "Sin Asignar" / "General" machine
@@ -403,7 +332,7 @@ export default function OrderImport() {
 
                   // Add warning to notes if machine was forced
                   let notesData = { ...row, import_batch_id: currentBatchId };
-                  if (!resolve(machineName, machineIdSource) && !isDbId(rawMachineId)) {
+                  if (!resolveMachine(machineName, machineIdSource) && !isDbId(rawMachineId)) {
                       notesData.warning = `Máquina original no encontrada: ${machineName}. Asignada a fallback.`;
                   }
 
