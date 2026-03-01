@@ -87,7 +87,13 @@ export default function ProductionPlanningPage() {
         if (order.notes && typeof order.notes === 'string') {
           try {
             const parsed = JSON.parse(order.notes);
-            if (parsed && typeof parsed === 'object') extra = parsed;
+            if (parsed && typeof parsed === 'object') {
+                extra = parsed;
+                // Hoist batch ID if it only exists inside the JSON
+                if (!order.import_batch_id && parsed.import_batch_id) {
+                    order.import_batch_id = parsed.import_batch_id;
+                }
+            }
           } catch (_) { /* no JSON */ }
         }
         // Normalizar fechas: "DD/MM/YYYY HH:mm" -> ISO completo "YYYY-MM-DDTHH:mm:00"
