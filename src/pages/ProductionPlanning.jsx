@@ -190,48 +190,12 @@ export default function ProductionPlanningPage() {
 
   // Derived Data
   const filteredOrders = useMemo(() => {
-    // 1. Identify Latest Batch ID to implement "Clean Slate" view
-    // This ensures we only show the most recent import, effectively hiding "ghost" records from failed deletions.
-    const batchIds = new Set();
-    workOrders.forEach(o => {
-        if (o.import_batch_id) batchIds.add(o.import_batch_id);
-    });
-    
-    let targetBatchId = null;
-    if (batchIds.size > 0) {
-        // Sort and pick latest (batch_TIMESTAMP format ensures lexical sort works correctly)
-        targetBatchId = Array.from(batchIds).sort().pop();
-    }
-    
-    // Debug info
-    console.log(`[ProductionPlanning] Total Orders: ${workOrders.length}. Batches found: ${batchIds.size}. Target Batch: ${targetBatchId}`);
-
-    // Fallback: If no batch ID is found (e.g. legacy data or failed parsing),
-    // define a fallback "latest" based on updated_at timestamp
-    let cutoffDate = null;
-    if (!targetBatchId && workOrders.length > 0) {
-        const sorted = [...workOrders].sort((a,b) => new Date(b.updated_at || 0) - new Date(a.updated_at || 0));
-        if (sorted[0]) {
-             // Assume "latest" import happened within 1 hour of the very last record update
-             const lastUpdate = new Date(sorted[0].updated_at || new Date());
-             cutoffDate = new Date(lastUpdate.getTime() - 60 * 60 * 1000); 
-             console.log(`[ProductionPlanning] No batch ID found. Using fallback cutoff: ${cutoffDate.toISOString()}`);
-        }
-    }
+    // REVERT: Clean Slate logic removed. Showing ALL orders.
+    // If you need filtering, re-enable standard filters below.
 
     // Las fechas effective_start_date y effective_delivery_date ya vienen calculadas
     // correctamente desde el query de workOrders (con horas precisas). NO sobreescribir.
     const filtered = workOrders.filter(order => {
-      // Clean Slate Filter:
-      // If order HAS a batch ID: it MUST match the latest targetBatchId.
-      // If order DOES NOT HAVE a batch ID: we assume it's a Manual Order -> ALWAYS SHOW IT.
-      if (order.import_batch_id) {
-          if (targetBatchId && order.import_batch_id !== targetBatchId) return false;
-      }
-      
-      // Note: We removed the cutoffDate fallback because it was hiding manual orders created earlier.
-      // Now, manual orders (no batch ID) persist until manually deleted.
-
       // Filter by Machine
       if (selectedMachine !== "all" && order.machine_id !== selectedMachine) return false;
       
