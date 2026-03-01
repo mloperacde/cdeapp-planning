@@ -202,13 +202,33 @@ export default function ProductionPlanningPage() {
         // Sort and pick latest (batch_TIMESTAMP format ensures lexical sort works correctly)
         targetBatchId = Array.from(batchIds).sort().pop();
     }
+    
+    // Debug info
+    console.log(`[ProductionPlanning] Total Orders: ${workOrders.length}. Batches found: ${batchIds.size}. Target Batch: ${targetBatchId}`);
+
+    // Fallback: If no batch ID is found (e.g. legacy data or failed parsing),
+    // define a fallback "latest" based on updated_at timestamp
+    let cutoffDate = null;
+    if (!targetBatchId && workOrders.length > 0) {
+        const sorted = [...workOrders].sort((a,b) => new Date(b.updated_at || 0) - new Date(a.updated_at || 0));
+        if (sorted[0]) {
+             // Assume "latest" import happened within 1 hour of the very last record update
+             const lastUpdate = new Date(sorted[0].updated_at || new Date());
+             cutoffDate = new Date(lastUpdate.getTime() - 60 * 60 * 1000); 
+             console.log(`[ProductionPlanning] No batch ID found. Using fallback cutoff: ${cutoffDate.toISOString()}`);
+        }
+    }
 
     // Las fechas effective_start_date y effective_delivery_date ya vienen calculadas
     // correctamente desde el query de workOrders (con horas precisas). NO sobreescribir.
     const filtered = workOrders.filter(order => {
       // Clean Slate Filter: If a fresh import exists, hide everything else (including old ghosts)
-      if (targetBatchId && order.import_batch_id !== targetBatchId) {
-          return false;
+      if (targetBatchId) {
+          if (order.import_batch_id !== targetBatchId) return false;
+      } else if (cutoffDate) {
+          // Fallback logic: Show only recently updated records if no batch ID exists
+          const updateTime = new Date(order.updated_at || order.created_at || 0);
+          if (updateTime < cutoffDate) return false;
       }
 
       // Filter by Machine
