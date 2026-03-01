@@ -456,7 +456,23 @@ export default function OrderImport() {
           // Fetch ALL orders (using a large limit to be safe, or iterate)
           // Since filtering by !== is hard, we fetch all and check locally
           const allOrders = await base44.entities.WorkOrder.list(undefined, 5000);
-          const ordersToDelete = allOrders.filter(o => o.import_batch_id !== currentBatchId);
+          
+          // Parse JSON notes to find batch ID if missing on root
+          const ordersToDelete = allOrders.filter(o => {
+              // 1. Check root field
+              if (o.import_batch_id === currentBatchId) return false;
+              
+              // 2. Check JSON notes (fallback)
+              if (o.notes && typeof o.notes === 'string' && o.notes.startsWith('{')) {
+                  try {
+                      const parsed = JSON.parse(o.notes);
+                      if (parsed.import_batch_id === currentBatchId) return false;
+                  } catch (_) { /* ignore */ }
+              }
+              
+              // If neither matches, it's an old record -> Delete
+              return true;
+          });
           
           if (ordersToDelete.length > 0) {
              console.log(`[Cleanup] Deleting ${ordersToDelete.length} old records...`);
