@@ -385,6 +385,7 @@ export default function OrderImport() {
 
                   const isDbId = (v) => v && /^[a-f0-9]{24}$/i.test(String(v).trim());
 
+                  // 1. Machine ID Resolution
                   let machineId = null;
                   const rawMachineId = row.machine_id || row._db_machine_id;
                   if (isDbId(rawMachineId)) {
@@ -393,20 +394,42 @@ export default function OrderImport() {
                       machineId = resolve(machineName, machineIdSource);
                   }
 
+                  // Fallback: If machine not found, assign to "Sin Asignar" / "General" machine
+                  // We must ensure this machine exists. If not, we'll create/find a placeholder.
+                  // For now, let's try to find a machine with code '000' or similar, or just pick the first one.
+                  // Better yet, we should probably warn but NOT skip if we want 480/480.
+                  // But WorkOrder requires a valid machine_id foreign key usually.
+                  // Strategy: If machine not found, look for a "Sin Asignar" machine. If not exists, use the first available machine as fallback 
+                  // to avoid data loss, but mark it in notes.
+                  
+                  if (!machineId) {
+                      // Try to find a generic machine
+                      const genericMachine = machinesRaw.find(m => m.nombre_maquina === 'Sin Asignar' || m.codigo_maquina === '000');
+                      if (genericMachine) {
+                          machineId = genericMachine.id;
+                      } else if (machinesRaw.length > 0) {
+                          // Ultimate fallback: First machine in DB
+                          machineId = machinesRaw[0].id;
+                      }
+                  }
+
                   if (!orderNumber || !machineId) {
-                      const reason = !orderNumber ? 'Falta número de orden' : `Máquina no encontrada: "${machineName || machineIdSource || 'N/A'}"`;
+                      const reason = !orderNumber ? 'Falta número de orden' : `Máquina no encontrada y no hay fallback: "${machineName || machineIdSource || 'N/A'}"`;
                       console.warn(`Skipping order: ${reason}`, { order_number: orderNumber, machine_name: machineName });
                       skippedItems.push({ ...row, _skipReason: reason });
                       failCount++;
                       processed++;
-                      setProgress(Math.round((processed / total) * 90)); // Reserve last 10% for cleanup
+                      setProgress(Math.round((processed / total) * 90)); 
                       return;
                   }
 
-                  const serializedData = JSON.stringify({
-                      ...row,
-                      import_batch_id: currentBatchId // Save batch ID in notes JSON too
-                  });
+                  // Add warning to notes if machine was forced
+                  let notesData = { ...row, import_batch_id: currentBatchId };
+                  if (!resolve(machineName, machineIdSource) && !isDbId(rawMachineId)) {
+                      notesData.warning = `Máquina original no encontrada: ${machineName}. Asignada a fallback.`;
+                  }
+
+                  const serializedData = JSON.stringify(notesData);
                   
                   const payload = {
                       ...row,

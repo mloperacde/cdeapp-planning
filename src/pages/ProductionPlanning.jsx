@@ -222,14 +222,15 @@ export default function ProductionPlanningPage() {
     // Las fechas effective_start_date y effective_delivery_date ya vienen calculadas
     // correctamente desde el query de workOrders (con horas precisas). NO sobreescribir.
     const filtered = workOrders.filter(order => {
-      // Clean Slate Filter: If a fresh import exists, hide everything else (including old ghosts)
-      if (targetBatchId) {
-          if (order.import_batch_id !== targetBatchId) return false;
-      } else if (cutoffDate) {
-          // Fallback logic: Show only recently updated records if no batch ID exists
-          const updateTime = new Date(order.updated_at || order.created_at || 0);
-          if (updateTime < cutoffDate) return false;
+      // Clean Slate Filter:
+      // If order HAS a batch ID: it MUST match the latest targetBatchId.
+      // If order DOES NOT HAVE a batch ID: we assume it's a Manual Order -> ALWAYS SHOW IT.
+      if (order.import_batch_id) {
+          if (targetBatchId && order.import_batch_id !== targetBatchId) return false;
       }
+      
+      // Note: We removed the cutoffDate fallback because it was hiding manual orders created earlier.
+      // Now, manual orders (no batch ID) persist until manually deleted.
 
       // Filter by Machine
       if (selectedMachine !== "all" && order.machine_id !== selectedMachine) return false;
