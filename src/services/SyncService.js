@@ -1,6 +1,7 @@
 import { cdeApp } from '../api/cdeAppClient';
 import { base44 } from '../api/base44Client';
 import { localDataService } from '../components/process-configurator/services/localDataService';
+import { buildMachinesMap } from '@/utils/machineResolution';
 import { toast } from 'sonner';
 
 const generateId = () => Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
@@ -39,7 +40,8 @@ export const SyncService = {
     // Run in sequence or parallel? Sequence is safer for logging.
     await this.syncRooms(log);
     await this.syncMachines(log);
-    await this.syncArticles(log); // Added Article Sync
+    await this.syncArticles(log);
+    await this.syncOrders(log);
     
     log("Sync completed.");
   },
@@ -261,194 +263,118 @@ export const SyncService = {
 
   async syncOrders(log) {
     log("Syncing Orders...");
-    try {
-      // 1. Fetch Orders
-      const response = await cdeApp.syncProductions();
-      let data = [];
-      if (Array.isArray(response)) {
-          data = response;
-      } else if (response && response.data && Array.isArray(response.data)) {
-          data = response.data;
-      } else if (response && response.data) {
-          data = [response.data];
-      } else if (response) {
-           if (typeof response === 'object' && Object.keys(response).length > 0 && Object.keys(response).every(key => !isNaN(parseInt(key)))) {
-               data = Object.values(response);
-           } else {
-               data = [response];
-           }
-      }
+    const currentBatchId = `batch_bg_${Date.now()}`;
 
-      if (data.length === 0) {
-          log("No orders found.");
+    try {
+      // 1. Fetch Orders from CDEApp
+      const response = await cdeApp.syncProductions();
+      let rawData = [];
+      if (Array.isArray(response)) rawData = response;
+      else if (response?.data && Array.isArray(response.data)) rawData = response.data;
+      else if (response?.data) rawData = [response.data];
+
+      if (rawData.length === 0) {
+          log("No orders found in CDEApp.");
           return;
       }
 
       // 2. Fetch Machines for resolution
-      let machinesMap = new Map();
+      let machinesRaw = [];
       try {
-          let res = await base44.entities.MachineMasterDatabase.list(undefined, 5000);
-          if (Array.isArray(res)) {
-              res.forEach(m => {
-                  if (m.nombre) machinesMap.set(m.nombre.toLowerCase().trim(), m.id);
-                  if (m.codigo_maquina) machinesMap.set(m.codigo_maquina.toLowerCase().trim(), m.id);
-                  if (m.code) machinesMap.set(m.code.toLowerCase().trim(), m.id);
-              });
-          }
-      } catch (e) {
-          console.warn("Error fetching machines for order sync", e);
-      }
+          machinesRaw = await base44.entities.MachineMasterDatabase.list(undefined, 2000);
+      } catch (e) { console.warn("Error fetching machines for background sync", e); }
+      
+      const { resolveMachine } = buildMachinesMap(machinesRaw);
 
-      // 3. Process Orders (Upsert Logic)
-      // Since we can't easily check all orders, we'll try to Create.
-      // NOTE: This might duplicate if backend doesn't handle unique constraint on order_number.
-      // Given user instruction "reescribiran", we ideally update.
-      // But without efficient lookup, we'll proceed with creation/update if we can find it.
-      
-      let created = 0;
-      let updated = 0;
-      let failed = 0;
-      
-      // We limit to 50 items for background sync to avoid blocking/rate limits if list is huge?
-      // Or we process all with delays. User said "reescribiran los datos", implies full sync.
-      // We will use the chunked approach.
-      
-      // Helper to normalize keys from Spanish/English mix to standard DB keys
-      const normalize = (row) => {
-          return {
-              order_number: String(row.order_number || row.Orden || row.numero_orden || row.wo || row.ORDEN || ''),
-              machine_name: row.machine_name || row.Máquina || row.maquina || row.machine || row.recurso,
-              machine_id_source: row.machine_id || row.id_maquina || row.MACHINE_ID, // source ID
-              status: row.status || row.Estado || row.situacion || 'Pendiente',
-              production_id: row.production_id || row.id || row.ID,
-              priority: parseInt(row.priority || row.Prioridad || row.urgencia) || 0,
-              quantity: parseInt(row.quantity || row.Cantidad || row.qty) || 0,
-              notes: row.notes || row.Observación || row.notas || row.comentarios || '',
-              client_name: row.client_name || row.Cliente,
-              product_name: row.product_name || row.Nombre || row.Descripción,
-              product_article_code: row.product_article_code || row.Artículo,
-              planned_end_date: row.planned_end_date || row['Fecha Fin'],
-              type: row.type || row.Tipo,
-              room: row.room || row.Sala,
-              client_order_ref: row.client_order_ref || row['Su Pedido'],
-              internal_order_ref: row.internal_order_ref || row.Pedido,
-              article_status: row.article_status || row['Edo. Art.'],
-              material: row.material || row.Material,
-              product_family: row.product_family || row.Producto,
-              shortages: row.shortages || row.Faltas,
-              committed_delivery_date: row.committed_delivery_date || row['Fecha Entrega'],
-              new_delivery_date: row.new_delivery_date || row['Nueva Fecha Entrega'],
-              delivery_compliance: row.delivery_compliance || row['Cumplimiento entrega'],
-              multi_unit: parseInt(row.multi_unit || row.MultUnid) || 0,
-              multi_qty: parseFloat(row.multi_qty || row['Mult x Cantidad']) || 0,
-              production_cadence: parseFloat(row.production_cadence || row.Cadencia) || 0,
-              delay_reason: row.delay_reason || row['Motivo Retraso'],
-              components_deadline: row.components_deadline || row['Fecha limite componentes'],
-              start_date: row.start_date || row['Fecha Inicio Limite'],
-              start_date_simple: row.start_date_simple || row['Fecha Inicio Limite Simple'],
-              modified_start_date: row.modified_start_date || row['Fecha Inicio Modificada'],
-              end_date_simple: row.end_date_simple || row['Fecha Fin Simple']
-          };
+      // Helper to extract value with aliases (minimal version of what's in OrderImport.jsx)
+      const extractValueMinimal = (obj, key, aliases = []) => {
+          if (obj[key] !== undefined) return obj[key];
+          for (const alias of aliases) { if (obj[alias] !== undefined) return obj[alias]; }
+          return undefined;
       };
 
-      const CHUNK_SIZE = 1; // Reduced to 1 to minimize burst rate
-      const CHUNK_DELAY = 1500; // Increased delay to 1.5s
+      // 3. Process Orders (Upsert Logic with Batch Tagging)
+      let successCount = 0;
+      let failCount = 0;
 
-      for (let i = 0; i < data.length; i += CHUNK_SIZE) {
-          const chunk = data.slice(i, i + CHUNK_SIZE);
+      const CHUNK_SIZE = 2;
+      const CHUNK_DELAY = 500;
+
+      for (let i = 0; i < rawData.length; i += CHUNK_SIZE) {
+          const chunk = rawData.slice(i, i + CHUNK_SIZE);
           
           await Promise.all(chunk.map(async (rawRow) => {
-              const row = normalize(rawRow);
-              const orderNumber = row.order_number;
-              const machineName = row.machine_name;
+              const orderNumber = extractValueMinimal(rawRow, 'order_number', ['Orden', 'numero_orden', 'wo', 'ORDEN']);
+              const machineName = extractValueMinimal(rawRow, 'machine_name', ['Máquina', 'maquina', 'machine', 'recurso']);
+              const machineIdSource = extractValueMinimal(rawRow, 'machine_id_source', ['machine_id', 'id_maquina', 'MACHINE_ID']);
               
-              let machineId = null;
-              if (machineName) {
-                  const s = String(machineName).toLowerCase().trim();
-                  if (machinesMap.has(s)) machineId = machinesMap.get(s);
-                  else if (s.includes(' - ')) {
-                      const parts = s.split(' - ');
-                      if (machinesMap.has(parts[0].trim())) machineId = machinesMap.get(parts[0].trim());
-                  }
+              let machineId = resolveMachine(machineName, machineIdSource);
+
+              // Fallback to "Sin Asignar" if possible
+              if (!machineId && machinesRaw.length > 0) {
+                  const fallback = machinesRaw.find(m => m.nombre_maquina === 'Sin Asignar' || m.codigo_maquina === '000') || machinesRaw[0];
+                  machineId = fallback.id;
               }
 
-              if (!orderNumber || !machineId) {
-                  failed++;
-                  return;
-              }
+              if (!orderNumber || !machineId) { failCount++; return; }
 
-              // Check if exists with retry
-              let existing = [];
-              try {
-                  existing = await retryOp(() => base44.entities.WorkOrder.filter({ order_number: String(orderNumber) }));
-              } catch (e) {
-                  // ignore or log
-              }
-
+              // Normalize payload
               const payload = {
                   order_number: String(orderNumber),
                   machine_id: machineId,
-                  status: row.status,
-                  production_id: row.production_id,
-                  machine_id_source: row.machine_id_source,
-                  priority: row.priority,
-                  quantity: row.quantity,
-                  notes: row.notes,
-                  client_name: row.client_name,
-                  product_name: row.product_name,
-                  product_article_code: row.product_article_code,
-                  planned_end_date: row.planned_end_date,
-                  type: row.type,
-                  room: row.room,
-                  client_order_ref: row.client_order_ref,
-                  internal_order_ref: row.internal_order_ref,
-                  article_status: row.article_status,
-                  material: row.material,
-                  product_family: row.product_family,
-                  shortages: row.shortages,
-                  committed_delivery_date: row.committed_delivery_date,
-                  new_delivery_date: row.new_delivery_date,
-                  delivery_compliance: row.delivery_compliance,
-                  multi_unit: row.multi_unit,
-                  multi_qty: row.multi_qty,
-                  production_cadence: row.production_cadence,
-                  delay_reason: row.delay_reason,
-                  components_deadline: row.components_deadline,
-                  start_date: row.start_date,
-                  start_date_simple: row.start_date_simple,
-                  modified_start_date: row.modified_start_date,
-                  end_date_simple: row.end_date_simple
+                  import_batch_id: currentBatchId,
+                  status: rawRow.status || rawRow.Estado || 'Pendiente',
+                  priority: parseInt(rawRow.priority || rawRow.Prioridad) || 0,
+                  quantity: parseInt(rawRow.quantity || rawRow.Cantidad) || 0,
+                  client_name: rawRow.client_name || rawRow.Cliente || '',
+                  product_name: rawRow.product_name || rawRow.Nombre || rawRow.Descripción || '',
+                  product_article_code: rawRow.product_article_code || rawRow.Artículo || '',
+                  committed_delivery_date: rawRow.committed_delivery_date || rawRow['Fecha Entrega'] || '',
+                  notes: JSON.stringify({ ...rawRow, import_batch_id: currentBatchId })
               };
 
               try {
+                  let existing = [];
+                  try { existing = await retryOp(() => base44.entities.WorkOrder.filter({ order_number: String(orderNumber) })); } catch (e) {}
+
                   if (existing && existing.length > 0) {
                       await retryOp(() => base44.entities.WorkOrder.update(existing[0].id, payload));
-                      updated++;
-                      
                       if (existing.length > 1) {
                           for (let k = 1; k < existing.length; k++) {
-                            try {
-                              await retryOp(() => base44.entities.WorkOrder.delete(existing[k].id));
-                            } catch (e) {
-                              console.warn("Error deleting duplicate WorkOrder", existing[k].id, e);
-                            }
+                              try { await retryOp(() => base44.entities.WorkOrder.delete(existing[k].id)); } catch (e) {}
                           }
                       }
                   } else {
                       await retryOp(() => base44.entities.WorkOrder.create(payload));
-                      created++;
                   }
+                  successCount++;
               } catch (e) {
-                  console.error("Order save error", e);
-                  failed++;
+                  console.error("Order background sync error", e);
+                  failCount++;
               }
           }));
 
-          if (i + CHUNK_SIZE < data.length) {
-              await new Promise(r => setTimeout(r, CHUNK_DELAY));
-          }
+          if (i + CHUNK_SIZE < rawData.length) await sleep(CHUNK_DELAY);
       }
-      log(`Orders: ${created} created, ${updated} updated, ${failed} failed.`);
+
+      // 4. Cleanup old records
+      log("Cleaning up stale orders...");
+      try {
+          const allOrders = await base44.entities.WorkOrder.list(undefined, 5000);
+          const toDelete = allOrders.filter(o => {
+              if (o.import_batch_id === currentBatchId) return false;
+              if (o.notes && o.notes.startsWith('{')) {
+                  try { if (JSON.parse(o.notes).import_batch_id === currentBatchId) return false; } catch(e) {}
+              }
+              return true;
+          });
+
+          for (let i = 0; i < toDelete.length; i += 5) {
+              const delChunk = toDelete.slice(i, i + 5);
+              await Promise.allSettled(delChunk.map(o => base44.entities.WorkOrder.delete(o.id)));
+          }
+          log(`Orders: ${successCount} synced, ${toDelete.length} cleaned up.`);
+      } catch (e) { log(`Cleanup error: ${e.message}`); }
 
     } catch (error) {
       log(`Error syncing orders: ${error.message}`);
