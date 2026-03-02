@@ -108,16 +108,16 @@ Deno.serve(async (req: Request) => {
     
     // Si estamos usando la URL antigua (/ExtApi), la mantenemos. Si no, probamos con y sin ExtApi.
     if (!baseUrl.includes("ExtApi")) {
-        // En la documentación de Cuco360 (cuco360.cucorent.com/api/documentation), los endpoints suelen estar en la raíz de /api
-        // Si el health check funcionó en /api/auxiliary/index, significa que la base URL es correcta.
-        // PERO, getfullchecks es un método de la API antigua (ExtApi).
-        // Si la nueva API no tiene getfullchecks, deberíamos usar /markings/index o similar.
-        // Como no tenemos la doc completa, probaremos la ruta 'legacy' pero con la nueva base URL, 
-        // añadiendo '/ExtApi' explícitamente porque es posible que lo requiera como "namespace".
+        // Al parecer, getfullchecks es específico de la API antigua y no está en la raíz de la nueva API REST.
+        // Vamos a probar un endpoint más estándar de la nueva API: /markings/index (listado de marcajes)
+        // Documentación típica de APIs REST: recurso/index o recurso/list
         
-        // Endpoint corregido para nueva URL base:
-        // https://cuco360.cucorent.com/api/ExtApi/checking/getfullchecks/380?...
-        endpoint = `/ExtApi/checking/getfullchecks/${CLIENT_CODE}?start_date=${safeFrom}&end_date=${safeTo}`;
+        // Probamos con /markings/index
+        // Params habituales: start_date, end_date (formato YYYY-MM-DD)
+        endpoint = `/markings/index?start_date=${safeFrom}&end_date=${safeTo}`;
+        
+        // Si fallara, la otra opción es que 'ExtApi' siga siendo válida pero requiera otro formato.
+        // Pero dado el error 500, es probable que el servidor no entienda la ruta anterior.
     }
 
     let url = `${baseUrl}${endpoint}`;
