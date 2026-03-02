@@ -108,21 +108,25 @@ Deno.serve(async (req: Request) => {
     
     // Si estamos usando la URL antigua (/ExtApi), la mantenemos. Si no, probamos con y sin ExtApi.
     if (!baseUrl.includes("ExtApi")) {
-        // En base a la captura y pruebas, el error 500 indica que la API no reconoce la ruta /markings/index.
-        // La documentación original mencionaba 'getfullchecks' y 'ExtApi'.
-        // Es muy probable que la nueva API (cuco360.cucorent.com/api) siga usando 'ExtApi' como prefijo para compatibilidad,
-        // pero con un formato diferente o simplemente que el endpoint correcto sea el legacy pero bajo el nuevo dominio.
+        // Los errores 500 persistentes en la nueva URL sugieren que la nueva API (cuco360.cucorent.com/api)
+        // podría no estar correctamente configurada para nuestro tenant o no soportar 'getfullchecks'.
         
-        // Volvemos a probar la ruta legacy completa bajo el nuevo dominio, ya que es la única documentada explícitamente en el pasado.
-        // Si falló antes con 500, podría ser por algún parámetro o header.
-        // Revisamos headers: 'apikey' (lowercase) está confirmado.
+        // ESTRATEGIA FINAL: Volver a la URL original (api.cuco360.com/api/ExtApi)
+        // pero usando el NUEVO método de autenticación (apikey header) que descubrimos en Swagger.
+        // Es muy posible que el endpoint antiguo siga vivo pero requiera la nueva auth.
         
-        // Probamos de nuevo /ExtApi/checking/getfullchecks pero nos aseguramos de que no haya doble slash y parámetros correctos.
-        // https://cuco360.cucorent.com/api/ExtApi/checking/getfullchecks/380
-        endpoint = `/ExtApi/checking/getfullchecks/${CLIENT_CODE}?start_date=${safeFrom}&end_date=${safeTo}`;
+        // Sobrescribimos la baseUrl temporalmente para probar la URL "legacy" original
+        const legacyBaseUrl = "https://api.cuco360.com/api/ExtApi";
+        
+        // Endpoint original
+        endpoint = `/checking/getfullchecks/${CLIENT_CODE}?start_date=${safeFrom}&end_date=${safeTo}`;
+        
+        // Usamos la URL legacy completa
+        url = `${legacyBaseUrl}${endpoint}`;
+    } else {
+        // Si ya tenía ExtApi, construimos normal
+        url = `${baseUrl}${endpoint}`;
     }
-
-    let url = `${baseUrl}${endpoint}`;
     
     // Corrección para evitar doble // si baseUrl termina en /
     url = url.replace(/([^:]\/)\/+/g, "$1");
