@@ -42,6 +42,7 @@ export default function DailyProductionPlanningPage() {
   const [selectedShift, setSelectedShift] = useState("Mañana");
   const [selectedTeam, setSelectedTeam] = useState(""); 
   const [configMode, setConfigMode] = useState("manual");
+  const [isLoading, setIsLoading] = useState(false);
   
   // Import Dialog State
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
@@ -386,10 +387,15 @@ export default function DailyProductionPlanningPage() {
     let total = 0;
     activePlanningsMap.forEach(p => {
         if (p.auto_suggested) return;
+        
+        // Ensure machine exists in the current machine list to avoid ghost counts
+        const machineExists = machines.some(m => String(m.id) === String(p.machine_id));
+        if (!machineExists) return;
+
         total += (Number(p.operadores_necesarios) || 0);
     });
     return total;
-  }, [activePlanningsMap]);
+  }, [activePlanningsMap, machines]);
 
   // --- Mutations ---
 
@@ -786,8 +792,9 @@ export default function DailyProductionPlanningPage() {
   };
 
   const handleOperatorChange = (planningId, val) => {
-    const num = parseInt(val);
-    if (!isNaN(num) && num > 0) {
+    // Treat empty string as 0 for real-time updates
+    const num = val === "" ? 0 : parseInt(val);
+    if (!isNaN(num) && num >= 0) { 
         updateMutation.mutate({
             id: planningId,
             data: { operadores_necesarios: num }
@@ -795,9 +802,40 @@ export default function DailyProductionPlanningPage() {
     }
   };
 
-  const handleClearAll = () => {
+  const handleClearAll = async () => {
     if (confirm("¿Estás seguro de que deseas borrar TODA la planificación para este día y equipo? Esta acción no se puede deshacer.")) {
-        clearMutation.mutate();
+        setIsLoading(true); // Using correct state setter
+        try {
+            // 1. Obtener lista fresca de la base de datos para asegurar limpieza total
+            const freshPlannings = await base44.entities.MachinePlanning.filter({ 
+                fecha_planificacion: selectedDate, 
+                team_key: selectedTeam 
+            });
+            
+            if (freshPlannings && freshPlannings.length > 0) {
+                // 2. Borrado secuencial con pequeño delay para evitar 429 y asegurar persistencia
+                for (const p of freshPlannings) {
+                    await base44.entities.MachinePlanning.delete(p.id);
+                    await new Promise(r => setTimeout(r, 30));
+                }
+            }
+            
+            toast({
+                title: "Limpieza Completada",
+                description: "Se han eliminado todos los registros de planificación.",
+                className: "bg-green-600 text-white border-green-700"
+            });
+        } catch (error) {
+            console.error("Error en limpieza total:", error);
+            toast({
+                title: "Error",
+                description: "No se pudo completar la limpieza total.",
+                variant: "destructive"
+            });
+        } finally {
+            queryClient.invalidateQueries(['machinePlannings', selectedDate, selectedTeam]);
+            setIsLoading(false);
+        }
     }
   };
 
@@ -1196,7 +1234,7 @@ export default function DailyProductionPlanningPage() {
                                   configMode === "manual" ? isActiveManual : isActiveSuggested;
 
                                 const operatorsValue =
-                                  planning && planning.operadores_necesarios
+                                  planning && (planning.operadores_necesarios !== undefined && planning.operadores_necesarios !== null)
                                     ? planning.operadores_necesarios
                                     : "";
                                 const avgVal = avgOperatorsByMachine.get(String(machine.id));
@@ -1257,23 +1295,15 @@ export default function DailyProductionPlanningPage() {
                                           <span className="text-[10px] text-slate-400">Op.</span>
                                           <Input
                                             type="number"
-                                            min="1"
+                                            min="0"
                                             className="h-6 w-12 px-1 text-center text-[11px] font-semibold bg-slate-50 border-slate-200 focus:border-blue-400 focus:ring-1 focus:ring-blue-400"
                                             disabled={!isActiveManual || !planning}
-                                            defaultValue={operatorsValue}
-                                            onBlur={e => {
+                                            value={operatorsValue}
+                                            onChange={e => {
                                               if (planning) {
                                                 handleOperatorChange(
                                                   planning.id,
                                                   e.target.value
-                                                );
-                                              }
-                                            }}
-                                            onKeyDown={e => {
-                                              if (e.key === "Enter" && planning) {
-                                                handleOperatorChange(
-                                                  planning.id,
-                                                  e.currentTarget.value
                                                 );
                                               }
                                             }}
