@@ -108,16 +108,18 @@ Deno.serve(async (req: Request) => {
     
     // Si estamos usando la URL antigua (/ExtApi), la mantenemos. Si no, probamos con y sin ExtApi.
     if (!baseUrl.includes("ExtApi")) {
-        // Al parecer, getfullchecks es específico de la API antigua y no está en la raíz de la nueva API REST.
-        // Vamos a probar un endpoint más estándar de la nueva API: /markings/index (listado de marcajes)
-        // Documentación típica de APIs REST: recurso/index o recurso/list
+        // En base a la captura y pruebas, el error 500 indica que la API no reconoce la ruta /markings/index.
+        // La documentación original mencionaba 'getfullchecks' y 'ExtApi'.
+        // Es muy probable que la nueva API (cuco360.cucorent.com/api) siga usando 'ExtApi' como prefijo para compatibilidad,
+        // pero con un formato diferente o simplemente que el endpoint correcto sea el legacy pero bajo el nuevo dominio.
         
-        // Probamos con /markings/index
-        // Params habituales: start_date, end_date (formato YYYY-MM-DD)
-        endpoint = `/markings/index?start_date=${safeFrom}&end_date=${safeTo}`;
+        // Volvemos a probar la ruta legacy completa bajo el nuevo dominio, ya que es la única documentada explícitamente en el pasado.
+        // Si falló antes con 500, podría ser por algún parámetro o header.
+        // Revisamos headers: 'apikey' (lowercase) está confirmado.
         
-        // Si fallara, la otra opción es que 'ExtApi' siga siendo válida pero requiera otro formato.
-        // Pero dado el error 500, es probable que el servidor no entienda la ruta anterior.
+        // Probamos de nuevo /ExtApi/checking/getfullchecks pero nos aseguramos de que no haya doble slash y parámetros correctos.
+        // https://cuco360.cucorent.com/api/ExtApi/checking/getfullchecks/380
+        endpoint = `/ExtApi/checking/getfullchecks/${CLIENT_CODE}?start_date=${safeFrom}&end_date=${safeTo}`;
     }
 
     let url = `${baseUrl}${endpoint}`;
