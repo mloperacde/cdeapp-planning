@@ -36,7 +36,9 @@ export function isEmployeeAvailableOnDate(employee, absences = [], dateISO) {
   const d = new Date(dateISO + 'T00:00:00');
   const hasActiveAbsence = absences.some(abs => {
     if (abs.employee_id !== employee.id) return false;
-    if (abs.estado_aprobacion !== 'Aprobada') return false;
+    // Consider Pending absences as unavailable too (effectively absent)
+    if (abs.estado_aprobacion === 'Rechazada') return false; 
+    
     const start = new Date(abs.fecha_inicio);
     const end = abs.fecha_fin_desconocida ? null : new Date(abs.fecha_fin);
     if (abs.fecha_fin_desconocida) return d >= start;
@@ -55,7 +57,8 @@ export function getAvailability(employees = [], absences = [], dateISO) {
       disponibles.push(emp);
     } else {
       ausentes.push(emp);
-      const a = absences.find(x => x.employee_id === emp.id && x.estado_aprobacion === 'Aprobada');
+      // Also show details for Pending absences
+      const a = absences.find(x => x.employee_id === emp.id && x.estado_aprobacion !== 'Rechazada');
       if (a) detallesAusentes.push({ employee: emp, ausencia: a });
     }
   });

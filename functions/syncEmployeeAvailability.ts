@@ -23,8 +23,12 @@ Deno.serve(async (req) => {
     for (const employee of employees) {
       try {
         // Buscar ausencias activas para este empleado
+        // IMPORTANT: We count "Pendiente" and "Aprobada" as Active.
+        // Even if not approved yet, employee is effectively absent.
+        // We only exclude "Rechazada".
         const employeeAbsences = absences.filter(abs => {
           if (abs.employee_id !== employee.id) return false;
+          if (abs.estado_aprobacion === 'Rechazada') return false; // Only exclude rejected
           if (!abs.fecha_inicio) return false;
           
           const start = new Date(abs.fecha_inicio);
