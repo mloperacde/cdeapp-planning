@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Check, X, Clock, FileText, Download } from "lucide-react";
+import { Check, X, Clock, FileText, Download, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
@@ -84,6 +84,26 @@ export default function AbsenceApprovalPanel({ absences, employees, masterEmploy
       setComentario("");
     }
   });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (absenceId) => {
+      return await base44.entities.Absence.delete(absenceId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['absences'] });
+      toast.success("Ausencia eliminada correctamente");
+      setExpandedId(null);
+    },
+    onError: () => {
+      toast.error("Error al eliminar la ausencia");
+    }
+  });
+
+  const handleDelete = (absenceId) => {
+    if (confirm("¿Estás seguro de que deseas eliminar esta solicitud de ausencia permanentemente? Esta acción no se puede deshacer.")) {
+        deleteMutation.mutate(absenceId);
+    }
+  };
 
   const handleApproval = (absence, estado) => {
     approvalMutation.mutate({ 
@@ -195,13 +215,22 @@ export default function AbsenceApprovalPanel({ absences, employees, masterEmploy
 
                     <div className="flex gap-2 mt-4">
                       {!isExpanded ? (
-                        <Button
-                          variant="outline"
-                          onClick={() => setExpandedId(absence.id)}
-                          className="flex-1"
-                        >
-                          Revisar
-                        </Button>
+                        <>
+                            <Button
+                            variant="outline"
+                            onClick={() => setExpandedId(absence.id)}
+                            className="flex-1"
+                            >
+                            Revisar
+                            </Button>
+                            <Button
+                                variant="ghost"
+                                onClick={() => handleDelete(absence.id)}
+                                className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                            >
+                                <Trash2 className="w-4 h-4" />
+                            </Button>
+                        </>
                       ) : (
                         <>
                           <Button
