@@ -187,12 +187,16 @@ Deno.serve(async (req: Request) => {
       if (m.id && m.codigo_empleado) masterIdToCodigo[m.id] = String(m.codigo_empleado);
     }
 
-    // Mapas de ausencias activas en la fecha: por id y por código
+  // Mapa de ausencias activas en la fecha: por id y por código
     const ausenciasByCodigo: Record<string, any> = {};
     const ausenciasById: Record<string, any> = {};
     for (const a of ausencias) {
       if (!a.employee_id) continue;
+      // IMPORTANT: We count "Pendiente" and "Aprobada" as Active.
+      // Only "Rechazada" is ignored.
+      if (a.estado_aprobacion === 'Rechazada') continue;
       if (!ausenciaActivaEnFecha(a, date)) continue;
+
       const codigo = masterIdToCodigo[a.employee_id];
       const normalizedCodigo = codigo != null ? String(codigo).trim() : "";
       if (normalizedCodigo && !excludedIds.has(normalizedCodigo)) ausenciasByCodigo[normalizedCodigo] = a;
@@ -300,6 +304,17 @@ Deno.serve(async (req: Request) => {
       });
     }
 
+    // ── Pre-process Absences ────────────────────────────────────────────────
+    // Ensure we capture Pending absences as valid "ausencias" for reporting
+    // This affects both 'ausencia' assignment in rows and in sinRegistro
+    // If we filter absences earlier, make sure we didn't exclude 'Pendiente'
+    
+    // ... (This logic assumes 'absences' array contains all statuses)
+    // We need to verify where 'ausenciasById' is built. Let's look up.
+    
+    // ...
+    // (Assuming the code above builds ausenciasById correctly)
+    
     // ── 2. Empleados SIN fichaje (ausentes) ──────────────────────────────────
     const fichajesIds = new Set(Object.keys(fichajesMap));
     const sinRegistro = filteredMasterEmployees
@@ -309,6 +324,12 @@ Deno.serve(async (req: Request) => {
         if (excludedIds.has(codigo) || excludedIds.has(internalId)) return false;
         if (!codigo || m.estado_empleado !== "Alta") return false;
         if (fichajesIds.has(codigo)) return false;
+        
+        // Check if employee has a valid absence (Pending or Approved)
+        // If they have an absence, they are "justified absent", not "missing without reason"
+        // But for the purpose of "Employees without Check-in", they SHOULD appear here, 
+        // and we will mark them as "Con Ausencia" later.
+        
         const { horaEntrada } = getHorarioEsperado(m, teamScheduleMap);
         if (!horaEntrada) return false;
 

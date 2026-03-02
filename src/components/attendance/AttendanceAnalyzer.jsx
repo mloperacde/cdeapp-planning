@@ -217,6 +217,9 @@ export default function AttendanceAnalyzer() {
 
   const hasAbsenceForDate = (employeeId, date) => {
     return absences.some(abs => {
+      // Consider pending absences as valid for attendance check
+      if (abs.estado_aprobacion === 'Rechazada') return false;
+      
       const start = new Date(abs.fecha_inicio);
       const end = new Date(abs.fecha_fin);
       const checkDate = new Date(date);
