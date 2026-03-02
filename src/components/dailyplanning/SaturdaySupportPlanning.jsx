@@ -37,7 +37,8 @@ export default function SaturdaySupportPlanning({ selectedTeam, teams = [] }) {
   const queryClient = useQueryClient();
 
   const [formData, setFormData] = useState({
-    employee_id: "",
+    employee_id: "", // Trainer / Lead
+    attendee_ids: [], // Multiple attendees
     activity_type: "Formación",
     description: "",
     start_time: "06:00",
@@ -98,6 +99,7 @@ export default function SaturdaySupportPlanning({ selectedTeam, teams = [] }) {
             doc_link: data.doc_link,
             doc_name: data.doc_name,
             completed: false,
+            attendees: data.attendee_ids || [],
             raw_notes: data.notes
         })
       };
@@ -147,6 +149,7 @@ export default function SaturdaySupportPlanning({ selectedTeam, teams = [] }) {
   const resetForm = () => {
     setFormData({
         employee_id: "",
+        attendee_ids: [],
         activity_type: "Formación",
         description: "",
         start_time: "06:00",
@@ -173,6 +176,7 @@ export default function SaturdaySupportPlanning({ selectedTeam, teams = [] }) {
 
     setFormData({
         employee_id: item.employee_id,
+        attendee_ids: notes.attendees || [],
         activity_type: item.funcion_asignada,
         description: notes.description || "",
         start_time: item.hora_inicio || "06:00",
@@ -439,11 +443,12 @@ export default function SaturdaySupportPlanning({ selectedTeam, teams = [] }) {
                   </div>
               </div>
 
-              {/* Internal Form (Nested) */}
+              {/* Internal Form (Nested) - Full Screen Mode */}
               {showForm && (
-                  <div className="absolute inset-0 bg-white z-10 flex flex-col p-6 animate-in fade-in slide-in-from-bottom-4 duration-200">
-                      <div className="flex items-center justify-between mb-6 border-b pb-4">
-                          <h3 className="text-lg font-bold text-slate-800">
+                  <div className="absolute inset-0 bg-white z-20 flex flex-col p-6 animate-in fade-in slide-in-from-bottom-4 duration-200 overflow-y-auto">
+                      <div className="flex items-center justify-between mb-6 border-b pb-4 shrink-0">
+                          <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                              {editingItem ? <Edit className="w-5 h-5 text-indigo-600" /> : <Plus className="w-5 h-5 text-indigo-600" />}
                               {editingItem ? "Editar Actividad" : "Nueva Actividad"}
                           </h3>
                           <Button variant="ghost" size="icon" onClick={() => setShowForm(false)}>
@@ -451,83 +456,152 @@ export default function SaturdaySupportPlanning({ selectedTeam, teams = [] }) {
                           </Button>
                       </div>
                       
-                      <div className="flex-1 overflow-y-auto space-y-4 pr-2">
-                          <div className="grid grid-cols-2 gap-4">
-                              <div className="space-y-2">
-                                  <Label>Empleado</Label>
-                                  <Select value={formData.employee_id} onValueChange={(v) => setFormData({...formData, employee_id: v})}>
-                                      <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
-                                      <SelectContent>
-                                          {employees.map(e => <SelectItem key={e.id} value={e.id}>{e.nombre || e.name}</SelectItem>)}
-                                      </SelectContent>
-                                  </Select>
-                              </div>
-                              <div className="space-y-2">
-                                  <Label>Tipo</Label>
-                                  <Select value={formData.activity_type} onValueChange={(v) => setFormData({...formData, activity_type: v})}>
-                                      <SelectTrigger><SelectValue /></SelectTrigger>
-                                      <SelectContent>
-                                          <SelectItem value="Formación">Formación</SelectItem>
-                                          <SelectItem value="Mantenimiento Preventivo">Mantenimiento Preventivo</SelectItem>
-                                          <SelectItem value="Avería Especial">Avería Especial</SelectItem>
-                                          <SelectItem value="Apoyo Producción">Apoyo Producción</SelectItem>
-                                      </SelectContent>
-                                  </Select>
-                              </div>
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-4">
-                              <div className="space-y-2">
-                                  <Label>Inicio</Label>
-                                  <Input type="time" value={formData.start_time} onChange={e => setFormData({...formData, start_time: e.target.value})} />
-                              </div>
-                              <div className="space-y-2">
-                                  <Label>Fin</Label>
-                                  <Input type="time" value={formData.end_time} onChange={e => setFormData({...formData, end_time: e.target.value})} />
-                              </div>
-                          </div>
-
-                          <div className="space-y-2">
-                              <Label>Descripción</Label>
-                              <Textarea 
-                                  placeholder="Detalles de la tarea..."
-                                  value={formData.description}
-                                  onChange={e => setFormData({...formData, description: e.target.value})} 
-                              />
-                          </div>
-
-                          <div className="bg-slate-50 p-4 rounded-lg border border-slate-100 space-y-4">
-                              <h4 className="font-medium text-sm text-slate-700 flex items-center gap-2">
-                                  <Paperclip className="w-4 h-4" /> Documentación y Seguimiento
-                              </h4>
-                              <div className="grid grid-cols-2 gap-4">
+                      <div className="flex-1 space-y-6 max-w-5xl mx-auto w-full">
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                              {/* Left Column: Basic Info */}
+                              <div className="space-y-4 md:col-span-1 border-r pr-6">
+                                  <h4 className="font-semibold text-slate-700 flex items-center gap-2">
+                                      <Clock className="w-4 h-4" /> Horario y Tipo
+                                  </h4>
+                                  
                                   <div className="space-y-2">
-                                      <Label className="text-xs">Nombre Documento / Formulario</Label>
-                                      <Input 
-                                          placeholder="Ej: Manual Seguridad v2.pdf" 
-                                          value={formData.doc_name}
-                                          onChange={e => setFormData({...formData, doc_name: e.target.value})}
+                                      <Label>Tipo de Actividad</Label>
+                                      <Select value={formData.activity_type} onValueChange={(v) => setFormData({...formData, activity_type: v})}>
+                                          <SelectTrigger><SelectValue /></SelectTrigger>
+                                          <SelectContent>
+                                              <SelectItem value="Formación">Formación</SelectItem>
+                                              <SelectItem value="Mantenimiento Preventivo">Mantenimiento Preventivo</SelectItem>
+                                              <SelectItem value="Avería Especial">Avería Especial</SelectItem>
+                                              <SelectItem value="Apoyo Producción">Apoyo Producción</SelectItem>
+                                          </SelectContent>
+                                      </Select>
+                                  </div>
+
+                                  <div className="grid grid-cols-2 gap-4">
+                                      <div className="space-y-2">
+                                          <Label>Inicio</Label>
+                                          <Input type="time" value={formData.start_time} onChange={e => setFormData({...formData, start_time: e.target.value})} />
+                                      </div>
+                                      <div className="space-y-2">
+                                          <Label>Fin</Label>
+                                          <Input type="time" value={formData.end_time} onChange={e => setFormData({...formData, end_time: e.target.value})} />
+                                      </div>
+                                  </div>
+
+                                  <div className="space-y-2">
+                                      <Label>Descripción / Objetivo</Label>
+                                      <Textarea 
+                                          className="min-h-[120px]"
+                                          placeholder="Detalles de la tarea o formación..."
+                                          value={formData.description}
+                                          onChange={e => setFormData({...formData, description: e.target.value})} 
                                       />
                                   </div>
+                              </div>
+
+                              {/* Middle Column: Participants */}
+                              <div className="space-y-4 md:col-span-1 border-r pr-6">
+                                  <h4 className="font-semibold text-slate-700 flex items-center gap-2">
+                                      <Users className="w-4 h-4" /> Participantes
+                                  </h4>
+
                                   <div className="space-y-2">
-                                      <Label className="text-xs">Enlace (URL)</Label>
-                                      <div className="relative">
-                                          <LinkIcon className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-slate-400" />
+                                      <Label>{formData.activity_type === "Formación" ? "Formador / Responsable" : "Responsable Principal"}</Label>
+                                      <Select value={formData.employee_id} onValueChange={(v) => setFormData({...formData, employee_id: v})}>
+                                          <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+                                          <SelectContent>
+                                              {employees.map(e => <SelectItem key={e.id} value={e.id}>{e.nombre || e.name}</SelectItem>)}
+                                          </SelectContent>
+                                      </Select>
+                                  </div>
+
+                                  <div className="space-y-2">
+                                      <div className="flex justify-between items-center">
+                                          <Label>Asistentes / Grupo</Label>
+                                          <Badge variant="outline">{formData.attendee_ids.length}</Badge>
+                                      </div>
+                                      
+                                      <Select onValueChange={(v) => {
+                                          if (!formData.attendee_ids.includes(v)) {
+                                              setFormData({...formData, attendee_ids: [...formData.attendee_ids, v]});
+                                          }
+                                      }}>
+                                          <SelectTrigger className="bg-slate-50 border-dashed">
+                                              <SelectValue placeholder="+ Añadir asistente" />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                              {employees.map(e => <SelectItem key={e.id} value={e.id}>{e.nombre || e.name}</SelectItem>)}
+                                          </SelectContent>
+                                      </Select>
+
+                                      <div className="bg-slate-50 rounded-lg border border-slate-100 p-2 h-[200px] overflow-y-auto space-y-1">
+                                          {formData.attendee_ids.length === 0 && (
+                                              <div className="text-center text-xs text-slate-400 py-8">
+                                                  Sin asistentes adicionales
+                                              </div>
+                                          )}
+                                          {formData.attendee_ids.map(attId => (
+                                              <div key={attId} className="flex justify-between items-center bg-white p-2 rounded border border-slate-100 text-sm shadow-sm">
+                                                  <span>{getEmployeeName(attId)}</span>
+                                                  <Button 
+                                                      variant="ghost" 
+                                                      size="sm" 
+                                                      className="h-5 w-5 p-0 hover:bg-red-50 hover:text-red-600 rounded-full"
+                                                      onClick={() => setFormData({
+                                                          ...formData, 
+                                                          attendee_ids: formData.attendee_ids.filter(id => id !== attId)
+                                                      })}
+                                                  >
+                                                      <Trash2 className="w-3 h-3" />
+                                                  </Button>
+                                              </div>
+                                          ))}
+                                      </div>
+                                  </div>
+                              </div>
+
+                              {/* Right Column: Documentation */}
+                              <div className="space-y-4 md:col-span-1">
+                                  <h4 className="font-semibold text-slate-700 flex items-center gap-2">
+                                      <Paperclip className="w-4 h-4" /> Documentación
+                                  </h4>
+
+                                  <div className="bg-blue-50/50 p-4 rounded-lg border border-blue-100 space-y-4">
+                                      <div className="space-y-2">
+                                          <Label className="text-xs font-semibold text-blue-800">Nombre Documento / Formulario</Label>
                                           <Input 
-                                              className="pl-8"
-                                              placeholder="https://..." 
-                                              value={formData.doc_link}
-                                              onChange={e => setFormData({...formData, doc_link: e.target.value})}
+                                              className="bg-white"
+                                              placeholder="Ej: Manual Seguridad v2.pdf" 
+                                              value={formData.doc_name}
+                                              onChange={e => setFormData({...formData, doc_name: e.target.value})}
                                           />
+                                      </div>
+                                      <div className="space-y-2">
+                                          <Label className="text-xs font-semibold text-blue-800">Enlace (URL)</Label>
+                                          <div className="relative">
+                                              <LinkIcon className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-slate-400" />
+                                              <Input 
+                                                  className="pl-8 bg-white"
+                                                  placeholder="https://..." 
+                                                  value={formData.doc_link}
+                                                  onChange={e => setFormData({...formData, doc_link: e.target.value})}
+                                              />
+                                          </div>
+                                          <p className="text-[10px] text-blue-600/80 leading-tight">
+                                              Pegue aquí el enlace a SharePoint, Drive o formulario de evaluación.
+                                          </p>
                                       </div>
                                   </div>
                               </div>
                           </div>
                       </div>
 
-                      <div className="pt-4 flex justify-end gap-2 border-t mt-4">
-                          <Button variant="outline" onClick={() => setShowForm(false)}>Cancelar</Button>
-                          <Button onClick={() => saveMutation.mutate(formData)} className="bg-indigo-600 hover:bg-indigo-700">Guardar</Button>
+                      <div className="pt-6 flex justify-end gap-3 border-t mt-auto shrink-0 bg-white">
+                          <Button variant="outline" size="lg" onClick={() => setShowForm(false)}>Cancelar</Button>
+                          <Button size="lg" onClick={() => saveMutation.mutate(formData)} className="bg-indigo-600 hover:bg-indigo-700 min-w-[150px]">
+                              <Save className="w-4 h-4 mr-2" />
+                              Guardar Actividad
+                          </Button>
                       </div>
                   </div>
               )}
