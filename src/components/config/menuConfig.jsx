@@ -54,9 +54,9 @@ export const MENU_STRUCTURE = [
   // Dirección
   { name: 'Dirección - Habilidades', path: '/DireccionSkills', icon: Star, category: 'Dirección' },
   { name: 'Nuevo Conf. Procesos', path: '/NewProcessConfigurator', icon: FileCog, category: 'Dirección' },
-  { name: 'Planning Producción', path: '/DailyProductionPlanningPage', icon: Factory, category: 'Dirección' },
 
   // Planificación
+  { name: 'Planning Producción', path: '/DailyProductionPlanningPage', icon: Factory, category: 'Planificación' },
   { name: 'Planificador Órdenes', path: '/ProductionPlanning', icon: Factory, category: 'Planificación' },
   { name: 'Importar Órdenes', path: '/OrderImport', icon: Database, category: 'Planificación' },
   { name: 'Optimización IA', path: '/ProductionOptimizer', icon: Sparkles, category: 'Planificación' },
