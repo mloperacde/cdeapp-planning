@@ -31,13 +31,15 @@ Deno.serve(async (req) => {
         
         if (ids.length === 0) break; // Done
         
-        // Parallel deletion in chunks of 50 for speed
-        const chunkSize = 50;
+        // Parallel deletion in chunks of 10 to avoid 500 DB lock errors
+        const chunkSize = 10;
         for (let i = 0; i < ids.length; i += chunkSize) {
             const chunk = ids.slice(i, i + chunkSize);
             await Promise.all(chunk.map(id => 
                 base44.asServiceRole.entities.AttendanceRecord.delete(id).catch(() => {})
             ));
+            // Small delay to let DB breathe
+            await new Promise(r => setTimeout(r, 50));
             totalDeleted += chunk.length;
         }
         
