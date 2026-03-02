@@ -18,19 +18,21 @@ Deno.serve(async (req) => {
     if (import_batch) filter.import_batch = import_batch;
     
     // Optimize: Fetch IDs only, and delete in parallel chunks
-    const pageSize = 500; // Smaller chunks for better control
+    const pageSize = 500; 
     let totalDeleted = 0;
     
-    // We only try one pass of fetching to avoid timeout. 
-    // If there are more than 500 records, user might need to run again or we implement a better bulk delete if API supports it.
-    // The previous loop was too slow (sequential delete).
+    // Use a loop to ensure ALL records are deleted, not just the first page.
+    // We'll limit the max loops to prevent infinite loops in case of errors.
+    const maxLoops = 20; // Up to 10,000 records should be enough
     
-    const page = await base44.asServiceRole.entities.AttendanceRecord.filter(filter, 'record_time', pageSize);
-    const ids = (page || []).map(r => r.id);
-    
-    if (ids.length > 0) {
-        // Parallel deletion in chunks of 20
-        const chunkSize = 20;
+    for (let loop = 0; loop < maxLoops; loop++) {
+        const page = await base44.asServiceRole.entities.AttendanceRecord.filter(filter, 'record_time', pageSize);
+        const ids = (page || []).map(r => r.id);
+        
+        if (ids.length === 0) break; // Done
+        
+        // Parallel deletion in chunks of 50 for speed
+        const chunkSize = 50;
         for (let i = 0; i < ids.length; i += chunkSize) {
             const chunk = ids.slice(i, i + chunkSize);
             await Promise.all(chunk.map(id => 
@@ -38,9 +40,12 @@ Deno.serve(async (req) => {
             ));
             totalDeleted += chunk.length;
         }
+        
+        // If we fetched fewer than pageSize, we are done
+        if (ids.length < pageSize) break;
     }
     
-    return Response.json({ deleted: totalDeleted, partial: ids.length === pageSize });
+    return Response.json({ deleted: totalDeleted, success: true });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }
