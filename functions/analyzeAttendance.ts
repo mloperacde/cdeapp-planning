@@ -92,8 +92,8 @@ function ausenciaActivaEnFecha(absence: any, fecha: string) {
   const inicioStr = String(absence.fecha_inicio).slice(0, 10);
   if (!inicioStr) return false;
 
-  // Solo consideramos ausencias aprobadas
-  if (absence.estado_aprobacion !== "Aprobada") return false;
+  // Solo consideramos ausencias aprobadas y pendientes (excluyendo rechazadas)
+  if (absence.estado_aprobacion === "Rechazada") return false;
 
   // Sin fecha fin o fin desconocido -> activa desde inicio en adelante
   if (absence.fecha_fin_desconocida || !absence.fecha_fin) {
