@@ -6,19 +6,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Wrench, Sparkles, ArrowLeft } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Calendar, Wrench, Sparkles, ArrowLeft, Clock, BookOpen } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { format, startOfWeek } from "date-fns";
 import { es } from "date-fns/locale";
 import MaintenancePlanningTab from "../components/dailyplanning/MaintenancePlanningTab";
+import SaturdaySupportPlanning from "../components/dailyplanning/SaturdaySupportPlanning";
 
 export default function MaintenancePlanningPage() {
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [selectedShift, setSelectedShift] = useState("Mañana");
   const [selectedTeam, setSelectedTeam] = useState('');
   const [isCalling, setIsCalling] = useState(false);
-
+  const [activeTab, setActiveTab] = useState("daily");
   const { data: teams = [] } = useQuery({
     queryKey: ['teamConfigs'],
     queryFn: () => base44.entities.TeamConfig.list(),
@@ -217,13 +219,36 @@ export default function MaintenancePlanningPage() {
         </Card>
 
         {/* Contenido Mantenimiento */}
-        <MaintenancePlanningTab
-            selectedDate={selectedDate}
-            selectedTeam={selectedTeam}
-            selectedShift={selectedShift}
-            teams={teams}
-            teamSchedules={teamSchedules}
-        />
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+          <TabsList className="bg-slate-100 dark:bg-slate-800 p-1">
+            <TabsTrigger value="daily" className="flex items-center gap-2">
+              <Clock className="w-4 h-4" />
+              Planning 14-15h
+            </TabsTrigger>
+            <TabsTrigger value="saturday" className="flex items-center gap-2">
+              <BookOpen className="w-4 h-4" />
+              Sábados / Formación
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="daily">
+            <MaintenancePlanningTab
+                selectedDate={selectedDate}
+                selectedTeam={selectedTeam}
+                selectedShift={selectedShift}
+                teams={teams}
+                teamSchedules={teamSchedules}
+            />
+          </TabsContent>
+
+          <TabsContent value="saturday">
+             <SaturdaySupportPlanning 
+                selectedDate={selectedDate}
+                selectedTeam={selectedTeam}
+                teams={teams}
+             />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
