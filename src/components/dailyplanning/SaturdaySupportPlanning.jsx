@@ -69,25 +69,6 @@ export default function SaturdaySupportPlanning({ selectedTeam, teams = [] }) {
   });
 
   // --- Derived Data ---
-  const calendarDays = useMemo(() => {
-    const start = startOfMonth(currentMonth);
-    const end = endOfMonth(currentMonth);
-    // Start from monday of the first week
-    const calendarStart = startOfWeek(start, { weekStartsOn: 1 }); // Import startOfWeek needed? Yes.
-    // We need to import startOfWeek from date-fns
-    const days = eachDayOfInterval({ start: start, end: end });
-    
-    // Fill previous days to start on Monday
-    const startDay = start.getDay(); // 0 is Sunday
-    const paddingDays = startDay === 0 ? 6 : startDay - 1;
-    const prefix = Array.from({ length: paddingDays }).map((_, i) => ({
-        date: subMonths(start, 0), // Placeholder
-        isPadding: true
-    }));
-
-    return days;
-  }, [currentMonth]);
-
   const planningsByDate = useMemo(() => {
     const map = new Map();
     monthPlannings.forEach(p => {
