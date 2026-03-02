@@ -216,14 +216,19 @@ export default function AttendanceAnalyzer() {
   };
 
   const hasAbsenceForDate = (employeeId, date) => {
+    // Convert check date to string YYYY-MM-DD for simpler comparison
+    const checkDateStr = date instanceof Date ? date.toISOString().split('T')[0] : String(date).split('T')[0];
+    
     return absences.some(abs => {
       // Consider pending absences as valid for attendance check
       if (abs.estado_aprobacion === 'Rechazada') return false;
       
-      const start = new Date(abs.fecha_inicio);
-      const end = new Date(abs.fecha_fin);
-      const checkDate = new Date(date);
-      return abs.employee_id === employeeId && checkDate >= start && checkDate <= end;
+      const start = new Date(abs.fecha_inicio).toISOString().split('T')[0];
+      // Handle unknown end date as "forever" or far future
+      const end = abs.fecha_fin_desconocida ? '2099-12-31' : new Date(abs.fecha_fin).toISOString().split('T')[0];
+      
+      // Strict string comparison to avoid timezone issues with Date objects
+      return String(abs.employee_id) === String(employeeId) && checkDateStr >= start && checkDateStr <= end;
     });
   };
 
