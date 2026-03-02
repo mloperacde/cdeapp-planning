@@ -108,21 +108,19 @@ Deno.serve(async (req: Request) => {
     
     // Si estamos usando la URL antigua (/ExtApi), la mantenemos. Si no, probamos con y sin ExtApi.
     if (!baseUrl.includes("ExtApi")) {
-        // Los errores 500 persistentes en la nueva URL sugieren que la nueva API (cuco360.cucorent.com/api)
-        // podría no estar correctamente configurada para nuestro tenant o no soportar 'getfullchecks'.
+        // SEGÚN LA INFORMACIÓN DE SWAGGER PROPORCIONADA POR EL USUARIO:
+        // Base: https://cuco360.cucorent.com/api/v2
+        // Auth: Header 'apikey'
+        // Endpoint probable: /markings (estándar REST)
         
-        // ESTRATEGIA FINAL: Volver a la URL original (api.cuco360.com/api/ExtApi)
-        // pero usando el NUEVO método de autenticación (apikey header) que descubrimos en Swagger.
-        // Es muy posible que el endpoint antiguo siga vivo pero requiera la nueva auth.
+        // Vamos a probar la API v2 REST estándar
+        const v2BaseUrl = "https://cuco360.cucorent.com/api/v2";
         
-        // Sobrescribimos la baseUrl temporalmente para probar la URL "legacy" original
-        const legacyBaseUrl = "https://api.cuco360.com/api/ExtApi";
+        // En APIs REST estándar, suele ser /markings?start_date=...&end_date=...
+        // Ojo con el formato de fecha, a veces es timestamp o ISO. Probaremos YYYY-MM-DD primero.
+        endpoint = `/markings?start_date=${safeFrom}&end_date=${safeTo}`;
         
-        // Endpoint original
-        endpoint = `/checking/getfullchecks/${CLIENT_CODE}?start_date=${safeFrom}&end_date=${safeTo}`;
-        
-        // Usamos la URL legacy completa
-        url = `${legacyBaseUrl}${endpoint}`;
+        url = `${v2BaseUrl}${endpoint}`;
     } else {
         // Si ya tenía ExtApi, construimos normal
         url = `${baseUrl}${endpoint}`;
