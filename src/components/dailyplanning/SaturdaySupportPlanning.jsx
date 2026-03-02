@@ -51,7 +51,14 @@ export default function SaturdaySupportPlanning({ selectedTeam, teams = [] }) {
   // --- Queries ---
   const { data: employees = [] } = useQuery({
     queryKey: ['employees'],
-    queryFn: () => base44.entities.EmployeeMasterDatabase.list('nombre', 2000),
+    queryFn: async () => {
+        const all = await base44.entities.EmployeeMasterDatabase.list('nombre', 2000);
+        // Filter by Department "Mantenimiento" (case insensitive, robust check)
+        return all.filter(e => {
+            const dept = (e.departamento || "").toLowerCase();
+            return dept.includes("mantenimiento") || dept.includes("maintenance");
+        });
+    },
     staleTime: 60 * 60 * 1000
   });
 
@@ -447,21 +454,21 @@ export default function SaturdaySupportPlanning({ selectedTeam, teams = [] }) {
               {showForm && (
                   <div className="absolute inset-0 bg-white z-20 flex flex-col p-6 animate-in fade-in slide-in-from-bottom-4 duration-200 overflow-y-auto">
                       <div className="flex items-center justify-between mb-6 border-b pb-4 shrink-0">
-                          <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                              {editingItem ? <Edit className="w-5 h-5 text-indigo-600" /> : <Plus className="w-5 h-5 text-indigo-600" />}
+                          <h3 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+                              {editingItem ? <Edit className="w-6 h-6 text-indigo-600" /> : <Plus className="w-6 h-6 text-indigo-600" />}
                               {editingItem ? "Editar Actividad" : "Nueva Actividad"}
                           </h3>
                           <Button variant="ghost" size="icon" onClick={() => setShowForm(false)}>
-                              <Trash2 className="w-5 h-5 rotate-45 text-slate-400" /> {/* Close icon workaround */}
+                              <Trash2 className="w-6 h-6 rotate-45 text-slate-400" /> {/* Close icon workaround */}
                           </Button>
                       </div>
                       
-                      <div className="flex-1 space-y-6 max-w-5xl mx-auto w-full">
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      <div className="flex-1 space-y-8 max-w-[95%] mx-auto w-full">
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                               {/* Left Column: Basic Info */}
-                              <div className="space-y-4 md:col-span-1 border-r pr-6">
-                                  <h4 className="font-semibold text-slate-700 flex items-center gap-2">
-                                      <Clock className="w-4 h-4" /> Horario y Tipo
+                              <div className="space-y-6 md:col-span-1 border-r pr-8">
+                                  <h4 className="text-lg font-semibold text-slate-700 flex items-center gap-2 border-b pb-2">
+                                      <Clock className="w-5 h-5" /> Horario y Tipo
                                   </h4>
                                   
                                   <div className="space-y-2">
@@ -500,25 +507,27 @@ export default function SaturdaySupportPlanning({ selectedTeam, teams = [] }) {
                               </div>
 
                               {/* Middle Column: Participants */}
-                              <div className="space-y-4 md:col-span-1 border-r pr-6">
-                                  <h4 className="font-semibold text-slate-700 flex items-center gap-2">
-                                      <Users className="w-4 h-4" /> Participantes
+                              <div className="space-y-6 md:col-span-1 border-r pr-8">
+                                  <h4 className="text-lg font-semibold text-slate-700 flex items-center gap-2 border-b pb-2">
+                                      <Users className="w-5 h-5" /> Participantes
                                   </h4>
 
-                                  <div className="space-y-2">
-                                      <Label>{formData.activity_type === "Formación" ? "Formador / Responsable" : "Responsable Principal"}</Label>
+                                  <div className="space-y-3">
+                                      <Label className="text-base font-medium text-slate-900">
+                                          {formData.activity_type === "Formación" ? "Formador / Responsable" : "Responsable Principal"}
+                                      </Label>
                                       <Select value={formData.employee_id} onValueChange={(v) => setFormData({...formData, employee_id: v})}>
-                                          <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+                                          <SelectTrigger className="h-10 text-base"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
                                           <SelectContent>
                                               {employees.map(e => <SelectItem key={e.id} value={e.id}>{e.nombre || e.name}</SelectItem>)}
                                           </SelectContent>
                                       </Select>
                                   </div>
 
-                                  <div className="space-y-2">
+                                  <div className="space-y-3">
                                       <div className="flex justify-between items-center">
-                                          <Label>Asistentes / Grupo</Label>
-                                          <Badge variant="outline">{formData.attendee_ids.length}</Badge>
+                                          <Label className="text-base font-medium text-slate-900">Asistentes / Grupo</Label>
+                                          <Badge variant="outline" className="text-sm px-2 py-0.5">{formData.attendee_ids.length}</Badge>
                                       </div>
                                       
                                       <Select onValueChange={(v) => {
@@ -526,7 +535,7 @@ export default function SaturdaySupportPlanning({ selectedTeam, teams = [] }) {
                                               setFormData({...formData, attendee_ids: [...formData.attendee_ids, v]});
                                           }
                                       }}>
-                                          <SelectTrigger className="bg-slate-50 border-dashed">
+                                          <SelectTrigger className="bg-slate-50 border-dashed h-10 text-base">
                                               <SelectValue placeholder="+ Añadir asistente" />
                                           </SelectTrigger>
                                           <SelectContent>
@@ -534,25 +543,25 @@ export default function SaturdaySupportPlanning({ selectedTeam, teams = [] }) {
                                           </SelectContent>
                                       </Select>
 
-                                      <div className="bg-slate-50 rounded-lg border border-slate-100 p-2 h-[200px] overflow-y-auto space-y-1">
+                                      <div className="bg-slate-50 rounded-lg border border-slate-100 p-3 h-[300px] overflow-y-auto space-y-2">
                                           {formData.attendee_ids.length === 0 && (
-                                              <div className="text-center text-xs text-slate-400 py-8">
+                                              <div className="text-center text-sm text-slate-400 py-12">
                                                   Sin asistentes adicionales
                                               </div>
                                           )}
                                           {formData.attendee_ids.map(attId => (
-                                              <div key={attId} className="flex justify-between items-center bg-white p-2 rounded border border-slate-100 text-sm shadow-sm">
-                                                  <span>{getEmployeeName(attId)}</span>
+                                              <div key={attId} className="flex justify-between items-center bg-white p-3 rounded border border-slate-100 text-sm shadow-sm hover:border-indigo-200 transition-colors">
+                                                  <span className="font-medium text-slate-700">{getEmployeeName(attId)}</span>
                                                   <Button 
                                                       variant="ghost" 
                                                       size="sm" 
-                                                      className="h-5 w-5 p-0 hover:bg-red-50 hover:text-red-600 rounded-full"
+                                                      className="h-6 w-6 p-0 hover:bg-red-50 hover:text-red-600 rounded-full"
                                                       onClick={() => setFormData({
                                                           ...formData, 
                                                           attendee_ids: formData.attendee_ids.filter(id => id !== attId)
                                                       })}
                                                   >
-                                                      <Trash2 className="w-3 h-3" />
+                                                      <Trash2 className="w-4 h-4" />
                                                   </Button>
                                               </div>
                                           ))}
@@ -561,9 +570,9 @@ export default function SaturdaySupportPlanning({ selectedTeam, teams = [] }) {
                               </div>
 
                               {/* Right Column: Documentation */}
-                              <div className="space-y-4 md:col-span-1">
-                                  <h4 className="font-semibold text-slate-700 flex items-center gap-2">
-                                      <Paperclip className="w-4 h-4" /> Documentación
+                              <div className="space-y-6 md:col-span-1">
+                                  <h4 className="text-lg font-semibold text-slate-700 flex items-center gap-2 border-b pb-2">
+                                      <Paperclip className="w-5 h-5" /> Documentación
                                   </h4>
 
                                   <div className="bg-blue-50/50 p-4 rounded-lg border border-blue-100 space-y-4">
