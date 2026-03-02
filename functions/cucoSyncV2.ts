@@ -108,21 +108,16 @@ Deno.serve(async (req: Request) => {
     
     // Si estamos usando la URL antigua (/ExtApi), la mantenemos. Si no, probamos con y sin ExtApi.
     if (!baseUrl.includes("ExtApi")) {
-        // Estamos en la nueva base /api. 
-        // Es posible que el endpoint de fichajes siga estando bajo un prefijo, o sea directo.
-        // Por seguridad, si el health check (/auxiliary) funcionó, es una API REST estándar.
-        // Pero getfullchecks suena a RPC antiguo.
+        // En la documentación de Cuco360 (cuco360.cucorent.com/api/documentation), los endpoints suelen estar en la raíz de /api
+        // Si el health check funcionó en /api/auxiliary/index, significa que la base URL es correcta.
+        // PERO, getfullchecks es un método de la API antigua (ExtApi).
+        // Si la nueva API no tiene getfullchecks, deberíamos usar /markings/index o similar.
+        // Como no tenemos la doc completa, probaremos la ruta 'legacy' pero con la nueva base URL, 
+        // añadiendo '/ExtApi' explícitamente porque es posible que lo requiera como "namespace".
         
-        // Vamos a probar a llamar a /ExtApi/checking... incluso con la nueva base si falla la primera
-        // endpoint = `/ExtApi/checking/getfullchecks/${CLIENT_CODE}?start_date=${safeFrom}&end_date=${safeTo}`;
-        
-        // Probamos sin ExtApi primero, ya que la base URL ya es /api
-        // Si baseUrl es https://cuco360.cucorent.com/api
-        // La ruta final debería ser https://cuco360.cucorent.com/api/v1/checking/getfullchecks (hipótesis)
-        // O simplemente /checking/getfullchecks si está en la raíz de api.
-        
-        // Vamos a probar la ruta más probable para la nueva API:
-        endpoint = `/checking/getfullchecks/${CLIENT_CODE}?start_date=${safeFrom}&end_date=${safeTo}`;
+        // Endpoint corregido para nueva URL base:
+        // https://cuco360.cucorent.com/api/ExtApi/checking/getfullchecks/380?...
+        endpoint = `/ExtApi/checking/getfullchecks/${CLIENT_CODE}?start_date=${safeFrom}&end_date=${safeTo}`;
     }
 
     let url = `${baseUrl}${endpoint}`;
