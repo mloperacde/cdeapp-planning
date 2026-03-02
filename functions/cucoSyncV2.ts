@@ -114,7 +114,15 @@ Deno.serve(async (req: Request) => {
         // Pero getfullchecks suena a RPC antiguo.
         
         // Vamos a probar a llamar a /ExtApi/checking... incluso con la nueva base si falla la primera
-        endpoint = `/ExtApi/checking/getfullchecks/${CLIENT_CODE}?start_date=${safeFrom}&end_date=${safeTo}`;
+        // endpoint = `/ExtApi/checking/getfullchecks/${CLIENT_CODE}?start_date=${safeFrom}&end_date=${safeTo}`;
+        
+        // Probamos sin ExtApi primero, ya que la base URL ya es /api
+        // Si baseUrl es https://cuco360.cucorent.com/api
+        // La ruta final debería ser https://cuco360.cucorent.com/api/v1/checking/getfullchecks (hipótesis)
+        // O simplemente /checking/getfullchecks si está en la raíz de api.
+        
+        // Vamos a probar la ruta más probable para la nueva API:
+        endpoint = `/checking/getfullchecks/${CLIENT_CODE}?start_date=${safeFrom}&end_date=${safeTo}`;
     }
 
     let url = `${baseUrl}${endpoint}`;
