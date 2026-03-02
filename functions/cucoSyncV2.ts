@@ -31,25 +31,29 @@ Deno.serve(async (req: Request) => {
 
     // 2. Constants & Params
     const CLIENT_CODE = "380";
-    // Base URL actualizada según documentación reciente (/auxiliary/index/)
-    const DEFAULT_API_URL = "https://api.cuco360.com/api"; 
+    // Base URL actualizada según documentación reciente (cuco360.cucorent.com/api)
+    // El usuario nos indica que la documentación está en cuco360.cucorent.com/api/documentation
+    // Por tanto, la API debe estar en cuco360.cucorent.com/api
+    const DEFAULT_API_URL = "https://cuco360.cucorent.com/api"; 
     const baseUrl = Deno.env.get("CUCO_API_URL") || DEFAULT_API_URL;
-    const authHeaderValue = apiKeyEnv.startsWith("Bearer ") ? apiKeyEnv : `Bearer ${apiKeyEnv}`;
+    
+    // Auth: 'apikey' header with raw value (no Bearer) for 'cliente_apikey' scheme
+    const authHeaderValue = apiKeyEnv.replace("Bearer ", "").trim();
     
     // --- HEALTH CHECK ---
     // Verificar conectividad antes de intentar operaciones pesadas
     try {
+        // Usamos un endpoint seguro para probar la conexión
         const healthUrl = `${baseUrl}/auxiliary/index/`;
         console.log(`[cucoSyncV2] Health Check: ${healthUrl}`);
+        // Header name: 'apikey' (lowercase)
         const healthRes = await fetch(healthUrl, { 
-            headers: { "APIKey": authHeaderValue, "Accept": "application/json" } 
+            headers: { "apikey": authHeaderValue, "Accept": "application/json" } 
         });
         
         if (!healthRes.ok) {
             const text = await healthRes.text();
             console.warn(`[cucoSyncV2] Health Check Failed (${healthRes.status}): ${text}`);
-            // No lanzamos error aquí para permitir intentar el endpoint legacy si este falla,
-            // pero lo logueamos claramente.
         } else {
             console.log(`[cucoSyncV2] Health Check OK`);
         }
@@ -120,7 +124,8 @@ Deno.serve(async (req: Request) => {
 
     console.log(`[cucoSyncV2] Fetching URL: ${url}`);
     
-    const headers = { "Content-Type": "application/json", "APIKey": authHeaderValue };
+    // Auth Header: 'apikey' with raw value
+    const headers = { "Content-Type": "application/json", "apikey": authHeaderValue };
 
     let response;
     try {
