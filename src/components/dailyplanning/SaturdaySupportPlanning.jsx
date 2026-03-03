@@ -57,7 +57,12 @@ export default function SaturdaySupportPlanning({ selectedTeam, teams = [] }) {
         // Also handle potential encoding issues or variations like "MANTENIMIENTO", "Mantenimiento", etc.
         return all.filter(e => {
             if (!e.departamento) return false;
+            // Normalize and remove special chars to be super permissive
+            // e.g. "MANTENIMIENTO", "Mantenimiento", "mantenimiento" -> "mantenimiento"
             const dept = String(e.departamento).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            
+            // Allow partial matches like "dpto mantenimiento" or just "mantenimiento"
+            // Also include "maintenance" for English support
             return dept.includes("mantenimiento") || dept.includes("maintenance");
         });
     },
