@@ -326,56 +326,86 @@ export default function DailyProductionPlanningPage() {
     const normalize = (str) => str ? str.toString().trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : "";
     const targetTeam = normalize(teamObj.team_name);
     const shift = normalize(currentShift);
-    const isMorningShift = shift.includes("mañana") || shift.includes("t1");
+    const isMorningShift = shift.includes("mañana") || shift.includes("t1") || shift === "manana";
     const isAfternoonShift = shift.includes("tarde") || shift.includes("t2");
 
     return (employees || []).filter(e => {
         // 1. Team Match (Robust with team_id support) + include fixed shift employees
+        //    Logic: Employee belongs to team OR has Fixed Shift corresponding to current shift
         const isTeamById = e.team_id && String(e.team_id) === String(teamObj.id);
         const isTeamByName = normalize(e.equipo) === targetTeam;
         const tipoTurno = normalize(e.tipo_turno);
-        const includeByFixed =
-          (isMorningShift && tipoTurno === "fijo mañana") ||
-          (isAfternoonShift && tipoTurno === "fijo tarde");
-        if (!(isTeamById || isTeamByName || includeByFixed)) return false;
+        
+        // Fixed shift employees are available regardless of team, IF they match the shift
+        const isFixedMorning = tipoTurno === "fijo manana" || tipoTurno === "fijo mañana";
+        const isFixedAfternoon = tipoTurno === "fijo tarde";
+
+        const matchesShiftContext = 
+          (isMorningShift && isFixedMorning) ||
+          (isAfternoonShift && isFixedAfternoon);
+
+        // If employee is Fixed Shift matching current shift, INCLUDE them (even if team doesn't match)
+        // If employee is Rotating (Rotativo), they MUST match the Team
+        
+        let shouldInclude = false;
+        if (matchesShiftContext) {
+            shouldInclude = true;
+        } else if (isTeamById || isTeamByName) {
+            // Only include team members if they are NOT fixed shift for the OTHER shift
+            // e.g. If current is Morning, and team member is Fixed Afternoon, exclude.
+            if (isMorningShift && isFixedAfternoon) shouldInclude = false;
+            else if (isAfternoonShift && isFixedMorning) shouldInclude = false;
+            else shouldInclude = true;
+        }
+
+        if (!shouldInclude) return false;
 
         // 2. Availability (Must be "Disponible" - Robust)
+        // If status is not explicitly 'disponible', skip.
         if (normalize(e.disponibilidad) !== "disponible") return false;
 
         // 3. Department: 'Producción' (Robust, normalizado)
+        // Allow variations like 'produccion', 'production', 'operaciones'
         const dept = normalize(e.departamento);
-        if (dept !== 'produccion') return false;
+        if (!dept.includes('produccion') && !dept.includes('production') && !dept.includes('operaciones')) return false;
 
         // 4. Role (Puesto) in allowed list (Robust)
+        // Allow empty role if department is correct? Better strict for operators count.
         const currentPuesto = normalize(e.puesto);
         const allowedRoles = [
             'responsable de linea', 
             'segunda de linea', 
             'operario de linea',
             'operaria de linea',
-            'tecnico de proceso'
+            'tecnico de proceso',
+            'operario',
+            'operaria'
         ].map(normalize);
         
-        if (!allowedRoles.includes(currentPuesto)) return false;
+        // Check if role contains any of allowed keywords (more robust than exact match)
+        const roleMatch = allowedRoles.some(role => currentPuesto.includes(role));
+        if (!roleMatch) return false;
 
         // 5. Absence Check (Robust)
+        // ... (existing logic seems fine, but let's ensure we parse dates correctly)
         if (e.ausencia_inicio) {
             const checkDate = new Date(selectedDate);
-            checkDate.setHours(0, 0, 0, 0);
+            checkDate.setHours(12, 0, 0, 0); // Use noon to avoid timezone edge cases
+            const checkTime = checkDate.getTime();
             
             const startDate = new Date(e.ausencia_inicio);
             startDate.setHours(0, 0, 0, 0);
+            const startTime = startDate.getTime();
 
             if (e.ausencia_fin) {
                 const endDate = new Date(e.ausencia_fin);
-                endDate.setHours(0, 0, 0, 0);
-                if (checkDate >= startDate && checkDate <= endDate) return false;
+                endDate.setHours(23, 59, 59, 999);
+                const endTime = endDate.getTime();
+                
+                if (checkTime >= startTime && checkTime <= endTime) return false;
             } else {
-                // If no end date, assume single day or active? 
-                // Strict check: if checkDate >= startDate, consider absent? 
-                // For now, let's assume if no end date, it's a single day absence or start of long term.
-                // Safest for planning: if checkDate >= startDate, they are absent.
-                if (checkDate >= startDate) return false;
+                // If no end date, assume active absence
+                if (checkTime >= startTime) return false;
             }
         }
 
