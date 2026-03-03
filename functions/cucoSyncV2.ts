@@ -108,19 +108,24 @@ Deno.serve(async (req: Request) => {
     
     // Si estamos usando la URL antigua (/ExtApi), la mantenemos. Si no, probamos con y sin ExtApi.
     if (!baseUrl.includes("ExtApi")) {
-        // SEGÚN LA INFORMACIÓN DE SWAGGER PROPORCIONADA POR EL USUARIO:
-        // Base: https://cuco360.cucorent.com/api/v2
-        // Auth: Header 'apikey'
-        // Endpoint probable: /markings (estándar REST)
+        // En la captura del usuario, se ve claramente que la URL es:
+        // https://cuco360.cucorent.com/api/ExtApi/checking/getfullchecks/380?start_date=...
+        // Y el error es 400 "Missing apikey".
+        // El Swagger muestra 'apikey' como header, pero a veces, si la versión es muy antigua (ExtApi),
+        // podría esperarlo como query param o con otro nombre de header.
+        // Pero dado que el error dice explícitamente "Missing apikey", probaremos enviarlo de todas las formas posibles para asegurar.
         
-        // Vamos a probar la API v2 REST estándar
-        const v2BaseUrl = "https://cuco360.cucorent.com/api/v2";
+        // Volvemos a la URL exacta que sale en el Curl de la captura del usuario.
+        const correctBaseUrl = "https://cuco360.cucorent.com/api/ExtApi";
         
-        // En APIs REST estándar, suele ser /markings?start_date=...&end_date=...
-        // Ojo con el formato de fecha, a veces es timestamp o ISO. Probaremos YYYY-MM-DD primero.
-        endpoint = `/markings?start_date=${safeFrom}&end_date=${safeTo}`;
+        // Formato de fecha de la captura: 2026-03-03 07:00:00 (Y-m-d H:i:s) url encoded
+        // safeFrom es YYYY-MM-DD. Añadimos hora.
+        const start = encodeURIComponent(`${safeFrom} 00:00:00`);
+        const end = encodeURIComponent(`${safeTo} 23:59:59`);
         
-        url = `${v2BaseUrl}${endpoint}`;
+        endpoint = `/checking/getfullchecks/${CLIENT_CODE}?start_date=${start}&end_date=${end}`;
+        
+        url = `${correctBaseUrl}${endpoint}`;
     } else {
         // Si ya tenía ExtApi, construimos normal
         url = `${baseUrl}${endpoint}`;
@@ -132,7 +137,14 @@ Deno.serve(async (req: Request) => {
     console.log(`[cucoSyncV2] Fetching URL: ${url}`);
     
     // Auth Header: 'apikey' with raw value
-    const headers = { "Content-Type": "application/json", "apikey": authHeaderValue };
+    // Añadimos también 'X-API-KEY' y 'Authorization' por si acaso, aunque el error dice 'apikey'.
+    // Y probamos a enviarlo también en Query Param si el header falla, pero primero headers.
+    const headers = { 
+        "Content-Type": "application/json", 
+        "apikey": authHeaderValue,
+        "APIKey": authHeaderValue, // Case sensitive variation
+        "X-API-KEY": authHeaderValue // Common alternative
+    };
 
     let response;
     try {
