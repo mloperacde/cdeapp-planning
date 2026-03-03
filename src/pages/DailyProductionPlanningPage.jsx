@@ -33,6 +33,8 @@ import {
 } from "@/components/ui/dialog";
 
 
+import { normalize, isProductionOperator } from "@/utils/employeeFilters";
+
 export default function DailyProductionPlanningPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -323,7 +325,6 @@ export default function DailyProductionPlanningPage() {
     if (!teamObj) return 0;
     
     // Normalization helper for robust comparison
-    const normalize = (str) => str ? str.toString().trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : "";
     const targetTeam = normalize(teamObj.team_name);
     const shift = normalize(currentShift);
     const isMorningShift = shift.includes("mañana") || shift.includes("t1") || shift === "manana";
@@ -364,27 +365,8 @@ export default function DailyProductionPlanningPage() {
         // If status is not explicitly 'disponible', skip.
         if (normalize(e.disponibilidad) !== "disponible") return false;
 
-        // 3. Department: 'Producción' (Robust, normalizado)
-        // Allow variations like 'produccion', 'production', 'operaciones'
-        const dept = normalize(e.departamento);
-        if (!dept.includes('produccion') && !dept.includes('production') && !dept.includes('operaciones')) return false;
-
-        // 4. Role (Puesto) in allowed list (Robust)
-        // Allow empty role if department is correct? Better strict for operators count.
-        const currentPuesto = normalize(e.puesto);
-        const allowedRoles = [
-            'responsable de linea', 
-            'segunda de linea', 
-            'operario de linea',
-            'operaria de linea',
-            'tecnico de proceso',
-            'operario',
-            'operaria'
-        ].map(normalize);
-        
-        // Check if role contains any of allowed keywords (more robust than exact match)
-        const roleMatch = allowedRoles.some(role => currentPuesto.includes(role));
-        if (!roleMatch) return false;
+        // 3 & 4. Role/Department Check via Shared Utility (Single Source of Truth)
+        if (!isProductionOperator(e)) return false;
 
         // 5. Absence Check (Robust)
         // ... (existing logic seems fine, but let's ensure we parse dates correctly)

@@ -4,24 +4,9 @@ import { Badge } from "@/components/ui/badge";
 import { Users, TrendingDown, TrendingUp } from "lucide-react";
 import { addDays, format, isValid } from "date-fns";
 import { es } from "date-fns/locale";
+import { normalize, isProductionOperator } from "@/utils/employeeFilters";
 
 const OPERARIOS_POR_MAQUINA = 6; // Media temporal hasta disponer del dato real
-
-const normalize = (str) =>
-  str ? str.toString().trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : "";
-
-const isProductionDept = (emp) => {
-  const d = normalize(emp?.departamento);
-  return d === "produccion" || d === "producción" || d === "fabricacion" || d === "fabricación";
-};
-
-const isShiftLeader = (emp) => {
-  const p = normalize(emp?.puesto);
-  if (!p) return false;
-  if (p.includes("jefe") && (p.includes("turno") || p.includes("produccion") || p.includes("producción"))) return true;
-  if (p.includes("responsable") && p.includes("turno")) return true;
-  return false;
-};
 
 export default function ResourceForecast({ orders, employees, selectedTeam, dateRange }) {
   // Días del rango
@@ -43,9 +28,8 @@ export default function ResourceForecast({ orders, employees, selectedTeam, date
   // Empleados de Producción asignables (misma lógica que Jefes de Turno)
   const employeesAssignable = useMemo(() => {
     return (employees || []).filter(e => {
-      if ((e.estado_empleado || "Alta") !== "Alta") return false;
-      if (!isProductionDept(e)) return false;
-      if (isShiftLeader(e)) return false;
+      if (!isProductionOperator(e)) return false;
+      
       if (selectedTeam !== "all") {
         const empTeam = normalize(e.equipo);
         const target = normalize(selectedTeam);
@@ -54,6 +38,7 @@ export default function ResourceForecast({ orders, employees, selectedTeam, date
       return true;
     });
   }, [employees, selectedTeam]);
+
 
   // Oferta: número fijo de operarios asignables (proyección estática, sin datos futuros de ausencias)
   const supply = employeesAssignable.length;

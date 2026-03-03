@@ -1,10 +1,11 @@
 import { useMemo } from 'react';
 import { format, startOfWeek, isSameDay } from 'date-fns';
+import { normalize, isProductionOperator } from '@/utils/employeeFilters';
 
 /**
  * Hook to calculate employee availability statistics based on a single source of truth.
  * Centralizes logic for:
- * - Active Employees filtering
+ * - Active Employees filtering (via isProductionOperator)
  * - Department/Team filtering
  * - Fixed Shift handling (Mañana/Tarde)
  * - Absence checking (robust date comparison)
@@ -30,9 +31,6 @@ export function useEmployeeAvailability({
   department = "Producción"
 }) {
   
-  // Normalization helper
-  const normalize = (str) => str ? str.toString().trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : "";
-
   // 1. Resolve Target Team & Shift Context
   const targetDate = new Date(date);
   targetDate.setHours(12, 0, 0, 0); // Noon to avoid TZ issues
@@ -53,17 +51,23 @@ export function useEmployeeAvailability({
     const absentList = [];
     const absentDetails = [];
 
-    // Filter by Department and Active Status first
+    // Filter by Production Operator Logic first
+    // Note: isProductionOperator checks status=Alta, dept=Produccion, and role whitelist
     const deptEmployees = employees.filter(e => {
-        if ((e.estado_empleado || "Alta") !== "Alta") return false;
+        // If department param is explicitly NOT production, bypass strict operator check?
+        // User asked to fix "availability in production planning", so we assume production context.
+        // However, if we pass "Mantenimiento", we shouldn't use isProductionOperator strictly for roles.
+        // Let's assume this hook is generic but tailored for production shifts.
         
-        const dept = normalize(e.departamento);
-        // Robust check for department
         const targetDept = normalize(department);
         if (targetDept === "produccion") {
-            return dept.includes("produccion") || dept.includes("production") || dept.includes("operaciones");
+            return isProductionOperator(e);
+        } else {
+            // Generic fallback for other departments (e.g. Maintenance)
+            if ((e.estado_empleado || "Alta") !== "Alta") return false;
+            const dept = normalize(e.departamento);
+            return dept.includes(targetDept);
         }
-        return dept.includes(targetDept);
     });
 
     deptEmployees.forEach(emp => {

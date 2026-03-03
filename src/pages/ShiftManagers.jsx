@@ -16,6 +16,7 @@ import { useShiftConfig } from "@/hooks/useShiftConfig";
 import ModuleGuard from "../components/common/ModuleGuard";
 import AgentChat from "@/components/common/AgentChat";
 import { useEmployeeAvailability } from '@/hooks/useEmployeeAvailability';
+import { isProductionOperator, normalize } from '@/utils/employeeFilters';
 
 const EMPTY_ARRAY = [];
 
@@ -129,32 +130,8 @@ export default function ShiftManagersPage() {
     },
   });
 
-  // Normalizador y filtros de elegibilidad (Producción asignable a máquinas, excluye Jefes de Turno)
-  const normalize = (str) =>
-    str ? str.toString().trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : "";
-
-  const isProductionDept = (emp) => {
-    const d = normalize(emp?.departamento);
-    return d === "produccion" || d === "producción";
-  };
-
-  const isShiftLeaderProduction = (emp) => {
-    const p = normalize(emp?.puesto);
-    if (!p) return false;
-    // Excluir jefes/responsables de turno de producción
-    if (p.includes("jefe") && (p.includes("turno") || p.includes("produccion") || p.includes("producción"))) return true;
-    if (p.includes("responsable") && p.includes("turno")) return true;
-    return false;
-  };
-
   const employeesAssignable = useMemo(() => {
-    return (employees || []).filter((e) => {
-      const isAlta = (e.estado_empleado || "Alta") === "Alta";
-      if (!isAlta) return false;
-      if (!isProductionDept(e)) return false;
-      if (isShiftLeaderProduction(e)) return false;
-      return true;
-    });
+    return (employees || []).filter(isProductionOperator);
   }, [employees]);
 
   const { data: teams = EMPTY_ARRAY } = useQuery({
@@ -348,7 +325,6 @@ export default function ShiftManagersPage() {
             // Re-implementing the Robust Logic inline to match the "Single Source of Truth" requirement
             // defined in useEmployeeAvailability.js
             
-            const normalize = (str) => str ? str.toString().trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : "";
             const currentShift = normalize(shift || "Mañana");
             const isMorning = currentShift.includes("manana") || currentShift.includes("t1");
             const isAfternoon = currentShift.includes("tarde") || currentShift.includes("t2");
