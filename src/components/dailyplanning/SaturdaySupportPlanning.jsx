@@ -54,8 +54,10 @@ export default function SaturdaySupportPlanning({ selectedTeam, teams = [] }) {
     queryFn: async () => {
         const all = await base44.entities.EmployeeMasterDatabase.list('nombre', 2000);
         // Filter by Department "Mantenimiento" (case insensitive, robust check)
+        // Also handle potential encoding issues or variations like "MANTENIMIENTO", "Mantenimiento", etc.
         return all.filter(e => {
-            const dept = (e.departamento || "").toLowerCase();
+            if (!e.departamento) return false;
+            const dept = String(e.departamento).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
             return dept.includes("mantenimiento") || dept.includes("maintenance");
         });
     },
