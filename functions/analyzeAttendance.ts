@@ -268,11 +268,47 @@ Deno.serve(async (req: Request) => {
       }
 
       const incongruencias = detectarIncongruencias(sorted);
-      const ausencia =
+      
+      let ausencia =
         ausenciasById[master?.id != null ? String(master.id) : ""] ||
         ausenciasByCodigo[emp.employee_id] ||
         null;
-      const alertaPresenciaConAusencia = !!ausencia;
+        
+      // CRITICAL CHECK: If absence ends today AND employee has checked in AFTER the absence end time (or simply has checked in if end time is not specific),
+      // we should consider the absence as "Finalized" and NOT flag it as "Presence during Absence".
+      // Usually, if an absence has an end date/time, we check against it.
+      
+      // However, the user request is simpler: "If absence is finalized (because employee checked in), stop showing as absent".
+      // If we found 'sorted' records (Check-ins), it means the employee IS present.
+      // If the absence covers the WHOLE day (e.g. Vacation), then it IS an anomaly (Presence during Vacation).
+      // But if it's a partial absence (e.g. Doctor visit 08:00-10:00) and they check in at 10:05, that's correct behavior.
+      
+      // LOGIC ADJUSTMENT:
+      // If 'ausencia' exists:
+      // 1. Check if absence has a specific end time on this date.
+      // 2. If absence covers full day, keep flagging as anomaly.
+      // 3. If absence was manually "finalized" (fecha_fin updated to earlier today), we should check if current check-ins are AFTER that end time.
+      
+      let alertaPresenciaConAusencia = !!ausencia;
+
+      if (alertaPresenciaConAusencia && ausencia.fecha_fin && !ausencia.fecha_fin_desconocida) {
+          // Check if absence effectively ended before the first check-in
+          const absenceEnd = new Date(ausencia.fecha_fin);
+          const absenceEndStr = absenceEnd.toISOString().slice(0, 10);
+          
+          // Only if absence ends TODAY
+          if (absenceEndStr === date) {
+             const absenceEndTime = absenceEnd.toISOString().slice(11, 16); // HH:mm
+             const firstCheckIn = primerRegistro.record_time;
+             
+             // If first check-in is AFTER or EQUAL to absence end time, then it's a valid return to work.
+             // No anomaly.
+             if (firstCheckIn >= absenceEndTime) {
+                 alertaPresenciaConAusencia = false;
+                 // We keep the 'ausencia' object attached for info, but status is OK
+             }
+          }
+      }
 
       let estado = "ok";
       if (alertaPresenciaConAusencia) estado = "alerta_ausencia";
