@@ -111,23 +111,24 @@ Deno.serve(async (req: Request) => {
         // En la captura del usuario, se ve claramente que la URL es:
         // https://cuco360.cucorent.com/api/ExtApi/checking/getfullchecks/380?start_date=...
         // Y el error es 400 "Missing apikey".
-        // El Swagger muestra 'apikey' como header, pero a veces, si la versión es muy antigua (ExtApi),
-        // podría esperarlo como query param o con otro nombre de header.
-        // Pero dado que el error dice explícitamente "Missing apikey", probaremos enviarlo de todas las formas posibles para asegurar.
+        // A pesar de probar todas las cabeceras posibles, el servidor sigue quejándose.
+        // Esto es muy común en APIs antiguas (legacy) que dicen usar headers pero en realidad
+        // solo leen 'apikey' si va como Query Parameter en la URL.
         
-        // Volvemos a la URL exacta que sale en el Curl de la captura del usuario.
         const correctBaseUrl = "https://cuco360.cucorent.com/api/ExtApi";
         
         // Formato de fecha de la captura: 2026-03-03 07:00:00 (Y-m-d H:i:s) url encoded
-        // safeFrom es YYYY-MM-DD. Añadimos hora.
         const start = encodeURIComponent(`${safeFrom} 00:00:00`);
         const end = encodeURIComponent(`${safeTo} 23:59:59`);
         
-        endpoint = `/checking/getfullchecks/${CLIENT_CODE}?start_date=${start}&end_date=${end}`;
+        // Añadimos 'apikey' como parámetro GET
+        endpoint = `/checking/getfullchecks/${CLIENT_CODE}?start_date=${start}&end_date=${end}&apikey=${authHeaderValue}`;
         
         url = `${correctBaseUrl}${endpoint}`;
     } else {
-        // Si ya tenía ExtApi, construimos normal
+        // Si ya tenía ExtApi, construimos normal pero inyectando apikey en query string también por si acaso
+        const separator = endpoint.includes('?') ? '&' : '?';
+        endpoint = `${endpoint}${separator}apikey=${authHeaderValue}`;
         url = `${baseUrl}${endpoint}`;
     }
     
