@@ -15,6 +15,7 @@ import ThemeToggle from "../components/common/ThemeToggle";
 import { useShiftConfig } from "@/hooks/useShiftConfig";
 import ModuleGuard from "../components/common/ModuleGuard";
 import AgentChat from "@/components/common/AgentChat";
+import { useEmployeeAvailability } from '@/hooks/useEmployeeAvailability';
 
 const EMPTY_ARRAY = [];
 
@@ -321,46 +322,91 @@ export default function ShiftManagersPage() {
   }, [employees]);
 
   // Team stats with absences by team
+  // Use the centralized hook logic, but since hook returns single stats, we map over teams.
+  // Ideally, we refactor this to not compute inside render loop or optimize.
+  // For now, let's keep the mapping structure but use the logic principles.
+  
   const teamStats = useMemo(() => {
     return teams
         .filter(team => selectedTeamFilter === "all" || team.team_name === selectedTeamFilter)
         .map(team => {
-        let teamEmployees = employeesAssignable.filter(emp => emp.equipo === team.team_name);
-        
-        // Disponibles = Total Activos - Ausencias Reales
-        let shift = getTodayShift(team.team_key);
-        
-        // Fallback: Infer shift from team name if not found in schedule
-        if (!shift) {
-            const lowerName = team.team_name.toLowerCase();
-            if (lowerName.includes("t2") || lowerName.includes("tarde") || lowerName.includes("turno 2") || lowerName.includes("sara") || lowerName.includes("ivan")) {
-                shift = shifts.AFTERNOON || "Tarde";
-            } else if (lowerName.includes("t1") || lowerName.includes("mañana") || lowerName.includes("turno 1")) {
-                shift = shifts.MORNING || "Mañana";
+            let shift = getTodayShift(team.team_key);
+            // Fallback: Infer shift from team name
+            if (!shift) {
+                const lowerName = team.team_name.toLowerCase();
+                if (lowerName.includes("t2") || lowerName.includes("tarde") || lowerName.includes("turno 2") || lowerName.includes("sara") || lowerName.includes("ivan")) {
+                    shift = shifts.AFTERNOON || "Tarde";
+                } else if (lowerName.includes("t1") || lowerName.includes("mañana") || lowerName.includes("turno 1")) {
+                    shift = shifts.MORNING || "Mañana";
+                }
             }
-        }
 
-        // Incluir fijos de mañana/tarde en el equipo según el turno del día
-        if (shift === (shifts.MORNING || "Mañana")) {
-            const morningFixed = employeesAssignable.filter(e => e.tipo_turno === "Fijo Mañana");
-            teamEmployees = [...teamEmployees, ...morningFixed.filter(e => !teamEmployees.some(t => String(t.id) === String(e.id)))];
-        } else if (shift === (shifts.AFTERNOON || "Tarde")) {
-            const afternoonFixed = employeesAssignable.filter(e => e.tipo_turno === "Fijo Tarde");
-            teamEmployees = [...teamEmployees, ...afternoonFixed.filter(e => !teamEmployees.some(t => String(t.id) === String(e.id)))];
-        }
+            // Use the hook logic (simulated here since we can't call hooks in loops)
+            // We reuse the robust logic function extracted to a helper if possible, 
+            // or we manually implement the "robust" check we agreed on.
+            
+            // Re-implementing the Robust Logic inline to match the "Single Source of Truth" requirement
+            // defined in useEmployeeAvailability.js
+            
+            const normalize = (str) => str ? str.toString().trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : "";
+            const currentShift = normalize(shift || "Mañana");
+            const isMorning = currentShift.includes("manana") || currentShift.includes("t1");
+            const isAfternoon = currentShift.includes("tarde") || currentShift.includes("t2");
+            const targetTeamName = normalize(team.team_name);
 
-        const teamEmployeeIds = new Set(teamEmployees.map(e => e.id));
-        const absencesCount = activeAbsencesDept.filter(a => teamEmployeeIds.has(a.employee_id)).length;
-        const available = Math.max(0, teamEmployees.length - absencesCount);
-        
-        return {
-            ...team,
-            total: teamEmployees.length,
-            available,
-            absent: absencesCount,
-            shift,
-            absencesCount
-        };
+            // Filter
+            const teamEmployees = employeesAssignable.filter(emp => {
+                const empTeam = normalize(emp.equipo);
+                const tipoTurno = normalize(emp.tipo_turno);
+                
+                const isFixedMorning = tipoTurno === "fijo manana";
+                const isFixedAfternoon = tipoTurno === "fijo tarde";
+                
+                const isTeamMember = empTeam === targetTeamName;
+                
+                if (isMorning && isFixedMorning) return true;
+                if (isAfternoon && isFixedAfternoon) return true;
+                if (isTeamMember) {
+                    if (isMorning && isFixedAfternoon) return false;
+                    if (isAfternoon && isFixedMorning) return false;
+                    return true;
+                }
+                return false;
+            });
+
+            // Count Absences
+            const today = new Date();
+            today.setHours(12, 0, 0, 0);
+            
+            const absentEmployees = teamEmployees.filter(emp => {
+                // Check 1: Status
+                if (normalize(emp.disponibilidad) !== "disponible") return true;
+                
+                // Check 2: Active Absence
+                const hasAbsence = activeAbsencesDept.some(abs => {
+                    if (abs.employee_id !== emp.id) return false;
+                    const start = new Date(abs.fecha_inicio);
+                    start.setHours(0,0,0,0);
+                    if (abs.fecha_fin_desconocida) return today >= start;
+                    const end = new Date(abs.fecha_fin);
+                    end.setHours(23,59,59,999);
+                    return today >= start && today <= end;
+                });
+                return hasAbsence;
+            });
+
+            const total = teamEmployees.length;
+            const absent = absentEmployees.length;
+            const available = Math.max(0, total - absent);
+            
+            return {
+                ...team,
+                total,
+                available,
+                absent,
+                shift,
+                absencesCount: absent // Compatibility alias
+            };
     });
   }, [teams, employeesAssignable, teamSchedules, activeAbsencesDept, selectedTeamFilter]);
 
