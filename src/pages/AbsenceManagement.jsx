@@ -89,7 +89,7 @@ export default function AbsenceManagementPage() {
     const now = new Date();
     const start = new Date(a.fecha_inicio);
     const end = a.fecha_fin_desconocida ? now : new Date(a.fecha_fin);
-    return now >= start && now <= end;
+    return now >= start && now <= end && a.estado_aprobacion !== "Rechazada";
   });
 
   const departmentsWithActiveAbsences = useMemo(() => {

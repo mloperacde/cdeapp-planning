@@ -134,17 +134,11 @@ export default function UnifiedAbsenceManager(props) {
     return absences.filter(abs => {
       if (!abs.fecha_inicio) return false;
       const start = new Date(abs.fecha_inicio);
-      // If unknown end, use 'now' to ensure it counts as active, or far future.
-      // Consistent with AbsenceManagementPage:
       const end = abs.fecha_fin_desconocida ? new Date('2099-12-31') : new Date(abs.fecha_fin);
       
-      // Use simple comparison for "Active Now" or "Active Today"
-      // If we want "Active Today" (at any point today):
-      // return isWithinInterval(now, { start: startOfDay(start), end: endOfDay(end) });
-      
-      // But user complained about congruency with Dashboard "Activas Ahora" (Active Now).
-      // So we use current time comparison.
-      return now >= start && now <= end && abs.estado_aprobacion === "Aprobada";
+      // Include Approved and Pending, exclude Rejected
+      // Also ensure consistency with Dashboard
+      return now >= start && now <= end && abs.estado_aprobacion !== "Rechazada";
     });
   }, [absences]);
 
@@ -435,8 +429,8 @@ export default function UnifiedAbsenceManager(props) {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-red-700 dark:text-red-300 font-medium">Ausentes Hoy</p>
-                <p className="text-2xl font-bold text-red-900 dark:text-red-100">{ausentesHoySegunAuditoria}</p>
+                <p className="text-xs text-red-700 dark:text-red-300 font-medium">Ausencias Activas</p>
+                <p className="text-2xl font-bold text-red-900 dark:text-red-100">{activeAbsencesConsolidated.length}</p>
               </div>
               <UserX className="w-8 h-8 text-red-600" />
             </div>
