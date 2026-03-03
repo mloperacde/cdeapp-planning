@@ -108,27 +108,20 @@ Deno.serve(async (req: Request) => {
     
     // Si estamos usando la URL antigua (/ExtApi), la mantenemos. Si no, probamos con y sin ExtApi.
     if (!baseUrl.includes("ExtApi")) {
-        // En la captura del usuario, se ve claramente que la URL es:
-        // https://cuco360.cucorent.com/api/ExtApi/checking/getfullchecks/380?start_date=...
-        // Y el error es 400 "Missing apikey".
-        // A pesar de probar todas las cabeceras posibles, el servidor sigue quejándose.
-        // Esto es muy común en APIs antiguas (legacy) que dicen usar headers pero en realidad
-        // solo leen 'apikey' si va como Query Parameter en la URL.
+        // CONFIRMADO POR EL USUARIO (CURL CORRECTO):
+        // URL: https://cuco360.cucorent.com/api/apiv2/checking/getfullchecks/380
+        // Header: APIkey (case sensitive)
+        // Params: start_date, end_date (encoded)
         
-        const correctBaseUrl = "https://cuco360.cucorent.com/api/ExtApi";
+        const correctBaseUrl = "https://cuco360.cucorent.com/api/apiv2";
         
-        // Formato de fecha de la captura: 2026-03-03 07:00:00 (Y-m-d H:i:s) url encoded
-        const start = encodeURIComponent(`${safeFrom} 00:00:00`);
-        const end = encodeURIComponent(`${safeTo} 23:59:59`);
+        const start = encodeURIComponent(`${safeFrom} 06:00:00`); // Usamos 06:00 como inicio seguro del día
+        const end = encodeURIComponent(`${safeTo} 22:00:00`); // 22:00 como fin seguro
         
-        // Añadimos 'apikey' como parámetro GET
-        endpoint = `/checking/getfullchecks/${CLIENT_CODE}?start_date=${start}&end_date=${end}&apikey=${authHeaderValue}`;
+        endpoint = `/checking/getfullchecks/${CLIENT_CODE}?start_date=${start}&end_date=${end}`;
         
         url = `${correctBaseUrl}${endpoint}`;
     } else {
-        // Si ya tenía ExtApi, construimos normal pero inyectando apikey en query string también por si acaso
-        const separator = endpoint.includes('?') ? '&' : '?';
-        endpoint = `${endpoint}${separator}apikey=${authHeaderValue}`;
         url = `${baseUrl}${endpoint}`;
     }
     
@@ -137,14 +130,10 @@ Deno.serve(async (req: Request) => {
 
     console.log(`[cucoSyncV2] Fetching URL: ${url}`);
     
-    // Auth Header: 'apikey' with raw value
-    // Añadimos también 'X-API-KEY' y 'Authorization' por si acaso, aunque el error dice 'apikey'.
-    // Y probamos a enviarlo también en Query Param si el header falla, pero primero headers.
+    // Header CONFIRMADO: 'APIkey' (con mayúsculas específicas)
     const headers = { 
         "Content-Type": "application/json", 
-        "apikey": authHeaderValue,
-        "APIKey": authHeaderValue, // Case sensitive variation
-        "X-API-KEY": authHeaderValue // Common alternative
+        "APIkey": authHeaderValue
     };
 
     let response;
@@ -169,39 +158,45 @@ Deno.serve(async (req: Request) => {
         throw new Error(`Invalid JSON response from CUCO360`);
     }
     
-    if (json.response && json.response !== "ok" && json.response !== "OK") {
-      throw new Error(`CUCO360 API returned error: ${JSON.stringify(json)}`);
+    // Validación respuesta V2
+    if (json.success === false) {
+      throw new Error(`CUCO360 API returned error: ${json.message || JSON.stringify(json)}`);
     }
 
-    const checks = json.data || json;
+    // Mapping V2: json.checks es el array
+    const checks = json.checks || json.data || json;
+    
     if (!Array.isArray(checks)) {
       if (!checks) {
           return Response.json({ success: true, message: "No data returned from CUCO360", count: 0 });
       }
-      throw new Error("Invalid data format from CUCO360: expected array");
+      throw new Error("Invalid data format from CUCO360: expected 'checks' array");
     }
 
-    // 5. Process & Save
+    // 5. Process & Save (Mapping fields from V2 response)
     const recordsToCreate = checks.map((check: any) => {
+      // V2 Fields: cod_empleado, fec_marcaje (YYYY-MM-DD HH:mm:ss), val_direccion (E/S), nom_dispositivo
       const employeeId = String(check.cod_empleado || check.employee_id || "");
-      const dateStr = check.fecha || check.date; 
-      const timeStr = check.hora || check.time;
+      const fullDate = check.fec_marcaje || check.fecha; // "2026-03-03 09:04:19"
+      
+      if (!employeeId || !fullDate) return null;
+      
+      const dateStr = fullDate.split(' ')[0];
+      const timeStr = fullDate.split(' ')[1];
       
       let direction = "E";
-      const type = String(check.tipo || check.type || check.sentido || "").toUpperCase();
-      if (type.startsWith("S") || type === "2" || type === "SALIDA" || type === "OUT") {
+      const type = String(check.val_direccion || check.tipo || "").toUpperCase();
+      if (type === "S" || type === "SALIDA" || type === "OUT" || type === "2") {
         direction = "S";
       }
 
-      if (!employeeId || !dateStr || !timeStr) return null;
-
       return {
         employee_id: employeeId,
-        employee_name: check.nombre || check.employee_name || `Empleado ${employeeId}`,
+        employee_name: check.nombre || `Empleado ${employeeId}`, // API V2 no devuelve nombre en este endpoint, usamos ID
         record_date: dateStr,
         record_time: timeStr.slice(0, 5),
         direction: direction,
-        device: check.dispositivo || check.terminal || "API",
+        device: check.nom_dispositivo || "API",
         import_batch: `cuco_sync_${new Date().toISOString().replace(/[:.]/g, '-')}`,
         source: "cuco360_api"
       };
