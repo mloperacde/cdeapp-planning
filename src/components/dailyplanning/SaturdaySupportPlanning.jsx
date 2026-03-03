@@ -347,13 +347,13 @@ export default function SaturdaySupportPlanning({ selectedTeam, teams = [] }) {
 
       {/* Detail Modal */}
       <Dialog open={showDetailModal} onOpenChange={setShowDetailModal}>
-          <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
+          <DialogContent className="max-w-7xl w-[95vw] h-[90vh] flex flex-col">
               <DialogHeader>
-                  <DialogTitle className="flex items-center gap-2 text-xl">
-                      <CalendarIcon className="w-5 h-5 text-indigo-600" />
+                  <DialogTitle className="flex items-center gap-2 text-2xl">
+                      <CalendarIcon className="w-6 h-6 text-indigo-600" />
                       {selectedDate && format(selectedDate, "EEEE, d 'de' MMMM", { locale: es })}
                   </DialogTitle>
-                  <div className="text-sm text-slate-500">
+                  <div className="text-base text-slate-500">
                       Gestión de actividades y asistencia
                   </div>
               </DialogHeader>
