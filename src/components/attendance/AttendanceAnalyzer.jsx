@@ -112,27 +112,33 @@ export default function AttendanceAnalyzer() {
   const handleAnalyzeWithAI = async () => {
     setAnalyzing(true);
     try {
-      // Prepare data summary for AI
+      // Prepare data summary for AI (Lightweight version)
       const summary = {
         date: selectedDate,
-        total_expected: analysis.totalExpected,
-        total_incidents: analysis.totalIncidents,
-        incidents_summary: analysis.incidents.map(i => ({
+        stats: {
+           expected: analysis.totalExpected,
+           incidents: analysis.totalIncidents
+        },
+        // Limit incidents to avoid token limit
+        top_incidents: analysis.incidents.slice(0, 50).map(i => ({
           type: i.type,
-          employee: i.employee.nombre,
-          department: i.department,
-          severity: i.severity,
-          details: i.message
+          dept: i.department,
+          msg: i.message
         })),
-        department_stats: analysis.byDepartment
+        dept_stats: Object.entries(analysis.byDepartment).map(([d, s]) => ({
+           dept: d,
+           absent: s.absent,
+           late: s.late,
+           unreg: s.unregistered
+        }))
       };
 
+      // Use a safer call structure or mock if LLM is unavailable/failing
+      // The 500 error suggests the backend function 'InvokeLLM' is failing or timing out
+      // We'll wrap this in a more robust error handler and maybe simplify the prompt
+      
       const response = await base44.integrations.Core.InvokeLLM({
-        prompt: `Analyze the following attendance data for potential patterns or anomalies. 
-        Identify if specific departments have higher rates of lateness or absence. 
-        Suggest potential root causes (e.g., traffic for specific shift start times, team morale).
-        Highlight any recurring issues if visible (assume this is a snapshot).
-        Language: Spanish.
+        prompt: `Analyze attendance data (JSON). Spanish language. Brief points.
         Data: ${JSON.stringify(summary)}`,
         response_json_schema: {
           type: "object",
@@ -148,7 +154,13 @@ export default function AttendanceAnalyzer() {
       toast.success("Análisis de IA completado");
     } catch (error) {
       console.error("AI Analysis failed:", error);
-      toast.error("Error en análisis de IA");
+      // Fallback UI for error
+      toast.error("El servicio de IA no está disponible en este momento. Intente más tarde.");
+      setAiAnalysis({
+         patterns: ["No se pudo completar el análisis automático."],
+         recommendations: ["Revise los datos manualmente en la tabla inferior."],
+         risk_assessment: "Desconocido (Error de servicio)"
+      });
     } finally {
       setAnalyzing(false);
     }
