@@ -31,36 +31,13 @@ Deno.serve(async (req: Request) => {
     }
 
     // 2. Constants & Params
-    const CLIENT_CODE = "380";
-    // Base URL actualizada según documentación reciente (cuco360.cucorent.com/api)
-    // El usuario nos indica que la documentación está en cuco360.cucorent.com/api/documentation
-    // Por tanto, la API debe estar en cuco360.cucorent.com/api
-    const DEFAULT_API_URL = "https://cuco360.cucorent.com/api"; 
-    const baseUrl = Deno.env.get("CUCO_API_URL") || DEFAULT_API_URL;
+    const CLIENT_CODE = Deno.env.get("CUCO_CLIENT_CODE") || "380";
     
     // Auth: 'apikey' header with raw value (no Bearer) for 'cliente_apikey' scheme
     const authHeaderValue = apiKeyEnv.replace("Bearer ", "").trim();
     
-    // --- HEALTH CHECK ---
-    // Verificar conectividad antes de intentar operaciones pesadas
-    try {
-        // Usamos un endpoint seguro para probar la conexión
-        const healthUrl = `${baseUrl}/auxiliary/index/`;
-        console.log(`[cucoSyncV2] Health Check: ${healthUrl}`);
-        // Header name: 'apikey' (lowercase)
-        const healthRes = await fetch(healthUrl, { 
-            headers: { "apikey": authHeaderValue, "Accept": "application/json" } 
-        });
-        
-        if (!healthRes.ok) {
-            const text = await healthRes.text();
-            console.warn(`[cucoSyncV2] Health Check Failed (${healthRes.status}): ${text}`);
-        } else {
-            console.log(`[cucoSyncV2] Health Check OK`);
-        }
-    } catch (e) {
-        console.warn(`[cucoSyncV2] Health Check Connection Error:`, e);
-    }
+    // --- HEALTH CHECK REMOVED ---
+    // We strictly use the V2 endpoint provided by the user.
     // --------------------
 
     let from = start_date;
@@ -88,50 +65,27 @@ Deno.serve(async (req: Request) => {
 
     console.log(`[cucoSyncV2] Syncing client ${CLIENT_CODE} from ${from} to ${to}`);
 
-    // 4. Call CUCO360 API
+    // 4. Call CUCO360 API (V2 Endpoint)
+    // URL: https://cuco360.cucorent.com/api/apiv2/checking/getfullchecks/{CLIENT_CODE}
+    // Headers: APIkey: {KEY}
+    
     const formatDate = (d: string) => {
         try { return d.includes('T') ? d.split('T')[0] : d; } catch { return d; }
     };
     const safeFrom = formatDate(from);
     const safeTo = formatDate(to);
     
-    // Endpoint legacy vs nuevo. Si el health check funcionó en /api/, asumimos estructura nueva.
-    // Pero si getfullchecks es específico de legacy (ExtApi), puede que necesitemos mantener ExtApi para esa llamada.
-    // Probaremos construir la URL con precaución.
+    const API_BASE_V2 = "https://cuco360.cucorent.com/api/apiv2";
     
-    // Si baseUrl es .../api, y el endpoint antiguo era /ExtApi/checking..., quizás ahora sea /checking... directo?
-    // Asumiremos que si cambiamos el base a /api, el endpoint debe ajustarse.
-    // Doc antigua: /api/ExtApi/checking/getfullchecks
-    // Doc nueva: /api/auxiliary/index
+    // Add times to ensure full day coverage (as per user example 06:00 to 22:00, but we use 00:00 to 23:59 for safety)
+    const start = encodeURIComponent(`${safeFrom} 00:00:00`); 
+    const end = encodeURIComponent(`${safeTo} 23:59:59`);
     
-    // Intento 1: Ruta estándar
-    let endpoint = `/checking/getfullchecks/${CLIENT_CODE}?start_date=${safeFrom}&end_date=${safeTo}`;
+    const url = `${API_BASE_V2}/checking/getfullchecks/${CLIENT_CODE}?start_date=${start}&end_date=${end}`;
     
-    // Si estamos usando la URL antigua (/ExtApi), la mantenemos. Si no, probamos con y sin ExtApi.
-    if (!baseUrl.includes("ExtApi")) {
-        // CONFIRMADO POR EL USUARIO (CURL CORRECTO):
-        // URL: https://cuco360.cucorent.com/api/apiv2/checking/getfullchecks/380
-        // Header: APIkey (case sensitive)
-        // Params: start_date, end_date (encoded)
-        
-        const correctBaseUrl = "https://cuco360.cucorent.com/api/apiv2";
-        
-        const start = encodeURIComponent(`${safeFrom} 06:00:00`); // Usamos 06:00 como inicio seguro del día
-        const end = encodeURIComponent(`${safeTo} 22:00:00`); // 22:00 como fin seguro
-        
-        endpoint = `/checking/getfullchecks/${CLIENT_CODE}?start_date=${start}&end_date=${end}`;
-        
-        url = `${correctBaseUrl}${endpoint}`;
-    } else {
-        url = `${baseUrl}${endpoint}`;
-    }
-    
-    // Corrección para evitar doble // si baseUrl termina en /
-    url = url.replace(/([^:]\/)\/+/g, "$1");
-
     console.log(`[cucoSyncV2] Fetching URL: ${url}`);
     
-    // Header CONFIRMADO: 'APIkey' (con mayúsculas específicas)
+    // Header CONFIRMADO: 'APIkey' (case sensitive)
     const headers = { 
         "Content-Type": "application/json", 
         "APIkey": authHeaderValue
@@ -168,38 +122,40 @@ Deno.serve(async (req: Request) => {
     const checks = json.checks || json.data || json;
     
     if (!Array.isArray(checks)) {
-      if (!checks) {
-          return Response.json({ success: true, message: "No data returned from CUCO360", count: 0 });
+      if (json.success === true && !json.checks) {
+          return Response.json({ success: true, message: "No data returned from CUCO360 (empty checks)", count: 0 });
       }
       throw new Error("Invalid data format from CUCO360: expected 'checks' array");
     }
 
     // 5. Process & Save (Mapping fields from V2 response)
     const recordsToCreate = checks.map((check: any) => {
-      // V2 Fields: cod_empleado, fec_marcaje (YYYY-MM-DD HH:mm:ss), val_direccion (E/S), nom_dispositivo
-      const employeeId = String(check.cod_empleado || check.employee_id || "");
+      // V2 Fields: cod_int_empleado (ID interno en Base44), fec_marcaje (YYYY-MM-DD HH:mm:ss), val_direccion (E/S), nom_dispositivo
+      // Según la documentación de Base44, usamos cod_int_empleado para mapear con EmployeeMasterDatabase.codigo_empleado
+      const employeeId = String(check.cod_int_empleado || check.cod_interno || check.cod_empleado || "");
       const fullDate = check.fec_marcaje || check.fecha; // "2026-03-03 09:04:19"
       
       if (!employeeId || !fullDate) return null;
       
-      const dateStr = fullDate.split(' ')[0];
-      const timeStr = fullDate.split(' ')[1];
+      const dateParts = fullDate.split(' ');
+      const dateStr = dateParts[0];
+      const timeStr = dateParts[1] || "00:00:00";
       
       let direction = "E";
-      const type = String(check.val_direccion || check.tipo || "").toUpperCase();
+      const type = String(check.val_direccion || "").toUpperCase();
       if (type === "S" || type === "SALIDA" || type === "OUT" || type === "2") {
         direction = "S";
       }
 
       return {
         employee_id: employeeId,
-        employee_name: check.nombre || `Empleado ${employeeId}`, // API V2 no devuelve nombre en este endpoint, usamos ID
+        employee_name: check.nombre || `Empleado ${employeeId}`, 
         record_date: dateStr,
         record_time: timeStr.slice(0, 5),
         direction: direction,
-        device: check.nom_dispositivo || "API",
-        import_batch: `cuco_sync_${new Date().toISOString().replace(/[:.]/g, '-')}`,
-        source: "cuco360_api"
+        device: check.nom_dispositivo || "API CUCO360",
+        import_batch: `cuco_v2_sync_${new Date().toISOString().split('T')[0]}`,
+        source: "cuco360_v2"
       };
     }).filter((r: any) => r !== null);
 
