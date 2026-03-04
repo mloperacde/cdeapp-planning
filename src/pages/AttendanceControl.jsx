@@ -324,9 +324,9 @@ export default function AttendanceControl() {
     
     setIsSyncing(true);
     try {
-      // 1. Preparar fechas (Formato ISO con T para mayor compatibilidad)
-      const start = encodeURIComponent(`${filterDate}T00:00:00`);
-      const end = encodeURIComponent(`${filterDate}T23:59:59`);
+      // 1. Preparar fechas (Volvemos al formato simple con espacio que funcionaba en la v1)
+      const start = encodeURIComponent(`${filterDate} 00:00:00`);
+      const end = encodeURIComponent(`${filterDate} 23:59:59`);
       
       // 2. Fetch directo a Cuco360 V2
       const url = `${CUCO_BASE_URL}/checking/getfullchecks/${CLIENT_CODE}?start_date=${start}&end_date=${end}`;
@@ -367,12 +367,13 @@ export default function AttendanceControl() {
       // 3. Mapear datos usando empleados locales
       const mappedRecords = records.map(r => {
         // Buscar empleado (Prioridad: Código Interno > ID Cuco)
-        const code = String(r.cod_int_empleado || "").trim();
-        const id = String(r.id_empleado || "").trim();
+        // Cuco devuelve a veces cod_int_empleado como número o string
+        const code = r.cod_int_empleado ? String(r.cod_int_empleado).trim() : "";
+        const id = r.id_empleado ? String(r.id_empleado).trim() : "";
         
         let emp = null;
         if (code) emp = employeesByCodigo.get(code);
-        if (!emp && id) emp = employeesById.get(id); // Fallback por ID si coincidiera con nuestra ID interna (poco probable pero posible)
+        if (!emp && id) emp = employeesById.get(id); // Fallback
         
         // Dirección: 1=Entrada, 2=Salida, 3=Entrada, 4=Salida
         let direction = "E";
@@ -386,9 +387,12 @@ export default function AttendanceControl() {
         }
 
         // Fecha y Hora
-        // r.fecha suele ser "2024-02-27T00:00:00"
+        // r.fecha suele ser "2024-02-27T00:00:00" o "2024-02-27 00:00:00"
         // r.hora suele ser "07:59:00"
-        const recordDate = r.fecha ? r.fecha.split('T')[0] : filterDate;
+        let recordDate = filterDate;
+        if (r.fecha) {
+           recordDate = r.fecha.split('T')[0].split(' ')[0];
+        }
         
         return {
           employee_id: code || id || "UNKNOWN",
