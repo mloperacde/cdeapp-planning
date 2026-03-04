@@ -148,7 +148,7 @@ export default function UnifiedAbsenceManager(props) {
     
     // Filter by context
     if (sourceContext === 'shift_manager') {
-      targetList = targetList.filter(e => 
+      targetList = targetList.filter(e =>   
         e.departamento?.toUpperCase() === 'FABRICACION' || 
         e.puesto?.toUpperCase().includes('OPERARI') ||
         e.equipo
