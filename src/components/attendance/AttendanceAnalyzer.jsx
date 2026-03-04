@@ -32,7 +32,15 @@ export default function AttendanceAnalyzer() {
 
   const { data: attendanceRecords } = useQuery({
     queryKey: ['attendanceRecords', selectedDate],
-    queryFn: () => base44.entities.AttendanceRecord.filter({ fecha: selectedDate }),
+    queryFn: async () => {
+      // Intentar cargar registros locales
+      const records = await base44.entities.AttendanceRecord.filter({ record_date: selectedDate });
+      
+      // Si no hay registros locales, quizás no se han sincronizado o están en formato antiguo
+      // En este caso, el analyzer depende totalmente de lo que haya en la base de datos
+      // tras la sincronización manual desde AttendanceControl.
+      return records;
+    },
     initialData: [],
     staleTime: 60 * 1000,
   });
@@ -269,6 +277,13 @@ export default function AttendanceAnalyzer() {
         // 2. Coincidencia por código de empleado (cruce externo)
         if (empCode && rId === empCode) return true;
         
+        // 3. Coincidencia por nombre (fallback desesperado para importaciones v2)
+        // A veces el employee_id en sync_v2 es "UNKNOWN" o un código raro, pero el nombre está
+        if (r.employee_name && emp.nombre && 
+            normalizeId(r.employee_name).includes(normalizeId(emp.nombre).split(' ')[0])) {
+           return true;
+        }
+
         return false;
       });
       
@@ -300,7 +315,29 @@ export default function AttendanceAnalyzer() {
           });
         }
       } else {
-        if (record.estado === "Ausencia") {
+        // Calcular estado si no viene pre-calculado
+        let estado = record.estado || "Presente";
+        let minRetraso = record.minutos_retraso_entrada || 0;
+        let minSalida = record.minutos_adelanto_salida || 0;
+
+        // Si es importación bruta (sync_v2), calcular retrasos al vuelo
+        if (record.import_batch && record.import_batch.startsWith("sync_v2")) {
+           const expected = getExpectedShift(emp, selectedDate);
+           if (expected && record.record_time) {
+              const actualTime = record.record_time.substring(0, 5); // HH:mm
+              if (actualTime > expected.hora_entrada) {
+                 const [hA, mA] = actualTime.split(':').map(Number);
+                 const [hE, mE] = expected.hora_entrada.split(':').map(Number);
+                 const diff = (hA * 60 + mA) - (hE * 60 + mE);
+                 if (diff > 5) { // Tolerancia 5 min
+                    estado = "Retraso";
+                    minRetraso = diff;
+                 }
+              }
+           }
+        }
+
+        if (estado === "Ausencia") {
           byDepartment[dept].absent++;
           
           const hasAbsence = hasAbsenceForDate(emp.id, selectedDate);
