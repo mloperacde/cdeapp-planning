@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { getMachineAlias } from "@/utils/machineAlias";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAppData } from "@/components/data/DataProvider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,6 +29,10 @@ export default function EmployeeSkillsMatrix({ defaultDepartment = "all", fixedD
   const [searchTerm, setSearchTerm] = useState("");
   const [filterDepartment, setFilterDepartment] = useState(defaultDepartment);
   const queryClient = useQueryClient();
+  const { employees: employeesData, machines: machinesData } = useAppData();
+
+  const employees = employeesData || [];
+  const machines = machinesData || [];
 
   const [newSkill, setNewSkill] = useState({
     skill_id: "",
@@ -38,37 +43,20 @@ export default function EmployeeSkillsMatrix({ defaultDepartment = "all", fixedD
     certificado: false,
   });
 
-  const { data: employees } = useQuery({
-    queryKey: ['employeesMaster'],
-    queryFn: () => base44.entities.EmployeeMasterDatabase.list('nombre', 1000),
-    initialData: [],
-  });
-
   const { data: skills } = useQuery({
     queryKey: ['skills'],
     queryFn: () => base44.entities.Skill.list('nombre'),
     initialData: [],
+    staleTime: 60 * 60 * 1000,
+    gcTime: 2 * 60 * 60 * 1000
   });
 
   const { data: employeeSkills } = useQuery({
     queryKey: ['employeeSkills'],
     queryFn: () => base44.entities.EmployeeSkill.list(),
     initialData: [],
-  });
-
-  const { data: machines } = useQuery({
-    queryKey: ['machines'],
-    queryFn: async () => {
-      const data = await base44.entities.MachineMasterDatabase.list(undefined, 1000);
-      return data.map(m => ({
-        id: m.id,
-        nombre: getMachineAlias(m),
-        alias: getMachineAlias(m),
-        codigo: m.codigo_maquina,
-        orden: m.orden_visualizacion || 999
-      })).sort((a, b) => a.orden - b.orden);
-    },
-    initialData: [],
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000
   });
 
   const addSkillMutation = useMutation({

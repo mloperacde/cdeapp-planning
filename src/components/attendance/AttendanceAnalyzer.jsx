@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAppData } from "@/components/data/DataProvider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,17 +26,15 @@ export default function AttendanceAnalyzer() {
   console.log("AttendanceAnalyzer loaded");
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const queryClient = useQueryClient();
+  const { employees: employeesData } = useAppData();
 
-  const { data: employees } = useQuery({
-    queryKey: ['employees'],
-    queryFn: () => base44.entities.EmployeeMasterDatabase.list(),
-    initialData: [],
-  });
+  const employees = employeesData || [];
 
   const { data: attendanceRecords } = useQuery({
     queryKey: ['attendanceRecords', selectedDate],
     queryFn: () => base44.entities.AttendanceRecord.filter({ fecha: selectedDate }),
     initialData: [],
+    staleTime: 60 * 1000,
   });
 
   const { data: absences } = useQuery({

@@ -1,6 +1,7 @@
 import { useState, useRef, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useAppData } from "../components/data/DataProvider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -55,6 +56,9 @@ export default function AttendanceControl() {
   const [filterDate, setFilterDate] = useState(new Date().toISOString().split("T")[0]);
   const fileInputRef = useRef(null);
   const queryClient = useQueryClient();
+  const { employees: employeesData } = useAppData();
+
+  const employees = employeesData || [];
 
   const { data: records = [], isLoading, refetch } = useQuery({
     queryKey: ["attendanceRecords", filterDate],
@@ -63,13 +67,7 @@ export default function AttendanceControl() {
       const page1 = await base44.entities.AttendanceRecord.filter({ record_date: filterDate }, "record_time", 2000);
       return page1;
     },
-    staleTime: 0,
-  });
-
-  const { data: employees = [] } = useQuery({
-    queryKey: ["employeesMasterForAttendance"],
-    queryFn: () => base44.entities.EmployeeMasterDatabase.list(undefined, 2000),
-    staleTime: 0,
+    staleTime: 5000,
   });
 
   const employeesById = useMemo(() => {

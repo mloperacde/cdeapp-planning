@@ -1,30 +1,33 @@
 import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAppData } from "@/components/data/DataProvider";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, DollarSign, Plus, Eye, TrendingUp } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Search, DollarSign, Plus, Eye, TrendingUp, Users, Calculator, Download } from "lucide-react";
+import { toast } from "sonner";
+import { formatCurrency } from "@/utils/format";
 import EmployeeSalaryDetail from "./EmployeeSalaryDetail";
 
 export default function EmployeeSalaryManager() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [showSummary, setShowSummary] = useState(true);
+  const { employees: employeesData } = useAppData();
 
-  const { data: employees = [] } = useQuery({
-    queryKey: ['employees'],
-    queryFn: async () => {
-      const all = await base44.entities.EmployeeMasterDatabase.list('nombre');
-      return all.filter(emp => emp.estado_empleado === 'Alta');
-    },
-  });
+  const employees = useMemo(() => {
+    return (employeesData || []).filter(emp => emp.estado_empleado === 'Alta');
+  }, [employeesData]);
 
   const { data: employeeSalaries = [] } = useQuery({
     queryKey: ['employeeSalaries'],
     queryFn: () => base44.entities.EmployeeSalary.filter({ is_current: true }),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000
   });
 
   const employeesWithSalary = useMemo(() => {

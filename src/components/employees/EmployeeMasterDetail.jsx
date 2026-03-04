@@ -24,42 +24,41 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { getMachineAlias } from "@/utils/machineAlias";
 
+import { useAppData } from "../data/DataProvider";
+
 export default function EmployeeMasterDetail({ employee, onClose, onEdit }) {
   const [activeTab, setActiveTab] = useState("general");
   const [editingLocker, setEditingLocker] = useState(false);
   const [lockerData, setLockerData] = useState({}); // Changed initial state to empty object
   const queryClient = useQueryClient();
+  const { employees: employeesData, machines: machinesData } = useAppData();
 
-  const { data: employees } = useQuery({
-    queryKey: ['employeesMaster'],
-    queryFn: () => base44.entities.EmployeeMasterDatabase.list(undefined, 1000),
-    initialData: [],
-    staleTime: 0,
-    gcTime: 0
-  });
+  // Use data from DataProvider instead of fetching again
+  const employees = employeesData || [];
+  const machines = machinesData || [];
 
   const { data: lockerAssignments } = useQuery({
     queryKey: ['lockerAssignments'],
     queryFn: () => base44.entities.LockerAssignment.list(),
     initialData: [],
-    staleTime: 0,
-    gcTime: 0
+    staleTime: 60 * 60 * 1000,
+    gcTime: 2 * 60 * 60 * 1000
   });
 
   const { data: committeeMembers } = useQuery({
     queryKey: ['committeeMembers'],
     queryFn: () => base44.entities.CommitteeMember.list(),
     initialData: [],
-    staleTime: 0,
-    gcTime: 0
+    staleTime: 60 * 60 * 1000,
+    gcTime: 2 * 60 * 60 * 1000
   });
 
   const { data: emergencyMembers } = useQuery({
     queryKey: ['emergencyTeamMembers'],
     queryFn: () => base44.entities.EmergencyTeamMember.list(),
     initialData: [],
-    staleTime: 0,
-    gcTime: 0
+    staleTime: 60 * 60 * 1000,
+    gcTime: 2 * 60 * 60 * 1000
   });
 
   const { data: employeeSkills } = useQuery({
@@ -73,8 +72,8 @@ export default function EmployeeMasterDetail({ employee, onClose, onEdit }) {
       }
     },
     initialData: [],
-    staleTime: 0,
-    gcTime: 0
+    staleTime: 60 * 60 * 1000,
+    gcTime: 2 * 60 * 60 * 1000
   });
 
   const { data: skills } = useQuery({
@@ -88,44 +87,21 @@ export default function EmployeeMasterDetail({ employee, onClose, onEdit }) {
       }
     },
     initialData: [],
-    staleTime: 0,
-    gcTime: 0
+    staleTime: 60 * 60 * 1000,
+    gcTime: 2 * 60 * 60 * 1000
   });
 
   const { data: absences } = useQuery({
     queryKey: ['absences'],
     queryFn: () => base44.entities.Absence.list('-fecha_inicio', 1000),
     initialData: [],
-    staleTime: 0,
-    gcTime: 0
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000
   });
 
   const { data: employeeMachineSkills, refetch: refetchMachineSkills } = useQuery({
     queryKey: ['employeeMachineSkills', employee?.id],
     queryFn: () => base44.entities.EmployeeMachineSkill.list(undefined, 1000),
-    initialData: [],
-    staleTime: 0,
-    gcTime: 0,
-    refetchOnMount: 'always'
-  });
-
-  const { data: machines } = useQuery({
-    queryKey: ['machinesMaster'],
-    queryFn: async () => {
-      const data = await base44.entities.MachineMasterDatabase.list(undefined, 1000);
-      return (Array.isArray(data) ? data : [])
-        .map(m => {
-          return {
-            id: m.id,
-            nombre: m.nombre,
-            alias: getMachineAlias(m),
-            codigo: m.codigo_maquina,
-            ubicacion: m.ubicacion,
-            orden: m.orden_visualizacion || 999
-          };
-        })
-        .sort((a, b) => (a.orden || 999) - (b.orden || 999));
-    },
     initialData: [],
     staleTime: 0,
     gcTime: 0,
