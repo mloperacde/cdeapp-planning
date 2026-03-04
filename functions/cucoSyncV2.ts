@@ -130,10 +130,10 @@ Deno.serve(async (req: Request) => {
       throw new Error("Invalid data format from CUCO360: expected 'checks' array");
     }
 
-    // 5. Process & Save (Mapping fields from V2 response)
+    // V2 Fields: cod_int_empleado (ID interno en Base44), fec_marcaje (YYYY-MM-DD HH:mm:ss), val_direccion (E/S), nom_dispositivo
+    // Según la documentación de Base44, usamos cod_int_empleado para mapear con EmployeeMasterDatabase.codigo_empleado
     const recordsToCreate = checks.map((check: any) => {
-      // V2 Fields: cod_int_empleado (ID interno en Base44), fec_marcaje (YYYY-MM-DD HH:mm:ss), val_direccion (E/S), nom_dispositivo
-      // Según la documentación de Base44, usamos cod_int_empleado para mapear con EmployeeMasterDatabase.codigo_empleado
+      // Prioridad: cod_int_empleado (suele ser el código de fichaje), luego cod_interno, luego cod_empleado
       const employeeId = String(check.cod_int_empleado || check.cod_interno || check.cod_empleado || "");
       const fullDate = check.fec_marcaje || check.fecha; // "2026-03-03 09:04:19"
       
