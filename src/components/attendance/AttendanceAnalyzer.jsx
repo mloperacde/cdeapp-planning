@@ -24,7 +24,14 @@ import { toast } from "sonner";
 export default function AttendanceAnalyzer() {
   // Debug: Component Loaded
   console.log("AttendanceAnalyzer loaded");
-  const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  // FIX: Ensure initial state is a valid string date, avoiding 'Invalid time value' on mount
+  const [selectedDate, setSelectedDate] = useState(() => {
+     try {
+       return format(new Date(), 'yyyy-MM-dd');
+     } catch (e) {
+       return new Date().toISOString().split('T')[0];
+     }
+  });
   const queryClient = useQueryClient();
   const { employees: employeesData } = useAppData();
 
@@ -34,6 +41,9 @@ export default function AttendanceAnalyzer() {
     queryKey: ['attendanceRecords', selectedDate],
     queryFn: async () => {
       // Intentar cargar registros locales
+      // Si selectedDate es inválido, devolver vacío para evitar crash
+      if (!selectedDate || selectedDate === 'Invalid Date') return [];
+      
       const records = await base44.entities.AttendanceRecord.filter({ record_date: selectedDate });
       
       // Si no hay registros locales, quizás no se han sincronizado o están en formato antiguo
@@ -241,20 +251,27 @@ export default function AttendanceAnalyzer() {
   };
 
   const hasAbsenceForDate = (employeeId, date) => {
-    // Convert check date to string YYYY-MM-DD for simpler comparison
-    const checkDateStr = date instanceof Date ? date.toISOString().split('T')[0] : String(date).split('T')[0];
-    
-    return absences.some(abs => {
-      // Consider pending absences as valid for attendance check
-      if (abs.estado_aprobacion === 'Rechazada') return false;
+    try {
+      if (!date || date === 'Invalid Date') return false;
+      // Convert check date to string YYYY-MM-DD for simpler comparison
+      const checkDateStr = date instanceof Date ? date.toISOString().split('T')[0] : String(date).split('T')[0];
       
-      const start = new Date(abs.fecha_inicio).toISOString().split('T')[0];
-      // Handle unknown end date as "forever" or far future
-      const end = abs.fecha_fin_desconocida ? '2099-12-31' : new Date(abs.fecha_fin).toISOString().split('T')[0];
-      
-      // Strict string comparison to avoid timezone issues with Date objects
-      return String(abs.employee_id) === String(employeeId) && checkDateStr >= start && checkDateStr <= end;
-    });
+      return absences.some(abs => {
+        // Consider pending absences as valid for attendance check
+        if (abs.estado_aprobacion === 'Rechazada') return false;
+        if (!abs.fecha_inicio) return false;
+        
+        const start = new Date(abs.fecha_inicio).toISOString().split('T')[0];
+        // Handle unknown end date as "forever" or far future
+        const end = abs.fecha_fin_desconocida ? '2099-12-31' : new Date(abs.fecha_fin || abs.fecha_inicio).toISOString().split('T')[0];
+        
+        // Strict string comparison to avoid timezone issues with Date objects
+        return String(abs.employee_id) === String(employeeId) && checkDateStr >= start && checkDateStr <= end;
+      });
+    } catch (e) {
+      console.warn("Error in hasAbsenceForDate:", e);
+      return false;
+    }
   };
 
   const normalizeId = (v) => (v == null ? "" : String(v).trim());
