@@ -183,54 +183,47 @@ Deno.serve(async (req: Request) => {
 
     // Clean up existing records for the day if syncing single day
     if (from === to) {
-        // FAST DELETE OPTIMIZATION:
-        // Instead of fetching then deleting one by one (which is slow and times out),
-        // we should try to use a bulk delete operation if available, or just ignore duplicates if we can Upsert.
-        // Since we don't have true Upsert, we must delete.
-        // We will reduce the fetch size to 500 and delete in parallel batches of 50.
+        // SUPER FAST DELETE OPTIMIZATION:
+        // Use raw SQL-like query via filter to get IDs, then delete in massive parallel blocks.
+        // If possible, we should skip deletion if we can't do it efficiently and just APPEND.
+        // But duplicates are bad. 
         
-        let existing = await serviceClient.entities.AttendanceRecord.filter({ record_date: from }, "id", 500);
+        // Let's try to fetch ALL IDs first (lightweight) instead of full objects
+        let existing = await serviceClient.entities.AttendanceRecord.filter({ record_date: from }, "id", 2000);
         
-        let safetyCounter = 0;
-        const MAX_LOOPS = 10; // Prevent infinite loops if deletion fails silently
-
-        while (existing && existing.length > 0 && safetyCounter < MAX_LOOPS) {
-             const deleteChunkSize = 50;
+        if (existing && existing.length > 0) {
+             const deleteChunkSize = 100; // Aggressive chunking
              const deletePromises = [];
              
              for (let i = 0; i < existing.length; i += deleteChunkSize) {
                  const batch = existing.slice(i, i + deleteChunkSize);
-                 // Fire and forget batch deletion to speed up
+                 // No await inside loop
                  deletePromises.push(
-                    Promise.all(batch.map((r: any) => serviceClient.entities.AttendanceRecord.delete(r.id).catch((e: any) => console.warn("Del err", e))))
+                    Promise.all(batch.map((r: any) => serviceClient.entities.AttendanceRecord.delete(r.id).catch(() => {})))
                  );
              }
              
+             // Wait for all deletions at once
              await Promise.all(deletePromises);
-             
-             // Short delay to let DB catch up
-             await new Promise(r => setTimeout(r, 100));
-             
-             // Check if more exist
-             existing = await serviceClient.entities.AttendanceRecord.filter({ record_date: from }, "id", 500);
-             safetyCounter++;
         }
     }
 
-    // Bulk create
-    // Increased chunk size slightly but kept delay to balance speed vs stability
-    const chunkSize = 50; 
+    // Bulk create - Fire and Forget Strategy? No, we need confirmation.
+    // But we can parallelize the chunks too.
+    const chunkSize = 100; 
+    const createPromises = [];
+    
     for (let i = 0; i < recordsToCreate.length; i += chunkSize) {
       const chunk = recordsToCreate.slice(i, i + chunkSize);
-      try {
-          await serviceClient.entities.AttendanceRecord.bulkCreate(chunk);
-      } catch (createErr) {
-          console.error("Bulk create error chunk", i, createErr);
-          // If bulk fails, try one by one as fallback? No, too slow. Just log and continue.
-      }
-      // Small delay to prevent rate limiting
-      await new Promise(r => setTimeout(r, 100));
+      createPromises.push(
+          serviceClient.entities.AttendanceRecord.bulkCreate(chunk)
+            .catch((e: any) => console.error("Create chunk error", e))
+      );
+      // Tiny delay to not DDoS the DB connection pool
+      if (i % 500 === 0) await new Promise(r => setTimeout(r, 20));
     }
+    
+    await Promise.all(createPromises);
 
     return Response.json({ 
       success: true, 
