@@ -324,13 +324,13 @@ export default function AttendanceControl() {
     
     setIsSyncing(true);
     try {
-      // 1. Preparar fechas
-      const start = encodeURIComponent(`${filterDate} 00:00:00`);
-      const end = encodeURIComponent(`${filterDate} 23:59:59`);
+      // 1. Preparar fechas (Formato ISO con T para mayor compatibilidad)
+      const start = encodeURIComponent(`${filterDate}T00:00:00`);
+      const end = encodeURIComponent(`${filterDate}T23:59:59`);
       
       // 2. Fetch directo a Cuco360 V2
       const url = `${CUCO_BASE_URL}/checking/getfullchecks/${CLIENT_CODE}?start_date=${start}&end_date=${end}`;
-      console.log("Fetching Cuco V2:", url);
+      console.log("Fetching Cuco V2 URL:", url);
       
       const response = await fetch(url, {
         method: 'GET',
@@ -341,24 +341,26 @@ export default function AttendanceControl() {
         }
       });
 
+      console.log("Cuco V2 Status:", response.status);
+
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(`Error HTTP ${response.status}: ${errorText}`);
       }
 
       const rawData = await response.json();
+      console.log("Cuco V2 Raw Data:", rawData);
       
       // Validar estructura de respuesta
-      // V2 suele devolver array directo o { data: [] }? 
-      // Según cucoSyncV2.ts asumíamos array directo.
       const records = Array.isArray(rawData) ? rawData : (rawData.data || []);
       
       if (!Array.isArray(records)) {
-        throw new Error("Formato de respuesta inválido de Cuco360");
+        throw new Error("Formato de respuesta inválido de Cuco360 (No es array)");
       }
 
       if (records.length === 0) {
-        toast.info("No se encontraron marcajes para este día en Cuco360.");
+        console.warn("Cuco360 devolvió 0 registros para la fecha:", filterDate);
+        toast.warning(`No se encontraron marcajes en Cuco360 para el ${filterDate}. Revise si hay datos en el origen.`);
         return;
       }
 
