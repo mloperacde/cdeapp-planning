@@ -352,10 +352,18 @@ export default function AttendanceControl() {
       console.log("Cuco V2 Raw Data:", rawData);
       
       // Validar estructura de respuesta
-      const records = Array.isArray(rawData) ? rawData : (rawData.data || []);
+      // V2 devuelve objeto { success: true, checks: [...] }
+      let records = [];
+      if (Array.isArray(rawData)) {
+        records = rawData;
+      } else if (Array.isArray(rawData.data)) {
+        records = rawData.data;
+      } else if (Array.isArray(rawData.checks)) {
+        records = rawData.checks;
+      }
       
       if (!Array.isArray(records)) {
-        throw new Error("Formato de respuesta inválido de Cuco360 (No es array)");
+        throw new Error("Formato de respuesta inválido de Cuco360 (No se encontró array de 'checks')");
       }
 
       if (records.length === 0) {
@@ -376,9 +384,16 @@ export default function AttendanceControl() {
         if (!emp && id) emp = employeesById.get(id); // Fallback
         
         // Dirección: 1=Entrada, 2=Salida, 3=Entrada, 4=Salida
+        // V2 devuelve "val_direccion": "E" o "S"
         let direction = "E";
+        const valDir = r.val_direccion ? String(r.val_direccion).toUpperCase() : "";
         const typeId = Number(r.id_tipo_marcaje);
-        if (typeId === 2 || typeId === 4) direction = "S";
+        
+        if (valDir === "S" || valDir === "SALIDA" || valDir === "OUT") {
+           direction = "S";
+        } else if (typeId === 2 || typeId === 4) {
+           direction = "S";
+        }
         
         // Incidencia
         let incident = "";
@@ -387,10 +402,15 @@ export default function AttendanceControl() {
         }
 
         // Fecha y Hora
-        // r.fecha suele ser "2024-02-27T00:00:00" o "2024-02-27 00:00:00"
-        // r.hora suele ser "07:59:00"
+        // V2 devuelve "fec_marcaje": "2026-03-04 08:15:04"
         let recordDate = filterDate;
-        if (r.fecha) {
+        let recordTime = r.hora || "00:00";
+
+        if (r.fec_marcaje) {
+           const parts = r.fec_marcaje.split(' ');
+           recordDate = parts[0];
+           if (parts[1]) recordTime = parts[1].slice(0, 5); // HH:mm
+        } else if (r.fecha) {
            recordDate = r.fecha.split('T')[0].split(' ')[0];
         }
         
@@ -401,9 +421,9 @@ export default function AttendanceControl() {
           direction: direction,
           incident: incident,
           record_date: recordDate,
-          record_time: r.hora,
+          record_time: recordTime,
           center: "",
-          device: "",
+          device: r.nom_dispositivo || "",
           import_batch: `sync_v2_${Date.now()}`
         };
       });
