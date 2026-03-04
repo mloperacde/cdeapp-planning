@@ -87,8 +87,10 @@ Deno.serve(async (req: Request) => {
     
     // Header CONFIRMADO: 'APIkey' (case sensitive)
     const headers = { 
-        "Content-Type": "application/json", 
-        "APIkey": authHeaderValue
+        "Content-Type": "application/json",
+        "accept": "application/json",
+        "APIkey": authHeaderValue,
+        "X-CSRF-TOKEN": ""
     };
 
     let response;
