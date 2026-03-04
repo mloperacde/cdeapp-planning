@@ -210,7 +210,7 @@ Deno.serve(async (req: Request) => {
 
     // Bulk create - Fire and Forget Strategy? No, we need confirmation.
     // But we can parallelize the chunks too.
-    const chunkSize = 100; 
+    const chunkSize = 50; // Reduce chunk size slightly to reduce payload size per request
     const createPromises = [];
     
     for (let i = 0; i < recordsToCreate.length; i += chunkSize) {
@@ -219,8 +219,8 @@ Deno.serve(async (req: Request) => {
           serviceClient.entities.AttendanceRecord.bulkCreate(chunk)
             .catch((e: any) => console.error("Create chunk error", e))
       );
-      // Tiny delay to not DDoS the DB connection pool
-      if (i % 500 === 0) await new Promise(r => setTimeout(r, 20));
+      // Increased delay to 100ms to allow DB to process connections better
+      if (i % 250 === 0) await new Promise(r => setTimeout(r, 100));
     }
     
     await Promise.all(createPromises);
