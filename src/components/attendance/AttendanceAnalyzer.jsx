@@ -260,8 +260,17 @@ export default function AttendanceAnalyzer() {
       byDepartment[dept].expected++;
 
       const record = attendanceRecords.find(r => {
-        const rid = normalizeId(r.employee_id);
-        return rid === normalizeId(emp.id) || rid === normalizeId(emp.codigo_empleado);
+        // Normalización estricta para evitar falsos negativos
+        const rId = normalizeId(r.employee_id);
+        const empId = normalizeId(emp.id);
+        const empCode = normalizeId(emp.codigo_empleado);
+        
+        // 1. Coincidencia directa por ID interno
+        if (rId === empId) return true;
+        // 2. Coincidencia por código de empleado (cruce externo)
+        if (empCode && rId === empCode) return true;
+        
+        return false;
       });
       
       if (!record) {
