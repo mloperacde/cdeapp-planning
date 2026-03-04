@@ -170,18 +170,34 @@ Deno.serve(async (req: Request) => {
 
     // Clean up existing records for the day if syncing single day
     if (from === to) {
-        const existing = await serviceClient.entities.AttendanceRecord.filter({ record_date: from }, "id", 2000);
-        if (existing && existing.length > 0) {
-            const deletePromises = existing.map((r: any) => serviceClient.entities.AttendanceRecord.delete(r.id));
-            await Promise.all(deletePromises);
+        // Optimización: Si hay muchos registros, usar deleteAttendanceRecords en lugar de borrar uno a uno
+        // Pero como estamos dentro de la función server-side, podemos hacerlo más eficiente.
+        // Si hay más de 2000, esto fallará. Mejor usar el endpoint de borrado masivo si existe, o iterar.
+        
+        let existing = await serviceClient.entities.AttendanceRecord.filter({ record_date: from }, "id", 1000);
+        
+        // Loop para borrar todos (si hay más de 1000)
+        while (existing && existing.length > 0) {
+             // Parallel delete in chunks to speed up
+             const deleteChunkSize = 20;
+             for (let i = 0; i < existing.length; i += deleteChunkSize) {
+                 const batch = existing.slice(i, i + deleteChunkSize);
+                 await Promise.all(batch.map((r: any) => serviceClient.entities.AttendanceRecord.delete(r.id).catch(() => {})));
+             }
+             
+             // Check if more exist
+             existing = await serviceClient.entities.AttendanceRecord.filter({ record_date: from }, "id", 1000);
         }
     }
 
     // Bulk create
-    const chunkSize = 50; 
+    // Reduce chunk size to avoid timeouts or limits
+    const chunkSize = 20; 
     for (let i = 0; i < recordsToCreate.length; i += chunkSize) {
       const chunk = recordsToCreate.slice(i, i + chunkSize);
       await serviceClient.entities.AttendanceRecord.bulkCreate(chunk);
+      // Small delay to prevent rate limiting
+      await new Promise(r => setTimeout(r, 50));
     }
 
     return Response.json({ 
