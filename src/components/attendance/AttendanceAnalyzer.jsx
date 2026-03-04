@@ -320,15 +320,26 @@ export default function AttendanceAnalyzer() {
         // 2. Coincidencia por código de empleado (cruce externo)
         if (empCode && rId === empCode) return true;
         
-        // 3. Coincidencia por nombre (fallback desesperado para importaciones v2)
-        // A veces el employee_id en sync_v2 es "UNKNOWN" o un código raro, pero el nombre está
-        // Usar primer apellido o nombre completo normalizado
+        // 3. Coincidencia por nombre (fallback para datos API v2)
+        // La API v2 trae nombre y apellidos. Nuestra DB puede tener solo nombre o nombre completo.
         if (r.employee_name && emp.nombre) {
-           const rName = normalizeId(r.employee_name);
-           const empName = normalizeId(emp.nombre);
+           const rName = normalizeId(r.employee_name); // ej: "PEREZ JUAN"
+           const empName = normalizeId(emp.nombre);    // ej: "JUAN PEREZ"
+           
+           // Si son idénticos
+           if (rName === empName) return true;
+           
+           // Si uno contiene al otro
            if (rName.includes(empName) || empName.includes(rName)) return true;
-           // Intento por primer token (Nombre)
-           if (rName.split(' ')[0] === empName.split(' ')[0] && rName.length > 3) return true;
+           
+           // Si todas las palabras de uno están en el otro (independiente del orden)
+           const rParts = rName.split(' ').filter(p => p.length > 2);
+           const empParts = empName.split(' ').filter(p => p.length > 2);
+           
+           if (rParts.length > 0 && empParts.length > 0) {
+              const allPartsMatch = empParts.every(p => rName.includes(p));
+              if (allPartsMatch) return true;
+           }
         }
 
         return false;
