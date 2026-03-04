@@ -196,6 +196,7 @@ export default function AttendanceAnalyzer() {
   };
 
   const getExpectedShift = (employee, date) => {
+    // Basic shifts
     if (employee.tipo_turno === "Fijo Mañana") {
       return {
         turno: "Mañana",
@@ -209,29 +210,34 @@ export default function AttendanceAnalyzer() {
         hora_salida: employee.horario_tarde_fin || "22:00"
       };
     } else if (employee.tipo_turno === "Rotativo" && employee.equipo) {
-      const weekStart = startOfWeek(new Date(date), { weekStartsOn: 1 });
-      const weekStartStr = format(weekStart, 'yyyy-MM-dd');
-      const team = teams.find(t => t.team_name === employee.equipo);
-      const schedule = teamSchedules.find(s => 
-        s.team_key === team?.team_key && s.fecha_inicio_semana === weekStartStr
-      );
-      
-      if (schedule?.turno === "Mañana") {
-        return {
-          turno: "Mañana",
-          hora_entrada: employee.horario_manana_inicio || "07:00",
-          hora_salida: employee.horario_manana_fin || "15:00"
-        };
-      } else if (schedule?.turno === "Tarde") {
-        return {
-          turno: "Tarde",
-          hora_entrada: employee.horario_tarde_inicio || "14:00",
-          hora_salida: employee.horario_tarde_fin || "22:00"
-        };
+      try {
+        const weekStart = startOfWeek(new Date(date), { weekStartsOn: 1 });
+        const weekStartStr = format(weekStart, 'yyyy-MM-dd');
+        const team = teams.find(t => t.team_name === employee.equipo);
+        const schedule = teamSchedules.find(s => 
+          s.team_key === team?.team_key && s.fecha_inicio_semana === weekStartStr
+        );
+        
+        if (schedule?.turno === "Mañana") {
+          return {
+            turno: "Mañana",
+            hora_entrada: employee.horario_manana_inicio || "07:00",
+            hora_salida: employee.horario_manana_fin || "15:00"
+          };
+        } else if (schedule?.turno === "Tarde") {
+          return {
+            turno: "Tarde",
+            hora_entrada: employee.horario_tarde_inicio || "14:00",
+            hora_salida: employee.horario_tarde_fin || "22:00"
+          };
+        }
+      } catch (e) {
+         console.warn("Error calculating shift for", employee.nombre, e);
       }
     }
     
-    return null;
+    // Default fallback shift
+    return null; 
   };
 
   const hasAbsenceForDate = (employeeId, date) => {
@@ -450,16 +456,27 @@ export default function AttendanceAnalyzer() {
 
     try {
       for (const incident of highSeverityIncidents) {
-        const expectedShift = getExpectedShift(incident.employee, selectedDate);
+        let expectedShift = getExpectedShift(incident.employee, selectedDate);
         
+        // Fallback if shift is unknown (e.g. 9-5)
+        if (!expectedShift) {
+           expectedShift = { hora_entrada: "09:00", hora_salida: "17:00" };
+        }
+
+        // Validate date format to prevent RangeError
+        // Ensure selectedDate is YYYY-MM-DD
+        const datePart = selectedDate.includes('T') ? selectedDate.split('T')[0] : selectedDate;
+        const startIso = new Date(`${datePart}T${expectedShift.hora_entrada}:00`).toISOString();
+        const endIso = new Date(`${datePart}T${expectedShift.hora_salida}:00`).toISOString();
+
         await createAbsenceMutation.mutateAsync({
           employee_id: incident.employee.id,
-          fecha_inicio: new Date(`${selectedDate}T${expectedShift.hora_entrada}`).toISOString(),
-          fecha_fin: new Date(`${selectedDate}T${expectedShift.hora_salida}`).toISOString(),
+          fecha_inicio: startIso,
+          fecha_fin: endIso,
           motivo: "Ausencia detectada automáticamente por análisis de presencia",
           tipo: "Ausencia por motivos desconocidos",
           remunerada: false,
-          notas: "Creado automáticamente - Sin fichaje detectado en fecha " + format(new Date(selectedDate), "dd/MM/yyyy", { locale: es })
+          notas: "Creado automáticamente - Sin fichaje detectado en fecha " + format(new Date(datePart), "dd/MM/yyyy", { locale: es })
         });
       }
 
