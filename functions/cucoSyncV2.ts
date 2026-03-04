@@ -130,14 +130,24 @@ Deno.serve(async (req: Request) => {
       throw new Error("Invalid data format from CUCO360: expected 'checks' array");
     }
 
-    // V2 Fields: cod_int_empleado (ID interno en Base44), fec_marcaje (YYYY-MM-DD HH:mm:ss), val_direccion (E/S), nom_dispositivo
-    // Según la documentación de Base44, usamos cod_int_empleado para mapear con EmployeeMasterDatabase.codigo_empleado
+    // 5. Process & Enrichment (Mapping with Master Database)
+    // Buscamos a los empleados en la base de datos maestra para enriquecer el registro
+    // Esto asegura que guardamos el nombre real, departamento, etc., de nuestra base de datos.
+    const masterEmployees = await serviceClient.entities.EmployeeMasterDatabase.list(undefined, 2000);
+    const masterMapByCodigo: Record<string, any> = {};
+    for (const emp of masterEmployees) {
+      if (emp.codigo_empleado) masterMapByCodigo[String(emp.codigo_empleado).trim()] = emp;
+    }
+
     const recordsToCreate = checks.map((check: any) => {
-      // Prioridad: cod_int_empleado (suele ser el código de fichaje), luego cod_interno, luego cod_empleado
-      const employeeId = String(check.cod_int_empleado || check.cod_interno || check.cod_empleado || "");
+      // ID externo que viene de Cuco (ej: "76")
+      const externalId = String(check.cod_int_empleado || check.cod_interno || check.cod_empleado || "").trim();
       const fullDate = check.fec_marcaje || check.fecha; // "2026-03-03 09:04:19"
       
-      if (!employeeId || !fullDate) return null;
+      if (!externalId || !fullDate) return null;
+      
+      // Intentar encontrar al empleado en nuestra base maestra
+      const masterEmp = masterMapByCodigo[externalId];
       
       const dateParts = fullDate.split(' ');
       const dateStr = dateParts[0];
@@ -149,9 +159,12 @@ Deno.serve(async (req: Request) => {
         direction = "S";
       }
 
+      // El registro de asistencia guarda el externalId en employee_id por convención del proyecto
+      // Pero enriquecemos los metadatos con la info de nuestra maestra
       return {
-        employee_id: employeeId,
-        employee_name: check.nombre || `Empleado ${employeeId}`, 
+        employee_id: externalId, 
+        employee_name: masterEmp?.nombre || check.nombre || `Empleado ${externalId}`, 
+        department: masterEmp?.departamento || check.des_incidencia || "Producción", // Fallback a Producción si no hay coincidencia
         record_date: dateStr,
         record_time: timeStr.slice(0, 5),
         direction: direction,

@@ -195,19 +195,80 @@ Deno.serve(async (req: Request) => {
       // IMPORTANT: We count "Pendiente" and "Aprobada" as Active.
       // Only "Rechazada" is ignored.
       if (a.estado_aprobacion === 'Rechazada') continue;
-      if (!ausenciaActivaEnFecha(a, date)) continue;
 
-      const codigo = masterIdToCodigo[a.employee_id];
-      const normalizedCodigo = codigo != null ? String(codigo).trim() : "";
-      if (normalizedCodigo && !excludedIds.has(normalizedCodigo)) ausenciasByCodigo[normalizedCodigo] = a;
-      ausenciasById[String(a.employee_id)] = a;
+      const aStart = new Date(a.fecha_inicio);
+      const aEnd = a.fecha_fin_desconocida ? new Date('2099-12-31') : new Date(a.fecha_fin);
+      
+      // Robust date check (string comparison YYYY-MM-DD)
+      const aStartStr = aStart.toISOString().split('T')[0];
+      const aEndStr = aEnd.toISOString().split('T')[0];
+      
+      if (date >= aStartStr && date <= aEndStr) {
+          ausenciasById[String(a.employee_id)] = a;
+          // Try to map to codigo_empleado if possible
+          if (masterIdToCodigo[String(a.employee_id)]) {
+             ausenciasByCodigo[masterIdToCodigo[String(a.employee_id)]] = a;
+          }
+      }
     }
 
-    const fichajesMap: Record<string, { employee_id: string; employee_name: string; registros: any[] }> = {};
+    // ── 1. Procesar Fichajes (Mapping and Enrichment) ────────────────────────
+    // We iterate over Raw Records (from Cuco/Excel) and try to link them to Master Employees
+    const fichajesMap: Record<string, any> = {};
+
     for (const r of filteredRawRecords) {
-      const id = String(r.employee_id);
-      if (!fichajesMap[id]) fichajesMap[id] = { employee_id: id, employee_name: r.employee_name, registros: [] };
-      fichajesMap[id].registros.push(r);
+      // The record might have 'employee_id' which could be:
+      // A) The internal Base44 ID (if mapped correctly in import)
+      // B) The 'codigo_empleado' (e.g. "76") from external system
+      // C) Some other identifier
+      
+      const rawId = r.employee_id ? String(r.employee_id).trim() : "";
+      if (!rawId) continue;
+
+      let masterEmp = null;
+
+      // Strategy 1: Match by Internal ID (Direct Link)
+      if (masterMapById[rawId]) {
+        masterEmp = masterMapById[rawId];
+      } 
+      // Strategy 2: Match by 'codigo_empleado' (External ID)
+      else if (masterMapByCodigo[rawId]) {
+        masterEmp = masterMapByCodigo[rawId];
+      }
+      
+      // If we found a master employee, use their data (Real Name, Dept, etc.)
+      // If not, we fall back to the raw data from the record
+      
+      // Key for grouping: Use 'codigo_empleado' if available (stable external ID), else internal ID
+      const key = masterEmp ? (masterEmp.codigo_empleado ? String(masterEmp.codigo_empleado) : String(masterEmp.id)) : rawId;
+      
+      if (!fichajesMap[key]) {
+        fichajesMap[key] = {
+          employee: masterEmp || { 
+            // Fallback object if not found in master
+            id: null,
+            nombre: r.employee_name || `Empleado ${rawId}`,
+            codigo_empleado: rawId,
+            departamento: r.department || "Desconocido",
+            equipo: "Sin Asignar",
+            tipo_turno: "Desconocido"
+          },
+          is_unknown: !masterEmp, // Flag for UI to show "Not in DB" warning
+          entries: [],
+          exits: [],
+          first: null,
+          last: null
+        };
+      }
+
+      const time = r.record_time ? String(r.record_time).substring(0, 5) : "";
+      if (r.direction === "E") {
+        fichajesMap[key].entries.push(time);
+        if (!fichajesMap[key].first || time < fichajesMap[key].first) fichajesMap[key].first = time;
+      } else {
+        fichajesMap[key].exits.push(time);
+        if (!fichajesMap[key].last || time > fichajesMap[key].last) fichajesMap[key].last = time;
+      }
     }
 
     // ── 1. Empleados CON fichaje ──────────────────────────────────────────────
