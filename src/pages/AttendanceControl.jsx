@@ -327,14 +327,18 @@ export default function AttendanceControl() {
     setIsSyncing(true);
     try {
       // Llamada a la nueva función de backend (V2 corregida)
+      // Usamos el cliente Base44 normal que gestiona la autenticación automáticamente
       const res = await base44.functions.invoke("cucoSyncV2", { date: filterDate, force: true });
       
-      if (res.error) throw new Error(res.error);
+      // La respuesta de base44.functions.invoke devuelve { data, error }
+      // Si la función backend devuelve JSON, estará en res.data
+      
+      if (res.error) throw new Error(res.error.message || res.error);
       
       const { success, message, count, error } = res.data || {};
       
-      if (!success) {
-        throw new Error(error || "Error desconocido al sincronizar con CUCO360");
+      if (success === false) {
+        throw new Error(error || message || "Error desconocido al sincronizar con CUCO360");
       }
       
       toast.success(message || `Sincronizados ${count} registros correctamente.`);
@@ -342,7 +346,9 @@ export default function AttendanceControl() {
       await refetch();
     } catch (err) {
       console.error("Error sync CUCO360:", err);
-      toast.error("Error al sincronizar: " + (err.message || "Verifica la conexión"));
+      // Extraer mensaje limpio si es posible
+      const msg = err.message || String(err);
+      toast.error("Error al sincronizar: " + msg);
     } finally {
       setIsSyncing(false);
     }
