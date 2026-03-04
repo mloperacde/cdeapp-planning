@@ -123,6 +123,30 @@ export default function EmployeeForm({ employee, machines, onClose }) {
       setFormData(loadedData);
     } else {
       setFormData(initialNewEmployeeFormData);
+      
+      // Auto-generate employee code for new entries
+      const generateCode = async () => {
+        try {
+            // Get all employees to find max code
+            // This is a client-side heuristic. For production, a backend function is safer for concurrency.
+            // But user asked for this logic "we can assume that function".
+            const allEmps = await base44.entities.EmployeeMasterDatabase.list(undefined, 2000);
+            
+            let maxCode = 0;
+            allEmps.forEach(e => {
+                const code = parseInt(e.codigo_empleado);
+                if (!isNaN(code) && code > maxCode) {
+                    maxCode = code;
+                }
+            });
+            
+            const nextCode = String(maxCode + 1);
+            setFormData(prev => ({ ...prev, codigo_empleado: nextCode }));
+        } catch (err) {
+            console.error("Error auto-generating employee code:", err);
+        }
+      };
+      generateCode();
     }
   }, [employee, employeeMachineSkills]);
 
