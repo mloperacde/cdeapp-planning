@@ -183,48 +183,42 @@ Deno.serve(async (req: Request) => {
 
     // Clean up existing records for the day if syncing single day
     if (from === to) {
-        // SUPER FAST DELETE OPTIMIZATION:
-        // Use raw SQL-like query via filter to get IDs, then delete in massive parallel blocks.
-        // If possible, we should skip deletion if we can't do it efficiently and just APPEND.
-        // But duplicates are bad. 
+        // ULTRA-SAFE DELETE:
+        // Raw delete of thousands of records might be too much.
+        // Let's delete in very small sequential batches to ensure stability.
         
-        // Let's try to fetch ALL IDs first (lightweight) instead of full objects
-        let existing = await serviceClient.entities.AttendanceRecord.filter({ record_date: from }, "id", 2000);
+        let existing = await serviceClient.entities.AttendanceRecord.filter({ record_date: from }, "id", 1000);
         
-        if (existing && existing.length > 0) {
-             const deleteChunkSize = 100; // Aggressive chunking
-             const deletePromises = [];
+        while (existing && existing.length > 0) {
+             const deleteChunkSize = 20; // Very small batch
              
              for (let i = 0; i < existing.length; i += deleteChunkSize) {
                  const batch = existing.slice(i, i + deleteChunkSize);
-                 // No await inside loop
-                 deletePromises.push(
-                    Promise.all(batch.map((r: any) => serviceClient.entities.AttendanceRecord.delete(r.id).catch(() => {})))
-                 );
+                 // Sequential await to prevent DB saturation
+                 await Promise.all(batch.map((r: any) => serviceClient.entities.AttendanceRecord.delete(r.id).catch(() => {})));
+                 // Small delay
+                 await new Promise(r => setTimeout(r, 50));
              }
              
-             // Wait for all deletions at once
-             await Promise.all(deletePromises);
+             existing = await serviceClient.entities.AttendanceRecord.filter({ record_date: from }, "id", 1000);
         }
     }
 
-    // Bulk create - Fire and Forget Strategy? No, we need confirmation.
-    // But we can parallelize the chunks too.
-    const chunkSize = 50; // Reduce chunk size slightly to reduce payload size per request
-    const createPromises = [];
+    // Bulk create
+    // Sequential small batches
+    const chunkSize = 20; 
     
     for (let i = 0; i < recordsToCreate.length; i += chunkSize) {
       const chunk = recordsToCreate.slice(i, i + chunkSize);
-      createPromises.push(
-          serviceClient.entities.AttendanceRecord.bulkCreate(chunk)
-            .catch((e: any) => console.error("Create chunk error", e))
-      );
-      // Increased delay to 100ms to allow DB to process connections better
-      if (i % 250 === 0) await new Promise(r => setTimeout(r, 100));
+      try {
+          await serviceClient.entities.AttendanceRecord.bulkCreate(chunk);
+      } catch (createErr) {
+          console.error("Bulk create error chunk", i, createErr);
+      }
+      // Generous delay
+      await new Promise(r => setTimeout(r, 200));
     }
     
-    await Promise.all(createPromises);
-
     return Response.json({ 
       success: true, 
       message: `Synced ${recordsToCreate.length} records from CUCO360`,
