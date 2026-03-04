@@ -10,10 +10,10 @@ import { Upload, Users, Clock, CheckCircle, AlertCircle, RefreshCw, Trash2, Sear
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 
-// Configuración temporal para sincronización directa desde Frontend (Bypass error 500 servidor)
+// Configuración para sincronización directa (Bypass Backend)
 const CUCO_API_KEY = "k9fKmKcVCRc44Rf7dpkxhnfU9z9t0XsgrYgkGQSr9unWFZPOKsySznPHb7bUJzBc";
 const CLIENT_CODE = "380";
-const CUCO_BASE_URL = "https://api.cuco360.com/api/ExtApi";
+const CUCO_BASE_URL = "https://cuco360.cucorent.com/api/apiv2";
 
 function parseFecha(valor) {
   if (!valor && valor !== 0) return null;
@@ -318,33 +318,115 @@ export default function AttendanceControl() {
     }
   };
 
-  // ── SINCRONIZAR CON CUCO360 ──────────────────────────────────────────────────
+  // ── SINCRONIZAR CON CUCO360 (DIRECTO FRONTEND) ──────────────────────────────
   const handleSyncCuco = async () => {
     if (!confirm(`¿Sincronizar marcajes de CUCO360 para el día ${filterDate}? Esto sobrescribirá los datos existentes.`)) return;
     
     setIsSyncing(true);
     try {
-      // Llamada a la nueva función de backend (V2 corregida)
-      // Usamos el cliente Base44 normal que gestiona la autenticación automáticamente
-      const res = await base44.functions.invoke("cucoSyncV2", { date: filterDate, force: true });
+      // 1. Preparar fechas
+      const start = encodeURIComponent(`${filterDate} 00:00:00`);
+      const end = encodeURIComponent(`${filterDate} 23:59:59`);
       
-      // La respuesta de base44.functions.invoke devuelve { data, error }
-      // Si la función backend devuelve JSON, estará en res.data
+      // 2. Fetch directo a Cuco360 V2
+      const url = `${CUCO_BASE_URL}/checking/getfullchecks/${CLIENT_CODE}?start_date=${start}&end_date=${end}`;
+      console.log("Fetching Cuco V2:", url);
       
-      if (res.error) throw new Error(res.error.message || res.error);
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'APIkey': CUCO_API_KEY // Sin Bearer
+        }
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Error HTTP ${response.status}: ${errorText}`);
+      }
+
+      const rawData = await response.json();
       
-      const { success, message, count, error } = res.data || {};
+      // Validar estructura de respuesta
+      // V2 suele devolver array directo o { data: [] }? 
+      // Según cucoSyncV2.ts asumíamos array directo.
+      const records = Array.isArray(rawData) ? rawData : (rawData.data || []);
       
-      if (success === false) {
-        throw new Error(error || message || "Error desconocido al sincronizar con CUCO360");
+      if (!Array.isArray(records)) {
+        throw new Error("Formato de respuesta inválido de Cuco360");
+      }
+
+      if (records.length === 0) {
+        toast.info("No se encontraron marcajes para este día en Cuco360.");
+        return;
+      }
+
+      // 3. Mapear datos usando empleados locales
+      const mappedRecords = records.map(r => {
+        // Buscar empleado (Prioridad: Código Interno > ID Cuco)
+        const code = String(r.cod_int_empleado || "").trim();
+        const id = String(r.id_empleado || "").trim();
+        
+        let emp = null;
+        if (code) emp = employeesByCodigo.get(code);
+        if (!emp && id) emp = employeesById.get(id); // Fallback por ID si coincidiera con nuestra ID interna (poco probable pero posible)
+        
+        // Dirección: 1=Entrada, 2=Salida, 3=Entrada, 4=Salida
+        let direction = "E";
+        const typeId = Number(r.id_tipo_marcaje);
+        if (typeId === 2 || typeId === 4) direction = "S";
+        
+        // Incidencia
+        let incident = "";
+        if (r.id_incidencia && r.id_incidencia !== 0) {
+           incident = `Incidencia ${r.id_incidencia}`;
+        }
+
+        // Fecha y Hora
+        // r.fecha suele ser "2024-02-27T00:00:00"
+        // r.hora suele ser "07:59:00"
+        const recordDate = r.fecha ? r.fecha.split('T')[0] : filterDate;
+        
+        return {
+          employee_id: code || id || "UNKNOWN",
+          employee_name: emp ? (emp.nombre || emp.name) : `Empleado ${code || id}`,
+          department: emp ? emp.departamento : "",
+          direction: direction,
+          incident: incident,
+          record_date: recordDate,
+          record_time: r.hora,
+          center: "",
+          device: "",
+          import_batch: `sync_v2_${Date.now()}`
+        };
+      });
+
+      // 4. Eliminar registros previos del día (Directo Frontend para evitar 405/500 en función)
+      // Primero buscamos los IDs a borrar
+      // Usamos la query existente 'records' si coincide con filterDate, o fetch fresco
+      const existing = await base44.entities.AttendanceRecord.filter({ record_date: filterDate }, "id", 2000);
+      if (existing.length > 0) {
+        // Borrar en lotes pequeños
+        const deleteChunkSize = 50;
+        for (let i = 0; i < existing.length; i += deleteChunkSize) {
+           const batchIds = existing.slice(i, i + deleteChunkSize).map(e => e.id);
+           await Promise.all(batchIds.map(id => base44.entities.AttendanceRecord.delete(id).catch(() => {})));
+        }
+      }
+
+      // 5. Guardar nuevos registros
+      const saveChunkSize = 50;
+      for (let i = 0; i < mappedRecords.length; i += saveChunkSize) {
+        await base44.entities.AttendanceRecord.bulkCreate(mappedRecords.slice(i, i + saveChunkSize));
       }
       
-      toast.success(message || `Sincronizados ${count} registros correctamente.`);
+      toast.success(`Sincronizados ${mappedRecords.length} registros correctamente.`);
       await queryClient.invalidateQueries({ queryKey: ["attendanceRecords"] });
       await refetch();
+      
     } catch (err) {
       console.error("Error sync CUCO360:", err);
-      // Extraer mensaje limpio si es posible
       const msg = err.message || String(err);
       toast.error("Error al sincronizar: " + msg);
     } finally {
