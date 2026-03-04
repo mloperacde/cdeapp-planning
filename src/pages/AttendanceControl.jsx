@@ -252,39 +252,149 @@ export default function AttendanceControl() {
     setImportErrors([]);
 
     try {
-      const { toCreate, errors } = await parseFile(file);
+      // 1. Parsear archivo
+      const buffer = await file.arrayBuffer();
+      let workbook;
+      try {
+        workbook = XLSX.read(buffer, { type: "array", cellDates: false, raw: false });
+      } catch {
+        throw new Error("No se pudo leer el archivo. Asegúrate de que es un Excel válido.");
+      }
+      
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: null, raw: true });
+      
+      // Buscar cabecera
+      let headerRowIdx = -1;
+      for (let i = 0; i < Math.min(rows.length, 20); i++) {
+        const row = rows[i];
+        if (!row) continue;
+        const cells = row.map((c) => String(c || "").trim().toUpperCase());
+        // Ajuste: Buscar columnas típicas de Cuco o estándar
+        if ((cells.includes("ID") && cells.includes("EMPLEADO")) || 
+            (cells.includes("CODIGO") && cells.includes("NOMBRE")) ||
+            (cells.includes("FECHA") && cells.includes("HORA"))) {
+          headerRowIdx = i;
+          break;
+        }
+      }
+      
+      if (headerRowIdx === -1) throw new Error('No se encontró la cabecera. Verifique columnas ID/Empleado o Fecha/Hora.');
+
+      const headers = rows[headerRowIdx].map((h) => String(h || "").trim());
+      const findCol = (names) => {
+        for (const name of names) {
+          const idx = headers.findIndex((h) => h.toLowerCase() === name.toLowerCase());
+          if (idx !== -1) return idx;
+        }
+        return -1;
+      };
+
+      const idxId = findCol(["ID", "Codigo", "Código"]);
+      const idxEmpleado = findCol(["Empleado", "Nombre", "Trabajador"]);
+      const idxSentido = findCol(["Sentido", "Tipo", "Dirección", "Direccion", "E/S"]);
+      const idxIncidencia = findCol(["Incidencia", "Observaciones"]);
+      const idxCentro = findCol(["Centro"]);
+      const idxDepartamento = findCol(["Departamento", "Depto", "Sección"]);
+      const idxDispositivo = findCol(["Dispositivo", "Terminal"]);
+      const idxFecha = findCol(["Fecha", "Date", "Día"]);
+      const idxHora = findCol(["Hora", "Hora marcaje", "Time"]);
+
+      const missing = [];
+      if (idxFecha === -1) missing.push("Fecha");
+      if (idxHora === -1) missing.push("Hora");
+      if (missing.length > 0) throw new Error(`Faltan columnas obligatorias: ${missing.join(", ")}`);
+
+      // Procesar filas
+      const toCreate = [];
+      const errors = [];
+      
+      // Filtrar filas válidas
+      const dataRows = rows.slice(headerRowIdx + 1);
+
+      dataRows.forEach((row, rowNum) => {
+        if (!row || row.length === 0) return;
+        
+        const rawFecha = idxFecha !== -1 ? row[idxFecha] : null;
+        if (!rawFecha) return; // Saltar filas vacías
+
+        const rawId = idxId !== -1 ? row[idxId] : null;
+        const rawEmpleado = idxEmpleado !== -1 ? row[idxEmpleado] : null;
+        const rawHora = idxHora !== -1 ? row[idxHora] : null;
+        const rawSentido = idxSentido !== -1 ? row[idxSentido] : null;
+
+        const employeeId = (rawId !== null && rawId !== undefined) ? String(rawId).trim() : "UNKNOWN";
+        const employeeName = rawEmpleado ? String(rawEmpleado).trim() : "Empleado Desconocido";
+        
+        const fechaStr = parseFecha(rawFecha);
+        const horaStr = parseHora(rawHora);
+        const sentido = rawSentido ? String(rawSentido).trim() : "";
+
+        if (!fechaStr) { 
+           // errors.push(`Fila ${headerRowIdx + 2 + rowNum}: Fecha inválida.`); 
+           return; 
+        }
+        if (!horaStr) { 
+           // errors.push(`Fila ${headerRowIdx + 2 + rowNum}: Hora inválida.`); 
+           return; 
+        }
+
+        // Mapear sentido
+        let direction = "E";
+        if (sentido.toUpperCase().includes("S") || sentido.toUpperCase().includes("OUT") || sentido.includes("Salida")) {
+           direction = "S";
+        }
+
+        toCreate.push({
+          employee_id: employeeId,
+          employee_name: employeeName,
+          direction: direction,
+          incident: idxIncidencia !== -1 && row[idxIncidencia] ? String(row[idxIncidencia]).trim() : "",
+          center: idxCentro !== -1 && row[idxCentro] ? String(row[idxCentro]).trim() : "",
+          department: idxDepartamento !== -1 && row[idxDepartamento] ? String(row[idxDepartamento]).trim() : "",
+          device: idxDispositivo !== -1 && row[idxDispositivo] ? String(row[idxDispositivo]).trim() : "",
+          record_date: fechaStr,
+          record_time: horaStr,
+          import_batch: `import_${Date.now()}`
+        });
+      });
 
       if (toCreate.length === 0) {
-        setImportErrors(errors);
-        toast.error(`No se importó ningún registro. ${errors.length} errores detectados.`);
+        toast.error(`No se encontraron registros válidos. ${errors.length} errores.`);
         return;
       }
 
-      const importedDate = toCreate[0]?.record_date;
-
-      if (importedDate) {
-        try {
-          await base44.functions.invoke("deleteAttendanceRecords", { record_date: importedDate });
-        } catch (err) {
-          console.error("Error al eliminar registros previos del día:", err);
-          toast.error("No se pudieron eliminar los registros previos del día antes de importar.");
-        }
+      // Detectar fecha principal del archivo (para borrar previos)
+      // Asumimos que el archivo es mayoritariamente de un día o mes, pero aquí borramos por día detectado
+      const datesInFile = [...new Set(toCreate.map(r => r.record_date))];
+      
+      // Borrar registros previos de esas fechas (Directo Frontend para evitar timeouts)
+      for (const date of datesInFile) {
+         const existing = await base44.entities.AttendanceRecord.filter({ record_date: date }, "id", 2000);
+         if (existing.length > 0) {
+             const deleteChunkSize = 50;
+             for (let i = 0; i < existing.length; i += deleteChunkSize) {
+                const batchIds = existing.slice(i, i + deleteChunkSize).map(e => e.id);
+                await Promise.all(batchIds.map(id => base44.entities.AttendanceRecord.delete(id).catch(() => {})));
+             }
+         }
       }
 
-      const { count } = await saveRecords(toCreate);
-      if (errors.length > 0) {
-        setImportErrors(errors);
-        toast.warning(`${count} registros importados. Se sobrescribieron registros previos de ese día. ${errors.length} filas con errores.`);
-      } else {
-        toast.success(`${count} registros importados correctamente. Se sobrescribieron registros previos de ese día.`);
+      // Guardar nuevos (Lotes de 50)
+      const saveChunkSize = 50;
+      for (let i = 0; i < toCreate.length; i += saveChunkSize) {
+        await base44.entities.AttendanceRecord.bulkCreate(toCreate.slice(i, i + saveChunkSize));
       }
 
+      toast.success(`${toCreate.length} registros importados correctamente.`);
       queryClient.invalidateQueries({ queryKey: ["attendanceRecords"] });
-      if (importedDate) setFilterDate(importedDate);
+      
+      // Actualizar filtro a la primera fecha encontrada
+      if (datesInFile.length > 0) setFilterDate(datesInFile[0]);
 
     } catch (err) {
       console.error(err);
-      toast.error("Error: " + err.message);
+      toast.error("Error importación: " + err.message);
     } finally {
       setImporting(false);
       if (fileInputRef.current) fileInputRef.current.value = "";

@@ -277,11 +277,19 @@ export default function AttendanceAnalyzer() {
   const normalizeId = (v) => (v == null ? "" : String(v).trim());
 
   const analysis = useMemo(() => {
+    // Debug: Log analysis start
+    console.log("Analyzing for date:", selectedDate);
+    console.log("Total Employees Loaded:", employees.length);
+    console.log("Total Records Loaded:", attendanceRecords.length);
+
     const expectedEmployees = employees.filter(emp => {
       const code = emp.codigo_empleado ? String(emp.codigo_empleado) : "";
       if (code === "999" || code === "998" || code === "997") return false;
-      return emp.incluir_en_planning !== false && getExpectedShift(emp, selectedDate) !== null;
+      // Relaxed check: Include everyone unless explicitly excluded, even if shift is unknown
+      return emp.incluir_en_planning !== false;
     });
+
+    console.log("Expected Employees:", expectedEmployees.length);
 
     const byDepartment = {};
     const incidents = [];
@@ -314,9 +322,13 @@ export default function AttendanceAnalyzer() {
         
         // 3. Coincidencia por nombre (fallback desesperado para importaciones v2)
         // A veces el employee_id en sync_v2 es "UNKNOWN" o un código raro, pero el nombre está
-        if (r.employee_name && emp.nombre && 
-            normalizeId(r.employee_name).includes(normalizeId(emp.nombre).split(' ')[0])) {
-           return true;
+        // Usar primer apellido o nombre completo normalizado
+        if (r.employee_name && emp.nombre) {
+           const rName = normalizeId(r.employee_name);
+           const empName = normalizeId(emp.nombre);
+           if (rName.includes(empName) || empName.includes(rName)) return true;
+           // Intento por primer token (Nombre)
+           if (rName.split(' ')[0] === empName.split(' ')[0] && rName.length > 3) return true;
         }
 
         return false;
