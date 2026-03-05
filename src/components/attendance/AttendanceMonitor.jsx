@@ -252,11 +252,21 @@ export default function AttendanceMonitor() {
          
          // Try fuzzy match if not found (fallback logic from Analyzer)
          if (!masterEmp) {
-            const rName = r.employee_name ? r.employee_name.toUpperCase() : "";
+            const rName = r.employee_name ? r.employee_name.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : "";
             if (rName) {
                masterEmp = employees.find(e => {
-                  const eName = e.nombre ? e.nombre.toUpperCase() : "";
-                  return eName && (eName === rName || eName.includes(rName) || rName.includes(eName));
+                  const eName = e.nombre ? e.nombre.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : "";
+                  // Check exact match, partial match, or reversed tokens
+                  if (!eName) return false;
+                  if (eName === rName || eName.includes(rName) || rName.includes(eName)) return true;
+                  
+                  // Check parts
+                  const eParts = eName.split(" ").filter(p => p.length > 2);
+                  const rParts = rName.split(" ").filter(p => p.length > 2);
+                  if (eParts.length > 0 && rParts.length > 0) {
+                     return eParts.every(p => rName.includes(p)) || rParts.every(p => eName.includes(p));
+                  }
+                  return false;
                });
             }
          }
