@@ -16,7 +16,8 @@ import AbsenceForm from "../absences/AbsenceForm";
 import { createAbsence, updateAbsence, deleteAbsence } from "../absences/AbsenceOperations";
 import MasterEmployeeEditDialog from "../master/MasterEmployeeEditDialog";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import { useAppData } from "../data/DataProvider";
+import { format, startOfWeek } from "date-fns";
 
 function formatMin(min) {
   if (min == null || min <= 0) return "—";
@@ -60,15 +61,12 @@ export default function AttendanceMonitor() {
   const [employeeInitialData, setEmployeeInitialData] = useState(null);
 
   const queryClient = useQueryClient();
+  const { employees: employeesData, machines: machinesData } = useAppData();
+  const employees = employeesData || [];
 
   const { data: currentUser } = useQuery({
     queryKey: ["currentUser"],
     queryFn: () => base44.auth.me(),
-  });
-
-  const { data: employees = [] } = useQuery({
-    queryKey: ["employeeMasterDatabase"],
-    queryFn: () => base44.entities.EmployeeMasterDatabase.list("nombre", 1000),
   });
 
   const { data: absences = [] } = useQuery({
@@ -89,6 +87,21 @@ export default function AttendanceMonitor() {
   const { data: holidays = [] } = useQuery({
     queryKey: ["holidays"],
     queryFn: () => base44.entities.Holiday.list(),
+  });
+
+  const { data: teamWeekSchedules = [] } = useQuery({
+    queryKey: ["teamWeekSchedules"],
+    queryFn: () => base44.entities.TeamWeekSchedule.list(),
+  });
+
+  const { data: teamConfigs = [] } = useQuery({
+    queryKey: ["teamConfigs"],
+    queryFn: () => base44.entities.TeamConfig.list(),
+  });
+
+  const { data: attendanceConfigs = [] } = useQuery({
+    queryKey: ["attendanceConfigs"],
+    queryFn: () => base44.entities.AttendanceConfig.list(),
   });
 
   const saveMutation = useMutation({
@@ -199,15 +212,250 @@ export default function AttendanceMonitor() {
     setIsLoading(true);
     setConsulted(false);
     try {
-      const res = await base44.functions.invoke("analyzeAttendance", {
-        date: selectedDate,
+      // 1. Fetch raw records for date
+      const rawRecords = await base44.entities.AttendanceRecord.filter({ record_date: selectedDate }, "record_time", 2000);
+      
+      // 2. Perform Local Analysis (replaces analyzeAttendance backend function)
+      const config = attendanceConfigs.find(c => c.activo) || {};
+      const toleranciaEntrada = config.tolerancia_entrada_minutos ?? 10;
+      const departamentosEstrictos = config.departamentos_estrictos || [];
+      const toleranciaReducida = config.tolerancia_reducida_minutos ?? 5;
+
+      const weekStart = format(startOfWeek(new Date(selectedDate), { weekStartsOn: 1 }), 'yyyy-MM-dd');
+      
+      // Build team schedule map
+      const teamScheduleMap = {};
+      teamWeekSchedules.forEach(ws => {
+         if (ws.fecha_inicio_semana === weekStart) {
+            teamScheduleMap[ws.team_key] = ws.turno;
+         }
       });
-      setResult(res.data);
+
+      // Prepare Maps
+      const excludedIds = new Set(["999", "998", "997"]);
+      const masterMapById = {};
+      const masterMapByCodigo = {};
+      
+      employees.forEach(emp => {
+         if (excludedIds.has(String(emp.codigo_empleado)) || excludedIds.has(String(emp.id))) return;
+         if (emp.id) masterMapById[String(emp.id)] = emp;
+         if (emp.codigo_empleado) masterMapByCodigo[String(emp.codigo_empleado)] = emp;
+      });
+
+      // Group records by Employee
+      const fichajesMap = {};
+      rawRecords.forEach(r => {
+         const rawId = r.employee_id ? String(r.employee_id).trim() : "";
+         if (!rawId || excludedIds.has(rawId)) return;
+
+         let masterEmp = masterMapById[rawId] || masterMapByCodigo[rawId];
+         
+         // Try fuzzy match if not found (fallback logic from Analyzer)
+         if (!masterEmp) {
+            const rName = r.employee_name ? r.employee_name.toUpperCase() : "";
+            if (rName) {
+               masterEmp = employees.find(e => {
+                  const eName = e.nombre ? e.nombre.toUpperCase() : "";
+                  return eName && (eName === rName || eName.includes(rName) || rName.includes(eName));
+               });
+            }
+         }
+
+         const key = masterEmp ? (masterEmp.codigo_empleado ? String(masterEmp.codigo_empleado) : String(masterEmp.id)) : rawId;
+
+         if (!fichajesMap[key]) {
+            fichajesMap[key] = {
+               employee: masterEmp || {
+                  id: null,
+                  nombre: r.employee_name || `Empleado ${rawId}`,
+                  codigo_empleado: rawId,
+                  departamento: r.department || "Desconocido",
+                  equipo: "Sin Asignar",
+                  tipo_turno: "Desconocido"
+               },
+               is_unknown: !masterEmp,
+               entries: [],
+               exits: [],
+               first: null,
+               last: null
+            };
+         }
+
+         const time = r.record_time ? String(r.record_time).substring(0, 5) : "";
+         const group = fichajesMap[key];
+         if (r.direction === "E") {
+            group.entries.push(time);
+            if (!group.first || time < group.first) group.first = time;
+         } else {
+            group.exits.push(time);
+            if (!group.last || time > group.last) group.last = time;
+         }
+      });
+
+      const rows = [];
+      const noEnMaestra = [];
+      const sinRegistro = [];
+
+      // Process Present Employees
+      Object.values(fichajesMap).forEach(emp => {
+         const master = masterMapById[emp.employee.id] || masterMapByCodigo[emp.employee.codigo_empleado];
+         
+         if (!master) {
+            noEnMaestra.push({
+               employee_id: emp.employee.codigo_empleado,
+               employee_name: emp.employee.nombre,
+               totalMarcajes: emp.entries.length + emp.exits.length
+            });
+            // Also add to rows for visibility
+            rows.push({
+               employee_id: emp.employee.codigo_empleado,
+               employee_name: emp.employee.nombre,
+               departamento: "—",
+               equipo: "—",
+               turnoReal: "—",
+               horaEsperada: null,
+               horaFinEsperada: null,
+               primerMarcaje: emp.first,
+               ultimoMarcaje: emp.last,
+               esRetraso: false,
+               retrasoMin: 0,
+               incidenciaJornada: true,
+               incongruencias: [],
+               estado: "error",
+               tiempoTrabajado: 0
+            });
+            return;
+         }
+
+         // Calculate Shifts & Status
+         const { horaEntrada, horaFin, turnoReal } = getHorarioEsperado(master, teamScheduleMap);
+         const tolerancia = departamentosEstrictos.includes(master.departamento) ? toleranciaReducida : toleranciaEntrada;
+         
+         let esRetraso = false;
+         let retrasoMin = 0;
+         if (horaEntrada && emp.first) {
+            const hE = toMin(horaEntrada);
+            const hA = toMin(emp.first);
+            if (hA > hE + tolerancia) {
+               esRetraso = true;
+               retrasoMin = hA - hE;
+            }
+         }
+
+         const incongruencias = [];
+         // Simple incongruity check
+         if (emp.entries.length === 0) incongruencias.push("Sin entrada");
+         if (emp.exits.length === 0) incongruencias.push("Sin salida");
+
+         let tiempoTrabajado = 0;
+         if (emp.first && emp.last) {
+            tiempoTrabajado = toMin(emp.last) - toMin(emp.first);
+         }
+
+         rows.push({
+            employee_id: String(master.codigo_empleado || master.id),
+            employee_name: master.nombre,
+            departamento: master.departamento || "—",
+            equipo: master.equipo || "—",
+            turnoReal: turnoReal || "—",
+            horaEsperada: horaEntrada,
+            horaFinEsperada: horaFin,
+            primerMarcaje: emp.first,
+            ultimoMarcaje: emp.last,
+            esRetraso,
+            retrasoMin,
+            incidenciaJornada: incongruencias.length > 0,
+            incongruencias,
+            estado: esRetraso ? "retraso" : (incongruencias.length > 0 ? "incompleto" : "ok"),
+            tiempoTrabajado,
+            alertaPresenciaConAusencia: hasAbsenceForDate(master.id, selectedDate)
+         });
+      });
+
+      // Process Absent Employees
+      employees.forEach(master => {
+         if (excludedIds.has(String(master.codigo_empleado))) return;
+         if (master.incluir_en_planning === false) return; // Skip if excluded
+
+         const keyId = master.id ? String(master.id) : null;
+         const keyCode = master.codigo_empleado ? String(master.codigo_empleado) : null;
+         
+         const hasData = (keyId && fichajesMap[keyId]) || (keyCode && fichajesMap[keyCode]);
+         if (hasData) return; // Already processed
+
+         const { horaEntrada, turnoReal } = getHorarioEsperado(master, teamScheduleMap);
+         if (!horaEntrada) return; // No shift, no absence alert
+
+         const ausencia = getAbsenceForDate(master.id, selectedDate);
+         
+         sinRegistro.push({
+            employee_id: String(master.codigo_empleado || master.id),
+            employee_name: master.nombre,
+            departamento: master.departamento || "—",
+            equipo: master.equipo || "—",
+            turnoReal: turnoReal || "—",
+            alertaFaltaAusencia: !ausencia,
+            ausenciaConfirmada: !!ausencia,
+            ausencia: ausencia
+         });
+      });
+
+      setResult({ rows, sinRegistro, noEnMaestra });
       setConsulted(true);
+    } catch (e) {
+       console.error("Local Analysis Error:", e);
+       toast.error("Error al analizar datos: " + e.message);
     } finally {
       setIsLoading(false);
     }
   };
+
+  // Helper Functions
+  const getHorarioEsperado = (master, scheduleMap) => {
+     if (!master) return { horaEntrada: null, horaFin: null, turnoReal: null };
+     const tipo = master.tipo_turno;
+     if (tipo === "Turno Partido") {
+        return { 
+           horaEntrada: master.turno_partido_entrada1, 
+           horaFin: master.turno_partido_salida2, 
+           turnoReal: "Partido" 
+        };
+     } else if (tipo === "Fijo Mañana") {
+        return { 
+           horaEntrada: master.horario_manana_inicio || "07:00", 
+           horaFin: master.horario_manana_fin || "15:00", 
+           turnoReal: "Mañana" 
+        };
+     } else if (tipo === "Fijo Tarde") {
+        return { 
+           horaEntrada: master.horario_tarde_inicio || "14:00", 
+           horaFin: master.horario_tarde_fin || "22:00", 
+           turnoReal: "Tarde" 
+        };
+     } else if (tipo === "Rotativo") {
+        const teamKey = master.equipo ? teamConfigs.find(t => t.team_name === master.equipo)?.team_key : null;
+        const turno = teamKey ? scheduleMap[teamKey] : null;
+        if (turno === "Mañana") {
+           return { horaEntrada: "07:00", horaFin: "15:00", turnoReal: "Mañana" };
+        } else if (turno === "Tarde") {
+           return { horaEntrada: "14:00", horaFin: "22:00", turnoReal: "Tarde" };
+        }
+     }
+     return { horaEntrada: null, horaFin: null, turnoReal: null };
+  };
+
+  const getAbsenceForDate = (empId, date) => {
+     return absences.find(a => {
+        if (a.estado_aprobacion === 'Rechazada') return false;
+        if (String(a.employee_id) !== String(empId)) return false;
+        const start = a.fecha_inicio.split('T')[0];
+        const end = a.fecha_fin_desconocida ? '2099-12-31' : a.fecha_fin.split('T')[0];
+        return date >= start && date <= end;
+     });
+  };
+
+  const hasAbsenceForDate = (empId, date) => !!getAbsenceForDate(empId, date);
+
 
   const dptos = useMemo(() => {
     if (!result) return [];

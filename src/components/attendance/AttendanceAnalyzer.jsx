@@ -122,33 +122,34 @@ export default function AttendanceAnalyzer() {
   const handleAnalyzeWithAI = async () => {
     setAnalyzing(true);
     try {
-      // Prepare data summary for AI (Lightweight version)
+      // Prepare data summary for AI (Extremely Lightweight version)
+      // El error 500 puede ser timeout o token limit. Reducimos al mínimo absoluto.
       const summary = {
         date: selectedDate,
         stats: {
-           expected: analysis.totalExpected,
-           incidents: analysis.totalIncidents
+           exp: analysis.totalExpected,
+           inc: analysis.totalIncidents
         },
-        // Limit incidents to avoid token limit
-        top_incidents: analysis.incidents.slice(0, 50).map(i => ({
-          type: i.type,
-          dept: i.department,
-          msg: i.message
-        })),
-        dept_stats: Object.entries(analysis.byDepartment).map(([d, s]) => ({
-           dept: d,
-           absent: s.absent,
-           late: s.late,
-           unreg: s.unregistered
-        }))
+        depts: Object.entries(analysis.byDepartment).map(([d, s]) => ({
+           d: d.substring(0, 15), // Truncar nombre dept
+           a: s.absent,
+           l: s.late,
+           u: s.unregistered
+        })).filter(d => d.a > 0 || d.l > 0 || d.u > 0) // Solo departamentos con incidencias
       };
 
-      // Use a safer call structure or mock if LLM is unavailable/failing
-      // The 500 error suggests the backend function 'InvokeLLM' is failing or timing out
-      // We'll wrap this in a more robust error handler and maybe simplify the prompt
-      
+      // Si no hay datos relevantes, no llamar a la IA
+      if (summary.depts.length === 0 && summary.stats.inc === 0) {
+         setAiAnalysis({
+            patterns: ["No se detectaron incidencias relevantes."],
+            recommendations: ["Mantener el buen funcionamiento."],
+            risk_assessment: "Bajo"
+         });
+         return;
+      }
+
       const response = await base44.integrations.Core.InvokeLLM({
-        prompt: `Analyze attendance data (JSON). Spanish language. Brief points.
+        prompt: `Analyze attendance JSON. Spanish. Brief.
         Data: ${JSON.stringify(summary)}`,
         response_json_schema: {
           type: "object",
@@ -165,11 +166,11 @@ export default function AttendanceAnalyzer() {
     } catch (error) {
       console.error("AI Analysis failed:", error);
       // Fallback UI for error
-      toast.error("El servicio de IA no está disponible en este momento. Intente más tarde.");
+      toast.error("El servicio de IA no está disponible en este momento.");
       setAiAnalysis({
-         patterns: ["No se pudo completar el análisis automático."],
+         patterns: ["No se pudo completar el análisis automático (Error de servicio)."],
          recommendations: ["Revise los datos manualmente en la tabla inferior."],
-         risk_assessment: "Desconocido (Error de servicio)"
+         risk_assessment: "Desconocido"
       });
     } finally {
       setAnalyzing(false);

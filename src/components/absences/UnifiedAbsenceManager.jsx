@@ -89,27 +89,42 @@ export default function UnifiedAbsenceManager(props) {
     return now.toISOString().slice(0, 10);
   }, []);
 
-  // Auditoría de presencia del día (fuente de verdad para "Sin presencia")
+  // Auditoría de presencia del día (Local fallback)
   const { data: attendanceAuditToday } = useQuery({
     queryKey: ['attendanceAuditToday', todayISO],
     queryFn: async () => {
       try {
-        const res = await base44.functions.invoke('analyzeAttendance', { date: todayISO });
-        // Si el backend devuelve error en el body pero con status 200, manejarlo.
-        if (res?.error) {
-          console.warn("Error en analyzeAttendance:", res.error);
-          return null; 
-        }
-        return res?.data || null;
+        // Fetch local records instead of calling backend function
+        const records = await base44.entities.AttendanceRecord.filter({ record_date: todayISO }, "employee_id", 2000);
+        
+        // Build simple audit structure
+        const recordSet = new Set();
+        records.forEach(r => {
+           if (r.employee_id) recordSet.add(String(r.employee_id));
+           // Also try matching by name if ID is missing (simplified)
+        });
+
+        const sinRegistro = employees.filter(e => {
+           if (e.incluir_en_planning === false) return false;
+           const id = String(e.id);
+           const code = e.codigo_empleado ? String(e.codigo_empleado) : "";
+           return !recordSet.has(id) && (!code || !recordSet.has(code));
+        });
+
+        return {
+           rows: records, // Simplified
+           sinRegistro: sinRegistro,
+           noEnMaestra: []
+        };
       } catch (e) {
-        console.warn("Fallo al invocar analyzeAttendance:", e);
-        return null; // Retornar null en lugar de lanzar para evitar crash de UI
+        console.warn("Fallo en auditoría local:", e);
+        return null;
       }
     },
     staleTime: 60 * 1000,
     gcTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
-    retry: 1, // Reintentar solo una vez si falla
+    retry: 1, 
   });
 
   // Índice rápido por empleado de la auditoría de hoy
