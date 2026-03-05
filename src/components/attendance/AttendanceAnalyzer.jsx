@@ -206,22 +206,29 @@ export default function AttendanceAnalyzer() {
   };
 
   const getExpectedShift = (employee, date) => {
-    // Basic shifts
-    if (employee.tipo_turno === "Fijo Mañana") {
-      return {
-        turno: "Mañana",
-        hora_entrada: employee.horario_manana_inicio || "07:00",
-        hora_salida: employee.horario_manana_fin || "15:00"
-      };
-    } else if (employee.tipo_turno === "Fijo Tarde") {
-      return {
-        turno: "Tarde",
-        hora_entrada: employee.horario_tarde_inicio || "14:00",
-        hora_salida: employee.horario_tarde_fin || "22:00"
-      };
-    } else if (employee.tipo_turno === "Rotativo" && employee.equipo) {
-      try {
-        const weekStart = startOfWeek(new Date(date), { weekStartsOn: 1 });
+    try {
+      if (!date || date === 'Invalid Date') return null;
+      
+      // Ensure date is a valid Date object or string that can be parsed
+      const dateObj = new Date(date);
+      if (isNaN(dateObj.getTime())) return null;
+
+      // Basic shifts
+      if (employee.tipo_turno === "Fijo Mañana") {
+        return {
+          turno: "Mañana",
+          hora_entrada: employee.horario_manana_inicio || "07:00",
+          hora_salida: employee.horario_manana_fin || "15:00"
+        };
+      } else if (employee.tipo_turno === "Fijo Tarde") {
+        return {
+          turno: "Tarde",
+          hora_entrada: employee.horario_tarde_inicio || "14:00",
+          hora_salida: employee.horario_tarde_fin || "22:00"
+        };
+      } else if (employee.tipo_turno === "Rotativo" && employee.equipo) {
+        
+        const weekStart = startOfWeek(dateObj, { weekStartsOn: 1 });
         const weekStartStr = format(weekStart, 'yyyy-MM-dd');
         const team = teams.find(t => t.team_name === employee.equipo);
         const schedule = teamSchedules.find(s => 
@@ -241,9 +248,9 @@ export default function AttendanceAnalyzer() {
             hora_salida: employee.horario_tarde_fin || "22:00"
           };
         }
-      } catch (e) {
-         console.warn("Error calculating shift for", employee.nombre, e);
       }
+    } catch (e) {
+       console.warn("Error calculating shift for", employee?.nombre, e);
     }
     
     // Default fallback shift
@@ -253,17 +260,29 @@ export default function AttendanceAnalyzer() {
   const hasAbsenceForDate = (employeeId, date) => {
     try {
       if (!date || date === 'Invalid Date') return false;
+      const dateObj = new Date(date);
+      if (isNaN(dateObj.getTime())) return false;
+      
       // Convert check date to string YYYY-MM-DD for simpler comparison
-      const checkDateStr = date instanceof Date ? date.toISOString().split('T')[0] : String(date).split('T')[0];
+      const checkDateStr = dateObj.toISOString().split('T')[0];
       
       return absences.some(abs => {
         // Consider pending absences as valid for attendance check
         if (abs.estado_aprobacion === 'Rechazada') return false;
         if (!abs.fecha_inicio) return false;
         
-        const start = new Date(abs.fecha_inicio).toISOString().split('T')[0];
-        // Handle unknown end date as "forever" or far future
-        const end = abs.fecha_fin_desconocida ? '2099-12-31' : new Date(abs.fecha_fin || abs.fecha_inicio).toISOString().split('T')[0];
+        const absStartObj = new Date(abs.fecha_inicio);
+        if (isNaN(absStartObj.getTime())) return false;
+        
+        const start = absStartObj.toISOString().split('T')[0];
+        
+        let end = '2099-12-31';
+        if (!abs.fecha_fin_desconocida && abs.fecha_fin) {
+           const absEndObj = new Date(abs.fecha_fin);
+           if (!isNaN(absEndObj.getTime())) {
+              end = absEndObj.toISOString().split('T')[0];
+           }
+        }
         
         // Strict string comparison to avoid timezone issues with Date objects
         return String(abs.employee_id) === String(employeeId) && checkDateStr >= start && checkDateStr <= end;
@@ -278,9 +297,17 @@ export default function AttendanceAnalyzer() {
 
   const analysis = useMemo(() => {
     // Debug: Log analysis start
-    console.log("Analyzing for date:", selectedDate);
-    console.log("Total Employees Loaded:", employees.length);
-    console.log("Total Records Loaded:", attendanceRecords.length);
+    // console.log("Analyzing for date:", selectedDate);
+
+    // Safety check for invalid date
+    if (!selectedDate || selectedDate === 'Invalid Date') {
+       return {
+          byDepartment: {},
+          incidents: [],
+          totalExpected: 0,
+          totalIncidents: 0
+       };
+    }
 
     const expectedEmployees = employees.filter(emp => {
       const code = emp.codigo_empleado ? String(emp.codigo_empleado) : "";
