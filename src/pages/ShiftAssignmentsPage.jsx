@@ -380,41 +380,74 @@ export default function ShiftAssignmentsPage() {
   };
 
   const isEmployeeAvailable = (e, dateStr, teamId) => {
-       const dept = normalize(e.departamento);
-       if (dept !== "produccion") return false;
+       // 1. Department (Production Only)
+       // Note: "isProductionOperator" already handles this in a smarter way, but let's keep strict here or reuse utility.
+       // Reuse utility for consistency with other pages
+       const { isProductionOperator, normalize } = require("@/utils/employeeFilters");
+       if (!isProductionOperator(e)) return false;
 
-       // Absence
+       // 2. Absence Check
        if (e.ausencia_inicio) {
             const checkDate = new Date(dateStr);
-            checkDate.setHours(0, 0, 0, 0);
+            checkDate.setHours(12, 0, 0, 0); // Noon to avoid timezone issues
+            const checkTime = checkDate.getTime();
+            
             const startDate = new Date(e.ausencia_inicio);
             startDate.setHours(0, 0, 0, 0);
+            const startTime = startDate.getTime();
+
             if (e.ausencia_fin) {
                 const endDate = new Date(e.ausencia_fin);
-                endDate.setHours(0, 0, 0, 0);
-                if (checkDate >= startDate && checkDate <= endDate) return false;
+                endDate.setHours(23, 59, 59, 999);
+                const endTime = endDate.getTime();
+                
+                if (checkTime >= startTime && checkTime <= endTime) return false;
             } else {
-                if (checkDate >= startDate) return false;
+                if (checkTime >= startTime) return false;
             }
        }
-       // 4. Team (Strict match or Fixed Shift)
+
+       // 3. Availability Status
+       if (normalize(e.disponibilidad) !== "disponible") return false;
+
+       // 4. Team & Shift Matching (The Core Logic)
        if (teamId !== "all") {
            const teamObj = teams.find(t => String(t.id) === String(teamId));
-           if (teamObj) {
-               // Check team_id first (more reliable)
-               if (e.team_id && String(e.team_id) === String(teamId)) return true;
-               
-               // Fallback to name matching
-               const empTeam = normalize(e.equipo);
-               const targetTeam = normalize(teamObj.team_name);
-               
-               // Flexible match
-               if (empTeam === targetTeam) return true;
-               if (targetTeam.length > 2 && empTeam.includes(targetTeam)) return true;
-               if (empTeam.length > 2 && targetTeam.includes(empTeam)) return true;
-               
-               return false;
+           if (!teamObj) return false;
+
+           const targetTeam = normalize(teamObj.team_name);
+           const shift = normalize(selectedShift);
+           const isMorningShift = shift.includes("mañana") || shift.includes("t1") || shift === "manana";
+           const isAfternoonShift = shift.includes("tarde") || shift.includes("t2");
+
+           // 1. Team Match
+           const isTeamById = e.team_id && String(e.team_id) === String(teamId);
+           const isTeamByName = normalize(e.equipo) === targetTeam;
+           
+           // 2. Fixed Shift Match
+           const tipoTurno = normalize(e.tipo_turno);
+           const isFixed = tipoTurno.includes("fijo");
+           const isMorningType = tipoTurno.includes("manana") || tipoTurno.includes("mañana") || tipoTurno.includes("t1");
+           const isAfternoonType = tipoTurno.includes("tarde") || tipoTurno.includes("t2");
+
+           const isFixedMorning = isFixed && isMorningType;
+           const isFixedAfternoon = isFixed && isAfternoonType;
+
+           const matchesShiftContext = 
+             (isMorningShift && isFixedMorning) ||
+             (isAfternoonShift && isFixedAfternoon);
+
+           // Inclusion Logic
+           if (matchesShiftContext) return true; // Always include if Fixed Shift matches current shift
+           
+           if (isTeamById || isTeamByName) {
+               // Exclude if Fixed Shift for OPPOSITE shift
+               if (isMorningShift && isFixedAfternoon) return false;
+               if (isAfternoonShift && isFixedMorning) return false;
+               return true; // Otherwise include team member
            }
+
+           return false;
        }
        return true;
   };
@@ -672,6 +705,16 @@ export default function ShiftAssignmentsPage() {
      return Array.from(set).sort((a, b) => (a || "").localeCompare(b || ""));
   }, [employees]);
 
+  // Count Employees by Position (New Feature)
+  const availableCountsByPosition = useMemo(() => {
+      const counts = {};
+      availableEmployees.forEach(e => {
+          const p = e.puesto || "Sin Puesto";
+          counts[p] = (counts[p] || 0) + 1;
+      });
+      return counts;
+  }, [availableEmployees]);
+
   // Grouped Employees for Right Panel
   const groupedAvailableEmployees = useMemo(() => {
       // Sort by Role: Responsable, Segunda, Operario, Others
@@ -866,6 +909,16 @@ export default function ShiftAssignmentsPage() {
                         <Badge variant="secondary">{groupedAvailableEmployees.length} / {employees.length}</Badge>
                     </h3>
                 </div>
+                
+                {/* Stats Summary */}
+                <div className="flex flex-wrap gap-1 text-[10px]">
+                    {Object.entries(availableCountsByPosition).sort((a,b) => b[1] - a[1]).slice(0, 5).map(([pos, count]) => (
+                        <span key={pos} className="bg-white border border-slate-200 px-1.5 py-0.5 rounded text-slate-600">
+                            {pos}: <strong>{count}</strong>
+                        </span>
+                    ))}
+                </div>
+
                 <Input 
                     placeholder="Buscar empleado..." 
                     value={searchTerm}
