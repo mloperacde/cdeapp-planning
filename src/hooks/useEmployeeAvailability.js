@@ -77,8 +77,13 @@ export function useEmployeeAvailability({
         const empTeam = normalize(emp.equipo);
         const tipoTurno = normalize(emp.tipo_turno);
         
-        const isFixedMorning = tipoTurno === "fijo manana";
-        const isFixedAfternoon = tipoTurno === "fijo tarde";
+        // Robust Fixed Shift Check (matching DailyProductionPlanningPage logic)
+        const isFixed = tipoTurno.includes("fijo");
+        const isMorningType = tipoTurno.includes("manana") || tipoTurno.includes("mañana") || tipoTurno.includes("t1");
+        const isAfternoonType = tipoTurno.includes("tarde") || tipoTurno.includes("t2");
+
+        const isFixedMorning = isFixed && isMorningType;
+        const isFixedAfternoon = isFixed && isAfternoonType;
         
         let shouldCount = false;
 

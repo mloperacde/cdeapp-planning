@@ -338,22 +338,28 @@ export default function DailyProductionPlanningPage() {
         const tipoTurno = normalize(e.tipo_turno);
         
         // Fixed shift employees are available regardless of team, IF they match the shift
-        const isFixedMorning = tipoTurno === "fijo manana" || tipoTurno === "fijo mañana";
-        const isFixedAfternoon = tipoTurno === "fijo tarde";
+        // Robust check for "Fijo Mañana" / "Turno Fijo Mañana" / "Fijo Tarde"
+        const isFixed = tipoTurno.includes("fijo");
+        const isMorningType = tipoTurno.includes("manana") || tipoTurno.includes("mañana") || tipoTurno.includes("t1");
+        const isAfternoonType = tipoTurno.includes("tarde") || tipoTurno.includes("t2");
 
+        const isFixedMorning = isFixed && isMorningType;
+        const isFixedAfternoon = isFixed && isAfternoonType;
+
+        // Determine if employee matches the requested shift context (Fixed Shift)
         const matchesShiftContext = 
           (isMorningShift && isFixedMorning) ||
           (isAfternoonShift && isFixedAfternoon);
 
-        // If employee is Fixed Shift matching current shift, INCLUDE them (even if team doesn't match)
-        // If employee is Rotating (Rotativo), they MUST match the Team
+        // Inclusion Logic:
+        // A. If employee is Fixed Shift matching the Current Planning Shift -> INCLUDE
+        // B. If employee is in the Rotative Team -> INCLUDE, UNLESS they have a Fixed Shift for the OTHER shift
         
         let shouldInclude = false;
         if (matchesShiftContext) {
             shouldInclude = true;
         } else if (isTeamById || isTeamByName) {
-            // Only include team members if they are NOT fixed shift for the OTHER shift
-            // e.g. If current is Morning, and team member is Fixed Afternoon, exclude.
+            // Check for conflict: Team member but Fixed for OPPOSITE shift
             if (isMorningShift && isFixedAfternoon) shouldInclude = false;
             else if (isAfternoonShift && isFixedMorning) shouldInclude = false;
             else shouldInclude = true;
@@ -362,17 +368,21 @@ export default function DailyProductionPlanningPage() {
         if (!shouldInclude) return false;
 
         // 2. Availability (Must be "Disponible" - Robust)
-        // If status is not explicitly 'disponible', skip.
         if (normalize(e.disponibilidad) !== "disponible") return false;
 
-        // 3 & 4. Role/Department Check via Shared Utility (Single Source of Truth)
+        // 3. Role Exclusion (Jefe de Turno / Equipo)
+        // Explicitly exclude Leadership roles as per requirement
+        const role = normalize(e.puesto);
+        if (role.includes("jefe") && role.includes("turno")) return false;
+        if (role.includes("jefe") && role.includes("equipo")) return false;
+
+        // 4. General Operator Check
         if (!isProductionOperator(e)) return false;
 
         // 5. Absence Check (Robust)
-        // ... (existing logic seems fine, but let's ensure we parse dates correctly)
         if (e.ausencia_inicio) {
             const checkDate = new Date(selectedDate);
-            checkDate.setHours(12, 0, 0, 0); // Use noon to avoid timezone edge cases
+            checkDate.setHours(12, 0, 0, 0); 
             const checkTime = checkDate.getTime();
             
             const startDate = new Date(e.ausencia_inicio);
@@ -386,14 +396,13 @@ export default function DailyProductionPlanningPage() {
                 
                 if (checkTime >= startTime && checkTime <= endTime) return false;
             } else {
-                // If no end date, assume active absence
                 if (checkTime >= startTime) return false;
             }
         }
 
         return true;
     }).length;
-  }, [employees, teams, selectedTeam, selectedDate]);
+  }, [employees, teams, selectedTeam, selectedDate, currentShift]);
 
   const totalRequiredOperators = useMemo(() => {
     let total = 0;

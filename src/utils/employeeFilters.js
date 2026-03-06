@@ -46,7 +46,11 @@ export const isProductionOperator = (emp) => {
     if (!role) return false;
 
     // Explicit exclusions (redundant with whitelist but good for documentation/safety)
+    // STRICT: Exclude Shift Leaders and Team Leaders
+    if (role.includes("jefe") && role.includes("turno")) return false;
+    if (role.includes("jefe") && role.includes("equipo")) return false;
     if (role.includes("jefe")) return false; 
+    
     if (role.includes("responsable") && role.includes("turno")) return false;
 
     // Whitelist matches
