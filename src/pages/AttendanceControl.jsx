@@ -485,14 +485,17 @@ export default function AttendanceControl() {
       // 3. Mapear datos usando empleados locales
       const mappedRecords = records.map(r => {
         // Buscar empleado (Prioridad: Código Interno > ID Cuco)
-        // Cuco devuelve a veces cod_int_empleado como número o string
-        const code = r.cod_int_empleado ? String(r.cod_int_empleado).trim() : "";
-        const id = r.id_empleado ? String(r.id_empleado).trim() : "";
+        // Cuco devuelve a veces cod_int_empleado como número o string. 0 es válido.
+        const code = (r.cod_int_empleado !== null && r.cod_int_empleado !== undefined) ? String(r.cod_int_empleado).trim() : "";
+        const id = (r.id_empleado !== null && r.id_empleado !== undefined) ? String(r.id_empleado).trim() : "";
         
         let emp = null;
         if (code) emp = employeesByCodigo.get(code);
         if (!emp && id) emp = employeesById.get(id); // Fallback
         
+        // Intentar recuperar nombre de la respuesta API si no cruzamos con local
+        const apiName = r.nombre_empleado || r.empleado || r.nombre || r.name || "";
+
         // Dirección: 1=Entrada, 2=Salida, 3=Entrada, 4=Salida
         // V2 devuelve "val_direccion": "E" o "S"
         let direction = "E";
@@ -526,7 +529,7 @@ export default function AttendanceControl() {
         
         return {
           employee_id: code || id || "UNKNOWN",
-          employee_name: emp ? (emp.nombre || emp.name) : `Empleado ${code || id}`,
+          employee_name: emp ? (emp.nombre || emp.name) : (apiName || `Empleado ${code || id}`),
           department: emp ? emp.departamento : "",
           direction: direction,
           incident: incident,
