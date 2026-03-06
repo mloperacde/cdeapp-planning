@@ -356,11 +356,33 @@ export default function AttendanceMonitor() {
          const incongruencias = [];
          // Simple incongruity check
          if (emp.entries.length === 0) incongruencias.push("Sin entrada");
-         if (emp.exits.length === 0) incongruencias.push("Sin salida");
+         
+         // Smart "No Exit" check
+         const todayStr = format(new Date(), 'yyyy-MM-dd');
+         const isToday = selectedDate === todayStr;
+         
+         if (emp.exits.length === 0) {
+            // Only report "No Exit" if date is in past OR if today and shift should have ended (with 1h margin)
+            let reportNoExit = true;
+            if (isToday && horaFin) {
+               const nowMin = toMin(format(new Date(), 'HH:mm'));
+               const endMin = toMin(horaFin);
+               if (nowMin < endMin + 60) reportNoExit = false;
+            } else if (isToday && !horaFin) {
+               // Unknown shift end, assume working if today
+               reportNoExit = false;
+            }
+            
+            if (reportNoExit) incongruencias.push("Sin salida");
+         }
 
          let tiempoTrabajado = 0;
          if (emp.first && emp.last) {
             tiempoTrabajado = toMin(emp.last) - toMin(emp.first);
+         } else if (emp.first && !emp.last && isToday) {
+            // Calculate time until now if working
+            const nowMin = toMin(format(new Date(), 'HH:mm'));
+            tiempoTrabajado = Math.max(0, nowMin - toMin(emp.first));
          }
 
          rows.push({
