@@ -308,9 +308,10 @@ export default function AttendanceMonitor() {
 
       // Process Present Employees
       Object.values(fichajesMap).forEach(emp => {
-         const master = masterMapById[emp.employee.id] || masterMapByCodigo[emp.employee.codigo_empleado];
+         // Fix: Ensure we use the resolved master employee if available in the group object
+         const master = emp.employee && emp.employee.id ? emp.employee : (masterMapById[emp.employee.id] || masterMapByCodigo[emp.employee.codigo_empleado]);
          
-         if (!master) {
+         if (!master || !master.id) { // Strict check for valid master record
             noEnMaestra.push({
                employee_id: emp.employee.codigo_empleado,
                employee_name: emp.employee.nombre,
@@ -390,11 +391,14 @@ export default function AttendanceMonitor() {
          const keyId = master.id ? String(master.id) : null;
          const keyCode = master.codigo_empleado ? String(master.codigo_empleado) : null;
          
+         // Fix: Check if employee is in fichajesMap by either ID or Code
          const hasData = (keyId && fichajesMap[keyId]) || (keyCode && fichajesMap[keyCode]);
-         if (hasData) return; // Already processed
+         if (hasData) return; // Already processed as present
 
          const { horaEntrada, turnoReal } = getHorarioEsperado(master, teamScheduleMap);
-         if (!horaEntrada) return; // No shift, no absence alert
+         
+         // Relaxed check: Report absence even if shift is unknown, unless explicit "No Turno"
+         // if (!horaEntrada) return; 
 
          const ausencia = getAbsenceForDate(master.id, selectedDate);
          
