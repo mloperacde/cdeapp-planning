@@ -30,6 +30,8 @@ import { getMachineAlias } from "@/utils/machineAlias";
 import { createPageUrl } from "@/utils";
 import * as XLSX from "xlsx";
 
+import { isProductionOperator, normalize } from "@/utils/employeeFilters";
+
 // Helper: Get Employee Name Robustly
 const getEmployeeName = (emp) => {
     if (!emp) return "";
@@ -381,9 +383,7 @@ export default function ShiftAssignmentsPage() {
 
   const isEmployeeAvailable = (e, dateStr, teamId) => {
        // 1. Department (Production Only)
-       // Note: "isProductionOperator" already handles this in a smarter way, but let's keep strict here or reuse utility.
        // Reuse utility for consistency with other pages
-       const { isProductionOperator, normalize } = require("@/utils/employeeFilters");
        if (!isProductionOperator(e)) return false;
 
        // 2. Absence Check
