@@ -942,13 +942,13 @@ export default function AttendanceMonitor() {
                       </thead>
                       <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                         {result.sinRegistro.map(emp => (
-                          <tr key={emp.id} className={`hover:bg-slate-50 ${emp.alertaFaltaAusencia ? "bg-red-50/40" : "bg-slate-50/30"}`}>
-                            <td className="px-3 py-2 text-slate-500 font-mono">{emp.codigo_empleado}</td>
-                            <td className="px-3 py-2 font-medium text-slate-800">{emp.nombre}</td>
+                          <tr key={emp.employee_id} className={`hover:bg-slate-50 ${emp.alertaFaltaAusencia ? "bg-red-50/40" : "bg-slate-50/30"}`}>
+                            <td className="px-3 py-2 text-slate-500 font-mono">{emp.employee_id}</td>
+                            <td className="px-3 py-2 font-medium text-slate-800">{emp.employee_name}</td>
                             <td className="px-3 py-2 text-slate-600">{emp.departamento || "—"}</td>
                             <td className="px-3 py-2 text-slate-500">{emp.equipo || "—"}</td>
                             <td className="px-3 py-2">
-                              <Badge className="bg-slate-100 text-slate-600 font-mono">{getHoraEsperada(emp)}</Badge>
+                              <Badge className="bg-slate-100 text-slate-600 font-mono">{emp.horaEntrada || "—"}</Badge>
                             </td>
                             <td className="px-3 py-2">
                               {emp.ausenciaConfirmada ? (

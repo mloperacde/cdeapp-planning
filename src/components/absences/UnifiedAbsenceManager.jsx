@@ -546,7 +546,12 @@ export default function UnifiedAbsenceManager(props) {
                   const canFinalizeByPunch = !!auditRow?.primerMarcaje && (abs.fecha_fin_desconocida || !abs.fecha_fin);
                   return (
                     <TableRow key={abs.id} className="hover:bg-slate-50 dark:hover:bg-slate-800">
-                      <TableCell className="font-semibold">{getEmployeeName(abs.employee_id)}</TableCell>
+                      <TableCell className="font-semibold">
+                        {getEmployeeName(abs.employee_id)}
+                        <div className="text-[10px] font-normal text-slate-400 mt-0.5">
+                          Solicitado por: {abs.created_by || "Sistema"}
+                        </div>
+                      </TableCell>
                       <TableCell><Badge variant="outline">{abs.tipo}</Badge></TableCell>
                       <TableCell>{abs.motivo}</TableCell>
                       <TableCell className="text-xs">
