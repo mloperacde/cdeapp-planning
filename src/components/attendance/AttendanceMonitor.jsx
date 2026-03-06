@@ -449,34 +449,61 @@ export default function AttendanceMonitor() {
   // Helper Functions
   const getHorarioEsperado = (master, scheduleMap) => {
      if (!master) return { horaEntrada: null, horaFin: null, turnoReal: null };
-     const tipo = master.tipo_turno;
-     if (tipo === "Turno Partido") {
+     
+     const tipo = master.tipo_turno ? String(master.tipo_turno).toLowerCase() : "";
+     
+     // 1. Turno Partido
+     if (tipo.includes("partido")) {
         return { 
            horaEntrada: master.turno_partido_entrada1, 
            horaFin: master.turno_partido_salida2, 
            turnoReal: "Partido" 
         };
-     } else if (tipo === "Fijo Mañana") {
+     } 
+     
+     // 2. Rotativo
+     if (tipo.includes("rotativo")) {
+        const teamKey = master.equipo ? teamConfigs.find(t => t.team_name === master.equipo)?.team_key : null;
+        const turno = teamKey ? scheduleMap[teamKey] : null;
+        
+        if (turno === "Mañana") {
+           return { 
+              horaEntrada: master.horario_manana_inicio || "07:00", 
+              horaFin: master.horario_manana_fin || "15:00", 
+              turnoReal: "Mañana" 
+           };
+        } else if (turno === "Tarde") {
+           return { 
+              horaEntrada: master.horario_tarde_inicio || "14:00", 
+              horaFin: master.horario_tarde_fin || "22:00", 
+              turnoReal: "Tarde" 
+           };
+        }
+        return { horaEntrada: null, horaFin: null, turnoReal: null };
+     }
+
+     // 3. Fijo Mañana (or similar) OR Implicit Morning
+     // If type says "mañana" OR (type is empty/other but has morning hours configured and NO afternoon hours)
+     const hasMorningHours = !!master.horario_manana_inicio;
+     const hasAfternoonHours = !!master.horario_tarde_inicio;
+     
+     if (tipo.includes("mañana") || tipo.includes("manana") || (hasMorningHours && !hasAfternoonHours && !tipo.includes("tarde"))) {
         return { 
            horaEntrada: master.horario_manana_inicio || "07:00", 
            horaFin: master.horario_manana_fin || "15:00", 
            turnoReal: "Mañana" 
         };
-     } else if (tipo === "Fijo Tarde") {
+     } 
+     
+     // 4. Fijo Tarde (or similar) OR Implicit Afternoon
+     if (tipo.includes("tarde") || (hasAfternoonHours && !hasMorningHours && !tipo.includes("mañana"))) {
         return { 
            horaEntrada: master.horario_tarde_inicio || "14:00", 
            horaFin: master.horario_tarde_fin || "22:00", 
            turnoReal: "Tarde" 
         };
-     } else if (tipo === "Rotativo") {
-        const teamKey = master.equipo ? teamConfigs.find(t => t.team_name === master.equipo)?.team_key : null;
-        const turno = teamKey ? scheduleMap[teamKey] : null;
-        if (turno === "Mañana") {
-           return { horaEntrada: "07:00", horaFin: "15:00", turnoReal: "Mañana" };
-        } else if (turno === "Tarde") {
-           return { horaEntrada: "14:00", horaFin: "22:00", turnoReal: "Tarde" };
-        }
      }
+
      return { horaEntrada: null, horaFin: null, turnoReal: null };
   };
 
@@ -577,10 +604,7 @@ export default function AttendanceMonitor() {
 
   // helper para horario esperado en tabla sinRegistro
   function getHoraEsperada(emp) {
-    const t = filterTurno === "__all__" ? "Mañana" : filterTurno;
-    if (emp.tipo_turno === "Turno Partido") return emp.turno_partido_entrada1 || "—";
-    if (emp.tipo_turno === "Fijo Mañana" || t === "Mañana") return emp.horario_manana_inicio || "—";
-    if (emp.tipo_turno === "Fijo Tarde" || t === "Tarde") return emp.horario_tarde_inicio || "—";
+    if (emp.horaEntrada) return emp.horaEntrada;
     return "—";
   }
 
