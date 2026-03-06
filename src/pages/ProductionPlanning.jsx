@@ -118,10 +118,14 @@ export default function ProductionPlanningPage() {
           return val;
         };
 
-        // IMPORTANTE: el JSON en `notes` (extra) tiene los datos completos con horas.
-        // Los campos directos del entity pueden tener versiones truncadas (sin hora).
-        // Prioridad: extra (JSON interno) > order (campos directos del entity)
-        const merged = { ...order, ...extra };
+        // IMPORTANTE: el JSON en `notes` (extra) tiene datos extendidos.
+        // Pero los identificadores relacionales (id, machine_id) y estado en la entidad son la fuente de verdad.
+        // Fusionamos extra primero, y luego sobreescribimos con order para garantizar integridad referencial.
+        const merged = { ...extra, ...order };
+        
+        // Asegurar que machine_id sea string para comparaciones consistentes
+        if (merged.machine_id) merged.machine_id = String(merged.machine_id);
+
         return {
           ...merged,
           // Inicio vigente CON HORA: Fecha Inicio Limite tiene hora real (ej: "23/02/2026 19:37")

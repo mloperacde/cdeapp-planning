@@ -291,9 +291,23 @@ Ent: ${order.effective_delivery_date || '-'}`;
                     // Calcular índice de columna inicio
                     let startIndex = days.findIndex(d => isSameDay(d, startDate));
                     let startFrac = 0;
+                    
                     if (startIndex === -1) {
-                      if (startDate < days[0]) { startIndex = 0; startFrac = 0; }
-                      else return null;
+                      if (startDate < days[0]) { 
+                         startIndex = 0; 
+                         startFrac = 0; 
+                      } else if (startDate > days[days.length - 1]) {
+                         return null; // Out of view
+                      } else {
+                         // Starts on a non-working day (weekend/holiday) -> Push to start of NEXT working day
+                         const nextIdx = days.findIndex(d => d > startDate);
+                         if (nextIdx !== -1) {
+                            startIndex = nextIdx;
+                            startFrac = 0;
+                         } else {
+                            return null;
+                         }
+                      }
                     } else {
                       startFrac = dayFraction(startDate);
                     }
@@ -301,16 +315,28 @@ Ent: ${order.effective_delivery_date || '-'}`;
                     // Calcular índice de columna fin
                     let endIndex = days.findIndex(d => isSameDay(d, endDate));
                     let endFrac = 1;
+
                     if (endIndex === -1) {
-                      if (endDate > days[days.length - 1]) { endIndex = days.length - 1; endFrac = 1; }
-                      else if (endDate < days[0]) return null;
-                      else {
-                        for (let i = days.length - 1; i >= 0; i--) {
-                          if (days[i] <= endDate) { endIndex = i; break; }
-                        }
-                      }
+                       if (endDate < days[0]) {
+                          return null; // Ends before view
+                       } else if (endDate > days[days.length - 1]) {
+                          endIndex = days.length - 1;
+                          endFrac = 1;
+                       } else {
+                          // Ends on a non-working day -> Pull to end of PREVIOUS working day
+                          // Find last day < endDate
+                          for (let i = days.length - 1; i >= 0; i--) {
+                             if (days[i] < endDate) {
+                                endIndex = i;
+                                endFrac = 1;
+                                break;
+                             }
+                          }
+                          // Safety: if it ends before first day (but passed the first check), clamp to 0
+                          if (endIndex === -1) { endIndex = 0; endFrac = 0; }
+                       }
                     } else {
-                      endFrac = dayFraction(endDate);
+                       endFrac = dayFraction(endDate);
                     }
 
                     // Posición en píxeles con fracción horaria
