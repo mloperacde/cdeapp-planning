@@ -99,56 +99,61 @@ export default function OrderImport() {
         ]);
         const orders = Array.isArray(ordersRes) ? ordersRes : [];
         const machines = Array.isArray(machinesRes) ? machinesRes : [];
-        const machinesMap = new Map();
-        machines.forEach(m => machinesMap.set(m.id, getMachineAlias(m)));
-
-        if (orders.length > 0) {
-            // REVERT: Simply load all orders without batch filtering
-            const uniqueOrders = new Map();
-            orders.forEach(o => {
-                if (!o.order_number) return;
-                const existing = uniqueOrders.get(o.order_number);
-                if (!existing) { uniqueOrders.set(o.order_number, o); }
-                else {
-                    const existingDate = new Date(existing.updated_at || existing.created_at || 0);
-                    const currentDate = new Date(o.updated_at || o.created_at || 0);
-                    if (currentDate > existingDate) uniqueOrders.set(o.order_number, o);
-                }
-            });
-            const deduped = Array.from(uniqueOrders.values());
-            const formatted = deduped.map(o => {
-                let sourceData = { ...o };
-                try {
-                    if (o.notes && typeof o.notes === 'string' && o.notes.trim().startsWith('{')) {
-                        const parsed = JSON.parse(o.notes);
-                        sourceData = { ...parsed, ...o };
-                        sourceData.notes = parsed.notes !== o.notes ? (parsed.notes || '') : '';
-                    }
-                } catch (e) { /* ignore */ }
-                const newRow = { ...sourceData };
-                SYSTEM_FIELDS.forEach(field => {
-                    let val = sourceData[field.key];
-                    if (val === undefined) val = extractValue(sourceData, field);
-                    if (val !== undefined) newRow[field.key] = val;
-                });
-                newRow.id = o.id;
-                // Preservar el machine_id real de BD (24 hex) para no perderlo durante la normalización
-                newRow._db_machine_id = o.machine_id;
-                newRow.effective_delivery_date = (newRow.new_delivery_date && !String(newRow.new_delivery_date).startsWith('0000')) ? newRow.new_delivery_date : newRow.committed_delivery_date;
-                newRow.effective_start_date = (newRow.modified_start_date && !String(newRow.modified_start_date).startsWith('0000')) ? newRow.modified_start_date : newRow.start_date;
-                if (o.machine_id && machinesMap.has(o.machine_id)) newRow.machine_name = machinesMap.get(o.machine_id);
-                return newRow;
-            });
-            setRawOrders(formatted);
-            const newest = deduped.reduce((prev, curr) => new Date(prev.updated_at || prev.created_at || 0) > new Date(curr.updated_at || curr.created_at || 0) ? prev : curr, deduped[0]);
-            if (newest) { const d = newest.updated_at || newest.created_at; if (d) setLastSyncTime(new Date(d)); }
-        }
+        
+        // Transform local DB orders to match the raw format
+        const transformed = orders.map(o => {
+            let notes = {};
+            try { notes = JSON.parse(o.notes || '{}'); } catch(e) {}
+            return {
+                ...o,
+                ...notes,
+                _db_machine_id: o.machine_id // Preserve DB ID
+            };
+        });
+        setRawOrders(transformed);
     } catch (e) {
-        console.error("Error loading local data", e);
-        toast.error("Error cargando datos guardados.");
+        toast.error("Error cargando datos locales: " + e.message);
     } finally {
         setLoading(false);
     }
+  };
+
+  const clearAllOrders = async () => {
+     if (!confirm("⚠️ ¡PELIGRO! ⚠️\n\nEsta acción eliminará TODAS las órdenes de trabajo de la base de datos.\n\n¿Estás seguro de que deseas vaciar la tabla por completo?")) return;
+
+     setSaving(true);
+     const toastId = toast.loading("Eliminando todas las órdenes...");
+     try {
+         const allOrders = await base44.entities.WorkOrder.list(undefined, 2000);
+         const total = allOrders.length;
+         
+         if (total === 0) {
+             toast.info("No hay órdenes para eliminar.");
+             setSaving(false);
+             toast.dismiss(toastId);
+             return;
+         }
+
+         let deleted = 0;
+         const CHUNK_SIZE = 10;
+         
+         // Delete in chunks
+         for (let i = 0; i < total; i += CHUNK_SIZE) {
+             const chunk = allOrders.slice(i, i + CHUNK_SIZE);
+             await Promise.all(chunk.map(o => base44.entities.WorkOrder.delete(o.id).catch(() => {})));
+             deleted += chunk.length;
+             toast.loading(`Eliminando: ${deleted}/${total} órdenes...`, { id: toastId });
+         }
+
+         toast.success(`Se han eliminado ${total} órdenes correctamente.`);
+         setRawOrders([]); // Clear local state
+     } catch (e) {
+         console.error(e);
+         toast.error("Error al limpiar órdenes: " + e.message);
+     } finally {
+         setSaving(false);
+         toast.dismiss(toastId);
+     }
   };
 
   const syncMachinesToLocalDB = async (background = false) => {
@@ -262,7 +267,7 @@ export default function OrderImport() {
 
   const saveOrders = async () => {
       if (filteredOrders.length === 0) { toast.warning("No hay órdenes visibles para guardar."); return; }
-      if (!confirm(`Se van a guardar ${filteredOrders.length} registros y se ELIMINARÁN los que no estén en esta lista. ¿Continuar?`)) return;
+      if (!confirm(`Se van a guardar ${filteredOrders.length} registros.\n\nIMPORTANTE: Esto añadirá nuevas órdenes o actualizará las existentes. Si deseas empezar de cero, usa el botón "Vaciar Base de Datos" primero.\n\n¿Continuar?`)) return;
 
       setSaving(true);
       setProgress(0);
@@ -447,6 +452,15 @@ export default function OrderImport() {
             <Button variant="outline" onClick={fetchOrders} disabled={loading}>
               {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
               Importar desde CDEApp
+            </Button>
+            <Button 
+                variant="destructive" 
+                onClick={clearAllOrders}
+                disabled={loading || saving}
+                title="Eliminar todas las órdenes de la base de datos"
+            >
+                <X className="mr-2 h-4 w-4" />
+                Vaciar Base de Datos
             </Button>
             <Button onClick={saveOrders} disabled={saving || filteredOrders.length === 0}>
               {saving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Guardando...</> : <><Save className="mr-2 h-4 w-4" />Guardar ({filteredOrders.length})</>}
