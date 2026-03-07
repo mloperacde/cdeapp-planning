@@ -10,6 +10,9 @@ declare const Deno: {
 Deno.serve(async (req: Request) => {
   try {
     const client = createClientFromRequest(req);
+    // Use service role for database operations
+    const serviceClient = client.asServiceRole || client;
+
     const body = await req.json().catch(() => ({}));
     
     const { date, start_date, end_date, force, debug_mode } = body;
@@ -177,9 +180,6 @@ Deno.serve(async (req: Request) => {
     if (recordsToCreate.length === 0) {
       return Response.json({ success: true, message: "No new records found in CUCO360.", count: 0 });
     }
-
-    // Use service role for database operations
-    const serviceClient = client.asServiceRole || client;
 
     // Clean up existing records for the day if syncing single day
     if (from === to) {
