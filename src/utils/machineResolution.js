@@ -3,30 +3,45 @@ import { getMachineAlias } from "./machineAlias";
 /**
  * Normaliza string para comparación: minúsculas, sin tildes, sin paréntesis, solo alfanumérico y espacios
  */
-export const normStr = (s) => String(s || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, '').replace(/[()]/g, '').replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+export const normStr = (s) => String(s || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, '').trim();
 
 /**
  * Construye un mapa de máquinas y devuelve una función de resolución robusta.
  * @param {Array} machinesRaw Lista de máquinas de la base de datos
  */
 export const buildMachinesMap = (machinesRaw) => {
-    const map = new Map();
-    const cdeIdMap = new Map(); // ID numérico CDE → ID base44
+    // 1. Indexar máquinas por múltiples claves
+    const lookup = new Map();
+
+    const addToIndex = (key, machineId) => {
+        if (!key) return;
+        const nKey = normStr(key);
+        if (nKey) lookup.set(nKey, machineId);
+        
+        // Indexar también sin espacios ni símbolos para robustez extrema
+        const strictKey = nKey.replace(/[^a-z0-9]/g, '');
+        if (strictKey && strictKey.length > 2) lookup.set("STRICT:" + strictKey, machineId);
+    };
 
     if (Array.isArray(machinesRaw)) {
         machinesRaw.forEach(m => {
-            // Mapa por ID de BD directo
-            if (m.id) map.set(m.id, m.id);
-            // Mapa por nombre normalizado
-            [m.nombre, m.codigo_maquina, m.codigo, m.descripcion, m.nombre_maquina].forEach(v => {
-                if (v) map.set(normStr(v), m.id);
-            });
-            const alias = getMachineAlias(m);
-            if (alias) map.set(normStr(alias), m.id);
-            // Mapa por cde_machine_id explícito
-            if (m.cde_machine_id) cdeIdMap.set(String(m.cde_machine_id).trim(), m.id);
-            // Mapa por orden_visualizacion (suele coincidir con ID CDE)
-            if (m.orden_visualizacion != null) cdeIdMap.set(String(Math.round(m.orden_visualizacion)), m.id);
+            const mid = String(m.id);
+            // A. Claves explícitas directas
+            addToIndex(m.id, mid);
+            addToIndex(m.codigo_maquina, mid);
+            addToIndex(m.codigo, mid);
+            
+            // B. Nombres y descripciones
+            addToIndex(m.nombre, mid);
+            addToIndex(m.nombre_maquina, mid);
+            addToIndex(m.descripcion, mid);
+            
+            // C. Alias calculado
+            addToIndex(getMachineAlias(m), mid);
+
+            // D. IDs Externos (CDE / Importación)
+            if (m.cde_machine_id) addToIndex(String(m.cde_machine_id), mid);
+            if (m.orden_visualizacion) addToIndex(String(Math.round(m.orden_visualizacion)), mid);
         });
     }
 
@@ -34,41 +49,48 @@ export const buildMachinesMap = (machinesRaw) => {
      * Resuelve un ID de máquina a partir de su nombre o ID de origen.
      */
     const resolveMachine = (machineName, machineIdSource) => {
-        // PRIORIDAD 0: solo usar cdeIdMap si la máquina tiene cde_machine_id explícito en BD
-        if (machineIdSource != null) {
-            const src = String(machineIdSource).trim();
-            if (cdeIdMap.has(src)) return cdeIdMap.get(src);
+        // 1. Intentar por ID Fuente directo (cde_machine_id, orden, etc)
+        if (machineIdSource) {
+            const src = normStr(String(machineIdSource));
+            if (lookup.has(src)) return lookup.get(src);
         }
 
-        const name = String(machineName || '');
-        // Limpiar paréntesis envolventes: "(1SANI - X)" → "1SANI - X"
-        const cleanName = name.replace(/^\(+/, '').replace(/\)+$/, '').trim();
-        const s = normStr(cleanName);
+        const rawName = String(machineName || '');
+        if (!rawName) return null;
 
-        // 1. Exacto por nombre normalizado
-        if (s && map.has(s)) return map.get(s);
+        // 2. Normalización básica
+        const nName = normStr(rawName);
+        if (lookup.has(nName)) return lookup.get(nName);
 
-        // 2. Formato "SALA CODIGO - NOMBRE_MAQUINA": buscar por la parte después del " - "
-        if (cleanName.includes(' - ')) {
-            const parts = cleanName.split(' - ');
-            // Parte derecha (nombre de máquina real)
-            const afterDash = normStr(parts.slice(1).join(' - '));
-            // Último token de la parte izquierda (suele ser el código numérico)
-            const beforeTokens = parts[0].trim().split(/\s+/);
-            const codeToken = normStr(beforeTokens[beforeTokens.length - 1]);
-            const beforeAll = normStr(parts[0]);
-
-            if (afterDash && map.has(afterDash)) return map.get(afterDash);
-            if (codeToken && map.has(codeToken)) return map.get(codeToken);
-            if (beforeAll && map.has(beforeAll)) return map.get(beforeAll);
+        // 3. Estrategia de Descomposición "CODIGO - NOMBRE"
+        // Ej: "119 - MAQUINA X" -> Buscar "119" o "MAQUINA X"
+        if (rawName.includes('-')) {
+            const parts = rawName.split('-').map(p => normStr(p));
+            // Parte Izquierda (Suele ser código o sala)
+            if (parts[0] && lookup.has(parts[0])) return lookup.get(parts[0]);
+            // Parte Derecha (Suele ser nombre)
+            const rightPart = parts.slice(1).join(' '); // Re-unir resto
+            if (rightPart && lookup.has(normStr(rightPart))) return lookup.get(normStr(rightPart));
         }
 
-        // 3. Fuzzy: alguna clave del mapa está contenida en el nombre o viceversa
-        if (s.length >= 3) {
-            for (const [key, id] of map.entries()) {
-                if (key.length < 3) continue;
-                if (s.includes(key) || key.includes(s)) return id;
-            }
+        // 4. Estrategia "Strict" (Sin espacios ni símbolos)
+        const strictName = nName.replace(/[^a-z0-9]/g, '');
+        if (lookup.has("STRICT:" + strictName)) return lookup.get("STRICT:" + strictName);
+
+        // 5. Búsqueda Parcial (Contiene) - Solo si es seguro (> 3 chars)
+        // Iterar sobre las claves conocidas (lento, usar solo como último recurso)
+        // Preferimos claves cortas que estén contenidas en el nombre largo
+        // Ej: DB tiene "MAQUINA X", input es "SALA 1 - MAQUINA X (NUEVA)"
+        for (const [key, id] of lookup.entries()) {
+            if (key.startsWith("STRICT:")) continue; // Skip strict keys
+            if (key.length < 3) continue; // Skip short noise
+            
+            // Si la clave de DB está contenida en el nombre del input
+            // Ej: key="119", input="119 - TORNO" -> MATCH
+            // Ej: key="TORNO", input="119 - TORNO" -> MATCH
+            // Usamos límites de palabra para evitar falsos positivos (ej: "1" en "11")
+            const regex = new RegExp(`\\b${key}\\b`, 'i');
+            if (regex.test(nName)) return id;
         }
 
         return null;
