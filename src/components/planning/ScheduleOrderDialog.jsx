@@ -6,15 +6,16 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format, addDays, isWeekend, parseISO } from "date-fns";
 
-export default function ScheduleOrderDialog({ open, onClose, order, dropDate, processes, machines = [], machineProcesses, onConfirm, holidays = [] }) {
+export default function ScheduleOrderDialog({ open, onClose, order, dropDate, newMachineId, processes, machines = [], machineProcesses, onConfirm, holidays = [] }) {
   const [processId, setProcessId] = useState("");
   const [endDate, setEndDate] = useState("");
   const [estimatedHours, setEstimatedHours] = useState(0);
 
   const targetMachine = useMemo(() => {
     if (!order || !machines.length) return null;
-    return machines.find(m => m.id === order.machine_id);
-  }, [order, machines]);
+    const mid = newMachineId || order.machine_id;
+    return machines.find(m => String(m.id) === String(mid));
+  }, [order, machines, newMachineId]);
 
   // Helper to calculate end date skipping weekends and holidays
   const calculateEndDate = (startDate, hoursNeeded, holidaysList) => {
@@ -108,6 +109,7 @@ export default function ScheduleOrderDialog({ open, onClose, order, dropDate, pr
 
   const handleConfirm = () => {
     onConfirm(order.id, {
+      machine_id: newMachineId || order.machine_id, // Update machine if moved
       process_id: processId,
       start_date: dropDate,
       planned_end_date: endDate
@@ -117,14 +119,14 @@ export default function ScheduleOrderDialog({ open, onClose, order, dropDate, pr
 
   const allowedProcesses = useMemo(() => {
     if (!order) return [];
-    const machineId = order.machine_id;
+    const machineId = newMachineId || order.machine_id;
     const allowedIds = machineProcesses
-        .filter(mp => mp.machine_id === machineId && mp.activo)
+        .filter(mp => String(mp.machine_id) === String(machineId) && mp.activo)
         .map(mp => mp.process_id);
     
     if (allowedIds.length === 0) return processes;
     return processes.filter(p => allowedIds.includes(p.id));
-  }, [order, machineProcesses, processes]);
+  }, [order, newMachineId, machineProcesses, processes]);
 
   if (!order) return null;
 

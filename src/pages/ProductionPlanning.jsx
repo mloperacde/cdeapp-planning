@@ -737,14 +737,15 @@ export default function ProductionPlanningPage() {
      const orderToUpdate = workOrders.find(o => o.id === id);
      if (!orderToUpdate) return;
 
-     const machineId = orderToUpdate.machine_id;
+     // Use new machine ID if moving, or fallback to current
+     const machineId = data.machine_id ? String(data.machine_id) : String(orderToUpdate.machine_id);
      const newStart = new Date(data.start_date);
      const newEnd = new Date(data.planned_end_date);
 
      // Check existing orders on this machine
      const conflict = workOrders.find(o => {
         if (o.id === id) return false; // Ignore self
-        if (o.machine_id !== machineId) return false; // Ignore other machines
+        if (String(o.machine_id) !== machineId) return false; // Ignore other machines
         if (!o.start_date) return false; // Ignore unscheduled
 
         // Existing order dates
@@ -989,6 +990,7 @@ export default function ProductionPlanningPage() {
         onClose={() => setDropDialogData(null)}
         order={dropDialogData?.order}
         dropDate={dropDialogData?.dropDate}
+        newMachineId={dropDialogData?.machineId} // Pass new machine ID
         processes={processes}
         machines={machines}
         machineProcesses={machineProcesses}
