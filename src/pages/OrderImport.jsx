@@ -313,7 +313,9 @@ export default function OrderImport() {
           const raw = await base44.entities.MachineMasterDatabase.list(undefined, 2000);
           
           // Ensure "Sin Asignar" machine exists for fallbacks
-          let unassignedMachine = raw.find(m => m.codigo_maquina === 'ZZ-UNASSIGNED');
+          // More robust search: by code OR by name, to avoid duplicates
+          let unassignedMachine = raw.find(m => m.codigo_maquina === 'ZZ-UNASSIGNED' || m.nombre === '⚠️ SIN ASIGNAR');
+          
           if (!unassignedMachine) {
               try {
                   unassignedMachine = await base44.entities.MachineMasterDatabase.create({
@@ -326,8 +328,14 @@ export default function OrderImport() {
                   raw.push(unassignedMachine);
               } catch (e) {
                   console.warn("Could not create unassigned machine", e);
-                  // Fallback to first machine if creation fails
-                  if (raw.length > 0) unassignedMachine = raw[0];
+                  // If creation failed (likely unique constraint), try to FIND it again in case it was created in parallel or missed
+                  try {
+                      const freshList = await base44.entities.MachineMasterDatabase.list(undefined, 2000);
+                      unassignedMachine = freshList.find(m => m.codigo_maquina === 'ZZ-UNASSIGNED');
+                  } catch (e2) {}
+                  
+                  // ABSOLUTE LAST RESORT: Do NOT default to raw[0] to avoid random assignment.
+                  // If we can't find a fallback machine, let machineId stay null so the loop handles it as an error.
               }
           }
 
