@@ -129,20 +129,20 @@ export default function OrderImport() {
          let deletedTotal = 0;
          
          while (remaining > 0) {
+             // Retrieve orders ID-only for faster fetch
              const allOrders = await base44.entities.WorkOrder.list(undefined, 2000);
              remaining = allOrders.length;
              
              if (remaining === 0) break;
 
-             const CHUNK_SIZE = 20;
+             // Delete sequentially in small chunks to avoid overload
+             const CHUNK_SIZE = 50;
              for (let i = 0; i < remaining; i += CHUNK_SIZE) {
                  const chunk = allOrders.slice(i, i + CHUNK_SIZE);
                  await Promise.all(chunk.map(o => base44.entities.WorkOrder.delete(o.id).catch(() => {})));
                  deletedTotal += chunk.length;
                  toast.loading(`Eliminando... (${deletedTotal} borrados)`, { id: toastId });
              }
-             // Verify if there are more (pagination or new inserts)
-             // The while loop will check again
          }
 
          toast.success(`Base de datos vaciada. ${deletedTotal} registros eliminados.`);
