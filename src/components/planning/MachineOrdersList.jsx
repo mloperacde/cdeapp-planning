@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Factory, Calendar, AlertCircle, Edit, Play, AlertTriangle } from "lucide-react";
+import { Factory, Calendar, AlertCircle, Edit } from "lucide-react";
 import { format, parseISO, isValid } from "date-fns";
 import { es } from "date-fns/locale";
 import { getMachineAlias } from "@/utils/machineAlias";
@@ -92,10 +92,6 @@ export default function MachineOrdersList({ machines = [], orders, processes, on
                     const process = processes.find(p => p.id === order.process_id);
                     const isLate = order.effective_delivery_date && new Date(order.effective_delivery_date) < new Date();
                     
-                    // Indicators Logic
-                    const isProducing = order.status === 'En Producción';
-                    const isMaterialMissing = ['NO', 'No', 'no'].includes(order.material_type) || ['SI', 'Si', 'si', 'YES', 'Yes'].includes(order.shortages);
-
                     return (
                         <div 
                             key={order.id} 
@@ -103,8 +99,6 @@ export default function MachineOrdersList({ machines = [], orders, processes, on
                             className={`
                                 relative p-2 rounded-md border cursor-pointer transition-all group hover:shadow-md
                                 ${getPriorityColor(order.priority)}
-                                ${isProducing ? 'ring-2 ring-green-500 ring-offset-1' : ''}
-                                ${isMaterialMissing ? 'border-red-500 border-l-4' : ''}
                             `}
                         >
                             {/* Línea 1: Pry, Orden, Artículo, Nombre, Cliente */}
@@ -112,25 +106,6 @@ export default function MachineOrdersList({ machines = [], orders, processes, on
                                 <Badge className={`${getPriorityBadgeColor(order.priority)} text-[10px] px-1.5 py-0 h-4 border-0 text-white shrink-0`}>
                                     {order.priority === 0 ? 'S/P' : `P${order.priority}`}
                                 </Badge>
-                                
-                                {process && (
-                                    <Badge variant="outline" className="text-[10px] px-1 h-4 border-slate-400 text-slate-600 shrink-0">
-                                        {process.name}
-                                    </Badge>
-                                )}
-
-                                {isProducing && (
-                                    <Badge variant="outline" className="bg-green-100 text-green-700 border-green-200 h-4 px-1 gap-0.5 animate-pulse">
-                                        <Play className="w-2 h-2 fill-green-700" />
-                                    </Badge>
-                                )}
-
-                                {isMaterialMissing && (
-                                    <Badge variant="destructive" className="h-4 px-1 gap-0.5" title="Materiales NO / Faltas">
-                                        <AlertTriangle className="w-2 h-2" />
-                                    </Badge>
-                                )}
-
                                 <span className="font-bold shrink-0">{order.order_number}</span>
                                 {order.product_article_code && (
                                     <>
