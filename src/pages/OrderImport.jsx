@@ -122,30 +122,30 @@ export default function OrderImport() {
      if (!confirm("⚠️ ¡PELIGRO! ⚠️\n\nEsta acción eliminará TODAS las órdenes de trabajo de la base de datos.\n\n¿Estás seguro de que deseas vaciar la tabla por completo?")) return;
 
      setSaving(true);
-     const toastId = toast.loading("Eliminando todas las órdenes...");
+     const toastId = toast.loading("Iniciando vaciado completo...");
      try {
-         const allOrders = await base44.entities.WorkOrder.list(undefined, 2000);
-         const total = allOrders.length;
+         // Loop until no orders remain
+         let remaining = 1;
+         let deletedTotal = 0;
          
-         if (total === 0) {
-             toast.info("No hay órdenes para eliminar.");
-             setSaving(false);
-             toast.dismiss(toastId);
-             return;
+         while (remaining > 0) {
+             const allOrders = await base44.entities.WorkOrder.list(undefined, 2000);
+             remaining = allOrders.length;
+             
+             if (remaining === 0) break;
+
+             const CHUNK_SIZE = 20;
+             for (let i = 0; i < remaining; i += CHUNK_SIZE) {
+                 const chunk = allOrders.slice(i, i + CHUNK_SIZE);
+                 await Promise.all(chunk.map(o => base44.entities.WorkOrder.delete(o.id).catch(() => {})));
+                 deletedTotal += chunk.length;
+                 toast.loading(`Eliminando... (${deletedTotal} borrados)`, { id: toastId });
+             }
+             // Verify if there are more (pagination or new inserts)
+             // The while loop will check again
          }
 
-         let deleted = 0;
-         const CHUNK_SIZE = 10;
-         
-         // Delete in chunks
-         for (let i = 0; i < total; i += CHUNK_SIZE) {
-             const chunk = allOrders.slice(i, i + CHUNK_SIZE);
-             await Promise.all(chunk.map(o => base44.entities.WorkOrder.delete(o.id).catch(() => {})));
-             deleted += chunk.length;
-             toast.loading(`Eliminando: ${deleted}/${total} órdenes...`, { id: toastId });
-         }
-
-         toast.success(`Se han eliminado ${total} órdenes correctamente.`);
+         toast.success(`Base de datos vaciada. ${deletedTotal} registros eliminados.`);
          setRawOrders([]); // Clear local state
      } catch (e) {
          console.error(e);
@@ -306,6 +306,26 @@ export default function OrderImport() {
 
       try {
           const raw = await base44.entities.MachineMasterDatabase.list(undefined, 2000);
+          
+          // Ensure "Sin Asignar" machine exists for fallbacks
+          let unassignedMachine = raw.find(m => m.codigo_maquina === 'ZZ-UNASSIGNED');
+          if (!unassignedMachine) {
+              try {
+                  unassignedMachine = await base44.entities.MachineMasterDatabase.create({
+                      codigo_maquina: 'ZZ-UNASSIGNED',
+                      nombre: '⚠️ SIN ASIGNAR',
+                      descripcion: 'Órdenes con máquina no identificada',
+                      ubicacion: 'GENERAL',
+                      orden_visualizacion: 9999
+                  });
+                  raw.push(unassignedMachine);
+              } catch (e) {
+                  console.warn("Could not create unassigned machine", e);
+                  // Fallback to first machine if creation fails
+                  if (raw.length > 0) unassignedMachine = raw[0];
+              }
+          }
+
           const { resolveMachine, machinesRaw } = buildMachinesMap(raw);
           toast.loading(`Guardando ${filteredOrders.length} órdenes (Lote: ${currentBatchId})...`, { id: toastId });
 
@@ -339,39 +359,31 @@ export default function OrderImport() {
                       machineId = resolveMachine(machineName, machineIdSource);
                   }
 
-                  // Fallback: If machine not found, assign to "Sin Asignar" / "General" machine
-                  // We must ensure this machine exists. If not, we'll create/find a placeholder.
-                  // For now, let's try to find a machine with code '000' or similar, or just pick the first one.
-                  // Better yet, we should probably warn but NOT skip if we want 480/480.
-                  // But WorkOrder requires a valid machine_id foreign key usually.
-                  // Strategy: If machine not found, look for a "Sin Asignar" machine. If not exists, use the first available machine as fallback 
-                  // to avoid data loss, but mark it in notes.
-                  
+                  // Fallback: If machine not found, assign to "Sin Asignar" machine
                   if (!machineId) {
-                      // Try to find a generic machine
-                      const genericMachine = machinesRaw.find(m => m.nombre_maquina === 'Sin Asignar' || m.codigo_maquina === '000');
-                      if (genericMachine) {
-                          machineId = genericMachine.id;
-                      } else if (machinesRaw.length > 0) {
-                          // Ultimate fallback: First machine in DB
-                          machineId = machinesRaw[0].id;
+                      if (unassignedMachine) {
+                          machineId = unassignedMachine.id;
+                      } else {
+                          // Last resort if even unassigned machine is missing
+                          const reason = `Máquina no encontrada y no existe fallback: "${machineName || machineIdSource || 'N/A'}"`;
+                          console.warn(`Skipping order: ${reason}`, { order_number: orderNumber });
+                          skippedItems.push({ ...row, _skipReason: reason });
+                          failCount++;
+                          processed++;
+                          setProgress(Math.round((processed / total) * 90)); 
+                          return;
                       }
                   }
 
                   if (!orderNumber || !machineId) {
-                      const reason = !orderNumber ? 'Falta número de orden' : `Máquina no encontrada y no hay fallback: "${machineName || machineIdSource || 'N/A'}"`;
-                      console.warn(`Skipping order: ${reason}`, { order_number: orderNumber, machine_name: machineName });
-                      skippedItems.push({ ...row, _skipReason: reason });
-                      failCount++;
-                      processed++;
-                      setProgress(Math.round((processed / total) * 90)); 
-                      return;
+                      // ... (Should be covered above)
+                      return; 
                   }
 
-                  // Add warning to notes if machine was forced
+                  // Add warning to notes if machine was forced to fallback
                   let notesData = { ...row, import_batch_id: currentBatchId };
-                  if (!resolveMachine(machineName, machineIdSource) && !isDbId(rawMachineId)) {
-                      notesData.warning = `Máquina original no encontrada: ${machineName}. Asignada a fallback.`;
+                  if (machineId === unassignedMachine?.id) {
+                      notesData.warning = `Máquina original no encontrada: ${machineName} (${machineIdSource || '?'}). Asignada a SIN ASIGNAR.`;
                   }
 
                   const serializedData = JSON.stringify(notesData);

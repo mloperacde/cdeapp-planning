@@ -64,10 +64,22 @@ export const buildMachinesMap = (machinesRaw) => {
 
         // 3. Estrategia de Descomposición "CODIGO - NOMBRE"
         // Ej: "119 - MAQUINA X" -> Buscar "119" o "MAQUINA X"
+        // Ej: "011C 152 - MAQUINA X" -> Buscar "011C", "152", "MAQUINA X"
         if (rawName.includes('-')) {
             const parts = rawName.split('-').map(p => normStr(p));
             // Parte Izquierda (Suele ser código o sala)
-            if (parts[0] && lookup.has(parts[0])) return lookup.get(parts[0]);
+            const leftPart = parts[0];
+            if (leftPart) {
+                if (lookup.has(leftPart)) return lookup.get(leftPart);
+                
+                // Sub-estrategia: Tokenizar parte izquierda por espacios
+                // Ej: "011C 152" -> "011C" y "152"
+                const tokens = leftPart.split(/\s+/);
+                for (const token of tokens) {
+                    if (token.length > 1 && lookup.has(token)) return lookup.get(token);
+                }
+            }
+
             // Parte Derecha (Suele ser nombre)
             const rightPart = parts.slice(1).join(' '); // Re-unir resto
             if (rightPart && lookup.has(normStr(rightPart))) return lookup.get(normStr(rightPart));
