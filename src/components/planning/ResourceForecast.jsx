@@ -6,9 +6,9 @@ import { addDays, format, isValid } from "date-fns";
 import { es } from "date-fns/locale";
 import { normalize, isProductionOperator } from "@/utils/employeeFilters";
 
-const OPERARIOS_POR_MAQUINA = 6; // Media temporal hasta disponer del dato real
+const OPERARIOS_POR_MAQUINA = 4; // Media temporal hasta disponer del dato real
 
-export default function ResourceForecast({ orders, employees, selectedTeam, dateRange }) {
+export default function ResourceForecast({ orders, employees, machines = [], selectedTeam, dateRange }) {
   // Días del rango
   const days = useMemo(() => {
     if (!dateRange?.start || !dateRange?.end) return [];
@@ -49,20 +49,31 @@ export default function ResourceForecast({ orders, employees, selectedTeam, date
       const dayStart = new Date(day); dayStart.setHours(0, 0, 0, 0);
       const dayEnd = new Date(day); dayEnd.setHours(23, 59, 59, 999);
 
-      // --- DEMANDA: máquinas únicas activas ese día × 6 operarios ---
+      // --- DEMANDA: máquinas únicas activas ese día × 4 operarios ---
       const activeMachineIds = new Set();
+      
       orders.forEach(order => {
-        if (!order.effective_start_date) return;
+        if (!order.effective_start_date || !order.machine_id) return;
+        
+        // Excluir máquinas de TERCEROS
+        const machine = machines.find(m => String(m.id) === String(order.machine_id));
+        const machineName = machine ? (machine.nombre || machine.nombre_maquina || '') : '';
+        if (machineName.toUpperCase().includes("TERCEROS")) return;
+
         const oStart = new Date(order.effective_start_date);
         const oEnd = order.effective_delivery_date
           ? new Date(order.effective_delivery_date)
           : new Date(order.committed_delivery_date || order.start_date || order.effective_start_date);
+          
         if (isNaN(oStart.getTime())) return;
+        
         if (oStart <= dayEnd && oEnd >= dayStart) {
-          if (order.machine_id) activeMachineIds.add(order.machine_id);
+          activeMachineIds.add(order.machine_id);
         }
       });
+      
       // Si no hay filtro de equipo → día completo = 2 turnos → demanda doble
+      // Si hay filtro (Mañana/Tarde/Noche) → demanda simple
       const turnos = selectedTeam === "all" ? 2 : 1;
       const demand = activeMachineIds.size * OPERARIOS_POR_MAQUINA * turnos;
 
@@ -70,11 +81,11 @@ export default function ResourceForecast({ orders, employees, selectedTeam, date
         date: day,
         machines: activeMachineIds.size,
         demand,
-        supply, // constante: no tenemos proyección de ausencias futuras
+        supply, 
         balance: supply - demand,
       };
     });
-  }, [days, orders, supply, selectedTeam]);
+  }, [days, orders, supply, selectedTeam, machines]);
 
   const avgBalance = forecast.length
     ? (forecast.reduce((s, d) => s + d.balance, 0) / forecast.length).toFixed(1)
@@ -90,7 +101,7 @@ export default function ResourceForecast({ orders, employees, selectedTeam, date
             <Users className="w-4 h-4" />
             Previsión de Recursos Humanos
             <span className="text-xs font-normal text-slate-500 ml-1">
-              ({totalAssignable} operarios prod.)
+              ({totalAssignable} operarios / {OPERARIOS_POR_MAQUINA} por máquina)
             </span>
           </div>
           <Badge variant={Number(avgBalance) >= 0 ? "outline" : "destructive"}>
@@ -98,100 +109,31 @@ export default function ResourceForecast({ orders, employees, selectedTeam, date
           </Badge>
         </CardTitle>
       </CardHeader>
-      <CardContent className="p-0 overflow-auto">
-        <div className="min-w-max">
-          {/* Header de fechas */}
-          <div className="flex border-b sticky top-0 bg-white dark:bg-slate-900 z-10">
-            <div className="w-40 p-3 font-semibold text-sm border-r bg-slate-50 dark:bg-slate-800">
-              Métrica
-            </div>
-            {forecast.map(day => (
-              <div key={day.date.toISOString()} className="w-32 p-2 border-r text-center">
-                <div className="text-xs text-slate-500 uppercase">{format(day.date, 'EEE', { locale: es })}</div>
-                <div className="text-sm font-bold">{format(day.date, 'dd MMM')}</div>
-              </div>
-            ))}
+      <CardContent className="p-0 overflow-auto flex-1">
+        <div className="min-w-[600px]">
+          {/* Header */}
+          <div className="grid grid-cols-5 border-b bg-slate-50 dark:bg-slate-900 sticky top-0 z-10">
+             <div className="p-2 text-xs font-bold border-r">Fecha</div>
+             <div className="p-2 text-xs font-bold text-center border-r">Máq. Activas</div>
+             <div className="p-2 text-xs font-bold text-center border-r">Demanda (Pers)</div>
+             <div className="p-2 text-xs font-bold text-center border-r">Oferta (Disp)</div>
+             <div className="p-2 text-xs font-bold text-center">Balance</div>
           </div>
-
-          {/* Máquinas activas */}
-          <div className="flex border-b bg-slate-50/50 dark:bg-slate-800/20">
-            <div className="w-40 p-3 font-medium text-xs border-r flex items-center gap-2 text-slate-500">
-              Máquinas activas
-            </div>
-            {forecast.map((day, i) => (
-              <div key={i} className="w-32 p-3 border-r text-center text-xs text-slate-500">
-                {day.machines} máq.
-              </div>
-            ))}
-          </div>
-
-          {/* Demanda */}
-          <div className="flex border-b">
-            <div className="w-40 p-3 font-medium text-sm border-r flex items-center gap-2 text-blue-600">
-              <TrendingDown className="w-4 h-4 flex-shrink-0" />
-              <div>
-                <div>Demanda</div>
-                <div className="text-[10px] font-normal text-slate-400">
-                {selectedTeam === "all"
-                  ? `~${OPERARIOS_POR_MAQUINA}×2 turnos/máq.`
-                  : `~${OPERARIOS_POR_MAQUINA} op/máq.`}
-              </div>
-              </div>
-            </div>
-            {forecast.map((day, i) => (
-              <div key={i} className="w-32 p-3 border-r text-center font-bold text-blue-600 bg-blue-50/30">
-                {day.demand}
-              </div>
-            ))}
-          </div>
-
-          {/* Oferta */}
-          <div className="flex border-b">
-            <div className="w-40 p-3 font-medium text-sm border-r flex items-center gap-2 text-green-600">
-              <Users className="w-4 h-4 flex-shrink-0" />
-              <div>
-                <div>Oferta</div>
-                <div className="text-[10px] font-normal text-slate-400">Op. prod. disponibles</div>
-              </div>
-            </div>
-            {forecast.map((day, i) => (
-              <div key={i} className="w-32 p-3 border-r text-center font-bold text-green-600 bg-green-50/30">
-                {day.supply}
-              </div>
-            ))}
-          </div>
-
-          {/* Balance */}
-          <div className="flex">
-            <div className="w-40 p-3 font-medium text-sm border-r flex items-center gap-2 text-slate-700 dark:text-slate-300">
-              <TrendingUp className="w-4 h-4 flex-shrink-0" /> Balance
-            </div>
-            {forecast.map((day, i) => (
-              <div
-                key={i}
-                className={`w-32 p-3 border-r text-center font-bold ${
-                  day.balance < 0
-                    ? 'bg-red-100 text-red-700'
-                    : day.balance === 0
-                    ? 'bg-yellow-50 text-yellow-700'
-                    : 'bg-emerald-100 text-emerald-700'
-                }`}
-              >
-                {day.balance > 0 ? `+${day.balance}` : day.balance}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Nota explicativa */}
-        <div className="p-3 border-t bg-amber-50 dark:bg-amber-900/10">
-          <p className="text-[10px] text-amber-700 dark:text-amber-400">
-            ⚠️ Demanda estimada temporalmente:{" "}
-            {selectedTeam === "all"
-              ? `${OPERARIOS_POR_MAQUINA} op/máq × 2 turnos (día completo)`
-              : `${OPERARIOS_POR_MAQUINA} op/máq × 1 turno`}{" "}
-            (proyección). Oferta = operarios de producción en activo sin ausencia registrada (proyección futura).
-          </p>
+          
+          {/* Rows */}
+          {forecast.map((dayData, i) => (
+             <div key={i} className="grid grid-cols-5 border-b hover:bg-slate-50 transition-colors">
+                <div className="p-2 text-xs border-r font-medium">
+                   {format(dayData.date, 'dd/MM/yyyy')}
+                </div>
+                <div className="p-2 text-xs text-center border-r">{dayData.machines}</div>
+                <div className="p-2 text-xs text-center border-r font-mono">{dayData.demand}</div>
+                <div className="p-2 text-xs text-center border-r font-mono text-slate-500">{dayData.supply}</div>
+                <div className={`p-2 text-xs text-center font-bold ${dayData.balance < 0 ? 'text-red-600' : 'text-green-600'}`}>
+                   {dayData.balance > 0 ? `+${dayData.balance}` : dayData.balance}
+                </div>
+             </div>
+          ))}
         </div>
       </CardContent>
     </Card>

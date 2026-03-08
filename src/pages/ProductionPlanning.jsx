@@ -927,6 +927,7 @@ export default function ProductionPlanningPage() {
                 <ResourceForecast 
                   orders={filteredOrders}
                   employees={employees}
+                  machines={machines} // Pass full machine list for filtering
                   selectedTeam={selectedTeam}
                   dateRange={dateRange}
                 />
