@@ -175,9 +175,22 @@ export default function OrderImport() {
               if (!code) continue;
               const name = m.name || m.description || `Máquina ${code}`;
               const location = m.room_name || m.sala || "";
-              const payload = { codigo_maquina: code, nombre: name, descripcion: name, ubicacion: location };
-              if (machineMap.has(code)) { await base44.entities.MachineMasterDatabase.update(machineMap.get(code), payload); updated++; }
-              else { await base44.entities.MachineMasterDatabase.create(payload); created++; }
+              // Store explicit CDE ID to ensure robust matching later
+              const payload = { 
+                  codigo_maquina: code, 
+                  nombre: name, 
+                  descripcion: name, 
+                  ubicacion: location,
+                  cde_machine_id: String(m.id || "") // Save Source ID
+              };
+              if (machineMap.has(code)) { 
+                  await base44.entities.MachineMasterDatabase.update(machineMap.get(code), payload); 
+                  updated++; 
+              }
+              else { 
+                  await base44.entities.MachineMasterDatabase.create(payload); 
+                  created++; 
+              }
           }
           setLastSyncTime(new Date());
           if (!background) toast.success(`Catálogo: ${created} nuevas, ${updated} actualizadas.`, { id: toastId });
@@ -315,9 +328,14 @@ export default function OrderImport() {
                   // 1. Machine ID Resolution
                   let machineId = null;
                   const rawMachineId = row.machine_id || row._db_machine_id;
+                  
+                  // Priority A: Existing valid DB ID (24 char hex)
                   if (isDbId(rawMachineId)) {
                       machineId = String(rawMachineId).trim();
-                  } else {
+                  } 
+                  
+                  // Priority B: Resolve via Name/SourceID
+                  if (!machineId) {
                       machineId = resolveMachine(machineName, machineIdSource);
                   }
 
