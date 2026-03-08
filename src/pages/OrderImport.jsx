@@ -245,7 +245,9 @@ export default function OrderImport() {
               : newRow.start_date;
 
           // Preserve CDE source ID for machine if available
-          if (row.machine_id) newRow.machine_id_source = row.machine_id;
+          // IMPORTANT: Check both 'machine_id' and 'machine_code' from source
+          if (row.machine_id) newRow.machine_id_source = String(row.machine_id);
+          if (row.machine_code) newRow.machine_code_source = String(row.machine_code);
 
           return newRow;
       });
@@ -355,6 +357,7 @@ export default function OrderImport() {
                   const orderNumber = row.order_number;
                   const machineName = row.machine_name;
                   const machineIdSource = row.machine_id_source;
+                  const machineCodeSource = row.machine_code_source;
 
                   const isDbId = (v) => v && /^[a-f0-9]{24}$/i.test(String(v).trim());
 
@@ -376,7 +379,15 @@ export default function OrderImport() {
                       }
                   }
 
-                  // Priority C: Resolve via Name (Only if ID resolution failed)
+                  // Priority C: Resolve via Machine Code (Explicit from CDE)
+                  if (!machineId && machineCodeSource) {
+                      const resolvedByCode = resolveMachine(machineCodeSource, null);
+                      if (resolvedByCode) {
+                           machineId = resolvedByCode;
+                      }
+                  }
+
+                  // Priority D: Resolve via Name (Only if ID resolution failed)
                   if (!machineId) {
                       machineId = resolveMachine(machineName, null);
                   }
