@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { getMachineAlias } from "@/utils/machineAlias";
 import { addDays, format, isSameDay, parseISO, isWeekend, isValid } from "date-fns";
 import { es } from "date-fns/locale";
-import { AlertCircle, CalendarClock } from "lucide-react";
+import { AlertCircle, CalendarClock, Play, AlertTriangle } from "lucide-react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 
 const ZOOM_CONFIG = {
@@ -349,6 +349,11 @@ Ent: ${order.effective_delivery_date || '-'}`;
 
                      const isLate = order.effective_delivery_date && new Date(order.effective_delivery_date) < new Date();
                      const qty = order.multi_qty || order.quantity || '';
+                     
+                     // Indicators Logic
+                     const isProducing = order.status === 'En Producción';
+                     const isMaterialMissing = ['NO', 'No', 'no'].includes(order.material_type) || ['SI', 'Si', 'si', 'YES', 'Yes'].includes(order.shortages);
+
                      const statusLabel = {
                        'En Progreso': 'EP',
                        'Completada': '✓',
@@ -364,13 +369,18 @@ Ent: ${order.effective_delivery_date || '-'}`;
                        `Cantidad: ${qty || '-'} | Material: ${order.material_type || '-'}`,
                        `Estado: ${order.status || '-'}`,
                        `Inicio: ${startStr || '-'} | Entrega: ${endStr || '-'}`,
-                     ].join('\n');
+                       isMaterialMissing ? '⚠️ FALTA MATERIAL' : '',
+                       isProducing ? '▶ EN PRODUCCIÓN' : ''
+                     ].filter(Boolean).join('\n');
 
                      return (
                        <div
                         key={order.id}
                         onClick={() => onEditOrder(order)}
-                        className={`absolute rounded shadow-md border-2 cursor-pointer flex flex-col justify-start gap-0.5 text-white pointer-events-auto hover:shadow-lg hover:brightness-110 transition-all hover:z-30 ${getPriorityColor(order.priority)} ${isLate ? 'border-yellow-400' : 'border-white/20'}`}
+                        className={`absolute rounded shadow-md border-2 cursor-pointer flex flex-col justify-start gap-0.5 text-white pointer-events-auto hover:shadow-lg hover:brightness-110 transition-all hover:z-30 
+                             ${getPriorityColor(order.priority)} 
+                             ${isMaterialMissing ? 'border-red-600 border-l-4' : (isLate ? 'border-yellow-400' : (isProducing ? 'ring-2 ring-green-400 ring-offset-0 border-transparent' : 'border-white/20'))}
+                         `}
                         style={{
                           left: `${leftPx + 2}px`,
                           width: `${widthPx - 4}px`,
@@ -387,6 +397,10 @@ Ent: ${order.effective_delivery_date || '-'}`;
                           <span className="font-bold text-[10px] shrink-0 bg-black/20 rounded px-1 leading-tight">
                             {order.priority === 0 ? 'S/P' : `P${order.priority}`}
                           </span>
+                          
+                          {isProducing && <Play className="w-3 h-3 fill-green-300 text-green-100 animate-pulse shrink-0" />}
+                          {isMaterialMissing && <AlertTriangle className="w-3 h-3 text-red-200 shrink-0" />}
+
                           <span className="font-bold text-[10px] truncate flex-1">{order.order_number}</span>
                           {statusLabel && (
                             <span className="text-[8px] bg-black/20 rounded px-1 shrink-0 leading-tight">{statusLabel}</span>
