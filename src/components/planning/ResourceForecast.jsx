@@ -49,17 +49,12 @@ export default function ResourceForecast({ orders, employees, machines = [], sel
       const dayStart = new Date(day); dayStart.setHours(0, 0, 0, 0);
       const dayEnd = new Date(day); dayEnd.setHours(23, 59, 59, 999);
 
-      // --- DEMANDA: máquinas únicas activas ese día × 4 operarios ---
+      // --- DEMANDA: máquinas únicas activas ese día × 6 operarios ---
       const activeMachineIds = new Set();
       
       orders.forEach(order => {
         if (!order.effective_start_date || !order.machine_id) return;
         
-        // Excluir máquinas de TERCEROS
-        const machine = machines.find(m => String(m.id) === String(order.machine_id));
-        const machineName = machine ? (machine.nombre || machine.nombre_maquina || '') : '';
-        if (machineName.toUpperCase().includes("TERCEROS")) return;
-
         const oStart = new Date(order.effective_start_date);
         const oEnd = order.effective_delivery_date
           ? new Date(order.effective_delivery_date)
@@ -85,7 +80,7 @@ export default function ResourceForecast({ orders, employees, machines = [], sel
         balance: supply - demand,
       };
     });
-  }, [days, orders, supply, selectedTeam, machines]);
+  }, [days, orders, supply, selectedTeam]);
 
   const avgBalance = forecast.length
     ? (forecast.reduce((s, d) => s + d.balance, 0) / forecast.length).toFixed(1)

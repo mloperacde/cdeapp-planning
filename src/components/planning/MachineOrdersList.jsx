@@ -113,6 +113,12 @@ export default function MachineOrdersList({ machines = [], orders, processes, on
                                     {order.priority === 0 ? 'S/P' : `P${order.priority}`}
                                 </Badge>
                                 
+                                {process && (
+                                    <Badge variant="outline" className="text-[10px] px-1 h-4 border-slate-400 text-slate-600 shrink-0">
+                                        {process.name}
+                                    </Badge>
+                                )}
+
                                 {isProducing && (
                                     <Badge variant="outline" className="bg-green-100 text-green-700 border-green-200 h-4 px-1 gap-0.5 animate-pulse">
                                         <Play className="w-2 h-2 fill-green-700" />
