@@ -187,41 +187,56 @@ export default function OrderImport() {
       }
   };
 
-  const fetchOrders = async () => {
+  const fetchFromCdeApp = async () => {
     setLoading(true);
     const toastId = toast.loading("Sincronizando datos con CDEApp...");
     try {
-      const [response] = await Promise.all([cdeApp.syncProductions(), syncMachinesToLocalDB(true)]);
+      // 1. Sync Machines first to ensure we have latest catalog
+      await syncMachinesToLocalDB(true);
+      
+      // 2. Fetch Productions
+      const response = await cdeApp.syncProductions();
+      
       let data = [];
       if (Array.isArray(response)) data = response;
       else if (response?.data && Array.isArray(response.data)) data = response.data;
-      else if (response?.data) data = [response.data];
+      else if (response) data = [response];
       
-      const normalize = (row) => {
-          // Preservar machine_id original (hex de BD) ANTES de normalizar, para no perderlo
-          const originalMachineId = row.machine_id;
-          const newRow = { ...row };
-          SYSTEM_FIELDS.forEach(field => { const val = extractValue(row, field); if (val !== undefined) newRow[field.key] = val; });
-          // Restaurar machine_id si era un hex de BD válido (24 chars)
-          if (originalMachineId && /^[a-f0-9]{24}$/i.test(String(originalMachineId).trim())) {
-              newRow.machine_id = originalMachineId;
-          }
+      // 3. Normalize Data
+      const normalized = data.map(row => {
+          const newRow = {};
+          
+          // Map system fields using aliases
+          SYSTEM_FIELDS.forEach(field => {
+              let val = extractValue(row, field);
+              if (val !== undefined) newRow[field.key] = val;
+          });
+
+          // Ensure types
           newRow.priority = parseInt(newRow.priority) || 0;
           newRow.quantity = parseInt(newRow.quantity) || 0;
           newRow.status = newRow.status || 'Pendiente';
-          newRow.multi_unit = parseInt(newRow.multi_unit) || 0;
-          newRow.multi_qty = parseFloat(newRow.multi_qty) || 0;
-          newRow.production_cadence = parseFloat(newRow.production_cadence) || 0;
-          newRow.effective_delivery_date = (newRow.new_delivery_date && !String(newRow.new_delivery_date).startsWith('0000')) ? newRow.new_delivery_date : newRow.committed_delivery_date;
-          newRow.effective_start_date = (newRow.modified_start_date && !String(newRow.modified_start_date).startsWith('0000')) ? newRow.modified_start_date : newRow.start_date;
+          
+          // Date logic
+          newRow.effective_delivery_date = (newRow.new_delivery_date && !String(newRow.new_delivery_date).startsWith('0000')) 
+              ? newRow.new_delivery_date 
+              : newRow.committed_delivery_date;
+              
+          newRow.effective_start_date = (newRow.modified_start_date && !String(newRow.modified_start_date).startsWith('0000')) 
+              ? newRow.modified_start_date 
+              : newRow.start_date;
+
+          // Preserve CDE source ID for machine if available
+          if (row.machine_id) newRow.machine_id_source = row.machine_id;
+
           return newRow;
-      };
-      if (data.length > 0) data = data.map(normalize);
-      setRawOrders(data);
-      toast.success(`${data.length} registros obtenidos.`, { id: toastId });
+      });
+
+      setRawOrders(normalized);
+      toast.success(`${normalized.length} registros obtenidos de CDEApp.`, { id: toastId });
     } catch (error) {
-      console.error("Error obteniendo datos:", error);
-      toast.error("Error al conectar con CDEApp.", { id: toastId });
+      console.error("Error fetching CDEApp:", error);
+      toast.error("Error al conectar con CDEApp: " + error.message, { id: toastId });
     } finally {
       setLoading(false);
     }
@@ -449,8 +464,8 @@ export default function OrderImport() {
           )}
         </div>
         <div className="flex gap-2">
-            <Button variant="outline" onClick={fetchOrders} disabled={loading}>
-              {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+            <Button onClick={fetchFromCdeApp} disabled={loading} className="bg-blue-600 hover:bg-blue-700">
+              {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
               Importar desde CDEApp
             </Button>
             <Button 

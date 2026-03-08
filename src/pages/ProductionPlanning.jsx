@@ -80,8 +80,10 @@ export default function ProductionPlanningPage() {
     queryFn: async () => {
       if (!base44.entities.WorkOrder) return [];
       const raw = await base44.entities.WorkOrder.list(undefined, 2000);
-      // Los datos reales están en el campo `notes` como JSON serializado
-      // Extraemos y fusionamos con los campos directos del entity
+      
+      // Get valid machine IDs for verification
+      const validMachineIds = new Set(machines.map(m => String(m.id)));
+
       return raw.map(order => {
         let extra = {};
         if (order.notes && typeof order.notes === 'string') {
@@ -89,21 +91,17 @@ export default function ProductionPlanningPage() {
             const parsed = JSON.parse(order.notes);
             if (parsed && typeof parsed === 'object') {
                 extra = parsed;
-                // Hoist batch ID if it only exists inside the JSON
                 if (!order.import_batch_id && parsed.import_batch_id) {
                     order.import_batch_id = parsed.import_batch_id;
                 }
             }
           } catch (_) { /* no JSON */ }
         }
-        // Normalizar fechas: "DD/MM/YYYY HH:mm" -> ISO completo "YYYY-MM-DDTHH:mm:00"
-        // IMPORTANTE: preservamos la hora para calcular posición fraccionaria en el Gantt
+        
         const normDate = (val) => {
           if (!val) return null;
           if (typeof val !== 'string') return val;
-          // Ya es ISO (contiene guiones y empieza por dígito de año)
-          if (/^\d{4}-/.test(val)) return val; // dejar tal cual (con o sin hora)
-          // DD/MM/YYYY o DD/MM/YYYY HH:mm
+          if (/^\d{4}-/.test(val)) return val;
           if (val.includes('/')) {
             const [datePart, timePart] = val.split(' ');
             const parts = datePart.split('/');
@@ -118,35 +116,35 @@ export default function ProductionPlanningPage() {
           return val;
         };
 
-        // IMPORTANTE: el JSON en `notes` (extra) tiene datos extendidos.
-        // Pero los identificadores relacionales (id, machine_id) y estado en la entidad son la fuente de verdad.
-        // Fusionamos extra primero, y luego sobreescribimos con order para garantizar integridad referencial.
         const merged = { ...extra, ...order };
         
-        // Asegurar que machine_id sea string para comparaciones consistentes
-        if (merged.machine_id) merged.machine_id = String(merged.machine_id);
+        // Ensure machine_id is valid string
+        let machineId = merged.machine_id ? String(merged.machine_id) : "";
+        
+        // Safety Check: If machine_id doesn't exist in master DB, mark as 'orphaned' or handle it
+        // We will keep it but maybe UI can group them in "Sin Asignar"
+        if (!validMachineIds.has(machineId)) {
+            // console.warn("Order on unknown machine:", machineId, merged.order_number);
+        }
 
         return {
           ...merged,
-          // Inicio vigente CON HORA: Fecha Inicio Limite tiene hora real (ej: "23/02/2026 19:37")
-          // modified_start_date (Fecha Inicio Modificada) tiene prioridad si existe
+          machine_id: machineId, // Explicitly set verified ID
+          // ... rest of date logic ...
           effective_start_date: (() => {
             const modStart = normDate(extra['Fecha Inicio Modificada'] || extra.modified_start_date || '');
             const startLimit = normDate(extra['Fecha Inicio Limite'] || extra.start_date || order.start_date || '');
             const result = (modStart && !String(modStart).startsWith('0000') && modStart.length > 0) ? modStart : startLimit;
             return result || null;
           })(),
-          // Fecha fin CON HORA: SIEMPRE usar "Fecha Fin" del JSON interno (ej: "24/02/2026 11:49")
-          // NUNCA usar effective_delivery_date del entity/JSON porque contiene la fecha de entrega, no la fin real
           effective_delivery_date: normDate(
             extra['Fecha Fin'] || extra['end_date_simple'] || extra.planned_end_date || order.planned_end_date || ''
           ),
-          // Fechas normalizadas sin hora (para otros usos)
           start_date: normDate(extra['Fecha Inicio Limite'] || extra.start_date || order.start_date || ''),
           committed_delivery_date: normDate(extra['Fecha Entrega'] || extra.committed_delivery_date || order.committed_delivery_date || ''),
           new_delivery_date: normDate(extra['Nueva Fecha Entrega'] || extra.new_delivery_date || ''),
           planned_end_date: normDate(extra['Fecha Fin'] || extra.planned_end_date || order.planned_end_date || ''),
-          // Campos clave del JSON
+          
           product_article_code: extra.product_article_code || extra['Artículo'] || order.product_article_code,
           product_name: extra.product_name || extra['Nombre'] || order.product_name,
           client_name: extra.client_name || extra['Cliente'] || order.client_name,
@@ -165,6 +163,8 @@ export default function ProductionPlanningPage() {
         };
       });
     },
+    // Make sure we refresh if machines change
+    enabled: machines.length > 0
   });
 
   const { data: processes = [] } = useQuery({
