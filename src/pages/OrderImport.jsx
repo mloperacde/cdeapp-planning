@@ -358,9 +358,18 @@ export default function OrderImport() {
                       machineId = String(rawMachineId).trim();
                   } 
                   
-                  // Priority B: Resolve via Name/SourceID
+                  // Priority B: Resolve via Source ID (CDE ID) - Strict Match
+                  // Si tenemos el ID de origen (machine_id_source), intentamos resolver SOLO por ID.
+                  if (!machineId && machineIdSource) {
+                      const resolvedBySource = resolveMachine(null, machineIdSource);
+                      if (resolvedBySource) {
+                          machineId = resolvedBySource;
+                      }
+                  }
+
+                  // Priority C: Resolve via Name (Only if ID resolution failed)
                   if (!machineId) {
-                      machineId = resolveMachine(machineName, machineIdSource);
+                      machineId = resolveMachine(machineName, null);
                   }
 
                   // Fallback: If machine not found, assign to "Sin Asignar" machine

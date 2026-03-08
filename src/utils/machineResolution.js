@@ -44,26 +44,30 @@ export const buildMachinesMap = (machinesRaw) => {
             if (m.orden_visualizacion) addToIndex(String(Math.round(m.orden_visualizacion)), mid);
 
             // E. Tokenizar Nombre y Descripción para indexar partes (ej: IDs incrustados)
-            // Esto permite que si la máquina se llama "011C 152 - PERFECT", el token "152" apunte a ella.
             const tokenizeAndIndex = (str) => {
                 if (!str) return;
-                // Dividir por espacios, guiones, paréntesis, corchetes
                 const tokens = normStr(str).split(/[\s\-\(\)\[\]\.\:]+/);
                 tokens.forEach(t => {
-                    // Ignorar tokens muy cortos o comunes para evitar ruido, EXCEPTO si parecen IDs numéricos
                     const isNumeric = /^\d+$/.test(t);
                     if (t.length < 2 && !isNumeric) return; 
                     if (['maq', 'maquina', 'linea', 'sala', 'nave', 'cde'].includes(t)) return;
                     
-                    // Solo indexar si no existe ya (para no sobrescribir claves más fuertes)
-                    // Ojo: Si "152" es un token en dos máquinas, esto causará colisión.
-                    // Pero asumimos que los IDs son únicos.
-                    if (!lookup.has(t)) addToIndex(t, mid);
+                    // PREVENCIÓN DE COLISIÓN: 
+                    // Si el token es un número corto (ej: "110"), podría ser parte del nombre de OTRA máquina.
+                    // Priorizamos el código exacto sobre el token difuso.
+                    // Si "110" ya existe en el lookup (porque es código de otra máquina), NO lo sobrescribimos.
+                    if (!lookup.has(t)) {
+                        addToIndex(t, mid);
+                    }
                 });
             };
-            tokenizeAndIndex(m.nombre);
-            tokenizeAndIndex(m.descripcion);
+            // Orden de prioridad para tokenización:
+            // 1. Código (Más fuerte)
             tokenizeAndIndex(m.codigo_maquina);
+            // 2. Descripción con ID CDE (Muy fuerte)
+            tokenizeAndIndex(m.descripcion); 
+            // 3. Nombre / Alias (Más débil)
+            tokenizeAndIndex(m.nombre);
             tokenizeAndIndex(getMachineAlias(m));
         });
     }
