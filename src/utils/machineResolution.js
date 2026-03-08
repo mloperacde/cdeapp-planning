@@ -40,8 +40,17 @@ export const buildMachinesMap = (machinesRaw) => {
             addToIndex(getMachineAlias(m), mid);
 
             // D. IDs Externos (CDE / Importación)
-            if (m.cde_machine_id) addToIndex(String(m.cde_machine_id), mid);
-            if (m.orden_visualizacion) addToIndex(String(Math.round(m.orden_visualizacion)), mid);
+            if (m.cde_machine_id) {
+                // Ensure CDE ID is the strongest key. Overwrite anything else.
+                const cdeKey = normStr(String(m.cde_machine_id));
+                lookup.set(cdeKey, mid);
+                // Also strict key
+                const strictKey = cdeKey.replace(/[^a-z0-9]/g, '');
+                if (strictKey) lookup.set("STRICT:" + strictKey, mid);
+            }
+            
+            // ELIMINADO: No indexar orden_visualizacion porque causa colisiones graves con IDs reales
+            // if (m.orden_visualizacion) addToIndex(String(Math.round(m.orden_visualizacion)), mid);
 
             // E. Tokenizar Nombre y Descripción para indexar partes (ej: IDs incrustados)
             const tokenizeAndIndex = (str) => {
