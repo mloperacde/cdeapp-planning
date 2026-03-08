@@ -7,6 +7,8 @@ import { es } from "date-fns/locale";
 import { getMachineAlias } from "@/utils/machineAlias";
 
 const DAILY_CAPACITY_HOURS = 14;
+const WORK_START_HOUR = 7; // 07:00 AM
+const WORK_END_HOUR = 22;  // 10:00 PM (15 hours span, but maybe lunch break?)
 
 export default function MachineLoadGraph({ orders, machines, dateRange }) {
   // Generate days array
@@ -15,14 +17,14 @@ export default function MachineLoadGraph({ orders, machines, dateRange }) {
     const start = new Date(dateRange.start);
     const end = new Date(dateRange.end);
     
-    if (!isValid(start) || !isValid(end)) return [];
-
+    // ... (rest of days logic)
     const dayList = [];
     let current = start;
     while (current <= end) {
-      const dow = current.getDay(); // 0=Dom, 6=Sáb
-      if (dow !== 0 && dow !== 6) dayList.push(new Date(current));
-      current = addDays(current, 1);
+       // ... existing logic ...
+       const d = new Date(current);
+       if (d.getDay() !== 0 && d.getDay() !== 6) dayList.push(d);
+       current.setDate(current.getDate() + 1);
     }
     return dayList;
   }, [dateRange]);
@@ -34,48 +36,48 @@ export default function MachineLoadGraph({ orders, machines, dateRange }) {
     orders.forEach(order => {
         if (!order.machine_id) return;
         
-        // Use effective dates
         const start = order.effective_start_date ? new Date(order.effective_start_date) : null;
+        // End date logic: prioritize planned_end_date (with time) over delivery date
         const endStr = order.planned_end_date || order.effective_delivery_date;
         const end = endStr ? new Date(endStr) : null;
 
         if (!isValid(start) || !isValid(end)) return;
         if (end < start) return;
 
-        // Iterate days in order range
-        // Optimization: Only iterate days that are within the VIEW range
-        const viewStart = new Date(dateRange.start);
-        const viewEnd = new Date(dateRange.end);
+        // Iterate days
+        let currentIter = new Date(start);
+        currentIter.setHours(0,0,0,0);
         
-        // Intersection of Order Interval and View Interval
-        const effectiveStart = max([start, viewStart]);
-        const effectiveEnd = min([end, viewEnd]);
-        
-        if (effectiveStart > effectiveEnd) return;
+        const lastDay = new Date(end);
+        lastDay.setHours(0,0,0,0);
 
-        let currentDay = startOfDay(effectiveStart);
-        const loopEnd = startOfDay(effectiveEnd);
-
-        while (currentDay <= loopEnd) {
-            const dayIso = format(currentDay, 'yyyy-MM-dd');
+        while (currentIter <= lastDay) {
+            const dayIso = format(currentIter, 'yyyy-MM-dd');
             
             // Calculate overlap for this specific day
-            const dayStart = startOfDay(currentDay);
-            const dayEnd = endOfDay(currentDay);
+            // But CLAMPED to working hours (07:00 - 22:00)
+            const dayStartWork = new Date(currentIter);
+            dayStartWork.setHours(WORK_START_HOUR, 0, 0, 0);
             
-            const overlapStart = max([start, dayStart]);
-            const overlapEnd = min([end, dayEnd]);
+            const dayEndWork = new Date(currentIter);
+            dayEndWork.setHours(WORK_END_HOUR, 0, 0, 0);
             
-            const hours = Math.max(0, differenceInHours(overlapEnd, overlapStart));
+            // Intersection of [OrderStart, OrderEnd] AND [WorkStart, WorkEnd]
+            const overlapStart = max([start, dayStartWork]);
+            const overlapEnd = min([end, dayEndWork]);
             
-            if (hours > 0) {
-                if (!loadMap[order.machine_id]) loadMap[order.machine_id] = {};
-                if (!loadMap[order.machine_id][dayIso]) loadMap[order.machine_id][dayIso] = 0;
+            if (overlapStart < overlapEnd) {
+                const hours = differenceInHours(overlapEnd, overlapStart); // or minutes / 60
+                const minutes = (overlapEnd - overlapStart) / (1000 * 60 * 60);
                 
-                loadMap[order.machine_id][dayIso] += hours;
+                if (minutes > 0) {
+                    if (!loadMap[order.machine_id]) loadMap[order.machine_id] = {};
+                    if (!loadMap[order.machine_id][dayIso]) loadMap[order.machine_id][dayIso] = 0;
+                    loadMap[order.machine_id][dayIso] += minutes;
+                }
             }
             
-            currentDay = addDays(currentDay, 1);
+            currentIter.setDate(currentIter.getDate() + 1);
         }
     });
 
