@@ -42,6 +42,29 @@ export const buildMachinesMap = (machinesRaw) => {
             // D. IDs Externos (CDE / Importación)
             if (m.cde_machine_id) addToIndex(String(m.cde_machine_id), mid);
             if (m.orden_visualizacion) addToIndex(String(Math.round(m.orden_visualizacion)), mid);
+
+            // E. Tokenizar Nombre y Descripción para indexar partes (ej: IDs incrustados)
+            // Esto permite que si la máquina se llama "011C 152 - PERFECT", el token "152" apunte a ella.
+            const tokenizeAndIndex = (str) => {
+                if (!str) return;
+                // Dividir por espacios, guiones, paréntesis, corchetes
+                const tokens = normStr(str).split(/[\s\-\(\)\[\]\.\:]+/);
+                tokens.forEach(t => {
+                    // Ignorar tokens muy cortos o comunes para evitar ruido, EXCEPTO si parecen IDs numéricos
+                    const isNumeric = /^\d+$/.test(t);
+                    if (t.length < 2 && !isNumeric) return; 
+                    if (['maq', 'maquina', 'linea', 'sala', 'nave', 'cde'].includes(t)) return;
+                    
+                    // Solo indexar si no existe ya (para no sobrescribir claves más fuertes)
+                    // Ojo: Si "152" es un token en dos máquinas, esto causará colisión.
+                    // Pero asumimos que los IDs son únicos.
+                    if (!lookup.has(t)) addToIndex(t, mid);
+                });
+            };
+            tokenizeAndIndex(m.nombre);
+            tokenizeAndIndex(m.descripcion);
+            tokenizeAndIndex(m.codigo_maquina);
+            tokenizeAndIndex(getMachineAlias(m));
         });
     }
 
@@ -89,18 +112,27 @@ export const buildMachinesMap = (machinesRaw) => {
         const strictName = nName.replace(/[^a-z0-9]/g, '');
         if (lookup.has("STRICT:" + strictName)) return lookup.get("STRICT:" + strictName);
 
-        // 5. Búsqueda Parcial (Contiene) - Solo si es seguro (> 3 chars)
-        // Iterar sobre las claves conocidas (lento, usar solo como último recurso)
-        // Preferimos claves cortas que estén contenidas en el nombre largo
-        // Ej: DB tiene "MAQUINA X", input es "SALA 1 - MAQUINA X (NUEVA)"
+        // 5. Estrategia Tokenizada Agresiva (Último recurso)
+        // Divide el input por espacios y busca cualquier token que sea una clave exacta conocida
+        // Ej: "011C 152 PERFECT 360" -> Busca "011C", "152", "PERFECT", "360"
+        const allTokens = nName.split(/[\s\-]+/);
+        for (const token of allTokens) {
+            // Ignorar tokens cortos o comunes que puedan dar falsos positivos
+            if (token.length < 3) continue;
+            if (['maq', 'maquina', 'linea', 'sala', 'nave'].includes(token)) continue;
+
+            if (lookup.has(token)) return lookup.get(token);
+        }
+
+        // 6. Búsqueda Parcial (Contiene) - PELIGROSO - Solo usar si tokenización falló
+        // Solo buscamos si el input contiene el nombre de una máquina CONOCIDA
+        // NO al revés (no si la máquina contiene el input) para evitar que "1" coincida con "11"
         for (const [key, id] of lookup.entries()) {
-            if (key.startsWith("STRICT:")) continue; // Skip strict keys
-            if (key.length < 3) continue; // Skip short noise
+            if (key.startsWith("STRICT:")) continue; 
+            if (key.length < 4) continue; // Requiere claves más largas para evitar falsos positivos
             
-            // Si la clave de DB está contenida en el nombre del input
-            // Ej: key="119", input="119 - TORNO" -> MATCH
-            // Ej: key="TORNO", input="119 - TORNO" -> MATCH
-            // Usamos límites de palabra para evitar falsos positivos (ej: "1" en "11")
+            // Si el nombre de entrada contiene la clave de la máquina completa
+            // Ej: Input="LINEA 110 ENVASADO", Key="110" -> MATCH
             const regex = new RegExp(`\\b${key}\\b`, 'i');
             if (regex.test(nName)) return id;
         }

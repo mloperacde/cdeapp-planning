@@ -176,10 +176,14 @@ export default function OrderImport() {
               const name = m.name || m.description || `Máquina ${code}`;
               const location = m.room_name || m.sala || "";
               // Store explicit CDE ID to ensure robust matching later
+              // We append ID to description to make it searchable even if cde_machine_id column is missing
+              const safeDesc = name || `Máquina ${code}`;
+              const enrichedDesc = safeDesc.includes(`[CDE:${m.id}]`) ? safeDesc : `${safeDesc} [CDE:${m.id}]`;
+              
               const payload = { 
                   codigo_maquina: code, 
                   nombre: name, 
-                  descripcion: name, 
+                  descripcion: enrichedDesc, 
                   ubicacion: location,
                   cde_machine_id: String(m.id || "") // Save Source ID
               };
