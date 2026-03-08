@@ -21,7 +21,8 @@ import { Label } from "@/components/ui/label";
 
 const SYSTEM_FIELDS = [
     { key: 'production_id', label: 'Production ID', aliases: ['production_id', 'id', 'PRODUCTION_ID'] },
-    { key: 'machine_id_source', label: 'machine_id', aliases: ['machine_id', 'id_maquina', 'MACHINE_ID'] },
+    // Ensure machine_id has higher priority than machine_name in visual table too
+    { key: 'machine_id_source', label: 'ID Máquina', aliases: ['machine_id', 'id_maquina', 'MACHINE_ID'] },
     { key: 'priority', label: 'Prioridad', aliases: ['priority', 'Prioridad', 'urgencia'] },
     { key: 'type', label: 'Tipo', aliases: ['type', 'Tipo', 'TIPO'] },
     { key: 'status', label: 'Estado', aliases: ['status', 'Estado', 'situacion', 'estatus'] },
