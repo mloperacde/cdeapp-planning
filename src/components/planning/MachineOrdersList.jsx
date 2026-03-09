@@ -42,7 +42,7 @@ export default function MachineOrdersList({ machines = [], orders, processes, on
   };
 
   const getMachineOrders = (machineId) => {
-    return orders.filter(o => o.machine_id === machineId);
+    return orders.filter(o => String(o.machine_id) === String(machineId));
   };
 
   return (
