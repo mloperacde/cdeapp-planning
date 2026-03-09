@@ -406,6 +406,9 @@ export default function AttendanceMonitor() {
       });
 
       // Process Absent Employees
+      const isToday = selectedDate === format(new Date(), 'yyyy-MM-dd');
+      const nowMin = isToday ? toMin(format(new Date(), 'HH:mm')) : 9999;
+
       employees.forEach(master => {
          if (excludedIds.has(String(master.codigo_empleado))) return;
          if (master.incluir_en_planning === false) return; // Skip if excluded
@@ -419,12 +422,28 @@ export default function AttendanceMonitor() {
 
          const { horaEntrada, turnoReal } = getHorarioEsperado(master, teamScheduleMap);
          
-         // Relaxed check: Report absence even if shift is unknown, unless explicit "No Turno"
-         // if (!horaEntrada) return; 
-
-         const ausencia = getAbsenceForDate(master.id, selectedDate);
-         
-         sinRegistro.push({
+         // Lógica de "Pendiente": Si es hoy y la hora de entrada es futura (con margen), no es ausencia aún
+          const ausencia = getAbsenceForDate(master.id, selectedDate);
+          
+          let isPending = false;
+          if (isToday && horaEntrada) {
+              const entradaMin = toMin(horaEntrada);
+              // Calcular tolerancia específica del departamento
+              // Si no está definida en departamentosEstrictos, usa la toleranciaEntrada general (ej: 10 min)
+              // Si está definida, usa toleranciaReducida (ej: 5 min)
+              const tolerancia = departamentosEstrictos.includes(master.departamento) ? toleranciaReducida : toleranciaEntrada;
+              
+              // Margen dinámico según configuración de tolerancia
+              if (entradaMin && nowMin < (entradaMin + tolerancia)) {
+                  isPending = true;
+              }
+          }
+ 
+          // Si está pendiente Y NO TIENE AUSENCIA JUSTIFICADA, lo excluimos de la lista de "Faltas"
+          // Si tiene ausencia justificada (vacaciones, baja), queremos verlo en la lista siempre.
+          if (isPending && !ausencia) return;
+  
+          sinRegistro.push({
             employee_id: String(master.codigo_empleado || master.id),
             employee_name: master.nombre,
             departamento: master.departamento || "—",
