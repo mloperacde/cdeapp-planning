@@ -183,7 +183,7 @@ export function SalaryProvider({ children }) {
            if (r.deductions && Array.isArray(r.deductions)) {
               const configItem = r.deductions.find(d => d.name === "PAY_CONFIG_JSON");
               if (configItem && configItem.description) {
-                 try { return JSON.parse(configItem.description); } catch {}
+                 try { return JSON.parse(configItem.description); } catch { return null; }
               }
            }
         }
@@ -193,7 +193,7 @@ export function SalaryProvider({ children }) {
         if (appConfigs.length > 0) {
            const r = appConfigs[0];
            let raw = r.value || r.description || r.app_subtitle;
-           try { return JSON.parse(raw); } catch {}
+           try { return JSON.parse(raw); } catch { return null; }
         }
         
         return { annual_pay_count: 14, pay_dates: [] };

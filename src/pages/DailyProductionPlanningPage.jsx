@@ -441,7 +441,9 @@ export default function DailyProductionPlanningPage() {
           try {
             const parsed = JSON.parse(order.notes);
             if (parsed && typeof parsed === "object") extra = parsed;
-          } catch (_) {}
+          } catch {
+            0;
+          }
         }
 
         const normDate = (val) => {

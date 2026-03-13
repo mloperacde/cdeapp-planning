@@ -232,11 +232,11 @@ class Base44DataService {
       // return unsubscribe;
       
       console.warn('⚠️ Suscripciones en tiempo real no implementadas');
-      return () => {}; // No-op por ahora
+      return () => undefined;
       
     } catch (error) {
       console.error('Error en suscripción:', error);
-      return () => {};
+      return () => undefined;
     }
   }
   

@@ -33,7 +33,9 @@ export function usePersistentAppConfig(configKey, initialData, queryKeyName, isA
         try {
             const localTs = localStorage.getItem(`last_save_ts_${configKey}`);
             if (localTs) minRequiredTimestamp = parseInt(localTs, 10);
-        } catch(e) {}
+        } catch {
+            0;
+        }
 
         const MAX_RETRIES = 5;
         const RETRY_DELAY = 1000;
@@ -124,7 +126,9 @@ export function usePersistentAppConfig(configKey, initialData, queryKeyName, isA
                         if (p._ts) return p._ts;
                         if (p.timestamp) return p.timestamp;
                     }
-                } catch(e) {}
+                } catch {
+                    0;
+                }
                 
                 // 2. Fallback to record timestamp
                 const d = new Date(item.updated_at || item.created_at || 0);
@@ -148,7 +152,9 @@ export function usePersistentAppConfig(configKey, initialData, queryKeyName, isA
                     try {
                         const full = await base44.entities.AppConfig.get(match.id);
                         if (full) record = full;
-                    } catch(e) {}
+                    } catch {
+                        0;
+                    }
                 }
     
                 // Extract content
@@ -263,7 +269,9 @@ export function usePersistentAppConfig(configKey, initialData, queryKeyName, isA
                         try {
                             const cKey = await base44.entities.AppConfig.filter({ key: chunkKey });
                             if (cKey) chunkMatches = [...chunkMatches, ...cKey];
-                        } catch(e) {}
+                        } catch {
+                            0;
+                        }
                         
                         if (chunkMatches.length > 0) {
                             chunkMatches.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
@@ -271,7 +279,9 @@ export function usePersistentAppConfig(configKey, initialData, queryKeyName, isA
                             try {
                                 const fullChunk = await base44.entities.AppConfig.get(chunkMatch.id);
                                 if (fullChunk) chunkMatch = fullChunk;
-                            } catch (e) {}
+                            } catch {
+                                0;
+                            }
                             
                             let chunkVal = chunkMatch.value;
                             if (!chunkVal && chunkMatch.description) chunkVal = chunkMatch.description;
@@ -429,7 +439,9 @@ export function usePersistentAppConfig(configKey, initialData, queryKeyName, isA
                  localStorage.setItem(`last_save_id_${configKey}`, newMasterId);
                  console.log(`[Config] Saved local consistency tokens: TS=${timestamp}, ID=${newMasterId}`);
              }
-          } catch(e) {}
+          } catch {
+            0;
+          }
           
           try {
               const verifyMaster = await base44.entities.AppConfig.get(newMasterId);
@@ -520,7 +532,9 @@ async function cleanupOldVersions(configKey, keepMasterId) {
                         if (p._ts) return p._ts;
                         if (p.timestamp) return p.timestamp;
                     }
-                } catch(e) {}
+                } catch {
+                    0;
+                }
                 const d = new Date(item.updated_at || item.created_at || 0);
                 return isNaN(d.getTime()) ? 0 : d.getTime();
              };
@@ -557,18 +571,20 @@ async function cleanupOldVersions(configKey, keepMasterId) {
                         
                         // v8 cleanup
                         if (parsed._v === 8 && parsed._chunk_ids) {
-                            await Promise.all(parsed._chunk_ids.map(cid => base44.entities.AppConfig.delete(cid).catch(()=>{}) ));
+                            await Promise.all(parsed._chunk_ids.map(cid => base44.entities.AppConfig.delete(cid).catch(() => undefined)));
                         }
                         // v7.1 cleanup
                         else if (parsed._use_versioned_keys && parsed._ts) {
                              for(let i=0; i<(parsed._chunk_count || 20); i++) {
                                  const ck = `${configKey}_${parsed._ts}_chunk_${i}`;
                                  const cs = await base44.entities.AppConfig.filter({ key: ck });
-                                 for(const c of cs) await base44.entities.AppConfig.delete(c.id).catch(()=>{});
+                                 for(const c of cs) await base44.entities.AppConfig.delete(c.id).catch(() => undefined);
                              }
                         }
                     }
-                } catch(e) {}
+                } catch (e) {
+                    console.warn("[Cleanup] Delete chunks failed", e);
+                }
 
                 // Delete the master record itself
                 await base44.entities.AppConfig.delete(m.id).catch(e => console.warn("Delete master failed", e));

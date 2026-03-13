@@ -144,7 +144,9 @@ export function StructureConfig({ config, setConfig }) {
             updatedAt: new Date().toISOString(),
           };
           window.localStorage.setItem("machineAssignmentStats", JSON.stringify(stats));
-        } catch {}
+        } catch {
+          0;
+        }
       }
 
       if (autoAssigned > 0) {

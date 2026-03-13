@@ -375,7 +375,7 @@ export default function AttendanceControl() {
              const deleteChunkSize = 50;
              for (let i = 0; i < existing.length; i += deleteChunkSize) {
                 const batchIds = existing.slice(i, i + deleteChunkSize).map(e => e.id);
-                await Promise.all(batchIds.map(id => base44.entities.AttendanceRecord.delete(id).catch(() => {})));
+                await Promise.all(batchIds.map(id => base44.entities.AttendanceRecord.delete(id).catch(() => undefined)));
              }
          }
       }
@@ -550,7 +550,7 @@ export default function AttendanceControl() {
         const deleteChunkSize = 50;
         for (let i = 0; i < existing.length; i += deleteChunkSize) {
            const batchIds = existing.slice(i, i + deleteChunkSize).map(e => e.id);
-           await Promise.all(batchIds.map(id => base44.entities.AttendanceRecord.delete(id).catch(() => {})));
+           await Promise.all(batchIds.map(id => base44.entities.AttendanceRecord.delete(id).catch(() => undefined)));
         }
       }
 

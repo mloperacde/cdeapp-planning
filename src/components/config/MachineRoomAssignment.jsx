@@ -44,7 +44,9 @@ export default function MachineRoomAssignment({ config }) {
         const parsed = JSON.parse(raw);
         setAutoStats(parsed);
       }
-    } catch {}
+    } catch {
+      0;
+    }
   }, []);
 
   const { data: machines = [], isLoading } = useQuery({

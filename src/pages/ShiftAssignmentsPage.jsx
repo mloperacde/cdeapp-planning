@@ -636,12 +636,13 @@ export default function ShiftAssignmentsPage() {
     }
   };
 
-  const handleOpenScreen = () => {
+  const handleOpenScreen = async () => {
     if (selectedTeam === "all") {
       toast.error("Seleccione un equipo antes de enviar a pantalla.");
       return;
     }
     const dateStr = format(selectedDate, "yyyy-MM-dd");
+    const screenId = "main";
     let extra = "";
     try {
       const payload = {
@@ -655,14 +656,29 @@ export default function ShiftAssignmentsPage() {
       if (typeof window !== "undefined") {
         try {
           window.localStorage.setItem("shiftAssignmentsDisplayPayload", raw);
-        } catch {}
+        } catch {
+          0;
+        }
         try {
           const encoded = btoa(unescape(encodeURIComponent(raw)));
           extra = `&payload=${encodeURIComponent(encoded)}`;
-        } catch {}
+        } catch {
+          0;
+        }
       }
-    } catch {}
-    const url = `${createPageUrl("ShiftAssignmentsDisplay")}?date=${encodeURIComponent(dateStr)}&shift=${encodeURIComponent(selectedShift)}&teamId=${encodeURIComponent(selectedTeam)}${extra}`;
+      try {
+        const configKey = `shift_assignments_display_${screenId}`;
+        await base44.entities.AppConfig.create({
+          config_key: configKey,
+          value: raw,
+        });
+      } catch {
+        toast.warning("No se pudo actualizar la pantalla remota. Se abrirá la vista de pantalla igualmente.");
+      }
+    } catch {
+      0;
+    }
+    const url = `${createPageUrl("ShiftAssignmentsDisplay")}?screenId=${encodeURIComponent(screenId)}&date=${encodeURIComponent(dateStr)}&shift=${encodeURIComponent(selectedShift)}&teamId=${encodeURIComponent(selectedTeam)}${extra}`;
     window.open(url, "_blank", "noopener,noreferrer");
   };
 

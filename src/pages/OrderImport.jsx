@@ -104,7 +104,7 @@ export default function OrderImport() {
         // Transform local DB orders to match the raw format
         const transformed = orders.map(o => {
             let notes = {};
-            try { notes = JSON.parse(o.notes || '{}'); } catch(e) {}
+            try { notes = JSON.parse(o.notes || '{}'); } catch { 0; }
             return {
                 ...o,
                 ...notes,
@@ -140,7 +140,7 @@ export default function OrderImport() {
              const CHUNK_SIZE = 50;
              for (let i = 0; i < remaining; i += CHUNK_SIZE) {
                  const chunk = allOrders.slice(i, i + CHUNK_SIZE);
-                 await Promise.all(chunk.map(o => base44.entities.WorkOrder.delete(o.id).catch(() => {})));
+                await Promise.all(chunk.map(o => base44.entities.WorkOrder.delete(o.id).catch(() => undefined)));
                  deletedTotal += chunk.length;
                  toast.loading(`Eliminando... (${deletedTotal} borrados)`, { id: toastId });
              }
@@ -334,7 +334,9 @@ export default function OrderImport() {
                   try {
                       const freshList = await base44.entities.MachineMasterDatabase.list(undefined, 2000);
                       unassignedMachine = freshList.find(m => m.codigo_maquina === 'ZZ-UNASSIGNED');
-                  } catch (e2) {}
+                  } catch {
+                      0;
+                  }
                   
                   // ABSOLUTE LAST RESORT: Do NOT default to raw[0] to avoid random assignment.
                   // If we can't find a fallback machine, let machineId stay null so the loop handles it as an error.

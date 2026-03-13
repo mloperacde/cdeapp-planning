@@ -239,8 +239,8 @@ export default function MachineMasterPage() {
   const paginatedItems = filteredMachines;
   const totalPages = 1;
   const currentPage = 1;
-  const nextPage = () => {};
-  const prevPage = () => {};
+  const nextPage = () => undefined;
+  const prevPage = () => undefined;
 
   const tiposUnicos = [...new Set(machines.map(m => m.tipo).filter(Boolean))];
 

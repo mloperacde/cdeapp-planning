@@ -251,8 +251,8 @@ function createMockBase44() {
 
   const auth = {
     me: async () => ({ id: "mock_user_id", email: "mock@example.com", role: "admin", name: "Mock User" }),
-    redirectToLogin: () => {},
-    logout: () => {},
+    redirectToLogin: () => undefined,
+    logout: () => undefined,
   };
 
   const query = () => ({
@@ -267,7 +267,7 @@ function createMockBase44() {
     }),
   });
 
-  const appLogs = { logUserInApp: async () => {} };
+  const appLogs = { logUserInApp: async () => undefined };
   
   const integrations = {
     Core: {

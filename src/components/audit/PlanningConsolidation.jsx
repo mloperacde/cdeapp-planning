@@ -55,7 +55,7 @@ export default function PlanningConsolidation() {
       // Migrar DailyMachineStaffing → DailyMachinePlanning
       for (const ds of dailystaff) {
         try {
-          const inferredTeam = getTeamForDateShift(ds.date, ds.shift);
+          const inferredTeam = ds.team_key || null;
           await base44.entities.DailyMachinePlanning.create({
             date: ds.date,
             shift: ds.shift,

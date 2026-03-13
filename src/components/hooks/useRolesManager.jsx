@@ -152,6 +152,72 @@ const DEFAULT_CONFIG = {
       field_permissions: {},
       parent_role: null,
       isSystem: true
+    },
+    display: {
+      name: "Pantalla",
+      is_strict: true,
+      permissions: {
+        isAdmin: false,
+        canConfigureSystem: false,
+        canManageUsers: false,
+        canViewAuditLogs: false,
+        canModifySecuritySettings: false,
+        canAccessBackendFunctions: false,
+        canViewPersonalData: false,
+        canEditPersonalData: false,
+        canViewSalary: false,
+        canEditSalary: false,
+        canViewBankingData: false,
+        canEditBankingData: false,
+        canEditEmployees: false,
+        canViewSensitiveDocuments: false,
+        canManageContracts: false,
+        canViewPerformanceReviews: false,
+        canEditPerformanceReviews: false,
+        canManageTraining: false,
+        canViewOwnAbsences: false,
+        canCreateOwnAbsences: false,
+        canViewAllAbsences: false,
+        canApproveAbsences: false,
+        canDeleteAbsences: false,
+        canViewAttendance: false,
+        canManageVacationBalance: false,
+        canOverrideAbsenceRules: false,
+        canViewPlanning: true,
+        canEditPlanning: false,
+        canScheduleProduction: false,
+        canModifyProductionOrders: false,
+        canViewProductionCosts: false,
+        canAssignOperators: false,
+        canViewMachines: true,
+        canManageMachines: false,
+        canViewMachineCosts: false,
+        canScheduleMaintenance: false,
+        canApproveMaintenance: false,
+        canViewMaintenanceHistory: false,
+        canEditMaintenanceRecords: false,
+        canAccessMachineDiagnostics: false,
+        canViewQualityData: false,
+        canRecordQualityInspections: false,
+        canApproveQualityReports: false,
+        canAccessNonConformities: false,
+        canViewInventory: false,
+        canManageInventory: false,
+        canViewInventoryCosts: false,
+        canApproveOrders: false,
+        canReceiveGoods: false,
+        canShipGoods: false,
+        canViewReports: false,
+        canViewAdvancedReports: false,
+        canViewFinancialReports: false,
+        canAccessAnalytics: false,
+        canExportData: false,
+        canAccessRealTimeData: false
+      },
+      page_permissions: { "/ShiftAssignmentsDisplay": true },
+      field_permissions: {},
+      parent_role: null,
+      isSystem: true
     }
   },
   user_assignments: {}
@@ -167,14 +233,21 @@ export function useRolesManager() {
 
   // Inicializar config
   useEffect(() => {
+    const ensureDisplayRole = (cfg) => {
+      if (!cfg || !cfg.roles) return cfg;
+      if (!cfg.roles.display) {
+        cfg.roles.display = JSON.parse(JSON.stringify(DEFAULT_CONFIG.roles.display));
+      }
+      return cfg;
+    };
     if (rolesConfig) {
-      setLocalConfig(JSON.parse(JSON.stringify(rolesConfig)));
-      setServerConfig(JSON.parse(JSON.stringify(rolesConfig)));
+      setLocalConfig(ensureDisplayRole(JSON.parse(JSON.stringify(rolesConfig))));
+      setServerConfig(ensureDisplayRole(JSON.parse(JSON.stringify(rolesConfig))));
       setIsDirty(false);
     } else if (!rolesConfigLoading) {
       // No hay config, usar defaults
-      setLocalConfig(JSON.parse(JSON.stringify(DEFAULT_CONFIG)));
-      setServerConfig(JSON.parse(JSON.stringify(DEFAULT_CONFIG)));
+      setLocalConfig(ensureDisplayRole(JSON.parse(JSON.stringify(DEFAULT_CONFIG))));
+      setServerConfig(ensureDisplayRole(JSON.parse(JSON.stringify(DEFAULT_CONFIG))));
       setIsDirty(false);
     }
   }, [rolesConfig, rolesConfigLoading]);

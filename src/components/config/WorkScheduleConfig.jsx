@@ -1,10 +1,13 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Save, Plus, Trash2, Clock } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Save, Plus, Trash2, Clock, Loader2 } from "lucide-react";
+import { base44 } from "@/api/base44Client";
+import { toast } from "sonner";
 
 export default function WorkScheduleConfig() {
   const [jornadaTypes, setJornadaTypes] = useState([
@@ -22,6 +25,51 @@ export default function WorkScheduleConfig() {
 
   const [newJornada, setNewJornada] = useState({ nombre: "", horas: 40, descripcion: "" });
   const [newHorario, setNewHorario] = useState({ nombre: "", tipo: "fijo", inicio: "07:00", fin: "15:00" });
+
+  const queryClient = useQueryClient();
+
+  const { data: configRecord, isLoading } = useQuery({
+    queryKey: ["appConfig", "work_schedule_config"],
+    queryFn: async () => {
+      const configs = await base44.entities.AppConfig.filter({ config_key: "work_schedule_config" }).catch(() => []);
+      const record = configs?.[0] || null;
+      if (!record) return null;
+      const raw = record.value || record.description || record.app_subtitle || "";
+      if (!raw) return { id: record.id, data: null };
+      try {
+        return { id: record.id, data: JSON.parse(raw) };
+      } catch {
+        return { id: record.id, data: null };
+      }
+    },
+    staleTime: 0,
+    gcTime: 0,
+  });
+
+  useEffect(() => {
+    if (!configRecord?.data) return;
+    const nextJornadas = configRecord.data.jornadaTypes;
+    const nextHorarios = configRecord.data.horarios;
+    if (Array.isArray(nextJornadas)) setJornadaTypes(nextJornadas);
+    if (Array.isArray(nextHorarios)) setHorarios(nextHorarios);
+  }, [configRecord]);
+
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      const payload = JSON.stringify({ jornadaTypes, horarios });
+      if (configRecord?.id) {
+        return base44.entities.AppConfig.update(configRecord.id, { config_key: "work_schedule_config", value: payload });
+      }
+      return base44.entities.AppConfig.create({ config_key: "work_schedule_config", value: payload });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["appConfig", "work_schedule_config"] });
+      toast.success("Configuración guardada");
+    },
+    onError: (error) => {
+      toast.error("Error al guardar: " + error.message);
+    },
+  });
 
   const addJornada = () => {
     if (!newJornada.nombre || !newJornada.horas) return;

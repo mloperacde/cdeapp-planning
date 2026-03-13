@@ -17,23 +17,58 @@ export default function ShiftAssignmentsDisplayPage() {
   const shiftParam = searchParams.get("shift") || "";
   const teamIdParam = searchParams.get("teamId");
   const payloadParam = searchParams.get("payload");
+  const screenIdParam = searchParams.get("screenId");
 
   const { employees, machines, teams } = useAppData();
 
-  const dateForFilter = dateParam || format(new Date(), "yyyy-MM-dd");
+  const screenConfigKey = useMemo(() => {
+    if (!screenIdParam) return null;
+    return `shift_assignments_display_${String(screenIdParam).trim()}`;
+  }, [screenIdParam]);
+
+  const { data: remotePayload = null } = useQuery({
+    queryKey: ["shiftAssignmentsDisplayRemotePayload", screenConfigKey],
+    enabled: !!screenConfigKey,
+    queryFn: async () => {
+      if (!screenConfigKey) return null;
+      const items = await base44.entities.AppConfig.filter({ config_key: screenConfigKey }).catch(() => []);
+      if (!items || items.length === 0) return null;
+      const sorted = [...items].sort((a, b) => {
+        const ta = new Date(a.updated_at || a.created_at || 0).getTime();
+        const tb = new Date(b.updated_at || b.created_at || 0).getTime();
+        return (isNaN(tb) ? 0 : tb) - (isNaN(ta) ? 0 : ta);
+      });
+      const newest = sorted[0];
+      if (!newest) return null;
+      const raw = newest.value || newest.description || newest.app_subtitle || "";
+      if (!raw) return null;
+      try {
+        return JSON.parse(raw);
+      } catch {
+        return null;
+      }
+    },
+    refetchInterval: 5000,
+    staleTime: 0,
+  });
 
   const teamKey = useMemo(() => {
-    if (!teamIdParam || teamIdParam === "all") return null;
-    const t = teams.find(team => String(team.id) === String(teamIdParam));
-    return t ? t.team_key : teamIdParam;
-  }, [teams, teamIdParam]);
+    const effectiveTeamId = teamIdParam || remotePayload?.teamId;
+    if (!effectiveTeamId || effectiveTeamId === "all") return null;
+    const t = teams.find(team => String(team.id) === String(effectiveTeamId));
+    return t ? t.team_key : effectiveTeamId;
+  }, [teams, teamIdParam, remotePayload]);
+
+  const effectiveDate = dateParam || remotePayload?.date || format(new Date(), "yyyy-MM-dd");
+  const effectiveShift = shiftParam || remotePayload?.shift || "";
+  const effectiveTeamId = teamIdParam || remotePayload?.teamId;
 
   const { data: dailyStaffing = [] } = useQuery({
-    queryKey: ["dailyMachineStaffingDisplay", dateForFilter, shiftParam, teamKey],
+    queryKey: ["dailyMachineStaffingDisplay", effectiveDate, effectiveShift, teamKey],
     queryFn: () => {
       const filters = {
-        date: dateForFilter,
-        shift: shiftParam
+        date: effectiveDate,
+        shift: effectiveShift
       };
       if (teamKey) {
         filters.team_key = teamKey;
@@ -54,6 +89,7 @@ export default function ShiftAssignmentsDisplayPage() {
       }
     }
     if (fromUrl) return fromUrl;
+    if (remotePayload) return remotePayload;
     if (typeof window === "undefined") return null;
     try {
       const raw = window.localStorage.getItem("shiftAssignmentsDisplayPayload");
@@ -63,7 +99,7 @@ export default function ShiftAssignmentsDisplayPage() {
     } catch {
       return null;
     }
-  }, [payloadParam]);
+  }, [payloadParam, remotePayload]);
 
   const roles = useMemo(
     () => [
@@ -211,19 +247,19 @@ export default function ShiftAssignmentsDisplayPage() {
 
   const displayDate = useMemo(() => {
     try {
-      if (!dateForFilter) return "";
-      const d = new Date(dateForFilter);
+      if (!effectiveDate) return "";
+      const d = new Date(effectiveDate);
       return format(d, "dd/MM/yyyy");
     } catch {
-      return dateForFilter;
+      return effectiveDate;
     }
-  }, [dateForFilter]);
+  }, [effectiveDate]);
 
   const teamName = useMemo(() => {
-    if (!teamIdParam || teamIdParam === "all") return "";
-    const t = teams.find(team => String(team.id) === String(teamIdParam));
+    if (!effectiveTeamId || effectiveTeamId === "all") return "";
+    const t = teams.find(team => String(team.id) === String(effectiveTeamId));
     return t ? t.team_name : "";
-  }, [teams, teamIdParam]);
+  }, [teams, effectiveTeamId]);
 
   return (
     <div className="h-screen w-screen bg-slate-900 text-slate-50 flex flex-col">
@@ -231,7 +267,7 @@ export default function ShiftAssignmentsDisplayPage() {
         <div>
           <div className="text-2xl font-semibold tracking-tight">Asignación de Turno</div>
           <div className="text-sm text-slate-300">
-            {displayDate} · {shiftParam} {teamName ? `· ${teamName}` : ""}
+            {displayDate} · {effectiveShift} {teamName ? `· ${teamName}` : ""}
           </div>
         </div>
         <div className="text-sm text-slate-400">

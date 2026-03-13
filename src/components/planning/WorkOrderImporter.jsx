@@ -261,8 +261,8 @@ export default function WorkOrderImporter({
     open, 
     onClose, 
     onImport,
-    machines = [],
-    processes = []
+    machines: machinesProp = [],
+    processes: processesProp = []
 }) {
   console.log("WorkOrderImporter loaded");
   const queryClient = useQueryClient();
@@ -310,15 +310,18 @@ export default function WorkOrderImporter({
   const [machineOverrides, setMachineOverrides] = useState({}); // Map<RawName, MachineID>
 
   // Data Queries
-  const { data: machines = [], refetch: refetchMachines } = useQuery({
+  const { data: machinesDb = [], refetch: refetchMachines } = useQuery({
     queryKey: ['machines-import'],
     queryFn: () => base44.entities.MachineMasterDatabase.list(),
   });
 
-  const { data: processes = [] } = useQuery({
+  const { data: processesDb = [] } = useQuery({
     queryKey: ['processes-import'],
     queryFn: () => base44.entities.Process.list(),
   });
+
+  const machines = machinesDb.length ? machinesDb : machinesProp;
+  const processes = processesDb.length ? processesDb : processesProp;
 
   // --- Step 1: File Upload ---
   const onDrop = useCallback((acceptedFiles) => {

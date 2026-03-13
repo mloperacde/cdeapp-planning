@@ -319,7 +319,7 @@ export default function SaturdaySupportPlanning({ selectedTeam, teams = [] }) {
                             <div className="flex-1 flex flex-col gap-1 mt-1 overflow-hidden">
                                 {items.slice(0, 3).map(item => {
                                     let notes = {};
-                                    try { notes = JSON.parse(item.notas); } catch (_) {}
+                                    try { notes = JSON.parse(item.notas); } catch { 0; }
                                     const isDone = notes.completed;
                                     
                                     return (

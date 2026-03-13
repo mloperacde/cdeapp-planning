@@ -335,13 +335,13 @@ export const SyncService = {
 
               try {
                   let existing = [];
-                  try { existing = await retryOp(() => base44.entities.WorkOrder.filter({ order_number: String(orderNumber) })); } catch (e) {}
+                  try { existing = await retryOp(() => base44.entities.WorkOrder.filter({ order_number: String(orderNumber) })); } catch { 0; }
 
                   if (existing && existing.length > 0) {
                       await retryOp(() => base44.entities.WorkOrder.update(existing[0].id, payload));
                       if (existing.length > 1) {
                           for (let k = 1; k < existing.length; k++) {
-                              try { await retryOp(() => base44.entities.WorkOrder.delete(existing[k].id)); } catch (e) {}
+                              try { await retryOp(() => base44.entities.WorkOrder.delete(existing[k].id)); } catch { 0; }
                           }
                       }
                   } else {
@@ -364,7 +364,7 @@ export const SyncService = {
           const toDelete = allOrders.filter(o => {
               if (o.import_batch_id === currentBatchId) return false;
               if (o.notes && o.notes.startsWith('{')) {
-                  try { if (JSON.parse(o.notes).import_batch_id === currentBatchId) return false; } catch(e) {}
+                  try { if (JSON.parse(o.notes).import_batch_id === currentBatchId) return false; } catch { 0; }
               }
               return true;
           });
