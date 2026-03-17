@@ -1054,6 +1054,12 @@ export default function MasterEmployeeDatabasePage() {
                     {visibleColumns.taquilla_numero && (
                       <TableCell className="py-0.5 px-3 text-[10px] text-slate-600 dark:text-slate-400 text-center">{emp.taquilla_numero || '-'}</TableCell>
                     )}
+                    {visibleColumns.pin && (
+                      <TableCell className="py-0.5 px-3 text-[10px] text-slate-600 dark:text-slate-400 font-mono text-center">{emp.pin ?? '-'}</TableCell>
+                    )}
+                    {visibleColumns.numero_tarjeta && (
+                      <TableCell className="py-0.5 px-3 text-[10px] text-slate-600 dark:text-slate-400 font-mono text-center">{emp.numero_tarjeta || '-'}</TableCell>
+                    )}
                     {visibleColumns.disponibilidad && (
                       <TableCell className="py-0.5 px-3 text-[10px]">
                         {emp.disponibilidad === 'Ausente' ? (
