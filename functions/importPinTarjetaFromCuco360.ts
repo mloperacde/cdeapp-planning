@@ -74,8 +74,8 @@ Deno.serve(async (req) => {
     let sinMatch = 0;
     let errores = 0;
 
-    // Procesar en lotes paralelos de 10 para ser más rápido
-    const BATCH_SIZE = 10;
+    // Procesar en lotes paralelos de 5 para evitar rate limit
+    const BATCH_SIZE = 5;
     for (let i = 0; i < toProcess.length; i += BATCH_SIZE) {
         const batch = toProcess.slice(i, i + BATCH_SIZE);
 
