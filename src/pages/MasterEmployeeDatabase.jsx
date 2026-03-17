@@ -48,7 +48,8 @@ import {
   ChevronUp,
   Download,
   ShieldCheck,
-  Clock
+  Clock,
+  RefreshCw
 } from "lucide-react";
 import MasterEmployeeEditDialog from "../components/master/MasterEmployeeEditDialog";
 import MasterEmployeeBulkEditDialog from "../components/master/MasterEmployeeBulkEditDialog";
@@ -87,6 +88,8 @@ const ALL_COLUMNS = {
   iban: { label: "IBAN", default: false },
   taquilla_vestuario: { label: "Vestuario", default: false },
   taquilla_numero: { label: "Taquilla", default: false },
+  pin: { label: "PIN Cuco360", default: false },
+  numero_tarjeta: { label: "Tarjeta Cuco360", default: false },
   disponibilidad: { label: "Disponibilidad", default: false },
   estado_sincronizacion: { label: "Sync Status", default: false },
   ultimo_sincronizado: { label: "Últ. Sync", default: false },
