@@ -155,12 +155,31 @@ export default function MasterEmployeeDatabasePage() {
   const { employees: masterEmployees = EMPTY_ARRAY, employeesLoading: isLoading } = appData;
   const permissions = usePermissions() || {};
   const [autoSyncDone, setAutoSyncDone] = useState(false);
+  const [syncingCuco, setSyncingCuco] = useState(false);
 
   const canCreateEmployee = permissions.isAdmin || permissions.canEditEmployees;
   // Use centralized permission check instead of hardcoded role check
   const isHrModuleAllowed = permissions.canAccessPage 
     ? permissions.canAccessPage('/MasterEmployeeDatabase') 
     : (permissions.role === "hr_manager" || permissions.isAdmin);
+
+  const handleSyncCuco360 = async () => {
+    setSyncingCuco(true);
+    toast.promise(
+      async () => {
+        const res = await base44.functions.invoke('importPinTarjetaFromCuco360', { only_missing: false });
+        const data = res.data;
+        queryClient.invalidateQueries({ queryKey: ['employeeMasterDatabase'] });
+        return data.resumen;
+      },
+      {
+        loading: 'Sincronizando PIN y tarjeta desde Cuco360...',
+        success: (r) => `✓ Actualizados: ${r.actualizados} | Sin match: ${r.sin_match_en_cuco} | Errores: ${r.errores}`,
+        error: (err) => `Error: ${err.message}`
+      }
+    );
+    setSyncingCuco(false);
+  };
 
   const handleCheckIntegrity = async () => {
     toast.promise(
