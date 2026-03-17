@@ -818,6 +818,20 @@ export default function MasterEmployeeDatabasePage() {
             </Button>
           )}
 
+          {permissions.isAdmin && (
+            <Button
+              onClick={handleSyncCuco360}
+              size="sm"
+              variant="outline"
+              disabled={syncingCuco}
+              className="bg-orange-50 hover:bg-orange-100 text-orange-700 border-orange-200 h-9 px-3"
+              title="Sincronizar PIN y Tarjeta desde Cuco360"
+            >
+              <RefreshCw className={`w-4 h-4 mr-2 ${syncingCuco ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">Sync Cuco360</span>
+            </Button>
+          )}
+
           {canCreateEmployee && (
             <Button
               onClick={() => {
