@@ -119,8 +119,8 @@ Deno.serve(async (req) => {
             }
         }));
 
-        // Pequeña pausa entre lotes
-        await new Promise(r => setTimeout(r, 200));
+        // Pausa entre lotes para respetar rate limit
+        await new Promise(r => setTimeout(r, 600));
     }
 
     console.log(`Completado: actualizados=${actualizados}, sinMatch=${sinMatch}, errores=${errores}`);
