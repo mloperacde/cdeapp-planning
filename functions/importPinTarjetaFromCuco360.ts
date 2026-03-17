@@ -18,12 +18,37 @@ Deno.serve(async (req) => {
 
     const authKey = apiKey.replace('Bearer ', '').trim();
 
+    // Mismo patrón que funciona en cucoSyncV2
     const headers = {
         'Content-Type': 'application/json',
         'accept': 'application/json',
         'APIkey': authKey,
-        'X-CSRF-TOKEN': ''
+        'X-CSRF-TOKEN': '',
+        'cod_cliente': COD_CLIENTE
     };
+
+    const body = await req.json().catch(() => ({}));
+
+    // Modo test: probar con un solo empleado para verificar el endpoint
+    if (body.test_cod_empleado) {
+        const codEmpleado = body.test_cod_empleado;
+        const url = `${API_BASE}/employees/${codEmpleado}`;
+        console.log(`TEST: GET ${url}`);
+        const response = await fetch(url, { headers });
+        const text = await response.text();
+        console.log(`TEST response (${response.status}): ${text}`);
+        return Response.json({ status: response.status, body: text });
+    }
+
+    // Modo test: obtener lista de empleados desde Cuco360
+    if (body.test_list) {
+        const url = `${API_BASE}/employees?cod_cliente=${COD_CLIENTE}`;
+        console.log(`TEST LIST: GET ${url}`);
+        const response = await fetch(url, { headers });
+        const text = await response.text();
+        console.log(`TEST LIST response (${response.status}): ${text.slice(0, 500)}`);
+        return Response.json({ status: response.status, body: text.slice(0, 2000) });
+    }
 
     // 1. Obtener todos los empleados de nuestra BD
     const localEmployees = await base44.asServiceRole.entities.EmployeeMasterDatabase.list(undefined, 2000);
@@ -47,9 +72,8 @@ Deno.serve(async (req) => {
             continue;
         }
 
-        // 2. Obtener datos del empleado desde Cuco360
-        const url = `${API_BASE}/employees/${codEmpleado}?cod_cliente=${COD_CLIENTE}`;
-        
+        const url = `${API_BASE}/employees/${codEmpleado}`;
+
         let response;
         try {
             response = await fetch(url, { headers });
@@ -77,7 +101,6 @@ Deno.serve(async (req) => {
             continue;
         }
 
-        // Los datos pueden venir en data.data o directamente
         const cucoEmp = data.data || data;
 
         const pinRaw = cucoEmp.pin;
@@ -99,7 +122,7 @@ Deno.serve(async (req) => {
             console.log(`- Empleado ${emp.codigo_empleado} - ${emp.nombre}: sin pin ni tarjeta en Cuco360`);
         }
 
-        // Pequeña pausa para no saturar la API
+        // Pausa para no saturar la API
         await new Promise(r => setTimeout(r, 100));
     }
 
