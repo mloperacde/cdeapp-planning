@@ -26,108 +26,114 @@ Deno.serve(async (req) => {
         'cod_cliente': COD_CLIENTE
     };
 
+    const body = await req.json().catch(() => ({}));
+    
+    // Solo actualizar empleados que aún no tienen pin (para continuar donde se quedó)
+    const onlyMissing = body.only_missing !== false; // por defecto true
+
     // PASO 1: Obtener lista de empleados desde Cuco360
-    // GET /employees/list/{customerId} → devuelve cod_int_empleado + pin
-    console.log(`Obteniendo lista de empleados desde Cuco360 (cliente ${COD_CLIENTE})...`);
+    console.log(`Obteniendo lista de empleados desde Cuco360...`);
     const listResponse = await fetch(`${API_BASE}/employees/list/${COD_CLIENTE}`, { headers });
 
     if (!listResponse.ok) {
         const errText = await listResponse.text();
-        return Response.json({ error: `Error HTTP ${listResponse.status} al obtener lista: ${errText}` }, { status: 500 });
+        return Response.json({ error: `Error HTTP ${listResponse.status}: ${errText}` }, { status: 500 });
     }
 
     const listData = await listResponse.json();
     const cucoEmployees = listData.data?.employees || listData.data || listData;
 
     if (!Array.isArray(cucoEmployees)) {
-        return Response.json({ error: 'Formato inesperado de la lista de empleados', raw: JSON.stringify(listData).slice(0, 500) }, { status: 500 });
+        return Response.json({ error: 'Formato inesperado', raw: JSON.stringify(listData).slice(0, 500) }, { status: 500 });
     }
 
-    console.log(`Empleados obtenidos desde Cuco360: ${cucoEmployees.length}`);
+    console.log(`Empleados en Cuco360: ${cucoEmployees.length}`);
 
-    // PASO 2: Para cada empleado Cuco, obtener detalle con la tarjeta
-    // GET /employees/{cod_empleado_cuco} → devuelve pin + tarjeta
-    // Construimos mapa cod_int_empleado → { pin, tarjeta }
-    const cucoMap = {};
-
-    for (const cucoEmp of cucoEmployees) {
-        const codInterno = String(cucoEmp.cod_int_empleado || '').trim();
-        const codCuco = cucoEmp.cod_empleado;
-        const pinFromList = cucoEmp.pin;
-
-        if (!codInterno || !codCuco) continue;
-
-        // Obtener detalle para conseguir la tarjeta
-        let tarjeta = null;
-        let pinFinal = pinFromList || null;
-
-        try {
-            const detailResponse = await fetch(`${API_BASE}/employees/${codCuco}`, { headers });
-            if (detailResponse.ok) {
-                const detailData = await detailResponse.json();
-                const detail = detailData.data || detailData;
-                tarjeta = detail.tarjeta || null;
-                pinFinal = detail.pin || pinFromList || null;
-            }
-        } catch (e) {
-            console.error(`Error obteniendo detalle de empleado Cuco ${codCuco}: ${e.message}`);
-        }
-
-        cucoMap[codInterno] = { pin: pinFinal, tarjeta };
-
-        // Pequeña pausa para no saturar la API
-        await new Promise(r => setTimeout(r, 80));
-    }
-
-    console.log(`Mapa Cuco360 construido con ${Object.keys(cucoMap).length} entradas`);
-
-    // PASO 3: Actualizar empleados locales con pin y tarjeta
+    // PASO 2: Obtener empleados locales
     const localEmployees = await base44.asServiceRole.entities.EmployeeMasterDatabase.list(undefined, 2000);
-    console.log(`Empleados locales: ${localEmployees.length}`);
+    
+    // Filtrar solo los que no tienen pin si only_missing=true
+    const toProcess = onlyMissing 
+        ? localEmployees.filter(e => !e.pin && e.codigo_empleado)
+        : localEmployees.filter(e => e.codigo_empleado);
+
+    console.log(`Empleados locales a procesar: ${toProcess.length} (onlyMissing=${onlyMissing})`);
+
+    // Mapa cod_int → cod_empleado_cuco (para llamar al detalle)
+    const cucoMapByCodInt = {};
+    const cucoMapPin = {}; // pin ya viene en el listado
+    for (const cucoEmp of cucoEmployees) {
+        const codInt = String(cucoEmp.cod_int_empleado || '').trim();
+        if (codInt) {
+            cucoMapByCodInt[codInt] = cucoEmp.cod_empleado;
+            cucoMapPin[codInt] = cucoEmp.pin || null;
+        }
+    }
 
     let actualizados = 0;
     let sinMatch = 0;
-    let sinCodigo = 0;
-    let sinDatos = 0;
+    let errores = 0;
 
-    for (const emp of localEmployees) {
-        if (!emp.codigo_empleado) { sinCodigo++; continue; }
+    // Procesar en lotes paralelos de 10 para ser más rápido
+    const BATCH_SIZE = 10;
+    for (let i = 0; i < toProcess.length; i += BATCH_SIZE) {
+        const batch = toProcess.slice(i, i + BATCH_SIZE);
 
-        const cod = String(emp.codigo_empleado).trim();
-        const cucoData = cucoMap[cod];
+        await Promise.all(batch.map(async (emp) => {
+            const cod = String(emp.codigo_empleado).trim();
+            const codCuco = cucoMapByCodInt[cod];
 
-        if (!cucoData) { sinMatch++; continue; }
+            if (!codCuco) {
+                sinMatch++;
+                return;
+            }
 
-        const pinRaw = cucoData.pin;
-        const tarjetaRaw = cucoData.tarjeta;
+            try {
+                // Obtener detalle para conseguir tarjeta
+                const detailResponse = await fetch(`${API_BASE}/employees/${codCuco}`, { headers });
+                if (!detailResponse.ok) {
+                    errores++;
+                    return;
+                }
 
-        const pin = (pinRaw !== undefined && pinRaw !== null && pinRaw !== '') ? parseInt(pinRaw, 10) : null;
-        const numeroTarjeta = (tarjetaRaw !== undefined && tarjetaRaw !== null && tarjetaRaw !== '') ? String(tarjetaRaw) : null;
+                const detailData = await detailResponse.json();
+                const detail = detailData.data || detailData;
 
-        if ((pin !== null && !isNaN(pin)) || numeroTarjeta !== null) {
-            const updateData = {};
-            if (pin !== null && !isNaN(pin)) updateData.pin = pin;
-            if (numeroTarjeta) updateData.numero_tarjeta = numeroTarjeta;
+                const pinRaw = detail.pin || cucoMapPin[cod];
+                const tarjetaRaw = detail.tarjeta;
 
-            await base44.asServiceRole.entities.EmployeeMasterDatabase.update(emp.id, updateData);
-            actualizados++;
-            console.log(`✓ ${emp.codigo_empleado} - ${emp.nombre}: pin=${pin}, tarjeta=${numeroTarjeta}`);
-        } else {
-            sinDatos++;
-        }
+                const pin = (pinRaw !== undefined && pinRaw !== null && pinRaw !== '') ? parseInt(pinRaw, 10) : null;
+                const numeroTarjeta = (tarjetaRaw !== undefined && tarjetaRaw !== null && tarjetaRaw !== '') ? String(tarjetaRaw) : null;
+
+                if ((pin !== null && !isNaN(pin)) || numeroTarjeta !== null) {
+                    const updateData = {};
+                    if (pin !== null && !isNaN(pin)) updateData.pin = pin;
+                    if (numeroTarjeta) updateData.numero_tarjeta = numeroTarjeta;
+                    await base44.asServiceRole.entities.EmployeeMasterDatabase.update(emp.id, updateData);
+                    actualizados++;
+                    console.log(`✓ ${emp.codigo_empleado} - ${emp.nombre}: pin=${pin}, tarjeta=${numeroTarjeta}`);
+                }
+            } catch (e) {
+                errores++;
+                console.error(`Error procesando empleado ${cod}: ${e.message}`);
+            }
+        }));
+
+        // Pequeña pausa entre lotes
+        await new Promise(r => setTimeout(r, 200));
     }
 
-    console.log(`Resumen final: actualizados=${actualizados}, sinMatch=${sinMatch}, sinCodigo=${sinCodigo}, sinDatos=${sinDatos}`);
+    console.log(`Completado: actualizados=${actualizados}, sinMatch=${sinMatch}, errores=${errores}`);
 
     return Response.json({
         success: true,
         resumen: {
-            empleados_en_cuco360: cucoEmployees.length,
+            empleados_cuco360: cucoEmployees.length,
             empleados_locales: localEmployees.length,
+            procesados: toProcess.length,
             actualizados,
             sin_match_en_cuco: sinMatch,
-            sin_pin_ni_tarjeta: sinDatos,
-            sin_codigo_local: sinCodigo,
+            errores,
         }
     });
 });
