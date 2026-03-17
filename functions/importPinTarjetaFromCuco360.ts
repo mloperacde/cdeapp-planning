@@ -26,96 +26,62 @@ Deno.serve(async (req) => {
         'cod_cliente': COD_CLIENTE
     };
 
-    const body = await req.json().catch(() => ({}));
-
-    // Debug: explorar endpoints de empleados
-    if (body.explore) {
-        const endpoints = [
-            `/employees`,
-            `/employees?cod_cliente=${COD_CLIENTE}`,
-            `/employees/list`,
-            `/employees/list/${COD_CLIENTE}`,
-            `/employee/list/${COD_CLIENTE}`,
-            `/employee/list`,
-            `/empleados/${COD_CLIENTE}`,
-            `/getemployees/${COD_CLIENTE}`,
-        ];
-
-        const results = [];
-        for (const ep of endpoints) {
-            const url = `${API_BASE}${ep}`;
-            try {
-                const response = await fetch(url, { headers });
-                const text = await response.text();
-                results.push({ endpoint: ep, status: response.status, body: text.slice(0, 300) });
-                console.log(`${ep} -> ${response.status}: ${text.slice(0, 200)}`);
-            } catch (e) {
-                results.push({ endpoint: ep, error: e.message });
-            }
-        }
-        return Response.json({ results });
-    }
-
-    // Debug: probar endpoint con ID de empleado Cuco (el que aparece en la captura como "660")
-    if (body.debug_url) {
-        const url = `${API_BASE}${body.debug_url}`;
-        console.log(`DEBUG: GET ${url}`);
-        const response = await fetch(url, { headers });
-        const text = await response.text();
-        console.log(`Response (${response.status}): ${text.slice(0, 500)}`);
-        return Response.json({ status: response.status, url, body: text.slice(0, 2000) });
-    }
-
-    // PASO 1: Obtener lista completa de empleados desde Cuco360
-    // Basado en la documentación: GET /employees/{customerId}
-    // Pero el customerId puede ser el ID interno de Cuco, no el cod_cliente
-    // Intentamos primero sin parámetro de cliente (autenticado por APIkey)
-    console.log(`Obteniendo lista de empleados desde Cuco360...`);
-    const listUrl = `${API_BASE}/employees`;
-    let listResponse;
-    try {
-        listResponse = await fetch(listUrl, { headers });
-    } catch (netErr) {
-        return Response.json({ error: `Error de red: ${netErr.message}` }, { status: 500 });
-    }
+    // PASO 1: Obtener lista de empleados desde Cuco360
+    // GET /employees/list/{customerId} → devuelve cod_int_empleado + pin
+    console.log(`Obteniendo lista de empleados desde Cuco360 (cliente ${COD_CLIENTE})...`);
+    const listResponse = await fetch(`${API_BASE}/employees/list/${COD_CLIENTE}`, { headers });
 
     if (!listResponse.ok) {
         const errText = await listResponse.text();
-        console.error(`Error al obtener lista: HTTP ${listResponse.status} - ${errText}`);
-        return Response.json({ 
-            error: `Error HTTP ${listResponse.status}`,
-            detail: errText,
-            hint: 'Usa debug_url o explore para investigar el endpoint correcto'
-        }, { status: 500 });
+        return Response.json({ error: `Error HTTP ${listResponse.status} al obtener lista: ${errText}` }, { status: 500 });
     }
 
-    let listData;
-    try {
-        listData = await listResponse.json();
-    } catch {
-        return Response.json({ error: 'Respuesta inválida al obtener lista de empleados' }, { status: 500 });
-    }
+    const listData = await listResponse.json();
+    const cucoEmployees = listData.data?.employees || listData.data || listData;
 
-    const cucoEmployees = listData.data || listData;
     if (!Array.isArray(cucoEmployees)) {
         return Response.json({ error: 'Formato inesperado de la lista de empleados', raw: JSON.stringify(listData).slice(0, 500) }, { status: 500 });
     }
 
     console.log(`Empleados obtenidos desde Cuco360: ${cucoEmployees.length}`);
-    if (cucoEmployees.length > 0) {
-        console.log(`Estructura primer empleado: ${JSON.stringify(cucoEmployees[0])}`);
-    }
 
-    // PASO 2: Construir mapa por código
+    // PASO 2: Para cada empleado Cuco, obtener detalle con la tarjeta
+    // GET /employees/{cod_empleado_cuco} → devuelve pin + tarjeta
+    // Construimos mapa cod_int_empleado → { pin, tarjeta }
     const cucoMap = {};
+
     for (const cucoEmp of cucoEmployees) {
-        const cod = String(
-            cucoEmp.cod_empleado || cucoEmp.cod_interno || cucoEmp.codigo || cucoEmp.id || ''
-        ).trim();
-        if (cod) cucoMap[cod] = cucoEmp;
+        const codInterno = String(cucoEmp.cod_int_empleado || '').trim();
+        const codCuco = cucoEmp.cod_empleado;
+        const pinFromList = cucoEmp.pin;
+
+        if (!codInterno || !codCuco) continue;
+
+        // Obtener detalle para conseguir la tarjeta
+        let tarjeta = null;
+        let pinFinal = pinFromList || null;
+
+        try {
+            const detailResponse = await fetch(`${API_BASE}/employees/${codCuco}`, { headers });
+            if (detailResponse.ok) {
+                const detailData = await detailResponse.json();
+                const detail = detailData.data || detailData;
+                tarjeta = detail.tarjeta || null;
+                pinFinal = detail.pin || pinFromList || null;
+            }
+        } catch (e) {
+            console.error(`Error obteniendo detalle de empleado Cuco ${codCuco}: ${e.message}`);
+        }
+
+        cucoMap[codInterno] = { pin: pinFinal, tarjeta };
+
+        // Pequeña pausa para no saturar la API
+        await new Promise(r => setTimeout(r, 80));
     }
 
-    // PASO 3: Actualizar empleados locales
+    console.log(`Mapa Cuco360 construido con ${Object.keys(cucoMap).length} entradas`);
+
+    // PASO 3: Actualizar empleados locales con pin y tarjeta
     const localEmployees = await base44.asServiceRole.entities.EmployeeMasterDatabase.list(undefined, 2000);
     console.log(`Empleados locales: ${localEmployees.length}`);
 
@@ -128,26 +94,30 @@ Deno.serve(async (req) => {
         if (!emp.codigo_empleado) { sinCodigo++; continue; }
 
         const cod = String(emp.codigo_empleado).trim();
-        const cucoEmp = cucoMap[cod];
+        const cucoData = cucoMap[cod];
 
-        if (!cucoEmp) { sinMatch++; continue; }
+        if (!cucoData) { sinMatch++; continue; }
 
-        const pinRaw = cucoEmp.pin;
-        const tarjetaRaw = cucoEmp.numero_tarjeta || cucoEmp.num_tarjeta;
+        const pinRaw = cucoData.pin;
+        const tarjetaRaw = cucoData.tarjeta;
 
         const pin = (pinRaw !== undefined && pinRaw !== null && pinRaw !== '') ? parseInt(pinRaw, 10) : null;
         const numeroTarjeta = (tarjetaRaw !== undefined && tarjetaRaw !== null && tarjetaRaw !== '') ? String(tarjetaRaw) : null;
 
-        if (pin !== null || numeroTarjeta !== null) {
+        if ((pin !== null && !isNaN(pin)) || numeroTarjeta !== null) {
             const updateData = {};
             if (pin !== null && !isNaN(pin)) updateData.pin = pin;
             if (numeroTarjeta) updateData.numero_tarjeta = numeroTarjeta;
+
             await base44.asServiceRole.entities.EmployeeMasterDatabase.update(emp.id, updateData);
             actualizados++;
+            console.log(`✓ ${emp.codigo_empleado} - ${emp.nombre}: pin=${pin}, tarjeta=${numeroTarjeta}`);
         } else {
             sinDatos++;
         }
     }
+
+    console.log(`Resumen final: actualizados=${actualizados}, sinMatch=${sinMatch}, sinCodigo=${sinCodigo}, sinDatos=${sinDatos}`);
 
     return Response.json({
         success: true,
