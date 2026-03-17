@@ -289,6 +289,8 @@ export default function MasterEmployeeDatabasePage() {
         'Turno Partido Salida 2': emp.turno_partido_salida2 || '',
         'Taquilla Vestuario': emp.taquilla_vestuario || '',
         'Taquilla Número': emp.taquilla_numero || '',
+        'PIN Cuco360': emp.pin ?? '',
+        'Número Tarjeta Cuco360': emp.numero_tarjeta || '',
         'Disponibilidad': emp.disponibilidad || '',
         'Ausencia Inicio': emp.ausencia_inicio ? format(new Date(emp.ausencia_inicio), 'dd/MM/yyyy HH:mm') : '',
         'Ausencia Fin': emp.ausencia_fin ? format(new Date(emp.ausencia_fin), 'dd/MM/yyyy HH:mm') : '',
