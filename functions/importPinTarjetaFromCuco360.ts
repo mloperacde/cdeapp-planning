@@ -119,8 +119,8 @@ Deno.serve(async (req) => {
             }
         }));
 
-        // Pausa entre lotes para respetar rate limit de Base44 (~300ms/op)
-        await new Promise(r => setTimeout(r, 350));
+        // Pausa entre lotes para respetar rate limit de Base44
+        await new Promise(r => setTimeout(r, 1200));
     }
 
     console.log(`Completado: actualizados=${actualizados}, sinMatch=${sinMatch}, errores=${errores}`);
