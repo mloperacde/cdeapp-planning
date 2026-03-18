@@ -821,17 +821,30 @@ export default function MasterEmployeeDatabasePage() {
           )}
 
           {permissions.isAdmin && (
-            <Button
-              onClick={handleSyncCuco360}
-              size="sm"
-              variant="outline"
-              disabled={syncingCuco}
-              className="bg-orange-50 hover:bg-orange-100 text-orange-700 border-orange-200 h-9 px-3"
-              title="Sincronizar PIN y Tarjeta desde Cuco360"
-            >
-              <RefreshCw className={`w-4 h-4 mr-2 ${syncingCuco ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">Sync Cuco360</span>
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={syncingCuco}
+                  className="bg-orange-50 hover:bg-orange-100 text-orange-700 border-orange-200 h-9 px-3"
+                >
+                  <RefreshCw className={`w-4 h-4 mr-2 ${syncingCuco ? 'animate-spin' : ''}`} />
+                  <span className="hidden sm:inline">Sync Cuco360</span>
+                  <ChevronDown className="w-3 h-3 ml-1" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => handleSyncCuco360(true)}>
+                  <RefreshCw className="w-4 h-4 mr-2 text-orange-600" />
+                  Solo sin PIN/tarjeta
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleSyncCuco360(false)}>
+                  <RefreshCw className="w-4 h-4 mr-2 text-red-600" />
+                  Forzar todos (lento)
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
 
           {canCreateEmployee && (
