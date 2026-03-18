@@ -50,8 +50,7 @@ import {
   Download,
   ShieldCheck,
   Clock,
-  RefreshCw,
-  ChevronDown
+  RefreshCw
 } from "lucide-react";
 import MasterEmployeeEditDialog from "../components/master/MasterEmployeeEditDialog";
 import MasterEmployeeBulkEditDialog from "../components/master/MasterEmployeeBulkEditDialog";
