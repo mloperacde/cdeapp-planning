@@ -74,8 +74,8 @@ Deno.serve(async (req) => {
     let sinMatch = 0;
     let errores = 0;
 
-    // Procesar de uno en uno con pausa para respetar rate limit de Base44
-    const BATCH_SIZE = 1;
+    // Procesar en lotes de 3 con pausa para respetar rate limit de Base44
+    const BATCH_SIZE = 3;
     for (let i = 0; i < toProcess.length; i += BATCH_SIZE) {
         const batch = toProcess.slice(i, i + BATCH_SIZE);
 
