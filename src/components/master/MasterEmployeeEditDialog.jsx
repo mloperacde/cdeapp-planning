@@ -890,6 +890,29 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
                     rows={3}
                   />
                 </div>
+
+                <div className="md:col-span-2 border-t pt-4 mt-2">
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Control de Acceso (Cuco360)</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>PIN Cuco360</Label>
+                      <Input
+                        type="number"
+                        value={formData.pin ?? ""}
+                        onChange={(e) => setFormData({ ...formData, pin: e.target.value ? parseInt(e.target.value, 10) : null })}
+                        placeholder="PIN del empleado"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Número de Tarjeta Cuco360</Label>
+                      <Input
+                        value={formData.numero_tarjeta || ""}
+                        onChange={(e) => setFormData({ ...formData, numero_tarjeta: e.target.value })}
+                        placeholder="Número de tarjeta"
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
             </TabsContent>
             )}
