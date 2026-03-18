@@ -163,17 +163,17 @@ export default function MasterEmployeeDatabasePage() {
     ? permissions.canAccessPage('/MasterEmployeeDatabase') 
     : (permissions.role === "hr_manager" || permissions.isAdmin);
 
-  const handleSyncCuco360 = async () => {
+  const handleSyncCuco360 = async (onlyMissing = true) => {
     setSyncingCuco(true);
     toast.promise(
-      async () => {
-        const res = await base44.functions.invoke('importPinTarjetaFromCuco360', { only_missing: false });
+      (async () => {
+        const res = await base44.functions.invoke('importPinTarjetaFromCuco360', { only_missing: onlyMissing });
         const data = res.data;
         queryClient.invalidateQueries({ queryKey: ['employeeMasterDatabase'] });
         return data.resumen;
-      },
+      })(),
       {
-        loading: 'Sincronizando PIN y tarjeta desde Cuco360...',
+        loading: onlyMissing ? 'Sincronizando empleados sin PIN/tarjeta...' : 'Sincronizando todos los empleados desde Cuco360...',
         success: (r) => `✓ Actualizados: ${r.actualizados} | Sin match: ${r.sin_match_en_cuco} | Errores: ${r.errores}`,
         error: (err) => `Error: ${err.message}`
       }
