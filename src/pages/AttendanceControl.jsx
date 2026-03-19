@@ -620,7 +620,6 @@ export default function AttendanceControl() {
             </Button>
           )}
         </div>
-      </div>
 
       {/* Lotes activos del día */}
       {batches.length > 1 && (
