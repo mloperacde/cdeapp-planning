@@ -920,6 +920,31 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
             {permissions.tabs.horarios && (
             <TabsContent value="horarios" className="space-y-4 mt-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                {/* Control Horario por Marcaje */}
+                <div className="md:col-span-2">
+                  <div className={`flex items-start gap-4 p-4 rounded-lg border-2 ${formData.sujeto_a_control_horario !== false ? "bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-800" : "bg-slate-50 border-slate-200 dark:bg-slate-800/20 dark:border-slate-700"}`}>
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Control horario por marcaje (Cuco360)</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                        Si está activado, el sistema esperará que este empleado fiche dentro de su horario configurado. Las ausencias de fichaje generarán incidencias automáticas.
+                      </p>
+                    </div>
+                    <Select
+                      value={formData.sujeto_a_control_horario !== false ? "true" : "false"}
+                      onValueChange={(value) => setFormData({ ...formData, sujeto_a_control_horario: value === "true" })}
+                    >
+                      <SelectTrigger className="w-28 shrink-0">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="true">✅ Sí</SelectItem>
+                        <SelectItem value="false">❌ No</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
                 <div className="space-y-2">
                   <Label>Tipo Jornada</Label>
                   <Select

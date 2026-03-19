@@ -1,235 +1,212 @@
-// @ts-ignore
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.21';
 
-// Declaraciones para el linter local (no afectan a Deno Deploy)
-declare const Deno: {
-  serve: (handler: (req: Request) => Promise<Response> | Response) => void;
-  env: { get: (key: string) => string | undefined };
-};
-
-Deno.serve(async (req: Request) => {
+Deno.serve(async (req) => {
   try {
-    const client = createClientFromRequest(req);
-    // Use service role for database operations
-    const serviceClient = client.asServiceRole || client;
+    const base44 = createClientFromRequest(req);
+    const serviceClient = base44.asServiceRole;
 
     const body = await req.json().catch(() => ({}));
-    
     const { date, start_date, end_date, force, debug_mode } = body;
 
-    // Minimal check
     if (debug_mode) {
-       return Response.json({ 
-          success: true, 
-          message: "Function cucoSyncV2 is deployed and reachable.",
-          has_key: !!Deno.env.get("CUCO360_API_KEY")
-       });
+      return Response.json({
+        success: true,
+        message: "Function cucoSyncV2 is deployed and reachable.",
+        has_key: !!Deno.env.get("CUCO360_API_KEY")
+      });
     }
 
-    // 1. Validate Configuration & API Key
-    // API KEY MUST BE CONFIGURED IN BASE44 SECRETS
-    const apiKeyEnv = Deno.env.get("CUCO360_API_KEY");
-    if (!apiKeyEnv) {
-      throw new Error("Secret 'CUCO360_API_KEY' is not configured in Base44 environment.");
-    }
+    const apiKey = Deno.env.get("CUCO360_API_KEY");
+    if (!apiKey) throw new Error("Secret 'CUCO360_API_KEY' is not configured.");
 
-    // 2. Constants & Params
     const CLIENT_CODE = Deno.env.get("CUCO_CLIENT_CODE") || "380";
-    
-    // Auth: 'apikey' header with raw value (no Bearer) for 'cliente_apikey' scheme
-    const authHeaderValue = apiKeyEnv.replace("Bearer ", "").trim();
-    
-    // --- HEALTH CHECK REMOVED ---
-    // We strictly use the V2 endpoint provided by the user.
-    // --------------------
+    const authHeader = apiKey.replace("Bearer ", "").trim();
 
     let from = start_date;
     let to = end_date;
-    
     if (date) { from = date; to = date; }
     if (!from || !to) {
-       const today = new Date().toISOString().split('T')[0];
-       from = today; to = today;
+      const today = new Date().toISOString().split('T')[0];
+      from = today; to = today;
     }
 
-    // 3. Automation Logic (Skip weekends/holidays)
+    // Saltar fines de semana y festivos (si no es forzado)
     if (!force && from === to) {
-      const targetDate = new Date(from);
-      const dayOfWeek = targetDate.getDay(); 
+      const targetDate = new Date(from + 'T12:00:00Z');
+      const dayOfWeek = targetDate.getUTCDay();
       if (dayOfWeek === 0 || dayOfWeek === 6) {
         return Response.json({ success: true, message: "Skipped: Weekend", count: 0 });
       }
-      
-      const holidays = await client.entities.Holiday.filter({ fecha: from }, "id,nombre", 1);
+      const holidays = await serviceClient.entities.Holiday.filter({ date: from }, "id,name", 1);
       if (holidays && holidays.length > 0) {
-        return Response.json({ success: true, message: `Skipped: Holiday (${holidays[0].nombre})`, count: 0 });
+        return Response.json({ success: true, message: `Skipped: Holiday (${holidays[0].name})`, count: 0 });
       }
     }
 
-    console.log(`[cucoSyncV2] Syncing client ${CLIENT_CODE} from ${from} to ${to}`);
+    console.log(`[cucoSyncV2] Syncing ${CLIENT_CODE} from ${from} to ${to}`);
 
-    // 4. Call CUCO360 API (V2 Endpoint)
-    // URL: https://cuco360.cucorent.com/api/apiv2/checking/getfullchecks/{CLIENT_CODE}
-    // Headers: APIkey: {KEY}
-    
-    const formatDate = (d: string) => {
-        try { return d.includes('T') ? d.split('T')[0] : d; } catch { return d; }
-    };
-    const safeFrom = formatDate(from);
-    const safeTo = formatDate(to);
-    
-    const API_BASE_V2 = "https://cuco360.cucorent.com/api/apiv2";
-    
-    // Add times to ensure full day coverage (as per user example 06:00 to 22:00, but we use 00:00 to 23:59 for safety)
-    const start = encodeURIComponent(`${safeFrom} 00:00:00`); 
-    const end = encodeURIComponent(`${safeTo} 23:59:59`);
-    
-    const url = `${API_BASE_V2}/checking/getfullchecks/${CLIENT_CODE}?start_date=${start}&end_date=${end}`;
-    
-    console.log(`[cucoSyncV2] Fetching URL: ${url}`);
-    
-    // Header CONFIRMADO: 'APIkey' (case sensitive)
-    const headers = { 
+    // ── 1. Obtener marcajes de Cuco360 ──────────────────────────────────────
+    const start = encodeURIComponent(`${from} 00:00:00`);
+    const end = encodeURIComponent(`${to} 23:59:59`);
+    const url = `https://cuco360.cucorent.com/api/apiv2/checking/getfullchecks/${CLIENT_CODE}?start_date=${start}&end_date=${end}`;
+
+    const response = await fetch(url, {
+      headers: {
         "Content-Type": "application/json",
         "accept": "application/json",
-        "APIkey": authHeaderValue,
+        "APIkey": authHeader,
         "X-CSRF-TOKEN": ""
-    };
+      }
+    });
 
-    let response;
-    try {
-        response = await fetch(url, { headers });
-    } catch (netErr: any) {
-        console.error(`[cucoSyncV2] Network Error:`, netErr);
-        throw new Error(`Network Error calling CUCO360: ${netErr?.message || String(netErr)}`);
-    }
-    
     if (!response.ok) {
       const text = await response.text();
-      console.error(`[cucoSyncV2] API Error ${response.status}: ${text}`);
       throw new Error(`CUCO360 API Error (${response.status}): ${text}`);
     }
 
-    let json;
-    try {
-        json = await response.json();
-    } catch (parseErr) {
-        console.error(`[cucoSyncV2] JSON Parse Error`);
-        throw new Error(`Invalid JSON response from CUCO360`);
-    }
-    
-    // Validación respuesta V2
+    const json = await response.json();
     if (json.success === false) {
-      throw new Error(`CUCO360 API returned error: ${json.message || JSON.stringify(json)}`);
+      throw new Error(`CUCO360 error: ${json.message || JSON.stringify(json)}`);
     }
 
-    // Mapping V2: json.checks es el array
     const checks = json.checks || json.data || json;
-    
     if (!Array.isArray(checks)) {
-      if (json.success === true && !json.checks) {
-          return Response.json({ success: true, message: "No data returned from CUCO360 (empty checks)", count: 0 });
-      }
-      throw new Error("Invalid data format from CUCO360: expected 'checks' array");
+      return Response.json({ success: true, message: "No data from CUCO360 (empty checks)", count: 0 });
     }
 
-    // 5. Process & Enrichment (Mapping with Master Database)
-    // Buscamos a los empleados en la base de datos maestra para enriquecer el registro
-    // Esto asegura que guardamos el nombre real, departamento, etc., de nuestra base de datos.
+    // ── 2. Cargar base maestra de empleados ─────────────────────────────────
     const masterEmployees = await serviceClient.entities.EmployeeMasterDatabase.list(undefined, 2000);
-    const masterMapByCodigo: Record<string, any> = {};
+
+    // Mapa por codigo_empleado para cruce rápido
+    const masterMapByCodigo = {};
     for (const emp of masterEmployees) {
-      if (emp.codigo_empleado) masterMapByCodigo[String(emp.codigo_empleado).trim()] = emp;
+      if (emp.codigo_empleado) {
+        masterMapByCodigo[String(emp.codigo_empleado).trim()] = emp;
+      }
     }
 
-    const recordsToCreate = checks.map((check: any) => {
-      // ID externo que viene de Cuco (ej: "76")
+    // ── 3. Procesar registros de marcaje ────────────────────────────────────
+    const recordsToCreate = checks.map((check) => {
       const externalId = String(check.cod_int_empleado || check.cod_interno || check.cod_empleado || "").trim();
-      const fullDate = check.fec_marcaje || check.fecha; // "2026-03-03 09:04:19"
-      
+      const fullDate = check.fec_marcaje || check.fecha;
       if (!externalId || !fullDate) return null;
-      
-      // Intentar encontrar al empleado en nuestra base maestra
+
       const masterEmp = masterMapByCodigo[externalId];
-      
       const dateParts = fullDate.split(' ');
       const dateStr = dateParts[0];
-      const timeStr = dateParts[1] || "00:00:00";
-      
-      let direction = "E";
+      const timeStr = (dateParts[1] || "00:00:00").slice(0, 5);
+
       const type = String(check.val_direccion || "").toUpperCase();
-      if (type === "S" || type === "SALIDA" || type === "OUT" || type === "2") {
-        direction = "S";
-      }
+      const direction = (type === "S" || type === "SALIDA" || type === "OUT" || type === "2") ? "S" : "E";
 
-      // El registro de asistencia guarda el externalId en employee_id por convención del proyecto
-      // Pero enriquecemos los metadatos con la info de nuestra maestra
       return {
-        employee_id: externalId, 
-        employee_name: masterEmp?.nombre || check.nombre || `Empleado ${externalId}`, 
-        department: masterEmp?.departamento || check.des_incidencia || "Producción", // Fallback a Producción si no hay coincidencia
+        employee_id: externalId,
+        employee_name: masterEmp?.nombre || check.nombre || `Empleado ${externalId}`,
+        department: masterEmp?.departamento || "Producción",
         record_date: dateStr,
-        record_time: timeStr.slice(0, 5),
-        direction: direction,
+        record_time: timeStr,
+        direction,
         device: check.nom_dispositivo || "API CUCO360",
-        import_batch: `cuco_v2_sync_${new Date().toISOString().split('T')[0]}`,
-        source: "cuco360_v2"
+        import_batch: `cuco_v2_sync_${new Date().toISOString().split('T')[0]}`
       };
-    }).filter((r: any) => r !== null);
+    }).filter(r => r !== null);
 
-    if (recordsToCreate.length === 0) {
-      return Response.json({ success: true, message: "No new records found in CUCO360.", count: 0 });
-    }
-
-    // Clean up existing records for the day if syncing single day
+    // ── 4. Limpiar registros previos del día (si es sincronización de un solo día) ─
     if (from === to) {
-        // ULTRA-SAFE DELETE:
-        // Raw delete of thousands of records might be too much.
-        // Let's delete in very small sequential batches to ensure stability.
-        
-        let existing = await serviceClient.entities.AttendanceRecord.filter({ record_date: from }, "id", 1000);
-        
-        while (existing && existing.length > 0) {
-             const deleteChunkSize = 20; // Very small batch
-             
-             for (let i = 0; i < existing.length; i += deleteChunkSize) {
-                 const batch = existing.slice(i, i + deleteChunkSize);
-                 // Sequential await to prevent DB saturation
-                 await Promise.all(batch.map((r: any) => serviceClient.entities.AttendanceRecord.delete(r.id).catch(() => {})));
-                 // Small delay
-                 await new Promise(r => setTimeout(r, 50));
-             }
-             
-             existing = await serviceClient.entities.AttendanceRecord.filter({ record_date: from }, "id", 1000);
+      let existing = await serviceClient.entities.AttendanceRecord.filter({ record_date: from }, "id", 1000);
+      while (existing && existing.length > 0) {
+        for (let i = 0; i < existing.length; i += 20) {
+          const batch = existing.slice(i, i + 20);
+          await Promise.all(batch.map(r => serviceClient.entities.AttendanceRecord.delete(r.id).catch(() => {})));
+          await new Promise(r => setTimeout(r, 50));
         }
+        existing = await serviceClient.entities.AttendanceRecord.filter({ record_date: from }, "id", 1000);
+      }
     }
 
-    // Bulk create
-    // Sequential small batches
-    const chunkSize = 20; 
-    
-    for (let i = 0; i < recordsToCreate.length; i += chunkSize) {
-      const chunk = recordsToCreate.slice(i, i + chunkSize);
-      try {
-          await serviceClient.entities.AttendanceRecord.bulkCreate(chunk);
-      } catch (createErr) {
-          console.error("Bulk create error chunk", i, createErr);
-      }
-      // Generous delay
+    // ── 5. Insertar nuevos registros ────────────────────────────────────────
+    for (let i = 0; i < recordsToCreate.length; i += 20) {
+      await serviceClient.entities.AttendanceRecord.bulkCreate(recordsToCreate.slice(i, i + 20)).catch(e => {
+        console.error("Bulk create error chunk", i, e);
+      });
       await new Promise(r => setTimeout(r, 200));
     }
-    
-    return Response.json({ 
-      success: true, 
+
+    // ── 6. Análisis de presencia vs. ausencia ───────────────────────────────
+    // Solo aplica cuando sincronizamos un solo día
+    if (from === to) {
+      const syncDate = from;
+
+      // Empleados sujetos a control horario (Alta + sujeto_a_control_horario !== false)
+      const controlledEmployees = masterEmployees.filter(emp =>
+        emp.estado_empleado === "Alta" &&
+        emp.sujeto_a_control_horario !== false
+      );
+
+      // Conjunto de códigos que ficharon hoy
+      const ficharonHoy = new Set(recordsToCreate.map(r => r.employee_id));
+
+      const ausentes = [];    // Esperados pero sin fichaje
+      const reactivados = []; // Marcados como Ausente pero ficharon
+
+      for (const emp of controlledEmployees) {
+        const code = String(emp.codigo_empleado || "").trim();
+        if (!code) continue;
+
+        const hasFichado = ficharonHoy.has(code);
+
+        if (!hasFichado && emp.disponibilidad !== "Ausente") {
+          // Estaba disponible pero NO fichó → marcar como Ausente
+          ausentes.push(emp);
+        } else if (hasFichado && emp.disponibilidad === "Ausente") {
+          // Estaba marcado como Ausente pero fichó → reactivar
+          reactivados.push(emp);
+        }
+      }
+
+      // Actualizar disponibilidad de ausentes
+      for (const emp of ausentes) {
+        await serviceClient.entities.EmployeeMasterDatabase.update(emp.id, {
+          disponibilidad: "Ausente",
+          ausencia_inicio: `${syncDate}T00:00:00`,
+          ausencia_motivo: "Ausencia detectada automáticamente por sistema (sin fichaje)"
+        }).catch(e => console.warn(`Error marcando ausente ${emp.nombre}:`, e));
+      }
+
+      // Reactivar empleados que ficharon estando marcados como ausentes
+      for (const emp of reactivados) {
+        await serviceClient.entities.EmployeeMasterDatabase.update(emp.id, {
+          disponibilidad: "Disponible",
+          ausencia_fin: new Date().toISOString(),
+          ausencia_motivo: null
+        }).catch(e => console.warn(`Error reactivando ${emp.nombre}:`, e));
+      }
+
+      console.log(`[cucoSyncV2] Análisis: ${ausentes.length} ausentes detectados, ${reactivados.length} reactivados`);
+
+      return Response.json({
+        success: true,
+        message: `Sync OK: ${recordsToCreate.length} fichajes importados`,
+        count: recordsToCreate.length,
+        analysis: {
+          employees_controlled: controlledEmployees.length,
+          ficharon: ficharonHoy.size,
+          ausentes_detectados: ausentes.length,
+          ausentes_nombres: ausentes.map(e => e.nombre),
+          reactivados: reactivados.length,
+          reactivados_nombres: reactivados.map(e => e.nombre)
+        }
+      });
+    }
+
+    return Response.json({
+      success: true,
       message: `Synced ${recordsToCreate.length} records from CUCO360`,
       count: recordsToCreate.length
     });
 
-  } catch (err: any) {
-    console.error("Error:", err);
-    return Response.json({ 
-        success: false, 
-        error: err.message 
-    }, { status: 500 });
+  } catch (err) {
+    console.error("[cucoSyncV2] Error:", err);
+    return Response.json({ success: false, error: err.message }, { status: 500 });
   }
 });
