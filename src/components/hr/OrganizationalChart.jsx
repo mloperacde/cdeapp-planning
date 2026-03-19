@@ -5,9 +5,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { 
-  Users, UserCircle, MoreHorizontal, Plus, Edit, Trash2, ArrowRight,
+  Users, UserCircle, MoreHorizontal, Plus, Edit, Trash2,
   ZoomIn, ZoomOut, Maximize2, Minimize2, ChevronDown, ChevronUp,
-  ArrowLeft, ArrowRight as ArrowRightIcon, RotateCcw
+  ArrowLeft, ArrowRight, RotateCcw
 } from "lucide-react";
 import {
   DropdownMenu,
