@@ -343,15 +343,12 @@ export default function OrganizationalChart({
 
               {!isCompact && deptPositions.length > 0 && (
                 <div className="space-y-0.5 bg-slate-50 dark:bg-slate-800/40 p-1.5 rounded text-[9px] border border-slate-100 dark:border-slate-700 mb-1.5">
-                  {deptPositions.slice(0, 2).map(pos => (
-                    <div key={pos.id} className="flex justify-between items-center">
-                      <span className="truncate max-w-[100px] text-slate-600 dark:text-slate-400" title={pos.name}>{pos.name}</span>
-                      <Badge variant="secondary" className="text-[8px] h-3.5 px-1">{pos.max_headcount || 1}</Badge>
+                  {deptPositions.map(pos => (
+                    <div key={pos.id} className="flex justify-between items-center gap-1">
+                      <span className="truncate text-slate-600 dark:text-slate-400" title={pos.name}>{pos.name}</span>
+                      <Badge variant="secondary" className="text-[8px] h-3.5 px-1 shrink-0">{pos.max_headcount || 1}</Badge>
                     </div>
                   ))}
-                  {deptPositions.length > 2 && (
-                    <div className="text-[8px] text-center text-slate-400">+{deptPositions.length - 2} más</div>
-                  )}
                 </div>
               )}
 
