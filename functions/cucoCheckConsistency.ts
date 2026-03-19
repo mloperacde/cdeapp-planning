@@ -10,11 +10,10 @@ Deno.serve(async (req) => {
   const API_KEY = Deno.env.get("CUCO360_API_KEY");
   const CLIENT_CODE = Deno.env.get("CUCO_CLIENT_CODE") || "380";
 
-  // 1. Obtener empleados de nuestra BD maestra (Alta + sujeto a control horario)
+  // 1. Empleados activos en nuestra BD maestra (sujetos a control horario)
   const ourEmployees = await base44.asServiceRole.entities.EmployeeMasterDatabase.filter({
     estado_empleado: "Alta"
   });
-
   const ourActive = ourEmployees.filter(e => e.sujeto_a_control_horario !== false);
   const ourCodes = ourActive.map(e => String(e.codigo_empleado)).filter(Boolean);
 
@@ -28,15 +27,12 @@ Deno.serve(async (req) => {
     return Response.json({ error: `Error Cuco360: ${cucoRes.status} - ${err}` }, { status: 500 });
   }
 
-  const cucoRawText = await cucoRes.text();
-  console.log("[DEBUG] Cuco360 raw text (first 800):", cucoRawText.substring(0, 800));
-  let cucoData;
-  try { cucoData = JSON.parse(cucoRawText); } catch(e) { return Response.json({ error: "Cuco360 no devolvió JSON válido", raw: cucoRawText.substring(0,300) }, { status: 500 }); }
-  const cucoList = Array.isArray(cucoData) ? cucoData : (cucoData.data || cucoData.employees || cucoData.list || cucoData.results || []);
-  
-  // Filtrar por situación Alta — aceptar "A", "Alta" o ausencia del campo (todos los listados están activos)
-  const cucoActive = cucoList.filter(e => !e.val_situacion || e.val_situacion === "A" || e.val_situacion === "Alta" || e.val_situacion === "a");
-  const cucoCodes = cucoActive.map(e => String(e.cod_interno || e.cod_int_empleado || e.cod_empleado || "")).filter(Boolean);
+  const cucoData = await cucoRes.json();
+  // La API devuelve { response, empleados: [...] }
+  const cucoList = cucoData.empleados || [];
+
+  // cod_int_empleado es el código interno que coincide con nuestro codigo_empleado
+  const cucoCodes = cucoList.map(e => String(e.cod_int_empleado || "").trim()).filter(Boolean);
 
   // 3. Comparar
   const onlyInOurs = ourCodes.filter(c => !cucoCodes.includes(c));
@@ -48,19 +44,23 @@ Deno.serve(async (req) => {
   // Enriquecer con nombres
   const onlyInOursDetail = onlyInOurs.map(code => {
     const emp = ourActive.find(e => String(e.codigo_empleado) === code);
-    return { codigo: code, nombre: emp?.nombre || "Desconocido" };
+    return { id: emp?.id, codigo: code, nombre: emp?.nombre || "Desconocido" };
   });
 
   const onlyInCucoDetail = onlyInCuco.map(code => {
-    const emp = cucoActive.find(e => String(e.cod_interno || e.cod_empleado) === code);
-    return { codigo: code, nombre: emp ? `${emp.nom_empleado || ''} ${emp.ape_empleado || ''}`.trim() : "Desconocido" };
+    const emp = cucoList.find(e => String(e.cod_int_empleado).trim() === code);
+    return {
+      codigo: code,
+      cod_empleado_cuco: emp?.cod_empleado,
+      nombre: emp ? `${emp.nom_empleado || ''} ${emp.ape_empleado || ''}`.trim() : "Desconocido"
+    };
   });
 
   return Response.json({
     consistent,
     summary: {
       total_our_active: ourActive.length,
-      total_cuco_active: cucoActive.length,
+      total_cuco_active: cucoList.length,
       in_both: inBoth.length,
       only_in_ours: onlyInOurs.length,
       only_in_cuco: onlyInCuco.length,
@@ -69,8 +69,6 @@ Deno.serve(async (req) => {
       only_in_ours: onlyInOursDetail,
       only_in_cuco: onlyInCucoDetail,
     },
-    debug_cuco_raw: typeof cucoData === 'object' ? JSON.stringify(cucoData).substring(0, 600) : String(cucoData).substring(0, 600),
-    debug_cuco_list_length: cucoList.length,
     checked_at: new Date().toISOString()
   });
 });
