@@ -79,7 +79,8 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
   const { data: allEmployeeCodes = [] } = useQuery({
     queryKey: ['allEmployeeCodes'],
     queryFn: async () => {
-      const all = await base44.entities.EmployeeMasterDatabase.list(undefined, 2000);
+      // Cargar TODOS los empleados (altas y bajas) para evitar reutilizar códigos
+      const all = await base44.entities.EmployeeMasterDatabase.list(undefined, 9999);
       return all.map(e => e.codigo_empleado).filter(Boolean);
     },
     enabled: !employee && open,
