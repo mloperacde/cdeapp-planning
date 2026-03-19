@@ -470,7 +470,8 @@ export default function AbsenteeismReport() {
           )}
 
           {/* MODO DETALLE: cards por día expandibles */}
-          {viewMode === "detail" && <div className="space-y-2">
+          {viewMode === "detail" && (
+          <div className="space-y-2">
             {filteredSummary.map(({ date, absent, incomplete, present }) => {
               const hasIssues = absent.length > 0 || incomplete.length > 0;
               if (!hasIssues && filterType !== "all") return null;
