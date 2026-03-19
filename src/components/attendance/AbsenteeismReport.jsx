@@ -203,50 +203,11 @@ export default function AbsenteeismReport() {
     const rankingList = [...employeeAbsences.values()]
       .sort((a, b) => (b.absent + b.incomplete) - (a.absent + a.incomplete));
 
-    // Análisis por departamento
-    // "Producción" = departamento que contiene "produc" (case-insensitive)
-    const isProduccion = (dep) => dep && dep.toLowerCase().includes("produc");
+    // Lista de departamentos únicos
+    const deptSet = new Set(activeEmployees.map(e => e.departamento || "Sin departamento"));
+    const deptList = [...deptSet].sort();
 
-    const deptStats = new Map(); // deptName -> { employees: Set<code>, absences: 0, incompletes: 0 }
-    for (const emp of activeEmployees) {
-      const dep = emp.departamento || "Sin departamento";
-      if (!deptStats.has(dep)) deptStats.set(dep, { employees: new Set(), absences: 0, incompletes: 0 });
-      deptStats.get(dep).employees.add(String(emp.codigo_empleado || ""));
-    }
-    for (const { absent, incomplete } of summary) {
-      for (const e of absent) {
-        const dep = e.departamento || "Sin departamento";
-        if (!deptStats.has(dep)) deptStats.set(dep, { employees: new Set(), absences: 0, incompletes: 0 });
-        deptStats.get(dep).absences++;
-      }
-      for (const e of incomplete) {
-        const dep = e.departamento || "Sin departamento";
-        if (!deptStats.has(dep)) deptStats.set(dep, { employees: new Set(), absences: 0, incompletes: 0 });
-        deptStats.get(dep).incompletes++;
-      }
-    }
-
-    const deptList = [...deptStats.entries()].map(([name, s]) => ({
-      name,
-      employeeCount: s.employees.size,
-      absences: s.absences,
-      incompletes: s.incompletes,
-      isProduccion: isProduccion(name),
-    })).sort((a, b) => (b.absences + b.incompletes) - (a.absences + a.incompletes));
-
-    const produccionDepts = deptList.filter(d => d.isProduccion);
-    const otherDepts = deptList.filter(d => !d.isProduccion);
-
-    const calcGroupStats = (depts) => {
-      const empCount = depts.reduce((s, d) => s + d.employeeCount, 0);
-      const abs = depts.reduce((s, d) => s + d.absences, 0);
-      const inc = depts.reduce((s, d) => s + d.incompletes, 0);
-      const possible = empCount * days.length;
-      const pct = possible > 0 ? ((abs / possible) * 100).toFixed(1) : "0.0";
-      return { empCount, abs, inc, pct };
-    };
-
-    return { summary, rankingList, totalDays: days.length, deptList, produccionDepts, otherDepts, calcGroupStats };
+    return { summary, rankingList, totalDays: days.length, deptList };
   }, [reportData, activeEmployees]);
 
   const toggleDay = (date) => setExpandedDays(prev => ({ ...prev, [date]: !prev[date] }));
