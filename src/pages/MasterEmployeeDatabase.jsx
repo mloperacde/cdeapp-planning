@@ -581,17 +581,18 @@ export default function MasterEmployeeDatabasePage() {
   };
 
   const stats = useMemo(() => {
-    if (!masterEmployees) {
-      return { total: 0, active: 0, absent: 0, shiftTypes: [], contractTypes: [] };
+    const data = filteredEmployees;
+    if (!data || data.length === 0) {
+      return { total: 0, excedencias: 0, active: 0, subjectToControl: 0, absent: 0, shiftTypes: [], contractTypes: [] };
     }
 
-    const shiftCounts = masterEmployees.reduce((acc, emp) => {
+    const shiftCounts = data.reduce((acc, emp) => {
       const shift = emp.tipo_turno || 'Sin turno';
       acc[shift] = (acc[shift] || 0) + 1;
       return acc;
     }, {});
 
-    const contractCounts = masterEmployees.reduce((acc, emp) => {
+    const contractCounts = data.reduce((acc, emp) => {
       const tipo = emp.tipo_contrato || 'Sin contrato';
       acc[tipo] = (acc[tipo] || 0) + 1;
       return acc;
@@ -605,17 +606,17 @@ export default function MasterEmployeeDatabasePage() {
       .map(([name, count]) => ({ name, count }))
       .sort((a, b) => b.count - a.count);
 
-    const activeEmployees = masterEmployees.filter(e => e.estado_empleado === 'Alta');
+    const activeEmployees = data.filter(e => e.estado_empleado === 'Alta');
     return {
-      total: masterEmployees.filter(e => e.estado_empleado !== 'Baja').length,
-      excedencias: masterEmployees.filter(e => e.estado_empleado === 'Excedencia').length,
+      total: data.filter(e => e.estado_empleado !== 'Baja').length,
+      excedencias: data.filter(e => e.estado_empleado === 'Excedencia').length,
       active: activeEmployees.length,
       subjectToControl: activeEmployees.filter(e => e.sujeto_a_control_horario !== false).length,
-      absent: masterEmployees.filter(e => e.disponibilidad === 'Ausente').length,
+      absent: data.filter(e => e.disponibilidad === 'Ausente').length,
       shiftTypes,
       contractTypes,
     };
-  }, [masterEmployees]);
+  }, [filteredEmployees]);
 
   const handleAdvancedFilterChange = (newFilters) => {
     if (!newFilters) return;
