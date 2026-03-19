@@ -668,22 +668,37 @@ export default function MasterEmployeeDatabasePage() {
             <span className="text-xs text-slate-500 font-medium uppercase tracking-wider">Resumen de Personal</span>
             <Users className="w-4 h-4 text-blue-600 dark:text-blue-400" />
           </div>
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-4 flex-wrap">
             <div className="flex flex-col">
-              <span className="text-4xl font-bold text-slate-900 dark:text-slate-100">{stats.total}</span>
+              <span className="text-3xl font-bold text-slate-900 dark:text-slate-100">{stats.total}</span>
               <span className="text-[10px] text-slate-500">Total</span>
             </div>
+            <div className="w-px h-8 bg-slate-200 dark:bg-slate-700" />
+            <div className="flex flex-col">
+              <span className="text-3xl font-bold text-amber-600 dark:text-amber-400">{stats.excedencias}</span>
+              <span className="text-[10px] text-slate-500">Excedencias</span>
+            </div>
+            <div className="w-px h-8 bg-slate-200 dark:bg-slate-700" />
             <div className="flex flex-col">
               <div className="flex items-center gap-1">
                 <UserCheck className="w-3 h-3 text-green-500" />
-                <span className="text-4xl font-bold text-green-600 dark:text-green-400">{stats.active}</span>
+                <span className="text-3xl font-bold text-green-600 dark:text-green-400">{stats.active}</span>
               </div>
               <span className="text-[10px] text-slate-500">Activos</span>
             </div>
+            <div className="w-px h-8 bg-slate-200 dark:bg-slate-700" />
+            <div className="flex flex-col">
+              <div className="flex items-center gap-1">
+                <Clock className="w-3 h-3 text-blue-500" />
+                <span className="text-3xl font-bold text-blue-600 dark:text-blue-400">{stats.subjectToControl}</span>
+              </div>
+              <span className="text-[10px] text-slate-500">Control horario</span>
+            </div>
+            <div className="w-px h-8 bg-slate-200 dark:bg-slate-700" />
             <div className="flex flex-col">
               <div className="flex items-center gap-1">
                 <UserX className="w-3 h-3 text-red-500" />
-                <span className="text-4xl font-bold text-red-600 dark:text-red-400">{stats.absent}</span>
+                <span className="text-3xl font-bold text-red-600 dark:text-red-400">{stats.absent}</span>
               </div>
               <span className="text-[10px] text-slate-500">Ausentes</span>
             </div>
