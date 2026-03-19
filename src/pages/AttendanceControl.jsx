@@ -746,8 +746,7 @@ export default function AttendanceControl() {
           </CardContent>
         </Card>
       )}
-
-        </div>
+          </div>
         </TabsContent>
       </Tabs>
     </div>
