@@ -602,8 +602,8 @@ export default function AttendanceControl() {
         </TabsContent>
 
         <TabsContent value="diario">
-        <div className="space-y-4">
-        <div className="flex gap-2 flex-wrap">
+          <div className="space-y-4">
+            <div className="flex gap-2 flex-wrap">
           <Button onClick={handleSyncCuco} disabled={isSyncing || importing} className="bg-indigo-600 hover:bg-indigo-700">
             <RefreshCw className={`w-4 h-4 mr-2 ${isSyncing ? "animate-spin" : ""}`} />
             {isSyncing ? "Sincronizando..." : "Sincronizar (v2)"}
