@@ -548,10 +548,24 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Código Empleado</Label>
-                  <Input
-                    value={formData.codigo_empleado || ""}
-                    onChange={(e) => setFormData({ ...formData, codigo_empleado: e.target.value })}
-                  />
+                  {!employee ? (
+                    <div className="relative">
+                      <Input
+                        value={formData.codigo_empleado || "Calculando..."}
+                        readOnly
+                        className="bg-blue-50 dark:bg-blue-950/30 border-blue-300 text-blue-800 dark:text-blue-200 font-semibold cursor-not-allowed"
+                      />
+                      <span className="absolute right-2 top-2 text-[10px] text-blue-500 font-medium">AUTO</span>
+                    </div>
+                  ) : (
+                    <Input
+                      value={formData.codigo_empleado || ""}
+                      onChange={(e) => setFormData({ ...formData, codigo_empleado: e.target.value })}
+                    />
+                  )}
+                  {!employee && (
+                    <p className="text-[10px] text-blue-600">Código asignado automáticamente (primer hueco libre o siguiente disponible)</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
