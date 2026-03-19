@@ -69,6 +69,8 @@ Deno.serve(async (req) => {
       only_in_ours: onlyInOursDetail,
       only_in_cuco: onlyInCucoDetail,
     },
+    debug_cuco_raw: typeof cucoData === 'object' ? JSON.stringify(cucoData).substring(0, 600) : String(cucoData).substring(0, 600),
+    debug_cuco_list_length: cucoList.length,
     checked_at: new Date().toISOString()
   });
 });
