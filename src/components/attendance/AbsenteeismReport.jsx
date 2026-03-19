@@ -44,6 +44,7 @@ export default function AbsenteeismReport() {
   const [reportData, setReportData] = useState(null); // { days: Map<date, records[]>, employees: Map }
   const [expandedDays, setExpandedDays] = useState({});
   const [filterType, setFilterType] = useState("all"); // all | absent | incomplete
+  const [viewMode, setViewMode] = useState("summary"); // summary | detail
 
   const { employees: employeesData } = useAppData();
   const employees = employeesData || [];
