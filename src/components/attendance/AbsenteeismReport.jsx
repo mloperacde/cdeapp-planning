@@ -546,7 +546,8 @@ export default function AbsenteeismReport() {
                 </Card>
               );
             })}
-          </div>}
+          </div>
+          )}
         </>
       )}
 
