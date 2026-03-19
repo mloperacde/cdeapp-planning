@@ -242,10 +242,11 @@ export default function AbsenteeismReport() {
     if (!processedReport) return [];
     return processedReport.summary.map(day => ({
       ...day,
-      absent: filterType === "incomplete" ? [] : day.absent,
-      incomplete: filterType === "absent" ? [] : day.incomplete,
+      absent: (filterType === "incomplete" ? [] : day.absent).filter(e => filterDept === "all" || (e.departamento || "Sin departamento") === filterDept),
+      incomplete: (filterType === "absent" ? [] : day.incomplete).filter(e => filterDept === "all" || (e.departamento || "Sin departamento") === filterDept),
+      present: day.present.filter(e => filterDept === "all" || (e.departamento || "Sin departamento") === filterDept),
     }));
-  }, [processedReport, filterType]);
+  }, [processedReport, filterType, filterDept]);
 
   return (
     <div className="space-y-4">
