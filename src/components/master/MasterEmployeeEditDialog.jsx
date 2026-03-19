@@ -75,6 +75,42 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
     staleTime: 0, // Forzar recarga cada vez
   });
 
+  // Auto-asignar código de empleado al crear nuevo
+  const { data: allEmployeeCodes = [] } = useQuery({
+    queryKey: ['allEmployeeCodes'],
+    queryFn: async () => {
+      const all = await base44.entities.EmployeeMasterDatabase.list(undefined, 2000);
+      return all.map(e => e.codigo_empleado).filter(Boolean);
+    },
+    enabled: !employee && open,
+    staleTime: 0,
+  });
+
+  useEffect(() => {
+    if (!employee && open && allEmployeeCodes.length > 0) {
+      // Convertir a números, filtrar inválidos y detectar duplicados
+      const numericCodes = [...new Set(
+        allEmployeeCodes.map(c => parseInt(c, 10)).filter(n => !isNaN(n) && n > 0)
+      )].sort((a, b) => a - b);
+
+      const maxCode = numericCodes[numericCodes.length - 1] || 0;
+
+      // Buscar el primer hueco libre entre 1 y maxCode
+      let nextCode = maxCode + 1;
+      for (let i = 1; i <= maxCode; i++) {
+        if (!numericCodes.includes(i)) {
+          nextCode = i;
+          break;
+        }
+      }
+
+      setFormData(prev => ({
+        ...prev,
+        codigo_empleado: String(nextCode),
+      }));
+    }
+  }, [employee, open, allEmployeeCodes]);
+
   const { data: departments = [], isLoading: isLoadingDepts } = useQuery({
     queryKey: ['departments'],
     queryFn: () => base44.entities.Department.list(),
