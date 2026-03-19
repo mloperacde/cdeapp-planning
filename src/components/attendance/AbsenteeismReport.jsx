@@ -425,8 +425,8 @@ export default function AbsenteeismReport() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                      {processedReport.summary.map(({ date, absent, incomplete, present }) => {
-                        const total = activeEmployees.length;
+                      {filteredSummary.map(({ date, absent, incomplete, present }) => {
+                        const total = filterDept === "all" ? activeEmployees.length : activeEmployees.filter(e => (e.departamento || "Sin departamento") === filterDept).length;
                         const absentCount = absent.length;
                         const incompleteCount = incomplete.length;
                         const absentPct = total > 0 ? ((absentCount / total) * 100).toFixed(1) : "0.0";
