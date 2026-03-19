@@ -79,9 +79,17 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
   const { data: allEmployeeCodes = [] } = useQuery({
     queryKey: ['allEmployeeCodes'],
     queryFn: async () => {
-      // Cargar TODOS los empleados (altas y bajas) para evitar reutilizar códigos
-      const all = await base44.entities.EmployeeMasterDatabase.list(undefined, 9999);
-      return all.map(e => e.codigo_empleado).filter(Boolean);
+      // Cargar TODOS los empleados con paginación (altas y bajas) para evitar reutilizar códigos
+      const pageSize = 500;
+      let allCodes = [];
+      let skip = 0;
+      while (true) {
+        const page = await base44.entities.EmployeeMasterDatabase.list(undefined, pageSize, skip);
+        allCodes = allCodes.concat(page.map(e => e.codigo_empleado).filter(Boolean));
+        if (page.length < pageSize) break;
+        skip += pageSize;
+      }
+      return allCodes;
     },
     enabled: !employee && open,
     staleTime: 0,
