@@ -748,6 +748,9 @@ export default function AttendanceControl() {
         </Card>
       )}
 
+        </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
