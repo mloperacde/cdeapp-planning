@@ -28,9 +28,10 @@ Deno.serve(async (req) => {
     return Response.json({ error: `Error Cuco360: ${cucoRes.status} - ${err}` }, { status: 500 });
   }
 
-  const cucoData = await cucoRes.json();
-  console.log("[DEBUG] Cuco360 raw response keys:", JSON.stringify(Object.keys(cucoData)));
-  console.log("[DEBUG] Cuco360 raw sample:", JSON.stringify(cucoData).substring(0, 500));
+  const cucoRawText = await cucoRes.text();
+  console.log("[DEBUG] Cuco360 raw text (first 800):", cucoRawText.substring(0, 800));
+  let cucoData;
+  try { cucoData = JSON.parse(cucoRawText); } catch(e) { return Response.json({ error: "Cuco360 no devolvió JSON válido", raw: cucoRawText.substring(0,300) }, { status: 500 }); }
   const cucoList = Array.isArray(cucoData) ? cucoData : (cucoData.data || cucoData.employees || cucoData.list || cucoData.results || []);
   
   // Filtrar por situación Alta — aceptar "A", "Alta" o ausencia del campo (todos los listados están activos)
