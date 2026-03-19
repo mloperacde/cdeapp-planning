@@ -29,7 +29,9 @@ Deno.serve(async (req) => {
   }
 
   const cucoData = await cucoRes.json();
-  const cucoList = Array.isArray(cucoData) ? cucoData : (cucoData.data || cucoData.employees || []);
+  console.log("[DEBUG] Cuco360 raw response keys:", JSON.stringify(Object.keys(cucoData)));
+  console.log("[DEBUG] Cuco360 raw sample:", JSON.stringify(cucoData).substring(0, 500));
+  const cucoList = Array.isArray(cucoData) ? cucoData : (cucoData.data || cucoData.employees || cucoData.list || cucoData.results || []);
   
   // Filtrar por situación Alta — aceptar "A", "Alta" o ausencia del campo (todos los listados están activos)
   const cucoActive = cucoList.filter(e => !e.val_situacion || e.val_situacion === "A" || e.val_situacion === "Alta" || e.val_situacion === "a");
