@@ -385,11 +385,11 @@ export default function AbsenteeismReport() {
               <select
                 value={filterDept}
                 onChange={e => setFilterDept(e.target.value)}
-                className="text-xs px-3 py-1.5 rounded-full font-medium border border-slate-200 bg-white text-slate-600 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                className="text-xs px-2 py-1.5 rounded-full border border-slate-200 bg-white text-slate-600 font-medium focus:outline-none focus:ring-1 focus:ring-indigo-400"
               >
                 <option value="all">Todos los departamentos</option>
-                {processedReport.deptList.map(d => (
-                  <option key={d} value={d}>{d}</option>
+                {processedReport.deptList.map(dep => (
+                  <option key={dep} value={dep}>{dep}</option>
                 ))}
               </select>
             </div>
@@ -425,8 +425,8 @@ export default function AbsenteeismReport() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                      {filteredSummary.map(({ date, absent, incomplete, present }) => {
-                        const total = filterDept === "all" ? activeEmployees.length : activeEmployees.filter(e => (e.departamento || "Sin departamento") === filterDept).length;
+                      {processedReport.summary.map(({ date, absent, incomplete, present }) => {
+                        const total = activeEmployees.length;
                         const absentCount = absent.length;
                         const incompleteCount = incomplete.length;
                         const absentPct = total > 0 ? ((absentCount / total) * 100).toFixed(1) : "0.0";
@@ -465,16 +465,15 @@ export default function AbsenteeismReport() {
                         <td className="px-4 py-2.5 font-bold text-slate-700">TOTAL</td>
                         <td className="px-4 py-2.5 text-center text-slate-500 text-xs">—</td>
                         <td className="px-4 py-2.5 text-center font-bold text-red-700">
-                          {filteredSummary.reduce((s, d) => s + d.absent.length, 0)}
+                          {processedReport.summary.reduce((s, d) => s + d.absent.length, 0)}
                         </td>
                         <td className="px-4 py-2.5 text-center font-bold text-orange-700">
-                          {filteredSummary.reduce((s, d) => s + d.incomplete.length, 0)}
+                          {processedReport.summary.reduce((s, d) => s + d.incomplete.length, 0)}
                         </td>
                         <td className="px-4 py-2.5 text-center font-bold text-slate-700">
                           {(() => {
-                            const totalAbsences = filteredSummary.reduce((s, d) => s + d.absent.length, 0);
-                            const filteredEmpCount = filterDept === "all" ? activeEmployees.length : activeEmployees.filter(e => (e.departamento || "Sin departamento") === filterDept).length;
-                            const totalPossible = filteredEmpCount * processedReport.totalDays;
+                            const totalAbsences = processedReport.summary.reduce((s, d) => s + d.absent.length, 0);
+                            const totalPossible = activeEmployees.length * processedReport.totalDays;
                             return totalPossible > 0 ? ((totalAbsences / totalPossible) * 100).toFixed(1) + "%" : "—";
                           })()}
                         </td>
