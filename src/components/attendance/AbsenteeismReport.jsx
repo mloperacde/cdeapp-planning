@@ -364,21 +364,113 @@ export default function AbsenteeismReport() {
             </Card>
           )}
 
-          {/* Filtro */}
-          <div className="flex gap-2">
-            {[["all", "Todos"], ["absent", "Solo ausentes"], ["incomplete", "Solo inc. jornada"]].map(([val, label]) => (
+          {/* Controles de vista y filtro */}
+          <div className="flex flex-wrap gap-2 items-center justify-between">
+            <div className="flex gap-2">
+              {[["all", "Todos"], ["absent", "Solo ausentes"], ["incomplete", "Solo inc. jornada"]].map(([val, label]) => (
+                <button
+                  key={val}
+                  onClick={() => setFilterType(val)}
+                  className={`text-xs px-3 py-1.5 rounded-full font-medium transition-colors ${filterType === val ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-1 bg-slate-100 rounded-lg p-1">
               <button
-                key={val}
-                onClick={() => setFilterType(val)}
-                className={`text-xs px-3 py-1.5 rounded-full font-medium transition-colors ${filterType === val ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+                onClick={() => setViewMode("summary")}
+                className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md font-medium transition-colors ${viewMode === "summary" ? "bg-white shadow text-slate-800" : "text-slate-500 hover:text-slate-700"}`}
               >
-                {label}
+                <Table2 className="w-3.5 h-3.5" /> Resumen
               </button>
-            ))}
+              <button
+                onClick={() => setViewMode("detail")}
+                className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md font-medium transition-colors ${viewMode === "detail" ? "bg-white shadow text-slate-800" : "text-slate-500 hover:text-slate-700"}`}
+              >
+                <LayoutList className="w-3.5 h-3.5" /> Detalle
+              </button>
+            </div>
           </div>
 
-          {/* Detalle por día */}
-          <div className="space-y-2">
+          {/* MODO RESUMEN: tabla por día */}
+          {viewMode === "summary" && (
+            <Card>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-slate-50 dark:bg-slate-800 border-b">
+                      <tr>
+                        <th className="text-left px-4 py-3 font-medium text-slate-600">Fecha</th>
+                        <th className="text-center px-4 py-3 font-medium text-slate-600">Deberían fichar</th>
+                        <th className="text-center px-4 py-3 font-medium text-slate-600">Sin presencia</th>
+                        <th className="text-center px-4 py-3 font-medium text-slate-600">Con incidencia</th>
+                        <th className="text-center px-4 py-3 font-medium text-slate-600">% Ausencia</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                      {processedReport.summary.map(({ date, absent, incomplete, present }) => {
+                        const total = activeEmployees.length;
+                        const absentCount = absent.length;
+                        const incompleteCount = incomplete.length;
+                        const absentPct = total > 0 ? ((absentCount / total) * 100).toFixed(1) : "0.0";
+                        const hasIssues = absentCount > 0 || incompleteCount > 0;
+                        return (
+                          <tr key={date} className={`hover:bg-slate-50 dark:hover:bg-slate-800/50 ${hasIssues ? "" : "opacity-60"}`}>
+                            <td className="px-4 py-2.5 font-medium text-slate-700">
+                              {format(parseISO(date), "EEE d MMM", { locale: es })}
+                            </td>
+                            <td className="px-4 py-2.5 text-center">
+                              <span className="font-semibold text-slate-700">{total}</span>
+                            </td>
+                            <td className="px-4 py-2.5 text-center">
+                              {absentCount > 0
+                                ? <Badge className="bg-red-100 text-red-800">{absentCount}</Badge>
+                                : <span className="text-green-600 font-semibold">0</span>
+                              }
+                            </td>
+                            <td className="px-4 py-2.5 text-center">
+                              {incompleteCount > 0
+                                ? <Badge className="bg-orange-100 text-orange-800">{incompleteCount}</Badge>
+                                : <span className="text-green-600 font-semibold">0</span>
+                              }
+                            </td>
+                            <td className="px-4 py-2.5 text-center">
+                              <span className={`font-bold text-sm ${parseFloat(absentPct) >= 10 ? "text-red-600" : parseFloat(absentPct) >= 5 ? "text-orange-500" : "text-green-600"}`}>
+                                {absentPct}%
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                    <tfoot className="bg-slate-50 dark:bg-slate-800 border-t-2 border-slate-200">
+                      <tr>
+                        <td className="px-4 py-2.5 font-bold text-slate-700">TOTAL</td>
+                        <td className="px-4 py-2.5 text-center text-slate-500 text-xs">—</td>
+                        <td className="px-4 py-2.5 text-center font-bold text-red-700">
+                          {processedReport.summary.reduce((s, d) => s + d.absent.length, 0)}
+                        </td>
+                        <td className="px-4 py-2.5 text-center font-bold text-orange-700">
+                          {processedReport.summary.reduce((s, d) => s + d.incomplete.length, 0)}
+                        </td>
+                        <td className="px-4 py-2.5 text-center font-bold text-slate-700">
+                          {(() => {
+                            const totalAbsences = processedReport.summary.reduce((s, d) => s + d.absent.length, 0);
+                            const totalPossible = activeEmployees.length * processedReport.totalDays;
+                            return totalPossible > 0 ? ((totalAbsences / totalPossible) * 100).toFixed(1) + "%" : "—";
+                          })()}
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* MODO DETALLE: cards por día expandibles */}
+          {viewMode === "detail" && <div className="space-y-2">
             {filteredSummary.map(({ date, absent, incomplete, present }) => {
               const hasIssues = absent.length > 0 || incomplete.length > 0;
               if (!hasIssues && filterType !== "all") return null;
