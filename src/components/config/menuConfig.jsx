@@ -42,6 +42,7 @@ export const MENU_STRUCTURE = [
   { name: 'Dashboard RRHH', path: '/AdvancedHRDashboard', icon: LayoutDashboard, category: 'Recursos Humanos' },
   { name: 'Estructura Organizativa', path: '/OrganizationalStructure', icon: GitBranch, category: 'Recursos Humanos' },
   { name: 'Base de datos de Empleados', path: '/MasterEmployeeDatabase', icon: Users, category: 'Recursos Humanos' },
+  { name: 'Sincronización Cuco360', path: '/CucoSyncDashboard', icon: Link2, category: 'Recursos Humanos' },
   { name: 'ETT y Temporales', path: '/ETTTemporaryEmployees', icon: Briefcase, category: 'Recursos Humanos' },
   { name: 'Onboarding', path: '/EmployeeOnboarding', icon: UserPlus, category: 'Recursos Humanos' },
   { name: 'Control Presencia', path: '/AttendanceManagement', icon: Clock, category: 'Recursos Humanos' },
