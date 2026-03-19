@@ -605,9 +605,12 @@ export default function MasterEmployeeDatabasePage() {
       .map(([name, count]) => ({ name, count }))
       .sort((a, b) => b.count - a.count);
 
+    const activeEmployees = masterEmployees.filter(e => e.estado_empleado === 'Alta');
     return {
-      total: masterEmployees.filter(e => ['Alta', 'Excedencia'].includes(e.estado_empleado)).length,
-      active: masterEmployees.filter(e => e.estado_empleado === 'Alta').length,
+      total: masterEmployees.filter(e => e.estado_empleado !== 'Baja').length,
+      excedencias: masterEmployees.filter(e => e.estado_empleado === 'Excedencia').length,
+      active: activeEmployees.length,
+      subjectToControl: activeEmployees.filter(e => e.sujeto_a_control_horario !== false).length,
       absent: masterEmployees.filter(e => e.disponibilidad === 'Ausente').length,
       shiftTypes,
       contractTypes,
