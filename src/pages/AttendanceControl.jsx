@@ -583,6 +583,26 @@ export default function AttendanceControl() {
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Control de Presencia</h1>
           <p className="text-sm text-slate-500">Importa y analiza los marcajes del sistema de control de acceso</p>
         </div>
+      </div>
+
+      <Tabs defaultValue="diario" className="w-full">
+        <TabsList className="mb-4">
+          <TabsTrigger value="diario">
+            <Clock className="w-4 h-4 mr-2" />
+            Control Diario
+          </TabsTrigger>
+          <TabsTrigger value="informe">
+            <BarChart2 className="w-4 h-4 mr-2" />
+            Informe Absentismo
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="informe">
+          <AbsenteeismReport />
+        </TabsContent>
+
+        <TabsContent value="diario">
+        <div className="space-y-4">
         <div className="flex gap-2 flex-wrap">
           <Button onClick={handleSyncCuco} disabled={isSyncing || importing} className="bg-indigo-600 hover:bg-indigo-700">
             <RefreshCw className={`w-4 h-4 mr-2 ${isSyncing ? "animate-spin" : ""}`} />
