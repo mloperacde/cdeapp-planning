@@ -465,10 +465,10 @@ export default function AbsenteeismReport() {
                         <td className="px-4 py-2.5 font-bold text-slate-700">TOTAL</td>
                         <td className="px-4 py-2.5 text-center text-slate-500 text-xs">—</td>
                         <td className="px-4 py-2.5 text-center font-bold text-red-700">
-                          {processedReport.summary.reduce((s, d) => s + d.absent.length, 0)}
+                          {filteredSummary.reduce((s, d) => s + d.absent.length, 0)}
                         </td>
                         <td className="px-4 py-2.5 text-center font-bold text-orange-700">
-                          {processedReport.summary.reduce((s, d) => s + d.incomplete.length, 0)}
+                          {filteredSummary.reduce((s, d) => s + d.incomplete.length, 0)}
                         </td>
                         <td className="px-4 py-2.5 text-center font-bold text-slate-700">
                           {(() => {
