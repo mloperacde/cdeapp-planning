@@ -248,6 +248,7 @@ function PagesContent() {
                 <Route path="/MaintenanceInterventions" element={<MaintenanceInterventions />} />
                 
                 <Route path="/MasterEmployeeDatabase" element={<MasterEmployeeDatabase />} />
+                <Route path="/CucoSyncDashboard" element={<CucoSyncDashboard />} />
                 
 
                 

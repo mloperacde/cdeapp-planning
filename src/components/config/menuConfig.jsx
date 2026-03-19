@@ -30,7 +30,8 @@ import {
   LayoutDashboard,
   CalendarDays,
   Truck,
-  Star
+  Star,
+  Link2
 } from 'lucide-react';
 
 export const MENU_STRUCTURE = [
