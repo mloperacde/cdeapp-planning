@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  RefreshCw, Download, Users, AlertCircle, UserX, Clock, CalendarRange, ChevronDown, ChevronUp
+  RefreshCw, Download, Users, AlertCircle, UserX, Clock, CalendarRange, ChevronDown, ChevronUp, LayoutList, Table2
 } from "lucide-react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
