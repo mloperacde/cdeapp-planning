@@ -372,7 +372,7 @@ export default function AbsenteeismReport() {
 
           {/* Controles de vista y filtro */}
           <div className="flex flex-wrap gap-2 items-center justify-between">
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2 items-center">
               {[["all", "Todos"], ["absent", "Solo ausentes"], ["incomplete", "Solo inc. jornada"]].map(([val, label]) => (
                 <button
                   key={val}
@@ -382,6 +382,16 @@ export default function AbsenteeismReport() {
                   {label}
                 </button>
               ))}
+              <select
+                value={filterDept}
+                onChange={e => setFilterDept(e.target.value)}
+                className="text-xs px-3 py-1.5 rounded-full font-medium border border-slate-200 bg-white text-slate-600 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+              >
+                <option value="all">Todos los departamentos</option>
+                {processedReport.deptList.map(d => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </select>
             </div>
             <div className="flex gap-1 bg-slate-100 rounded-lg p-1">
               <button
