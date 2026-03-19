@@ -472,8 +472,9 @@ export default function AbsenteeismReport() {
                         </td>
                         <td className="px-4 py-2.5 text-center font-bold text-slate-700">
                           {(() => {
-                            const totalAbsences = processedReport.summary.reduce((s, d) => s + d.absent.length, 0);
-                            const totalPossible = activeEmployees.length * processedReport.totalDays;
+                            const totalAbsences = filteredSummary.reduce((s, d) => s + d.absent.length, 0);
+                            const filteredEmpCount = filterDept === "all" ? activeEmployees.length : activeEmployees.filter(e => (e.departamento || "Sin departamento") === filterDept).length;
+                            const totalPossible = filteredEmpCount * processedReport.totalDays;
                             return totalPossible > 0 ? ((totalAbsences / totalPossible) * 100).toFixed(1) + "%" : "—";
                           })()}
                         </td>
