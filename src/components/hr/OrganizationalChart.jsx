@@ -301,7 +301,7 @@ export default function OrganizationalChart({
                       )}
                       {onMove && (
                         <DropdownMenuItem onClick={() => onMove(dept)}>
-                          <ArrowRight className="w-4 h-4 mr-2" /> Mover a...
+                          <ArrowLeft className="w-4 h-4 mr-2 rotate-180" /> Mover a...
                         </DropdownMenuItem>
                       )}
                       {onDelete && (
