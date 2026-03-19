@@ -277,7 +277,7 @@ export default function OrganizationalChart({
                       title="Mover derecha"
                       onClick={(e) => { e.stopPropagation(); moveSiblingInChart(nodeKey, dept.id, 1); }}
                     >
-                      <ArrowRightIcon className="w-3 h-3" />
+                      <ArrowRight className="w-3 h-3" />
                     </Button>
                   </div>
                 )}
