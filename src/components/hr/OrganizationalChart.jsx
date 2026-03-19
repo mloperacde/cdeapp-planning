@@ -61,43 +61,49 @@ export default function OrganizationalChart({
 
   // Reorder siblings state (node-level sorting in chart view)
   const [siblingOrder, setSiblingOrder] = React.useState({});
+  const [isSaving, setIsSaving] = React.useState(false);
+  const queryClient = useQueryClient();
 
   // Initialize sibling order from dept.orden
   React.useEffect(() => {
     const order = {};
     departments.forEach(dept => {
-      if (dept.parent_id) {
-        if (!order[dept.parent_id]) order[dept.parent_id] = {};
-        order[dept.parent_id][dept.id] = dept.orden ?? 0;
-      } else {
-        if (!order['root']) order['root'] = {};
-        order['root'][dept.id] = dept.orden ?? 0;
-      }
+      const key = dept.parent_id || 'root';
+      if (!order[key]) order[key] = {};
+      order[key][dept.id] = dept.orden ?? 0;
     });
     setSiblingOrder(order);
   }, [departments]);
 
-  const moveSiblingInChart = (parentKey, deptId, delta) => {
-    setSiblingOrder(prev => {
-      const group = { ...(prev[parentKey] || {}) };
-      const sorted = Object.entries(group).sort((a, b) => a[1] - b[1]);
-      const idx = sorted.findIndex(([id]) => id === deptId);
-      if (idx < 0) return prev;
-      const newIdx = Math.max(0, Math.min(sorted.length - 1, idx + delta));
-      if (newIdx === idx) return prev;
-      const newSorted = [...sorted];
-      const [item] = newSorted.splice(idx, 1);
-      newSorted.splice(newIdx, 0, item);
-      const newGroup = {};
-      newSorted.forEach(([id], i) => { newGroup[id] = i; });
-      return { ...prev, [parentKey]: newGroup };
-    });
-    // Persist via onNodeDrop callback if available (reuse for reorder)
-    if (onNodeDrop) {
-      const siblings = departments.filter(d => 
-        (d.parent_id || 'root') === parentKey
+  const moveSiblingInChart = async (parentKey, deptId, delta) => {
+    // Compute new order
+    const group = { ...(siblingOrder[parentKey] || {}) };
+    const sorted = Object.entries(group).sort((a, b) => a[1] - b[1]);
+    const idx = sorted.findIndex(([id]) => id === deptId);
+    if (idx < 0) return;
+    const newIdx = Math.max(0, Math.min(sorted.length - 1, idx + delta));
+    if (newIdx === idx) return;
+    const newSorted = [...sorted];
+    const [item] = newSorted.splice(idx, 1);
+    newSorted.splice(newIdx, 0, item);
+    const newGroup = {};
+    newSorted.forEach(([id], i) => { newGroup[id] = i; });
+
+    // Update local state immediately for responsive UI
+    setSiblingOrder(prev => ({ ...prev, [parentKey]: newGroup }));
+
+    // Persist to database
+    setIsSaving(true);
+    try {
+      await Promise.all(
+        newSorted.map(([id], i) => base44.entities.Department.update(id, { orden: i }))
       );
-      // signal to parent for persistence
+      await queryClient.invalidateQueries({ queryKey: ['departments'] });
+      toast.success("Orden guardado");
+    } catch (e) {
+      toast.error("Error al guardar el orden");
+    } finally {
+      setIsSaving(false);
     }
   };
 
