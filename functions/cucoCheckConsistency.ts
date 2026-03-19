@@ -31,8 +31,9 @@ Deno.serve(async (req) => {
   const cucoData = await cucoRes.json();
   const cucoList = Array.isArray(cucoData) ? cucoData : (cucoData.data || cucoData.employees || []);
   
-  const cucoActive = cucoList.filter(e => e.val_situacion === "A" || e.val_situacion === "Alta");
-  const cucoCodes = cucoActive.map(e => String(e.cod_interno || e.cod_empleado || "")).filter(Boolean);
+  // Filtrar por situación Alta — aceptar "A", "Alta" o ausencia del campo (todos los listados están activos)
+  const cucoActive = cucoList.filter(e => !e.val_situacion || e.val_situacion === "A" || e.val_situacion === "Alta" || e.val_situacion === "a");
+  const cucoCodes = cucoActive.map(e => String(e.cod_interno || e.cod_int_empleado || e.cod_empleado || "")).filter(Boolean);
 
   // 3. Comparar
   const onlyInOurs = ourCodes.filter(c => !cucoCodes.includes(c));
