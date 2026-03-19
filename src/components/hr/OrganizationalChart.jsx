@@ -404,6 +404,14 @@ export default function OrganizationalChart({
       className="relative overflow-hidden flex-1 flex flex-col bg-slate-50 dark:bg-background rounded-lg border border-slate-200 dark:border-border select-none"
       style={{ minHeight: 0, height: '100%' }}
     >
+      {/* Saving indicator */}
+      {isSaving && (
+        <div className="absolute top-3 left-3 z-40 bg-white/95 dark:bg-card/95 backdrop-blur-sm px-3 py-1.5 rounded-lg shadow-md border border-slate-200 dark:border-border text-xs text-slate-600 flex items-center gap-2">
+          <div className="w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+          Guardando orden...
+        </div>
+      )}
+
       {/* Toolbar */}
       <div className="absolute top-3 right-3 z-40 flex gap-1.5 bg-white/95 dark:bg-card/95 backdrop-blur-sm p-1.5 rounded-lg shadow-md border border-slate-200 dark:border-border">
         <TooltipProvider>
