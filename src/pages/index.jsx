@@ -66,6 +66,7 @@ import MantenimientoSkills from "./MantenimientoSkills";
 import AlmacenSkills from "./AlmacenSkills";
 import CalidadSkills from "./CalidadSkills";
 import CucoSyncDashboard from "./CucoSyncDashboard";
+import TechnicalReports from "./TechnicalReports";
 
 import { BrowserRouter, HashRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';

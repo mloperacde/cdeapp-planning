@@ -31,7 +31,8 @@ import {
   CalendarDays,
   Truck,
   Star,
-  Link2
+  Link2,
+  FlaskConical
 } from 'lucide-react';
 
 export const MENU_STRUCTURE = [
