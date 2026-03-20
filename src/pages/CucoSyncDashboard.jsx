@@ -311,12 +311,21 @@ function EmployeeDiscrepancyRow({ emp, action, actionLabel, actionClass, syncing
       </td>
       <td className="px-4 py-2.5">
         {emp.posible_match_cuco ? (
-          <div className="flex items-start gap-1 text-amber-700 text-xs">
-            <Search className="w-3 h-3 mt-0.5 shrink-0" />
-            <span>
-              Código <strong>{emp.posible_match_cuco.cod_int}</strong> en Cuco:<br/>
-              <span className="text-slate-500">{emp.posible_match_cuco.nombre_cuco}</span>
-            </span>
+          <div className="flex flex-col gap-1">
+            <div className="flex items-start gap-1 text-amber-700 text-xs">
+              <Search className="w-3 h-3 mt-0.5 shrink-0" />
+              <span>
+                Mismo nombre en Cuco con código <strong>{emp.posible_match_cuco.cod_int}</strong>
+              </span>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-[10px] h-6 border-amber-400 text-amber-700 hover:bg-amber-50 px-2"
+              onClick={() => fixEmployeeCode(emp.id, emp.posible_match_cuco.cod_int, emp.nombre)}
+            >
+              Corregir código → {emp.posible_match_cuco.cod_int}
+            </Button>
           </div>
         ) : (
           <span className="text-[10px] text-slate-400">No encontrado por nombre</span>
