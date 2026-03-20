@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   RefreshCw, CheckCircle2, AlertCircle, AlertTriangle, Users,
-  UserPlus, UserMinus, ArrowUpDown, Database, Link2
+  UserPlus, UserMinus, ArrowUpDown, Database, Link2, KeyRound, Search
 } from "lucide-react";
 import { toast } from "sonner";
 
