@@ -175,7 +175,10 @@ export default function CucoSyncDashboard() {
               <UserPlus className="w-4 h-4" />
               Empleados en BD Maestra pero NO en Cuco360 ({cr.discrepancies.only_in_ours.length})
             </CardTitle>
-            <p className="text-xs text-slate-500">Estos empleados deben crearse en Cuco360</p>
+            <p className="text-xs text-slate-500">
+              Comparación realizada exclusivamente por <strong>código de empleado</strong> (cod_int_empleado). 
+              Estos empleados deben crearse en Cuco360 o revisar si tienen asignado PIN/tarjeta.
+            </p>
           </CardHeader>
           <CardContent className="p-0">
             <table className="w-full text-sm">
@@ -183,6 +186,8 @@ export default function CucoSyncDashboard() {
                 <tr>
                   <th className="text-left px-4 py-2 text-xs font-medium text-slate-600">Código</th>
                   <th className="text-left px-4 py-2 text-xs font-medium text-slate-600">Nombre</th>
+                  <th className="text-left px-4 py-2 text-xs font-medium text-slate-600">PIN / Tarjeta</th>
+                  <th className="text-left px-4 py-2 text-xs font-medium text-slate-600">¿Match por nombre?</th>
                   <th className="text-right px-4 py-2 text-xs font-medium text-slate-600">Acción</th>
                 </tr>
               </thead>
