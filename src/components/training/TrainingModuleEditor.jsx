@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { Save, ArrowLeft, Bot, Sparkles, BookOpen, ClipboardCheck, FileText } from 'lucide-react';
 import TrainingAIChat from './TrainingAIChat';
+import TrainingPDFExport from './TrainingPDFExport';
 import ReactMarkdown from 'react-markdown';
 
 const DEPARTAMENTOS = ['Almacén', 'Mantenimiento', 'Calidad', 'Planificación', 'Producción'];
@@ -72,6 +73,7 @@ export default function TrainingModuleEditor({ module, onBack }) {
           </div>
         </div>
         <div className="flex gap-2">
+          <TrainingPDFExport module={data} />
           <Button variant="outline" size="sm" onClick={() => setShowAI(!showAI)} className="gap-2">
             <Bot className="w-4 h-4" />
             {showAI ? 'Ocultar IA' : 'Asistente IA'}
