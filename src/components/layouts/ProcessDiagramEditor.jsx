@@ -179,14 +179,15 @@ export default function ProcessDiagramEditor({ diagramId, layouts, onBack }) {
   const selectedLayout = layouts?.find(l => l.id === data.room_layout_id);
   const layoutElements = selectedLayout?.layout_elements || [];
 
-  useQuery({
+  const { data: existingDiagram } = useQuery({
     queryKey: ['ProcessDiagram', diagramId],
     queryFn: () => base44.entities.ProcessDiagram.filter({ id: diagramId }),
     enabled: !isNew && !loaded,
-    onSuccess: (res) => {
-      if (res?.[0]) { setData(res[0]); setLoaded(true); }
-    },
   });
+  if (existingDiagram?.[0] && !loaded) {
+    setData(existingDiagram[0]);
+    setLoaded(true);
+  }
 
   const saveMutation = useMutation({
     mutationFn: (d) => isNew ? base44.entities.ProcessDiagram.create(d) : base44.entities.ProcessDiagram.update(diagramId, d),
