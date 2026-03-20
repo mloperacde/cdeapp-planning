@@ -7,10 +7,37 @@ import { Send, Bot, Sparkles, Loader2, BookOpen, ClipboardList, Target, FileQues
 import ReactMarkdown from 'react-markdown';
 
 const QUICK_ACTIONS = [
-  { icon: Target, label: 'Generar Objetivos', prompt: (m) => `Genera los objetivos de aprendizaje para el módulo "${m.titulo || 'sin título'}" dirigido a ${m.departamentos?.join(', ') || 'todos los departamentos'}, nivel ${m.nivel || 'básico'}.` },
-  { icon: BookOpen, label: 'Crear Material Completo', prompt: (m) => `Crea el material de estudio completo para el módulo "${m.titulo || 'sin título'}" (${m.categoria || 'formación industrial'}), nivel ${m.nivel || 'básico'}, para el departamento de ${m.departamentos?.join(', ') || 'producción'}. Incluye introducción, unidades temáticas detalladas, casos prácticos y conclusiones. Usa formato Markdown.` },
-  { icon: ClipboardList, label: 'Generar Evaluación', prompt: (m) => `Crea 10 preguntas de evaluación para el módulo "${m.titulo || 'sin título'}" nivel ${m.nivel || 'básico'}. Incluye preguntas tipo test, verdadero/falso y alguna pregunta abierta. Al final, indica los criterios de superación.` },
-  { icon: FileQuestion, label: 'Casos Prácticos', prompt: (m) => `Genera 3 casos prácticos y ejercicios aplicables en el entorno real de trabajo para el módulo "${m.titulo || 'sin título'}" de ${m.departamentos?.join(', ') || 'producción'}. Los casos deben estar basados en situaciones reales de una empresa de co-packing y envasado industrial.` },
+  { 
+    icon: Target, 
+    label: 'Generar Objetivos', 
+    prompt: (m) => `Genera los objetivos de aprendizaje para el módulo "${m.titulo || 'sin título'}" dirigido a ${m.departamentos?.join(', ') || 'todos los departamentos'}, nivel ${m.nivel || 'básico'}. ${m.descripcion ? `Descripción del módulo: ${m.descripcion}` : ''}` 
+  },
+  { 
+    icon: BookOpen, 
+    label: 'Crear Material Completo', 
+    prompt: (m) => `Crea el MATERIAL DIDÁCTICO COMPLETO del módulo de formación con los siguientes datos:
+- Título: "${m.titulo || 'sin título'}"
+- Categoría: ${m.categoria || 'formación industrial'}
+- Nivel: ${m.nivel || 'básico'}
+- Departamento: ${m.departamentos?.join(', ') || 'producción'}
+- Duración: ${m.duracionHoras ? `${m.duracionHoras} horas` : 'a definir'}
+- Puestos objetivo: ${m.puestosObjetivo?.join(', ') || 'operarios'}
+- Normativa de referencia: ${m.normativaReferencia || 'aplica la normativa relevante del sector'}
+${m.descripcion ? `- Descripción: ${m.descripcion}` : ''}
+${m.objetivos ? `- Objetivos ya definidos: ${m.objetivos}` : ''}
+
+Genera el contenido íntegro y completo de cada unidad temática — no solo un índice o resumen. Cada unidad debe contener la explicación teórica completa, procedimientos detallados paso a paso, ejemplos reales del entorno de trabajo y puntos clave destacados. El material debe ser suficientemente completo para que un alumno pueda estudiar y prepararse solo con este documento. Usa formato Markdown con encabezados, listas, tablas y bloques de nota.` 
+  },
+  { 
+    icon: ClipboardList, 
+    label: 'Generar Evaluación', 
+    prompt: (m) => `Crea la evaluación completa para el módulo "${m.titulo || 'sin título'}" nivel ${m.nivel || 'básico'}, departamento ${m.departamentos?.join(', ') || 'producción'}. Incluye: 10 preguntas tipo test con 4 opciones cada una (indica la correcta), 5 preguntas de verdadero/falso y 2 preguntas abiertas de aplicación práctica. Al final, define los criterios de superación (puntuación mínima, tiempo límite). Usa formato Markdown.` 
+  },
+  { 
+    icon: FileQuestion, 
+    label: 'Casos Prácticos', 
+    prompt: (m) => `Genera 3 casos prácticos detallados para el módulo "${m.titulo || 'sin título'}" de ${m.departamentos?.join(', ') || 'producción'}. Cada caso debe: (1) describir una situación real concreta que podría ocurrir en una empresa de co-packing y envasado, (2) plantear preguntas de análisis y reflexión, (3) indicar la solución esperada con los pasos correctos a seguir. Los casos deben ser progresivos en dificultad y cubrir los aspectos más críticos del módulo. Usa formato Markdown.` 
+  },
 ];
 
 export default function TrainingAIChat({ module, onUpdateContent }) {
