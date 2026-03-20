@@ -32,23 +32,47 @@ Deno.serve(async (req) => {
   const cucoList = cucoData.empleados || [];
 
   // cod_int_empleado es el código interno que coincide con nuestro codigo_empleado
+  // SIEMPRE usar solo código como índice de equivalencia (nunca nombres)
   const cucoCodes = cucoList.map(e => String(e.cod_int_empleado || "").trim()).filter(Boolean);
+  // Mapa para búsqueda rápida por código
+  const cucoByCode = new Map(cucoList.map(e => [String(e.cod_int_empleado || "").trim(), e]));
 
-  // 3. Comparar
+  // 3. Comparar SOLO por código (no por nombre)
   const onlyInOurs = ourCodes.filter(c => !cucoCodes.includes(c));
   const onlyInCuco = cucoCodes.filter(c => !ourCodes.includes(c));
   const inBoth = ourCodes.filter(c => cucoCodes.includes(c));
 
   const consistent = onlyInOurs.length === 0 && onlyInCuco.length === 0;
 
-  // Enriquecer con nombres
+  // Normalizar nombre para búsqueda aproximada
+  const normName = (s) => (s || "").toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+
+  // Enriquecer con nombres + buscar posible match por nombre en Cuco
   const onlyInOursDetail = onlyInOurs.map(code => {
     const emp = ourActive.find(e => String(e.codigo_empleado) === code);
-    return { id: emp?.id, codigo: code, nombre: emp?.nombre || "Desconocido" };
+    const ourNameNorm = normName(emp?.nombre);
+    // Buscar en Cuco360 si hay alguien con nombre similar (puede estar con otro código)
+    const nameMatchInCuco = cucoList.find(c => {
+      const cucoName = normName(`${c.nom_empleado || ''} ${c.ape_empleado || ''}`);
+      return cucoName && ourNameNorm && cucoName === ourNameNorm;
+    });
+    return {
+      id: emp?.id,
+      codigo: code,
+      nombre: emp?.nombre || "Desconocido",
+      pin: emp?.pin || null,
+      numero_tarjeta: emp?.numero_tarjeta || null,
+      tiene_credenciales: !!(emp?.pin || emp?.numero_tarjeta),
+      posible_match_cuco: nameMatchInCuco ? {
+        cod_int: String(nameMatchInCuco.cod_int_empleado || "").trim(),
+        cod_empleado: nameMatchInCuco.cod_empleado,
+        nombre_cuco: `${nameMatchInCuco.nom_empleado || ''} ${nameMatchInCuco.ape_empleado || ''}`.trim()
+      } : null
+    };
   });
 
   const onlyInCucoDetail = onlyInCuco.map(code => {
-    const emp = cucoList.find(e => String(e.cod_int_empleado).trim() === code);
+    const emp = cucoByCode.get(code);
     return {
       codigo: code,
       cod_empleado_cuco: emp?.cod_empleado,
