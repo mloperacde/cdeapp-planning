@@ -301,6 +301,7 @@ function PagesContent() {
                 <Route path="/DataModelView" element={<DataModelView />} />
                 <Route path="/TechnicalReports" element={<TechnicalReports />} />
                 <Route path="/TrainingManagement" element={<TrainingManagement />} />
+                <Route path="/RoomLayoutManager" element={<RoomLayoutManager />} />
                 {/* Rutas faltantes - redirecciones */}
                 <Route path="/Employees" element={<MasterEmployeeDatabase />} />
                 <Route path="/AdvancedConfiguration" element={<Configuration />} />
