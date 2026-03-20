@@ -297,6 +297,7 @@ function PagesContent() {
                 <Route path="/OrganizationalStructure" element={<OrganizationalStructure />} />
                 <Route path="/MigrationDashboard" element={<MigrationDashboard />} />
                 <Route path="/DataModelView" element={<DataModelView />} />
+                <Route path="/TechnicalReports" element={<TechnicalReports />} />
                 {/* Rutas faltantes - redirecciones */}
                 <Route path="/Employees" element={<MasterEmployeeDatabase />} />
                 <Route path="/AdvancedConfiguration" element={<Configuration />} />
