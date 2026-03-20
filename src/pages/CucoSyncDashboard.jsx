@@ -212,6 +212,7 @@ export default function CucoSyncDashboard() {
                     actionClass="bg-orange-600 hover:bg-orange-700"
                     syncingId={syncingId}
                     onSync={syncEmployee}
+                    onFixCode={fixEmployeeCode}
                   />
                 ))}
               </tbody>
