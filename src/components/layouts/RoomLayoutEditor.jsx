@@ -122,7 +122,7 @@ export default function RoomLayoutEditor({ layoutId, onBack }) {
         {/* Left sidebar */}
         <div className="w-52 flex-shrink-0 p-2 border-r border-slate-200 dark:border-border bg-white dark:bg-card space-y-2 overflow-y-auto">
           <div className="flex gap-1 mb-2">
-            {[['palette', 'Paleta', Layers], ['settings', 'Config', Settings]].map(([key, label, Icon]) => (
+            {[['palette', 'Paleta', Layers], ['settings', 'Config', Settings]].map(([key, label, TabIcon]) => (
               <button
                 key={key}
                 onClick={() => setSidePanel(key)}
