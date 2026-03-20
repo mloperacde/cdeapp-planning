@@ -1,0 +1,133 @@
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Trash2, Plus, X } from 'lucide-react';
+import { ELEMENT_TYPES } from './ElementPalette';
+
+export default function ElementPropertiesPanel({ element, machines, onUpdate, onDelete }) {
+  const [newStation, setNewStation] = useState('');
+
+  if (!element) {
+    return (
+      <div className="bg-white dark:bg-card border border-slate-200 dark:border-border rounded-xl p-4 text-center text-slate-400 text-sm">
+        <p>Selecciona un elemento para editar sus propiedades</p>
+      </div>
+    );
+  }
+
+  const update = (field, value) => onUpdate(element.id, { [field]: value });
+
+  const addStation = () => {
+    if (!newStation.trim()) return;
+    const stations = [...(element.stations || []), {
+      id: `st_${Date.now()}`,
+      name: newStation.trim(),
+      x_offset: 5,
+      y_offset: 5,
+      width: Math.min(60, element.width - 10),
+      height: Math.min(30, element.height / 3),
+    }];
+    update('stations', stations);
+    setNewStation('');
+  };
+
+  const removeStation = (stId) => {
+    update('stations', (element.stations || []).filter(s => s.id !== stId));
+  };
+
+  return (
+    <div className="bg-white dark:bg-card border border-slate-200 dark:border-border rounded-xl p-3 space-y-3 max-h-[calc(100vh-220px)] overflow-y-auto">
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Propiedades</p>
+        <Button size="sm" variant="ghost" className="text-red-500 h-6 w-6 p-0" onClick={() => onDelete(element.id)}>
+          <Trash2 className="w-3.5 h-3.5" />
+        </Button>
+      </div>
+
+      <div className="space-y-2">
+        <div>
+          <Label className="text-xs">Etiqueta</Label>
+          <Input value={element.label || ''} onChange={e => update('label', e.target.value)} className="h-7 text-sm" />
+        </div>
+
+        <div>
+          <Label className="text-xs">Tipo</Label>
+          <select
+            value={element.type}
+            onChange={e => update('type', e.target.value)}
+            className="w-full h-7 text-sm border border-input rounded-md px-2 bg-background"
+          >
+            {ELEMENT_TYPES.map(t => (
+              <option key={t.type} value={t.type}>{t.label}</option>
+            ))}
+          </select>
+        </div>
+
+        {element.type === 'machine' && machines?.length > 0 && (
+          <div>
+            <Label className="text-xs">Máquina vinculada</Label>
+            <select
+              value={element.ref_id || ''}
+              onChange={e => update('ref_id', e.target.value)}
+              className="w-full h-7 text-sm border border-input rounded-md px-2 bg-background"
+            >
+              <option value="">-- Sin vincular --</option>
+              {machines.map(m => (
+                <option key={m.id} value={m.id}>{m.nombre} ({m.codigo_maquina})</option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        <div>
+          <Label className="text-xs">Color</Label>
+          <div className="flex gap-2 items-center">
+            <input type="color" value={element.color || '#3B82F6'} onChange={e => update('color', e.target.value)}
+              className="w-8 h-7 rounded border border-input cursor-pointer" />
+            <Input value={element.color || '#3B82F6'} onChange={e => update('color', e.target.value)} className="h-7 text-xs flex-1" />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
+          <div><Label className="text-xs">X</Label><Input type="number" value={element.x} onChange={e => update('x', +e.target.value)} className="h-7 text-sm" /></div>
+          <div><Label className="text-xs">Y</Label><Input type="number" value={element.y} onChange={e => update('y', +e.target.value)} className="h-7 text-sm" /></div>
+          <div><Label className="text-xs">Ancho</Label><Input type="number" value={element.width} onChange={e => update('width', +e.target.value)} className="h-7 text-sm" /></div>
+          <div><Label className="text-xs">Alto</Label><Input type="number" value={element.height} onChange={e => update('height', +e.target.value)} className="h-7 text-sm" /></div>
+        </div>
+
+        <div>
+          <Label className="text-xs">Rotación (°)</Label>
+          <Input type="number" value={element.rotation || 0} onChange={e => update('rotation', +e.target.value)} className="h-7 text-sm" />
+        </div>
+      </div>
+
+      {/* Stations */}
+      <div>
+        <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">Estaciones</p>
+        <div className="space-y-1 mb-2">
+          {(element.stations || []).map(st => (
+            <div key={st.id} className="flex items-center gap-1 bg-slate-50 dark:bg-slate-800 rounded px-2 py-1">
+              <span className="text-xs flex-1 text-slate-700 dark:text-slate-300">{st.name}</span>
+              <button onClick={() => removeStation(st.id)} className="text-red-400 hover:text-red-600">
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          ))}
+        </div>
+        <div className="flex gap-1">
+          <Input
+            placeholder="Nombre estación..."
+            value={newStation}
+            onChange={e => setNewStation(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && addStation()}
+            className="h-7 text-xs flex-1"
+          />
+          <Button size="sm" onClick={addStation} className="h-7 px-2">
+            <Plus className="w-3 h-3" />
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
