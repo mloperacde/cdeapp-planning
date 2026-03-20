@@ -128,7 +128,7 @@ export default function RoomLayoutEditor({ layoutId, onBack }) {
                 onClick={() => setSidePanel(key)}
                 className={`flex-1 flex items-center justify-center gap-1 text-xs py-1 rounded transition-colors ${sidePanel === key ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-accent/10'}`}
               >
-                <Icon className="w-3 h-3" />{label}
+                <TabIcon className="w-3 h-3" />{label}
               </button>
             ))}
           </div>
