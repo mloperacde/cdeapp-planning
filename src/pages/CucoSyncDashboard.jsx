@@ -33,6 +33,17 @@ export default function CucoSyncDashboard() {
     }
   };
 
+  const fixEmployeeCode = async (employeeId, newCode, nombre) => {
+    if (!confirm(`¿Actualizar el código de ${nombre} de su valor actual a "${newCode}" (código real en Cuco360)?`)) return;
+    try {
+      await base44.entities.EmployeeMasterDatabase.update(employeeId, { codigo_empleado: newCode });
+      toast.success(`✓ Código de ${nombre} actualizado a ${newCode}`);
+      await runCheck();
+    } catch (err) {
+      toast.error("Error al actualizar código: " + err.message);
+    }
+  };
+
   const syncEmployee = async (employeeId, action, nombre) => {
     setSyncingId(employeeId + action);
     try {
