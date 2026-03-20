@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ArrowLeft, Save, Settings, Layers } from 'lucide-react';
 import { toast } from 'sonner';
-import ElementPalette, { getElementConfig } from './ElementPalette';
+import ElementPalette from './ElementPalette';
 import LayoutCanvas from './LayoutCanvas';
 import ElementPropertiesPanel from './ElementPropertiesPanel';
 
@@ -44,7 +44,9 @@ export default function RoomLayoutEditor({ layoutId, onBack }) {
   }
 
   const saveMutation = useMutation({
-    mutationFn: (d) => isNew ? base44.entities.RoomLayout.create(d) : base44.entities.RoomLayout.update(layoutId, d),
+    mutationFn: (d) => isNew
+      ? base44.entities.RoomLayout.create(d)
+      : base44.entities.RoomLayout.update(layoutId, d),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['RoomLayout'] });
       toast.success('Layout guardado correctamente');
@@ -78,7 +80,10 @@ export default function RoomLayoutEditor({ layoutId, onBack }) {
   };
 
   const deleteElement = (id) => {
-    setData(prev => ({ ...prev, layout_elements: (prev.layout_elements || []).filter(e => e.id !== id) }));
+    setData(prev => ({
+      ...prev,
+      layout_elements: (prev.layout_elements || []).filter(e => e.id !== id),
+    }));
     setSelectedId(null);
   };
 
@@ -88,6 +93,11 @@ export default function RoomLayoutEditor({ layoutId, onBack }) {
     setSelectedId(id);
     if (id) setSidePanel('properties');
   };
+
+  const sidePanelTabs = [
+    { key: 'palette', label: 'Paleta', Icon: Layers },
+    { key: 'settings', label: 'Config', Icon: Settings },
+  ];
 
   return (
     <div className="flex flex-col h-screen bg-slate-50 dark:bg-background overflow-hidden">
@@ -110,9 +120,14 @@ export default function RoomLayoutEditor({ layoutId, onBack }) {
             onChange={e => setData(d => ({ ...d, status: e.target.value }))}
             className="h-8 text-xs border border-input rounded-md px-2 bg-background"
           >
-            {['Borrador', 'Aprobado', 'Archivado'].map(s => <option key={s} value={s}>{s}</option>)}
+            {['Borrador', 'Aprobado', 'Archivado'].map(s => <option key={s}>{s}</option>)}
           </select>
-          <Button size="sm" onClick={() => saveMutation.mutate(data)} disabled={saveMutation.isPending} className="gap-1 bg-blue-600 hover:bg-blue-700 text-white">
+          <Button
+            size="sm"
+            onClick={() => saveMutation.mutate(data)}
+            disabled={saveMutation.isPending}
+            className="gap-1 bg-blue-600 hover:bg-blue-700 text-white"
+          >
             <Save className="w-4 h-4" /> Guardar
           </Button>
         </div>
@@ -122,13 +137,17 @@ export default function RoomLayoutEditor({ layoutId, onBack }) {
         {/* Left sidebar */}
         <div className="w-52 flex-shrink-0 p-2 border-r border-slate-200 dark:border-border bg-white dark:bg-card space-y-2 overflow-y-auto">
           <div className="flex gap-1 mb-2">
-            {[['palette', 'Paleta', Layers], ['settings', 'Config', Settings]].map(([key, label, TabIcon]) => (
+            {sidePanelTabs.map(({ key, label, Icon }) => (
               <button
                 key={key}
                 onClick={() => setSidePanel(key)}
-                className={`flex-1 flex items-center justify-center gap-1 text-xs py-1 rounded transition-colors ${sidePanel === key ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-accent/10'}`}
+                className={`flex-1 flex items-center justify-center gap-1 text-xs py-1 rounded transition-colors ${
+                  sidePanel === key
+                    ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                    : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-accent/10'
+                }`}
               >
-                <TabIcon className="w-3 h-3" />{label}
+                <Icon className="w-3 h-3" />{label}
               </button>
             ))}
           </div>
@@ -139,12 +158,21 @@ export default function RoomLayoutEditor({ layoutId, onBack }) {
             <div className="space-y-3">
               <div>
                 <Label className="text-xs">Sala física</Label>
-                <Input value={data.room_name} onChange={e => setData(d => ({ ...d, room_name: e.target.value }))} className="h-7 text-sm" placeholder="Ej: Sala 101..." />
+                <Input
+                  value={data.room_name}
+                  onChange={e => setData(d => ({ ...d, room_name: e.target.value }))}
+                  className="h-7 text-sm"
+                  placeholder="Ej: Sala 101..."
+                />
               </div>
               <div>
                 <Label className="text-xs">Descripción</Label>
-                <textarea value={data.description || ''} onChange={e => setData(d => ({ ...d, description: e.target.value }))}
-                  className="w-full text-sm border border-input rounded-md p-2 h-20 resize-none bg-background text-foreground" placeholder="Descripción..." />
+                <textarea
+                  value={data.description || ''}
+                  onChange={e => setData(d => ({ ...d, description: e.target.value }))}
+                  className="w-full text-sm border border-input rounded-md p-2 h-20 resize-none bg-background text-foreground"
+                  placeholder="Descripción..."
+                />
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
@@ -187,7 +215,7 @@ export default function RoomLayoutEditor({ layoutId, onBack }) {
           </p>
         </div>
 
-        {/* Right sidebar - Properties (when element selected) */}
+        {/* Right sidebar - Properties when element selected */}
         {selectedElement && (
           <div className="w-56 flex-shrink-0 p-2 border-l border-slate-200 dark:border-border bg-white dark:bg-card overflow-y-auto">
             <ElementPropertiesPanel
