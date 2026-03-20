@@ -292,9 +292,36 @@ function EmployeeDiscrepancyRow({ emp, action, actionLabel, actionClass, syncing
   const isLoading = syncingId === emp.id + action;
 
   return (
-    <tr className="hover:bg-slate-50">
+    <tr className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
       <td className="px-4 py-2.5 font-mono text-slate-600">{emp.codigo}</td>
       <td className="px-4 py-2.5 font-medium">{emp.nombre}</td>
+      <td className="px-4 py-2.5">
+        {emp.tiene_credenciales !== undefined ? (
+          emp.tiene_credenciales ? (
+            <div className="flex items-center gap-1 text-green-600 text-xs">
+              <KeyRound className="w-3 h-3" />
+              <span>PIN: {emp.pin ?? "—"} / T: {emp.numero_tarjeta ?? "—"}</span>
+            </div>
+          ) : (
+            <Badge variant="outline" className="text-red-500 border-red-200 text-[10px]">
+              Sin PIN ni tarjeta
+            </Badge>
+          )
+        ) : null}
+      </td>
+      <td className="px-4 py-2.5">
+        {emp.posible_match_cuco ? (
+          <div className="flex items-start gap-1 text-amber-700 text-xs">
+            <Search className="w-3 h-3 mt-0.5 shrink-0" />
+            <span>
+              Código <strong>{emp.posible_match_cuco.cod_int}</strong> en Cuco:<br/>
+              <span className="text-slate-500">{emp.posible_match_cuco.nombre_cuco}</span>
+            </span>
+          </div>
+        ) : (
+          <span className="text-[10px] text-slate-400">No encontrado por nombre</span>
+        )}
+      </td>
       <td className="px-4 py-2.5 text-right">
         <Button
           size="sm"
