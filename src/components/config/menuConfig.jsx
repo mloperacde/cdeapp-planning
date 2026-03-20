@@ -32,7 +32,8 @@ import {
   Truck,
   Star,
   Link2,
-  FlaskConical
+  FlaskConical,
+  GraduationCap
 } from 'lucide-react';
 
 export const MENU_STRUCTURE = [
