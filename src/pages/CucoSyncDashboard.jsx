@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+
 export default function CucoSyncDashboard() {
   const [checking, setChecking] = useState(false);
   const [checkResult, setCheckResult] = useState(null);
