@@ -300,7 +300,8 @@ export default function CucoSyncDashboard() {
   );
 }
 
-function EmployeeDiscrepancyRow({ emp, action, actionLabel, actionClass, syncingId, onSync }) {
+function EmployeeDiscrepancyRow({ emp, action, actionLabel, actionClass, syncingId, onSync, onFixCode }) {
+  const fixEmployeeCode = onFixCode;
   const isLoading = syncingId === emp.id + action;
 
   return (
