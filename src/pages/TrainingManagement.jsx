@@ -18,13 +18,7 @@ const STATUS_COLORS = {
   'Archivado': 'bg-red-100 text-red-600',
 };
 
-const DEPT_COLORS = {
-  'Almacén': 'bg-orange-100 text-orange-700',
-  'Mantenimiento': 'bg-blue-100 text-blue-700',
-  'Calidad': 'bg-purple-100 text-purple-700',
-  'Planificación': 'bg-cyan-100 text-cyan-700',
-  'Producción': 'bg-emerald-100 text-emerald-700',
-};
+
 
 const NIVEL_COLORS = {
   'Básico': 'bg-green-50 text-green-700 border-green-200',
