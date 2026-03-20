@@ -60,6 +60,7 @@ export const MENU_STRUCTURE = [
   { name: 'Nuevo Conf. Procesos', path: '/NewProcessConfigurator', icon: FileCog, category: 'Dirección' },
   { name: 'Informes Técnicos CQV', path: '/TechnicalReports', icon: FlaskConical, category: 'Dirección' },
   { name: 'Gestión de Formación', path: '/TrainingManagement', icon: GraduationCap, category: 'Dirección' },
+  { name: 'Layouts y Diagramas de Proceso', path: '/RoomLayoutManager', icon: LayoutDashboard, category: 'Dirección' },
 
   // Planificación
   { name: 'Planning Producción', path: '/DailyProductionPlanningPage', icon: Factory, category: 'Planificación' },
