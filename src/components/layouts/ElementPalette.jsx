@@ -1,4 +1,5 @@
 // Palette of draggable elements for the room layout editor
+// NOTE: 'room_floor' is a special type handled by RoomLayoutEditor (not added as a regular element)
 
 export const ELEMENT_TYPES = [
   // Maquinaria general
@@ -26,6 +27,7 @@ export const ELEMENT_TYPES = [
   { type: 'walkway',            label: 'Pasillo',                color: '#E5E7EB', defaultW: 200, defaultH: 40,  icon: '↕️',  category: 'Estructura' },
   { type: 'wall',               label: 'Pared / Límite',         color: '#374151', defaultW: 200, defaultH: 15,  icon: '🧱',  category: 'Estructura' },
   { type: 'column',             label: 'Columna',                color: '#6B7280', defaultW: 20,  defaultH: 20,  icon: '⬛',  category: 'Estructura' },
+  // room_floor is special — NOT in ELEMENT_TYPES, rendered via RoomFloorPaletteItem
   // Otros
   { type: 'other',              label: 'Elemento libre',         color: '#9CA3AF', defaultW: 80,  defaultH: 60,  icon: '➕',  category: 'Otros' },
 ];
