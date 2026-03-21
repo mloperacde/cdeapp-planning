@@ -29,6 +29,7 @@ export default function RoomLayoutEditor({ layoutId, onBack }) {
     status: 'Borrador',
     layout_elements: [],
     room_polygon: [],
+    floor_color: '#475569',
   });
   const [selectedId, setSelectedId] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
