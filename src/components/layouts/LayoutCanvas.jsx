@@ -418,13 +418,15 @@ export default function LayoutCanvas({
           <rect width={width * zoom} height={height * zoom} fill="url(#grid)" />
 
           <g transform={`scale(${zoom})`}>
-            {/* Room floor — layer 0, below everything */}
+            {/* Room floor — layer 0, below everything, selectable */}
             <RoomFloor
               points={roomPolygon}
               isDrawing={drawingRoom}
               currentPoint={drawingRoom ? drawCursor : null}
               floorColor={floorColor}
               snapToClose={snapToClose}
+              selected={selectedId === FLOOR_ID}
+              onPointerDown={startMove}
             />
 
             {/* Elements */}
