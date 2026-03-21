@@ -14,6 +14,7 @@ import LayoutCanvas from './LayoutCanvas';
 import ElementPropertiesPanel from './ElementPropertiesPanel';
 import LayoutTemplateLibrary from './LayoutTemplateLibrary';
 import InlineProcessPanel from './InlineProcessPanel';
+import Layout3DView from './Layout3DView';
 
 export default function RoomLayoutEditor({ layoutId, onBack }) {
   const qc = useQueryClient();
