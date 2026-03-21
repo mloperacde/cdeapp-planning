@@ -197,7 +197,10 @@ export default function RoomLayoutEditor({ layoutId, onBack }) {
 
   const handleSelect = (id) => {
     setSelectedId(id);
-    if (id) setSelectedIds([]);
+    if (id) {
+      setSelectedIds([]);
+      setRightPanel('props');
+    }
   };
 
   const handleMultiSelect = (ids) => {
