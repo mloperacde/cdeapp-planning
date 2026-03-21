@@ -15,6 +15,7 @@ import ElementPropertiesPanel from './ElementPropertiesPanel';
 import LayoutTemplateLibrary from './LayoutTemplateLibrary';
 import InlineProcessPanel from './InlineProcessPanel';
 import Layout3DView from './Layout3DView';
+import LayoutPDFExport from './LayoutPDFExport';
 
 export default function RoomLayoutEditor({ layoutId, onBack }) {
   const qc = useQueryClient();
