@@ -261,6 +261,13 @@ export default function RoomLayoutEditor({ layoutId, onBack }) {
 
   return (
     <div className="flex flex-col h-screen bg-slate-50 dark:bg-background overflow-hidden">
+      {showPDF && (
+        <LayoutPDFExport
+          data={data}
+          svgRef={svgRef}
+          onClose={() => setShowPDF(false)}
+        />
+      )}
       {show3D && (
         <Layout3DView
           elements={data.layout_elements || []}
