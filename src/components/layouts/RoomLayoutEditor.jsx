@@ -435,10 +435,15 @@ export default function RoomLayoutEditor({ layoutId, onBack }) {
             {rightPanel === 'props' && (
               <div className="p-2 overflow-y-auto h-full">
                 <ElementPropertiesPanel
-                  element={selectedElement}
+                  element={selectedId === '__room_floor__' ? { id: '__room_floor__' } : selectedElement}
                   machines={machines}
                   onUpdate={updateElement}
                   onDelete={deleteElement}
+                  roomPolygon={data.room_polygon || []}
+                  floorColor={data.floor_color || '#475569'}
+                  onUpdateFloor={handleFloorUpdate}
+                  onDeleteFloor={handleFloorDelete}
+                  onRedrawFloor={handleFloorRedraw}
                 />
               </div>
             )}
