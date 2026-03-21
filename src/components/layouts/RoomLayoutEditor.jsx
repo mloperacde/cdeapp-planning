@@ -218,6 +218,15 @@ export default function RoomLayoutEditor({ layoutId, onBack }) {
 
   return (
     <div className="flex flex-col h-screen bg-slate-50 dark:bg-background overflow-hidden">
+      {show3D && (
+        <Layout3DView
+          elements={data.layout_elements || []}
+          roomPolygon={data.room_polygon || []}
+          canvasWidth={data.canvas_width || 1200}
+          canvasHeight={data.canvas_height || 800}
+          onClose={() => setShow3D(false)}
+        />
+      )}
       {/* Top bar */}
       <div className="flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-card border-b border-slate-200 dark:border-border shadow-sm flex-shrink-0">
         <Button variant="ghost" size="sm" onClick={onBack} className="gap-1 h-7 text-xs">
