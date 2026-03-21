@@ -99,9 +99,11 @@ export default function RoomLayoutEditor({ layoutId, onBack }) {
   };
 
   const deleteSelected = () => {
-    // If floor is selected, delete it
+    // If floor is selected, clear it
     if (selectedId === '__room_floor__') {
-      handleFloorDelete();
+      setData(d => ({ ...d, room_polygon: [] }));
+      setSelectedId(null);
+      setDrawingRoom(false);
       return;
     }
     const toRemove = new Set(selectedIds.length > 1 ? selectedIds : selectedId ? [selectedId] : []);
