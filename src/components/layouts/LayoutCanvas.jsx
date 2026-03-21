@@ -61,29 +61,52 @@ function LayoutElement({ el, selected, multiSelected, onPointerDown, onResize })
   );
 }
 
-/** Room outline polygon drawer */
-function RoomDrawing({ points, isDrawing, currentPoint, color = '#1E40AF' }) {
+/** Room floor surface — rendered BELOW all elements */
+function RoomFloor({ points, isDrawing, currentPoint }) {
   if (points.length === 0 && !isDrawing) return null;
   const ptStr = points.map(p => `${p.x},${p.y}`).join(' ');
   const allPts = currentPoint ? [...points, currentPoint] : points;
   const allStr = allPts.map(p => `${p.x},${p.y}`).join(' ');
+  const wallColor = '#334155';
+  const floorId = 'floor-pattern';
+
   return (
     <g pointerEvents="none">
-      {/* Filled room */}
+      {/* Floor tile pattern */}
+      <defs>
+        <pattern id={floorId} width="40" height="40" patternUnits="userSpaceOnUse">
+          <rect width="40" height="40" fill="#F1F5F9" />
+          <rect width="20" height="20" fill="#E9EEF5" />
+          <rect x="20" y="20" width="20" height="20" fill="#E9EEF5" />
+        </pattern>
+      </defs>
+
+      {/* Closed floor fill */}
       {points.length > 2 && !isDrawing && (
-        <polygon points={ptStr} fill={color} fillOpacity={0.07} stroke={color} strokeWidth={2} strokeDasharray="8 4" />
+        <>
+          <polygon points={ptStr} fill={`url(#${floorId})`} stroke="none" />
+          <polygon points={ptStr} fill="none" stroke={wallColor} strokeWidth={3} strokeLinejoin="round" />
+          {/* Inner wall shadow */}
+          <polygon points={ptStr} fill="none" stroke={wallColor} strokeWidth={6} strokeOpacity={0.08} strokeLinejoin="round" />
+        </>
       )}
-      {/* In-progress path */}
+
+      {/* In-progress outline */}
       {isDrawing && allPts.length > 1 && (
-        <polyline points={allStr} fill="none" stroke={color} strokeWidth={2} strokeDasharray="6 3" />
+        <polyline points={allStr} fill="none" stroke={wallColor} strokeWidth={2.5} strokeDasharray="8 4" />
       )}
-      {/* Vertex dots */}
+
+      {/* Vertex handles */}
       {points.map((p, i) => (
-        <circle key={i} cx={p.x} cy={p.y} r={4} fill={color} stroke="#fff" strokeWidth={1.5} />
+        <g key={i}>
+          <circle cx={p.x} cy={p.y} r={5} fill={wallColor} stroke="#fff" strokeWidth={1.5} />
+          <text x={p.x + 7} y={p.y - 5} fontSize={8} fill={wallColor} fontWeight="bold">{i + 1}</text>
+        </g>
       ))}
-      {/* Start dot highlight */}
-      {points.length > 0 && (
-        <circle cx={points[0].x} cy={points[0].y} r={6} fill="none" stroke={color} strokeWidth={1.5} strokeDasharray="3 2" />
+
+      {/* Snap-to-close indicator on first point */}
+      {points.length > 2 && isDrawing && (
+        <circle cx={points[0].x} cy={points[0].y} r={10} fill="none" stroke="#10B981" strokeWidth={2} strokeDasharray="3 2" />
       )}
     </g>
   );
