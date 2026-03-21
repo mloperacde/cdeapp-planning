@@ -233,19 +233,37 @@ export default function LayoutCanvas({
     onUpdateElement(id, { width: Math.max(20, w), height: Math.max(20, h) });
   }, [onUpdateElement]);
 
+  // helper: is cursor near first point? (in screen pixels)
+  const isNearFirstPoint = useCallback((clientX, clientY) => {
+    if (roomPolygon.length < 2) return false;
+    const svg = svgRef.current;
+    if (!svg) return false;
+    const rect = svg.getBoundingClientRect();
+    // Convert first polygon point to screen coords
+    const sx = (roomPolygon[0].x + pan.x) * zoom + rect.left;
+    const sy = (roomPolygon[0].y + pan.y) * zoom + rect.top;
+    const dx = clientX - sx, dy = clientY - sy;
+    return Math.sqrt(dx * dx + dy * dy) < CLOSE_RADIUS;
+  }, [roomPolygon, zoom, pan]);
+
   // ── Background interactions ──────────────────────────────────────────────
   const handleBgMouseDown = (e) => {
     // Room drawing mode
     if (drawingRoom) {
-      const { x, y } = getSVGCoords(e);
-      // Close polygon if clicking near start
-      if (roomPolygon.length > 2) {
-        const dx = x - roomPolygon[0].x, dy = y - roomPolygon[0].y;
-        if (Math.sqrt(dx * dx + dy * dy) < 12 / zoom) {
-          onRoomPolygonChange?.([...roomPolygon]); // signal close
-          return;
+      if (e.button === 2) {
+        // Right click = undo last point
+        e.preventDefault();
+        if (roomPolygon.length > 0) {
+          onRoomPolygonChange?.(roomPolygon.slice(0, -1));
         }
+        return;
       }
+      // Close polygon if clicking near start
+      if (isNearFirstPoint(e.clientX, e.clientY)) {
+        onRoomPolygonChange?.([...roomPolygon]); // signal close (already has >=2 pts)
+        return;
+      }
+      const { x, y } = getSVGCoords(e);
       onRoomPolygonChange?.([...roomPolygon, { x: snap(x), y: snap(y) }]);
       return;
     }
