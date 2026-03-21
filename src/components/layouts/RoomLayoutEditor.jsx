@@ -259,6 +259,11 @@ export default function RoomLayoutEditor({ layoutId, onBack }) {
               ✕
             </button>
           )}
+          <div className="w-px h-4 bg-slate-200 dark:bg-border mx-0.5" />
+          <button onClick={() => setShow3D(true)} title="Ver en 3D"
+            className="p-1 rounded hover:bg-slate-100 dark:hover:bg-accent/10 text-slate-500 hover:text-indigo-600 flex items-center gap-1 text-xs font-medium">
+            <Box className="w-3.5 h-3.5" /> 3D
+          </button>
         </div>
 
         {activeMultiCount > 1 && (
