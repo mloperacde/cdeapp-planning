@@ -61,8 +61,8 @@ function LayoutElement({ el, selected, multiSelected, onPointerDown, onResize })
   );
 }
 
-/** Room floor surface — rendered BELOW all elements */
-function RoomFloor({ points, isDrawing, currentPoint, floorColor, snapToClose }) {
+/** Room floor surface — rendered BELOW all elements, selectable/movable */
+function RoomFloor({ points, isDrawing, currentPoint, floorColor, snapToClose, selected, onPointerDown }) {
   if (points.length === 0 && !isDrawing) return null;
   const ptStr = points.map(p => `${p.x},${p.y}`).join(' ');
   const allPts = currentPoint ? [...points, currentPoint] : points;
@@ -70,46 +70,65 @@ function RoomFloor({ points, isDrawing, currentPoint, floorColor, snapToClose })
   const wallColor = '#1e293b';
   const fill = floorColor || '#475569';
 
+  // Bounding box for selection handle
+  const xs = points.map(p => p.x), ys = points.map(p => p.y);
+  const bbX = Math.min(...xs), bbY = Math.min(...ys);
+  const bbW = Math.max(...xs) - bbX, bbH = Math.max(...ys) - bbY;
+
   return (
-    <g pointerEvents="none">
-      {/* Closed floor fill */}
+    <g>
+      {/* Closed floor fill — clickable to select */}
       {points.length > 2 && (
         <>
-          <polygon points={ptStr} fill={fill} stroke="none" />
-          <polygon points={ptStr} fill="none" stroke={wallColor} strokeWidth={4} strokeLinejoin="round" />
+          <polygon points={ptStr} fill={fill} stroke="none"
+            style={{ cursor: isDrawing ? 'crosshair' : 'move', userSelect: 'none' }}
+            onMouseDown={!isDrawing ? (e) => onPointerDown?.(e, '__room_floor__') : undefined}
+          />
+          <polygon points={ptStr} fill="none" stroke={wallColor} strokeWidth={4} strokeLinejoin="round" pointerEvents="none" />
+          {/* Selection outline */}
+          {selected && !isDrawing && (
+            <polygon points={ptStr} fill="none" stroke="#2563EB" strokeWidth={2.5} strokeDasharray="8 4" strokeLinejoin="round" pointerEvents="none" />
+          )}
         </>
       )}
 
       {/* In-progress outline */}
       {isDrawing && allPts.length > 1 && (
-        <polyline points={allStr} fill="none" stroke={wallColor} strokeWidth={2} strokeDasharray="8 5" strokeLinecap="round" />
+        <polyline points={allStr} fill="none" stroke={wallColor} strokeWidth={2} strokeDasharray="8 5" strokeLinecap="round" pointerEvents="none" />
       )}
       {/* Preview fill while drawing */}
       {isDrawing && allPts.length > 2 && (
-        <polygon points={allStr} fill={fill} fillOpacity={0.35} stroke="none" />
+        <polygon points={allStr} fill={fill} fillOpacity={0.35} stroke="none" pointerEvents="none" />
       )}
 
       {/* Vertex handles */}
       {points.map((p, i) => (
-        <g key={i}>
+        <g key={i} pointerEvents="none">
           <circle cx={p.x} cy={p.y} r={6} fill={wallColor} stroke="#fff" strokeWidth={2} />
           <text x={p.x + 9} y={p.y - 6} fontSize={9} fill={wallColor} fontWeight="bold">{i + 1}</text>
         </g>
       ))}
 
-      {/* Snap-to-close indicator — large visible ring on first point */}
+      {/* Snap-to-close indicator */}
       {points.length >= 2 && isDrawing && (
         <circle cx={points[0].x} cy={points[0].y} r={snapToClose ? 14 : 18}
           fill={snapToClose ? '#10B981' : 'none'}
           fillOpacity={snapToClose ? 0.25 : 0}
           stroke={snapToClose ? '#10B981' : '#F59E0B'}
           strokeWidth={snapToClose ? 3 : 2}
-          strokeDasharray={snapToClose ? 'none' : '4 3'} />
+          strokeDasharray={snapToClose ? 'none' : '4 3'}
+          pointerEvents="none" />
       )}
-      {/* Tooltip hint on first point */}
       {points.length >= 2 && isDrawing && (
-        <text x={points[0].x + 20} y={points[0].y - 12} fontSize={9} fill={snapToClose ? '#10B981' : '#F59E0B'} fontWeight="bold">
+        <text x={points[0].x + 20} y={points[0].y - 12} fontSize={9} fill={snapToClose ? '#10B981' : '#F59E0B'} fontWeight="bold" pointerEvents="none">
           {snapToClose ? '✓ Cerrar' : 'inicio'}
+        </text>
+      )}
+
+      {/* Move handle label when selected */}
+      {selected && !isDrawing && points.length > 2 && (
+        <text x={bbX + bbW / 2} y={bbY - 8} textAnchor="middle" fontSize={9} fill="#2563EB" fontWeight="bold" pointerEvents="none">
+          Suelo de Sala
         </text>
       )}
     </g>
