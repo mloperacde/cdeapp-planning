@@ -363,6 +363,7 @@ export default function RoomLayoutEditor({ layoutId, onBack }) {
             roomPolygon={data.room_polygon || []}
             onRoomPolygonChange={handleRoomPolygonChange}
             drawingRoom={drawingRoom}
+            floorColor={data.floor_color || '#475569'}
             width={data.canvas_width || 1200}
             height={data.canvas_height || 800}
           />
