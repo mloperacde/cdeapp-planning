@@ -300,11 +300,24 @@ export default function LayoutCanvas({
     window.addEventListener('mouseup', onUp);
   };
 
-  // Mouse move for room draw cursor
+  // Double click to close polygon
+  const handleDblClick = (e) => {
+    if (!drawingRoom || roomPolygon.length < 3) return;
+    e.preventDefault();
+    onRoomPolygonChange?.([...roomPolygon]);
+  };
+
+  // Mouse move for room draw cursor + snap detection
   const handleMouseMove = (e) => {
     if (!drawingRoom) return;
-    const { x, y } = getSVGCoords(e);
-    setDrawCursor({ x: snap(x), y: snap(y) });
+    const near = isNearFirstPoint(e.clientX, e.clientY);
+    setSnapToClose(near);
+    if (near && roomPolygon.length >= 2) {
+      setDrawCursor({ x: roomPolygon[0].x, y: roomPolygon[0].y });
+    } else {
+      const { x, y } = getSVGCoords(e);
+      setDrawCursor({ x: snap(x), y: snap(y) });
+    }
   };
 
   const layerOrder = ['walkway', 'wall', 'column'];
