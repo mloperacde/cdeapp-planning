@@ -47,14 +47,29 @@ export default function RoomLayoutEditor({ layoutId, onBack }) {
 
   const { data: existingLayout } = useQuery({
     queryKey: ['RoomLayout', layoutId],
-    queryFn: () => base44.entities.RoomLayout.filter({ id: layoutId }),
+    queryFn: () => base44.entities.RoomLayout.list(),
     enabled: !isNew && !loaded,
+    select: (list) => list?.find(r => r.id === layoutId),
   });
 
-  if (existingLayout?.[0] && !loaded) {
-    setData(existingLayout[0]);
-    setLoaded(true);
-  }
+  // Load data only once when fetched
+  useEffect(() => {
+    if (existingLayout && !loaded) {
+      setData({
+        name: existingLayout.name || '',
+        room_name: existingLayout.room_name || '',
+        description: existingLayout.description || '',
+        canvas_width: existingLayout.canvas_width || 1200,
+        canvas_height: existingLayout.canvas_height || 800,
+        status: existingLayout.status || 'Borrador',
+        layout_elements: existingLayout.layout_elements || [],
+        room_polygon: existingLayout.room_polygon || [],
+        floor_color: existingLayout.floor_color || '#475569',
+        background_image_url: existingLayout.background_image_url || '',
+      });
+      setLoaded(true);
+    }
+  }, [existingLayout, loaded]);
 
   const saveMutation = useMutation({
     mutationFn: (d) => isNew
