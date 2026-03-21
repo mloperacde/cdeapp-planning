@@ -62,51 +62,55 @@ function LayoutElement({ el, selected, multiSelected, onPointerDown, onResize })
 }
 
 /** Room floor surface — rendered BELOW all elements */
-function RoomFloor({ points, isDrawing, currentPoint }) {
+function RoomFloor({ points, isDrawing, currentPoint, floorColor, snapToClose }) {
   if (points.length === 0 && !isDrawing) return null;
   const ptStr = points.map(p => `${p.x},${p.y}`).join(' ');
   const allPts = currentPoint ? [...points, currentPoint] : points;
   const allStr = allPts.map(p => `${p.x},${p.y}`).join(' ');
-  const wallColor = '#334155';
-  const floorId = 'floor-pattern';
+  const wallColor = '#1e293b';
+  const fill = floorColor || '#475569';
 
   return (
     <g pointerEvents="none">
-      {/* Floor tile pattern */}
-      <defs>
-        <pattern id={floorId} width="40" height="40" patternUnits="userSpaceOnUse">
-          <rect width="40" height="40" fill="#F1F5F9" />
-          <rect width="20" height="20" fill="#E9EEF5" />
-          <rect x="20" y="20" width="20" height="20" fill="#E9EEF5" />
-        </pattern>
-      </defs>
-
       {/* Closed floor fill */}
-      {points.length > 2 && !isDrawing && (
+      {points.length > 2 && (
         <>
-          <polygon points={ptStr} fill={`url(#${floorId})`} stroke="none" />
-          <polygon points={ptStr} fill="none" stroke={wallColor} strokeWidth={3} strokeLinejoin="round" />
-          {/* Inner wall shadow */}
-          <polygon points={ptStr} fill="none" stroke={wallColor} strokeWidth={6} strokeOpacity={0.08} strokeLinejoin="round" />
+          <polygon points={ptStr} fill={fill} stroke="none" />
+          <polygon points={ptStr} fill="none" stroke={wallColor} strokeWidth={4} strokeLinejoin="round" />
         </>
       )}
 
       {/* In-progress outline */}
       {isDrawing && allPts.length > 1 && (
-        <polyline points={allStr} fill="none" stroke={wallColor} strokeWidth={2.5} strokeDasharray="8 4" />
+        <polyline points={allStr} fill="none" stroke={wallColor} strokeWidth={2} strokeDasharray="8 5" strokeLinecap="round" />
+      )}
+      {/* Preview fill while drawing */}
+      {isDrawing && allPts.length > 2 && (
+        <polygon points={allStr} fill={fill} fillOpacity={0.35} stroke="none" />
       )}
 
       {/* Vertex handles */}
       {points.map((p, i) => (
         <g key={i}>
-          <circle cx={p.x} cy={p.y} r={5} fill={wallColor} stroke="#fff" strokeWidth={1.5} />
-          <text x={p.x + 7} y={p.y - 5} fontSize={8} fill={wallColor} fontWeight="bold">{i + 1}</text>
+          <circle cx={p.x} cy={p.y} r={6} fill={wallColor} stroke="#fff" strokeWidth={2} />
+          <text x={p.x + 9} y={p.y - 6} fontSize={9} fill={wallColor} fontWeight="bold">{i + 1}</text>
         </g>
       ))}
 
-      {/* Snap-to-close indicator on first point */}
-      {points.length > 2 && isDrawing && (
-        <circle cx={points[0].x} cy={points[0].y} r={10} fill="none" stroke="#10B981" strokeWidth={2} strokeDasharray="3 2" />
+      {/* Snap-to-close indicator — large visible ring on first point */}
+      {points.length >= 2 && isDrawing && (
+        <circle cx={points[0].x} cy={points[0].y} r={snapToClose ? 14 : 18}
+          fill={snapToClose ? '#10B981' : 'none'}
+          fillOpacity={snapToClose ? 0.25 : 0}
+          stroke={snapToClose ? '#10B981' : '#F59E0B'}
+          strokeWidth={snapToClose ? 3 : 2}
+          strokeDasharray={snapToClose ? 'none' : '4 3'} />
+      )}
+      {/* Tooltip hint on first point */}
+      {points.length >= 2 && isDrawing && (
+        <text x={points[0].x + 20} y={points[0].y - 12} fontSize={9} fill={snapToClose ? '#10B981' : '#F59E0B'} fontWeight="bold">
+          {snapToClose ? '✓ Cerrar' : 'inicio'}
+        </text>
       )}
     </g>
   );
