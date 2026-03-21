@@ -149,9 +149,11 @@ export default function LayoutCanvas({
   floorColor,
   width = 1200,
   height = 800,
+  svgRef: externalSvgRef,
 }) {
   const FLOOR_ID = '__room_floor__';
-  const svgRef = useRef(null);
+  const internalSvgRef = useRef(null);
+  const svgRef = externalSvgRef || internalSvgRef;
   const containerRef = useRef(null);
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
