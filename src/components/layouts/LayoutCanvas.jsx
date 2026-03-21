@@ -127,6 +127,7 @@ export default function LayoutCanvas({
   roomPolygon = [],
   onRoomPolygonChange,
   drawingRoom = false,
+  floorColor,
   width = 1200,
   height = 800,
 }) {
