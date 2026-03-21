@@ -263,8 +263,8 @@ export default function LayoutCanvas({
   const topEls = elements.filter(e => !layerOrder.includes(e.type));
 
   return (
-    <div ref={containerRef} className="relative overflow-hidden border border-slate-300 dark:border-border rounded-xl bg-slate-100 dark:bg-slate-800"
-      style={{ maxHeight: 'calc(100vh - 200px)' }}>
+    <div ref={containerRef} className="relative overflow-hidden border border-slate-300 dark:border-border rounded-xl bg-slate-100 dark:bg-slate-800 flex-1 min-h-0"
+      style={{ height: '100%' }}>
 
       {/* Zoom controls */}
       <div className="absolute top-2 right-2 z-10 flex items-center gap-1 bg-white dark:bg-card border border-slate-200 dark:border-border rounded-lg shadow-sm px-1.5 py-1">
