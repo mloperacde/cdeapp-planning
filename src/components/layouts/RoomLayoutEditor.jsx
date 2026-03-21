@@ -206,6 +206,23 @@ export default function RoomLayoutEditor({ layoutId, onBack }) {
     }
   };
 
+  const handleFloorUpdate = ({ floorColor }) => {
+    if (floorColor !== undefined) setData(d => ({ ...d, floor_color: floorColor }));
+  };
+
+  const handleFloorDelete = () => {
+    setData(d => ({ ...d, room_polygon: [] }));
+    setSelectedId(null);
+    setDrawingRoom(false);
+  };
+
+  const handleFloorRedraw = () => {
+    setDrawingRoom(true);
+    setData(d => ({ ...d, room_polygon: [] }));
+    setSelectedId(null);
+    setSidePanel('palette');
+  };
+
   const handleMultiSelect = (ids) => {
     setSelectedIds(ids);
     if (ids.length > 0) setSelectedId(null);
