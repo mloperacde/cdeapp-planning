@@ -441,6 +441,7 @@ export default function RoomLayoutEditor({ layoutId, onBack }) {
             floorColor={data.floor_color || '#475569'}
             width={data.canvas_width || 1200}
             height={data.canvas_height || 800}
+            svgRef={svgRef}
           />
           <p className="text-xs text-slate-400 mt-1 text-center flex-shrink-0 pb-1">
             Clic=selec · Shift+clic=multi · Arrastrar=rect.selección · Ctrl+scroll=zoom · Ctrl+C/V=copiar/pegar · Del=borrar
