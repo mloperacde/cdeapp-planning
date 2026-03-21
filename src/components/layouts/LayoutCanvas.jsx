@@ -208,9 +208,35 @@ export default function LayoutCanvas({
     setGuides({ x: gx, y: gy });
   }, [elements, zoom]);
 
+  // ── Move floor polygon (all points offset) ───────────────────────────────
+  const startMoveFloor = useCallback((e) => {
+    e.stopPropagation();
+    onSelect(FLOOR_ID);
+    onMultiSelect?.([]);
+
+    const startX = e.clientX / zoom;
+    const startY = e.clientY / zoom;
+    const origPoints = roomPolygon.map(p => ({ ...p }));
+
+    const onMv = (me) => {
+      const dx = snap(me.clientX / zoom - startX);
+      const dy = snap(me.clientY / zoom - startY);
+      onRoomPolygonChange?.(origPoints.map(p => ({ x: p.x + dx, y: p.y + dy })));
+    };
+    const onUp = () => {
+      window.removeEventListener('mousemove', onMv);
+      window.removeEventListener('mouseup', onUp);
+    };
+    window.addEventListener('mousemove', onMv);
+    window.addEventListener('mouseup', onUp);
+  }, [roomPolygon, onRoomPolygonChange, onSelect, onMultiSelect, zoom]);
+
   // ── Move single / group ──────────────────────────────────────────────────
   const startMove = useCallback((e, id) => {
     e.stopPropagation();
+
+    // Floor has its own move handler
+    if (id === FLOOR_ID) { startMoveFloor(e); return; }
 
     if (e.shiftKey) {
       const next = selectedIds.includes(id) ? selectedIds.filter(x => x !== id) : [...selectedIds, id];
@@ -247,7 +273,7 @@ export default function LayoutCanvas({
     };
     window.addEventListener('mousemove', onMv);
     window.addEventListener('mouseup', onUp);
-  }, [elements, selectedIds, onSelect, onMultiSelect, onUpdateElement, computeGuides, zoom]);
+  }, [elements, selectedIds, onSelect, onMultiSelect, onUpdateElement, computeGuides, zoom, startMoveFloor]);
 
   const handleResize = useCallback((id, w, h) => {
     onUpdateElement(id, { width: Math.max(20, w), height: Math.max(20, h) });
