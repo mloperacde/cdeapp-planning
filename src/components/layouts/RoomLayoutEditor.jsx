@@ -225,6 +225,7 @@ export default function RoomLayoutEditor({ layoutId, onBack }) {
           roomPolygon={data.room_polygon || []}
           canvasWidth={data.canvas_width || 1200}
           canvasHeight={data.canvas_height || 800}
+          floorColor={data.floor_color || '#475569'}
           onClose={() => setShow3D(false)}
         />
       )}
