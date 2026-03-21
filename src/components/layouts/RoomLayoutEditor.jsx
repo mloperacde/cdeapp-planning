@@ -338,9 +338,35 @@ export default function RoomLayoutEditor({ layoutId, onBack }) {
                   <textarea value={data.description || ''} onChange={e => setData(d => ({ ...d, description: e.target.value }))}
                     className="w-full text-sm border border-input rounded-md p-2 h-20 resize-none bg-background text-foreground" placeholder="Descripción..." />
                 </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div><Label className="text-xs">Ancho</Label><Input type="number" value={data.canvas_width} onChange={e => setData(d => ({ ...d, canvas_width: +e.target.value }))} className="h-7 text-sm" /></div>
-                  <div><Label className="text-xs">Alto</Label><Input type="number" value={data.canvas_height} onChange={e => setData(d => ({ ...d, canvas_height: +e.target.value }))} className="h-7 text-sm" /></div>
+                <div>
+                  <Label className="text-xs">Tamaño del lienzo</Label>
+                  <div className="grid grid-cols-3 gap-1 mt-1 mb-2">
+                    {[
+                      { label: 'S', w: 800, h: 600 },
+                      { label: 'M', w: 1200, h: 800 },
+                      { label: 'L', w: 1600, h: 1000 },
+                      { label: 'XL', w: 2000, h: 1200 },
+                      { label: '16:9', w: 1920, h: 1080 },
+                      { label: '4:3', w: 1400, h: 1050 },
+                    ].map(p => (
+                      <button key={p.label}
+                        onClick={() => setData(d => ({ ...d, canvas_width: p.w, canvas_height: p.h }))}
+                        className={`text-[10px] py-1 rounded border transition-colors ${data.canvas_width === p.w && data.canvas_height === p.h ? 'bg-blue-100 border-blue-400 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' : 'border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-accent/10'}`}>
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <Label className="text-[10px] text-slate-500">Ancho (px)</Label>
+                      <Input type="number" value={data.canvas_width} onChange={e => setData(d => ({ ...d, canvas_width: +e.target.value }))} className="h-7 text-sm" />
+                    </div>
+                    <div>
+                      <Label className="text-[10px] text-slate-500">Alto (px)</Label>
+                      <Input type="number" value={data.canvas_height} onChange={e => setData(d => ({ ...d, canvas_height: +e.target.value }))} className="h-7 text-sm" />
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-slate-400 mt-1">{data.canvas_width} × {data.canvas_height} px</p>
                 </div>
                 <div>
                   <Label className="text-xs">Color del suelo</Label>
