@@ -317,17 +317,6 @@ export default function RoomLayoutEditor({ layoutId, onBack }) {
             )}
           </div>
 
-          {/* Element props below if single selected */}
-          {selectedElement && (
-            <div className="flex-shrink-0 border-t border-slate-200 dark:border-border pt-2 overflow-y-auto max-h-64">
-              <ElementPropertiesPanel
-                element={selectedElement}
-                machines={machines}
-                onUpdate={updateElement}
-                onDelete={deleteElement}
-              />
-            </div>
-          )}
         </div>
 
         {/* CANVAS */}
