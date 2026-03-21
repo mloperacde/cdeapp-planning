@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
   ArrowLeft, Save, Settings, Layers, Library, Copy, Ungroup, Trash2,
-  PenTool, GitBranch, Clipboard
+  PenTool, GitBranch, Clipboard, Box
 } from 'lucide-react';
 import { toast } from 'sonner';
 import ElementPalette from './ElementPalette';
