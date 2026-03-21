@@ -36,6 +36,7 @@ export default function RoomLayoutEditor({ layoutId, onBack }) {
   const [rightPanel, setRightPanel] = useState('process'); // 'process' | 'props'
   const [loaded, setLoaded] = useState(false);
   const [drawingRoom, setDrawingRoom] = useState(false);
+  const [show3D, setShow3D] = useState(false);
   const clipboard = useRef([]); // copy/paste buffer
 
   const { data: machines = [] } = useQuery({
