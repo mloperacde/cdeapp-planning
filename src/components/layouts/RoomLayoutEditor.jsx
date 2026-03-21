@@ -257,20 +257,6 @@ export default function RoomLayoutEditor({ layoutId, onBack }) {
             <Trash2 className="w-3.5 h-3.5" />
           </button>
           <div className="w-px h-4 bg-slate-200 dark:bg-border mx-0.5" />
-          <button
-            onClick={() => setDrawingRoom(d => !d)}
-            title="Dibujar contorno de sala"
-            className={`p-1 rounded flex items-center gap-1 text-xs ${drawingRoom ? 'bg-indigo-100 text-indigo-700' : 'hover:bg-slate-100 dark:hover:bg-accent/10 text-slate-500'}`}
-          >
-            <PenTool className="w-3.5 h-3.5" />
-          </button>
-          {drawingRoom && (
-            <button onClick={() => { setData(d => ({ ...d, room_polygon: [] })); }} title="Borrar contorno"
-              className="p-1 hover:bg-red-50 rounded text-red-400 hover:text-red-600 text-xs">
-              ✕
-            </button>
-          )}
-          <div className="w-px h-4 bg-slate-200 dark:bg-border mx-0.5" />
           <button onClick={() => setShow3D(true)} title="Ver en 3D"
             className="p-1 rounded hover:bg-slate-100 dark:hover:bg-accent/10 text-slate-500 hover:text-indigo-600 flex items-center gap-1 text-xs font-medium">
             <Box className="w-3.5 h-3.5" /> 3D
