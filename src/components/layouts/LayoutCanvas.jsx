@@ -373,6 +373,8 @@ export default function LayoutCanvas({
               points={roomPolygon}
               isDrawing={drawingRoom}
               currentPoint={drawingRoom ? drawCursor : null}
+              floorColor={floorColor}
+              snapToClose={snapToClose}
             />
 
             {/* Elements */}
