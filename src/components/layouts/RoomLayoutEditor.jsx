@@ -303,6 +303,10 @@ export default function RoomLayoutEditor({ layoutId, onBack }) {
             className="p-1 rounded hover:bg-slate-100 dark:hover:bg-accent/10 text-slate-500 hover:text-indigo-600 flex items-center gap-1 text-xs font-medium">
             <Box className="w-3.5 h-3.5" /> 3D
           </button>
+          <button onClick={() => setShowPDF(true)} title="Exportar PDF"
+            className="p-1 rounded hover:bg-slate-100 dark:hover:bg-accent/10 text-slate-500 hover:text-rose-600 flex items-center gap-1 text-xs font-medium">
+            <FileDown className="w-3.5 h-3.5" /> PDF
+          </button>
         </div>
 
         {activeMultiCount > 1 && (
