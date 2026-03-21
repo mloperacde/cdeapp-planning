@@ -5,8 +5,45 @@ import { Label } from '@/components/ui/label';
 import { Trash2, Plus, X } from 'lucide-react';
 import { ELEMENT_TYPES } from './ElementPalette';
 
-export default function ElementPropertiesPanel({ element, machines, onUpdate, onDelete }) {
+export default function ElementPropertiesPanel({ element, machines, onUpdate, onDelete, roomPolygon, floorColor, onUpdateFloor, onDeleteFloor, onRedrawFloor }) {
   const [newStation, setNewStation] = useState('');
+
+  // Special panel for room floor
+  if (element?.id === '__room_floor__') {
+    const pts = roomPolygon || [];
+    const xs = pts.map(p => p.x), ys = pts.map(p => p.y);
+    const bbX = pts.length ? Math.min(...xs) : 0;
+    const bbY = pts.length ? Math.min(...ys) : 0;
+    const bbW = pts.length ? Math.max(...xs) - bbX : 0;
+    const bbH = pts.length ? Math.max(...ys) - bbY : 0;
+    return (
+      <div className="bg-white dark:bg-card border border-slate-200 dark:border-border rounded-xl p-3 space-y-3">
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">🏠 Suelo de Sala</p>
+          <Button size="sm" variant="ghost" className="text-red-500 h-6 w-6 p-0" onClick={onDeleteFloor} title="Borrar suelo">
+            <Trash2 className="w-3.5 h-3.5" />
+          </Button>
+        </div>
+        <div>
+          <Label className="text-xs">Color del suelo</Label>
+          <div className="flex gap-2 items-center mt-1">
+            <input type="color" value={floorColor || '#475569'} onChange={e => onUpdateFloor?.({ floorColor: e.target.value })}
+              className="w-8 h-7 rounded border border-input cursor-pointer" />
+            <Input value={floorColor || '#475569'} onChange={e => onUpdateFloor?.({ floorColor: e.target.value })} className="h-7 text-xs flex-1" />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-2 text-xs text-slate-500">
+          <div><span className="block text-[10px] text-slate-400">Puntos</span><span className="font-medium text-slate-700 dark:text-slate-300">{pts.length}</span></div>
+          <div><span className="block text-[10px] text-slate-400">Tamaño</span><span className="font-medium text-slate-700 dark:text-slate-300">{Math.round(bbW)}×{Math.round(bbH)}</span></div>
+          <div><span className="block text-[10px] text-slate-400">Pos. X</span><span className="font-medium text-slate-700 dark:text-slate-300">{Math.round(bbX)}</span></div>
+          <div><span className="block text-[10px] text-slate-400">Pos. Y</span><span className="font-medium text-slate-700 dark:text-slate-300">{Math.round(bbY)}</span></div>
+        </div>
+        <Button size="sm" variant="outline" className="w-full h-7 text-xs gap-1" onClick={onRedrawFloor}>
+          ✏️ Redibujar contorno
+        </Button>
+      </div>
+    );
+  }
 
   if (!element) {
     return (
