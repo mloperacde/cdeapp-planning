@@ -355,7 +355,9 @@ export default function LayoutCanvas({
           height={height * zoom}
           onMouseDown={handleBgMouseDown}
           onMouseMove={handleMouseMove}
-          style={{ display: 'block', cursor: drawingRoom ? 'crosshair' : 'default' }}
+          onDoubleClick={handleDblClick}
+          onContextMenu={(e) => { if (drawingRoom) e.preventDefault(); }}
+          style={{ display: 'block', cursor: drawingRoom ? (snapToClose ? 'cell' : 'crosshair') : 'default' }}
         >
           <defs>
             <pattern id="grid" width={GRID * zoom} height={GRID * zoom} patternUnits="userSpaceOnUse">
