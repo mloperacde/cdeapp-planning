@@ -332,6 +332,17 @@ export default function RoomLayoutEditor({ layoutId, onBack }) {
                   <div><Label className="text-xs">Ancho</Label><Input type="number" value={data.canvas_width} onChange={e => setData(d => ({ ...d, canvas_width: +e.target.value }))} className="h-7 text-sm" /></div>
                   <div><Label className="text-xs">Alto</Label><Input type="number" value={data.canvas_height} onChange={e => setData(d => ({ ...d, canvas_height: +e.target.value }))} className="h-7 text-sm" /></div>
                 </div>
+                <div>
+                  <Label className="text-xs">Color del suelo</Label>
+                  <div className="flex items-center gap-2 mt-1">
+                    <input type="color" value={data.floor_color || '#475569'}
+                      onChange={e => setData(d => ({ ...d, floor_color: e.target.value }))}
+                      className="h-7 w-10 rounded border border-input cursor-pointer" />
+                    <span className="text-xs text-slate-500 font-mono">{data.floor_color || '#475569'}</span>
+                    <button onClick={() => setData(d => ({ ...d, floor_color: '#475569' }))}
+                      className="text-xs text-blue-500 hover:underline">Reset</button>
+                  </div>
+                </div>
                 <p className="text-xs text-slate-500">{(data.layout_elements || []).length} elementos · {(data.room_polygon || []).length} puntos sala</p>
               </div>
             )}
