@@ -335,8 +335,8 @@ export default function RoomLayoutEditor({ layoutId, onBack }) {
             width={data.canvas_width || 1200}
             height={data.canvas_height || 800}
           />
-          <p className="text-xs text-slate-400 mt-1 text-center">
-            Clic=selec · Shift+clic=multi · Arrastrar fondo=rect.selección · Ctrl+scroll=zoom · Ctrl+C/V=copiar/pegar · Del=borrar
+          <p className="text-xs text-slate-400 mt-1 text-center flex-shrink-0 pb-1">
+            Clic=selec · Shift+clic=multi · Arrastrar=rect.selección · Ctrl+scroll=zoom · Ctrl+C/V=copiar/pegar · Del=borrar
           </p>
         </div>
 
