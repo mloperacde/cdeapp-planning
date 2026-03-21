@@ -327,8 +327,8 @@ export default function LayoutCanvas({
           <rect width={width * zoom} height={height * zoom} fill="url(#grid)" />
 
           <g transform={`scale(${zoom})`}>
-            {/* Room polygon */}
-            <RoomDrawing
+            {/* Room floor — layer 0, below everything */}
+            <RoomFloor
               points={roomPolygon}
               isDrawing={drawingRoom}
               currentPoint={drawingRoom ? drawCursor : null}
