@@ -38,7 +38,49 @@ export function getElementConfig(type) {
   return ELEMENT_TYPES.find(e => e.type === type) || ELEMENT_TYPES[ELEMENT_TYPES.length - 1];
 }
 
-export default function ElementPalette({ onAdd }) {
+/** Special palette item for the room floor surface */
+function RoomFloorPaletteItem({ isDrawing, hasFloor, floorColor, onToggleDraw, onClearFloor }) {
+  return (
+    <div className={`rounded-lg border-2 transition-all ${isDrawing ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20' : hasFloor ? 'border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800' : 'border-dashed border-slate-300 dark:border-slate-600'}`}>
+      <button
+        onClick={onToggleDraw}
+        className="w-full flex items-center gap-2 px-2 py-2 rounded-lg text-left"
+      >
+        {/* Floor preview */}
+        <div className="flex-shrink-0 w-8 h-8 rounded border border-slate-300 dark:border-slate-600 flex items-center justify-center overflow-hidden"
+          style={{ backgroundColor: hasFloor ? floorColor : 'transparent' }}>
+          {hasFloor ? (
+            <span className="text-xs" style={{ color: '#fff', textShadow: '0 1px 2px rgba(0,0,0,0.6)' }}>🏠</span>
+          ) : (
+            <span className="text-xs text-slate-400">✏️</span>
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className={`text-xs font-medium leading-tight ${isDrawing ? 'text-indigo-700 dark:text-indigo-300' : 'text-slate-700 dark:text-slate-300'}`}>
+            {isDrawing ? '✏️ Dibujando...' : 'Suelo de Sala'}
+          </p>
+          <p className="text-[10px] text-slate-400 leading-tight">
+            {isDrawing ? 'Clic en canvas para añadir puntos' : hasFloor ? 'Polígono definido — clic para redibujar' : 'Clic para definir contorno'}
+          </p>
+        </div>
+      </button>
+      {hasFloor && !isDrawing && (
+        <div className="px-2 pb-2 flex gap-1">
+          <button onClick={onToggleDraw}
+            className="flex-1 text-[10px] py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded hover:bg-indigo-200 transition-colors">
+            ✏️ Redibujar
+          </button>
+          <button onClick={onClearFloor}
+            className="flex-1 text-[10px] py-1 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded hover:bg-red-100 transition-colors">
+            🗑 Borrar
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function ElementPalette({ onAdd, isDrawingRoom, hasRoomFloor, floorColor, onToggleDrawRoom, onClearRoomFloor }) {
   return (
     <div className="space-y-2 max-h-[calc(100vh-220px)] overflow-y-auto pr-0.5">
       {CATEGORIES.map(cat => {
@@ -58,6 +100,16 @@ export default function ElementPalette({ onAdd }) {
                 <span className="flex-1 text-slate-700 dark:text-slate-300 text-xs leading-tight truncate">{el.label}</span>
               </button>
             ))}
+            {/* Inject Suelo de Sala at the bottom of Estructura section */}
+            {cat === 'Estructura' && (
+              <RoomFloorPaletteItem
+                isDrawing={isDrawingRoom}
+                hasFloor={hasRoomFloor}
+                floorColor={floorColor}
+                onToggleDraw={onToggleDrawRoom}
+                onClearFloor={onClearRoomFloor}
+              />
+            )}
           </div>
         );
       })}
