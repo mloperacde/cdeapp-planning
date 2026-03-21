@@ -309,7 +309,16 @@ export default function RoomLayoutEditor({ layoutId, onBack }) {
           </div>
 
           <div className="flex-1 overflow-y-auto overflow-x-hidden">
-            {sidePanel === 'palette' && <ElementPalette onAdd={addElement} />}
+            {sidePanel === 'palette' && (
+              <ElementPalette
+                onAdd={addElement}
+                isDrawingRoom={drawingRoom}
+                hasRoomFloor={(data.room_polygon || []).length > 2}
+                floorColor={data.floor_color || '#475569'}
+                onToggleDrawRoom={() => setDrawingRoom(d => !d)}
+                onClearRoomFloor={() => { setData(d => ({ ...d, room_polygon: [] })); setDrawingRoom(false); }}
+              />
+            )}
 
             {sidePanel === 'templates' && (
               <LayoutTemplateLibrary
