@@ -286,7 +286,7 @@ export default function LayoutCanvas({
         </div>
       )}
 
-      <div style={{ overflow: 'auto', maxHeight: 'calc(100vh - 200px)' }}>
+      <div style={{ overflow: 'auto', width: '100%', height: '100%' }}>
         <svg
           ref={svgRef}
           width={width * zoom}
