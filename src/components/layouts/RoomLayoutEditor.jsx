@@ -320,7 +320,7 @@ export default function RoomLayoutEditor({ layoutId, onBack }) {
         </div>
 
         {/* CANVAS */}
-        <div className="flex-1 p-2 overflow-auto min-w-0">
+        <div className="flex-1 overflow-hidden min-w-0 flex flex-col">
           <LayoutCanvas
             elements={data.layout_elements || []}
             selectedId={selectedId}
