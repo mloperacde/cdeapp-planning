@@ -138,6 +138,9 @@ export default function LayoutCanvas({
   const [selRect, setSelRect] = useState(null);
   const [guides, setGuides] = useState({ x: null, y: null }); // alignment lines
   const [drawCursor, setDrawCursor] = useState(null); // current mouse for room drawing
+  const [snapToClose, setSnapToClose] = useState(false);
+
+  const CLOSE_RADIUS = 20; // px in screen space — snap-to-close distance
 
   // ── Zoom controls ────────────────────────────────────────────────────────
   const zoomIn = () => setZoom(z => Math.min(4, +(z + 0.25).toFixed(2)));
