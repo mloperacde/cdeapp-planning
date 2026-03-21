@@ -343,8 +343,12 @@ export default function LayoutCanvas({
       </div>
 
       {drawingRoom && (
-        <div className="absolute top-2 left-2 z-10 bg-indigo-600 text-white text-xs rounded-lg px-3 py-1.5 shadow">
-          Modo dibujo sala · Clic para añadir punto · Clic en inicio para cerrar
+        <div className="absolute top-2 left-2 z-10 bg-indigo-700 text-white text-xs rounded-lg px-3 py-2 shadow-lg space-y-0.5">
+          <div className="font-semibold">✏️ Modo dibujo sala</div>
+          <div className="text-indigo-200">· Clic = añadir punto</div>
+          <div className="text-indigo-200">· Doble clic = cerrar polígono</div>
+          <div className="text-indigo-200">· Clic derecho = deshacer punto</div>
+          <div className="text-indigo-200">· Acércate al inicio para cerrar ({roomPolygon.length} pts)</div>
         </div>
       )}
 
