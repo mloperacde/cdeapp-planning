@@ -1,7 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { cdeApp } from '../api/cdeAppClient';
 import { base44 } from '../api/base44Client';
-import { getMachineAlias } from "@/utils/machineAlias";
 import { buildMachinesMap } from "@/utils/machineResolution";
 import { toast } from 'sonner';
 import { Table as TableIcon, RefreshCw, Loader2, Search, X, Trash2, CheckCircle2, AlertTriangle, Info } from 'lucide-react';
@@ -109,25 +107,44 @@ export default function OrderImport() {
     }
   };
 
+  // Helper: call backend function
+  // Response shape: res.data = { success, data: <cdeapp response> }
+  // CDE productions response: { success, headers, data: [...] }
+  // CDE machines response: { success, data: [...] }
+  const cdeSync = async (action, params = {}) => {
+    const res = await base44.functions.invoke('cdeAppSync', { action, params });
+    if (res.data?.error) throw new Error(res.data.error);
+    const inner = res.data?.data; // CDEApp raw response
+    // Productions: { success, headers, data: [...] } → return the array
+    if (inner && Array.isArray(inner.data)) return inner.data;
+    // Machines: { success, data: [...] } same
+    if (inner && inner.success !== undefined && Array.isArray(inner.data)) return inner.data;
+    // Already an array
+    if (Array.isArray(inner)) return inner;
+    return inner;
+  };
+
   // ─── SYNC MACHINES ───────────────────────────────────────────────────────────
   const syncMachines = async () => {
-    const machines = await cdeApp.syncMachines();
-    const machineList = Array.isArray(machines) ? machines : (machines?.data || []);
+    const machines = await cdeSync('sync-machines');
+    const machineList = Array.isArray(machines) ? machines : [];
     if (!machineList.length) return;
 
     const existing = await base44.entities.MachineMasterDatabase.list(undefined, 5000);
     const byCode = new Map((Array.isArray(existing) ? existing : []).map(m => [String(m.codigo_maquina || '').trim(), m.id]));
 
     for (const m of machineList) {
-      const code = String(m.code || m.id || '').trim();
+      // CDEApp fields: external_id, codigo, nombre, sala
+      const code = String(m.codigo || m.code || m.id || '').trim();
       if (!code) continue;
-      const name = m.name || m.description || `Máquina ${code}`;
+      const name = m.nombre || m.name || m.description || `Máquina ${code}`;
+      const extId = m.external_id || m.id || code;
       const payload = {
         codigo_maquina: code,
         nombre: name,
-        descripcion: `${name} [CDE:${m.id}]`,
-        ubicacion: m.room_name || m.sala || '',
-        cde_machine_id: String(m.id || '')
+        descripcion: `${name} [CDE:${extId}]`,
+        ubicacion: m.sala || m.room_name || '',
+        cde_machine_id: String(extId)
       };
       if (byCode.has(code)) await base44.entities.MachineMasterDatabase.update(byCode.get(code), payload);
       else await base44.entities.MachineMasterDatabase.create(payload);
@@ -151,7 +168,7 @@ export default function OrderImport() {
 
       // Step 2 – Fetch productions from CDEApp
       setProgressLabel('Obteniendo órdenes de CDEApp...');
-      const response = await cdeApp.syncProductions();
+      const response = await cdeSync('sync-productions');
       let data = Array.isArray(response) ? response : (response?.data && Array.isArray(response.data) ? response.data : []);
 
       // Step 3 – Normalize CDE data
