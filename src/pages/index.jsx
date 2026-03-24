@@ -69,6 +69,8 @@ import CucoSyncDashboard from "./CucoSyncDashboard";
 import TechnicalReports from "./TechnicalReports";
 import TrainingManagement from "./TrainingManagement";
 import RoomLayoutManager from "./RoomLayoutManager";
+import ProductionPlannerChat from "./ProductionPlannerChat";
+import InterventionConfigPage from "./InterventionConfigPage";
 
 import { BrowserRouter, HashRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -302,6 +304,8 @@ function PagesContent() {
                 <Route path="/TechnicalReports" element={<TechnicalReports />} />
                 <Route path="/TrainingManagement" element={<TrainingManagement />} />
                 <Route path="/RoomLayoutManager" element={<RoomLayoutManager />} />
+                <Route path="/ProductionPlannerChat" element={<ProductionPlannerChat />} />
+                <Route path="/InterventionConfig" element={<InterventionConfigPage />} />
                 {/* Rutas faltantes - redirecciones */}
                 <Route path="/Employees" element={<MasterEmployeeDatabase />} />
                 <Route path="/AdvancedConfiguration" element={<Configuration />} />
