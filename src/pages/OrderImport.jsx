@@ -2,13 +2,14 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { cdeApp } from '../api/cdeAppClient';
 import { base44 } from '../api/base44Client';
 import { getMachineAlias } from "@/utils/machineAlias";
-import { buildMachinesMap, normStr } from "@/utils/machineResolution";
+import { buildMachinesMap } from "@/utils/machineResolution";
 import { toast } from 'sonner';
-import { Download, Table as TableIcon, Save, Search, X, RefreshCw, Loader2 } from 'lucide-react';
+import { Table as TableIcon, RefreshCw, Loader2, Search, X, Trash2, CheckCircle2, AlertTriangle, Info } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -21,7 +22,6 @@ import { Label } from "@/components/ui/label";
 
 const SYSTEM_FIELDS = [
     { key: 'production_id', label: 'Production ID', aliases: ['production_id', 'id', 'PRODUCTION_ID'] },
-    // Ensure machine_id has higher priority than machine_name in visual table too
     { key: 'machine_id_source', label: 'ID Máquina', aliases: ['machine_id', 'id_maquina', 'MACHINE_ID'] },
     { key: 'priority', label: 'Prioridad', aliases: ['priority', 'Prioridad', 'urgencia'] },
     { key: 'type', label: 'Tipo', aliases: ['type', 'Tipo', 'TIPO'] },
@@ -81,582 +81,413 @@ const extractValue = (obj, fieldDef) => {
 };
 
 export default function OrderImport() {
-  const [rawOrders, setRawOrders] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [orders, setOrders] = useState([]);
+  const [syncing, setSyncing] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [filterValues, setFilterValues] = useState({ machine: "", material: "", order: "", client: "", deliveryDateStart: "", deliveryDateEnd: "", startDateStart: "", startDateEnd: "" });
-  const [lastSyncTime, setLastSyncTime] = useState(null);
+  const [progressLabel, setProgressLabel] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterValues, setFilterValues] = useState({ machine: '', material: '', order: '', client: '', deliveryDateStart: '', deliveryDateEnd: '', startDateStart: '', startDateEnd: '' });
+  const [lastSyncStats, setLastSyncStats] = useState(null); // { time, created, updated, deleted, skipped }
 
-  useEffect(() => { fetchLocalData(); }, []);
+  useEffect(() => { loadLocalOrders(); }, []);
 
-  const fetchLocalData = async () => {
-    setLoading(true);
+  const loadLocalOrders = async () => {
+    setSyncing(true);
     try {
-        const [ordersRes, machinesRes] = await Promise.all([
-            base44.entities.WorkOrder.list(undefined, 2000),
-            base44.entities.MachineMasterDatabase.list(undefined, 2000)
-        ]);
-        const orders = Array.isArray(ordersRes) ? ordersRes : [];
-        const machines = Array.isArray(machinesRes) ? machinesRes : [];
-        
-        // Transform local DB orders to match the raw format
-        const transformed = orders.map(o => {
-            let notes = {};
-            try { notes = JSON.parse(o.notes || '{}'); } catch { 0; }
-            return {
-                ...o,
-                ...notes,
-                _db_machine_id: o.machine_id // Preserve DB ID
-            };
-        });
-        setRawOrders(transformed);
+      const res = await base44.entities.WorkOrder.list(undefined, 3000);
+      const list = Array.isArray(res) ? res : [];
+      const transformed = list.map(o => {
+        let extra = {};
+        try { extra = JSON.parse(o.notes || '{}'); } catch { /* ignore */ }
+        return { ...o, ...extra, _db_machine_id: o.machine_id };
+      });
+      setOrders(transformed);
     } catch (e) {
-        toast.error("Error cargando datos locales: " + e.message);
+      toast.error('Error cargando órdenes locales: ' + e.message);
     } finally {
-        setLoading(false);
+      setSyncing(false);
+    }
+  };
+
+  // ─── SYNC MACHINES ───────────────────────────────────────────────────────────
+  const syncMachines = async () => {
+    const machines = await cdeApp.syncMachines();
+    const machineList = Array.isArray(machines) ? machines : (machines?.data || []);
+    if (!machineList.length) return;
+
+    const existing = await base44.entities.MachineMasterDatabase.list(undefined, 5000);
+    const byCode = new Map((Array.isArray(existing) ? existing : []).map(m => [String(m.codigo_maquina || '').trim(), m.id]));
+
+    for (const m of machineList) {
+      const code = String(m.code || m.id || '').trim();
+      if (!code) continue;
+      const name = m.name || m.description || `Máquina ${code}`;
+      const payload = {
+        codigo_maquina: code,
+        nombre: name,
+        descripcion: `${name} [CDE:${m.id}]`,
+        ubicacion: m.room_name || m.sala || '',
+        cde_machine_id: String(m.id || '')
+      };
+      if (byCode.has(code)) await base44.entities.MachineMasterDatabase.update(byCode.get(code), payload);
+      else await base44.entities.MachineMasterDatabase.create(payload);
+    }
+  };
+
+  // ─── MAIN SYNC ────────────────────────────────────────────────────────────────
+  // Strategy:
+  //   1. Fetch all productions from CDEApp
+  //   2. Get all current WorkOrders from DB  → build map by order_number
+  //   3. Upsert: update existing, create new
+  //   4. Delete: records in DB whose order_number is NOT in CDEApp response
+  const syncAll = async () => {
+    setSyncing(true);
+    setProgress(0);
+    setProgressLabel('Sincronizando catálogo de máquinas...');
+
+    try {
+      // Step 1 – Sync machines
+      await syncMachines();
+
+      // Step 2 – Fetch productions from CDEApp
+      setProgressLabel('Obteniendo órdenes de CDEApp...');
+      const response = await cdeApp.syncProductions();
+      let data = Array.isArray(response) ? response : (response?.data && Array.isArray(response.data) ? response.data : []);
+
+      // Step 3 – Normalize CDE data
+      const normalized = data.map(row => {
+        const newRow = {};
+        SYSTEM_FIELDS.forEach(field => {
+          const val = extractValue(row, field);
+          if (val !== undefined) newRow[field.key] = val;
+        });
+        newRow.priority = parseInt(newRow.priority) || 0;
+        newRow.quantity = parseInt(newRow.quantity) || 0;
+        newRow.status = newRow.status || 'Pendiente';
+        newRow.effective_delivery_date = (newRow.new_delivery_date && !String(newRow.new_delivery_date).startsWith('0000'))
+          ? newRow.new_delivery_date : newRow.committed_delivery_date;
+        newRow.effective_start_date = (newRow.modified_start_date && !String(newRow.modified_start_date).startsWith('0000'))
+          ? newRow.modified_start_date : newRow.start_date;
+        if (row.machine_id) newRow.machine_id_source = String(row.machine_id);
+        if (row.machine_code) newRow.machine_code_source = String(row.machine_code);
+        return newRow;
+      });
+
+      const cdeOrderNumbers = new Set(normalized.map(r => String(r.order_number)).filter(Boolean));
+
+      // Step 4 – Load existing DB records
+      setProgressLabel('Cargando registros actuales...');
+      const dbOrders = await base44.entities.WorkOrder.list(undefined, 5000);
+      const dbList = Array.isArray(dbOrders) ? dbOrders : [];
+
+      // Map: order_number → existing DB record
+      const dbByOrderNumber = new Map();
+      dbList.forEach(o => {
+        if (o.order_number) dbByOrderNumber.set(String(o.order_number), o);
+      });
+
+      // Step 5 – Load machines for resolution
+      const machinesRaw = await base44.entities.MachineMasterDatabase.list(undefined, 2000);
+      const { resolveMachine } = buildMachinesMap(Array.isArray(machinesRaw) ? machinesRaw : []);
+
+      // Ensure fallback "Sin Asignar" machine
+      let unassignedMachine = (Array.isArray(machinesRaw) ? machinesRaw : []).find(m =>
+        m.codigo_maquina === 'ZZ-UNASSIGNED' || m.nombre === '⚠️ SIN ASIGNAR'
+      );
+      if (!unassignedMachine) {
+        try {
+          unassignedMachine = await base44.entities.MachineMasterDatabase.create({
+            codigo_maquina: 'ZZ-UNASSIGNED', nombre: '⚠️ SIN ASIGNAR',
+            descripcion: 'Órdenes con máquina no identificada', ubicacion: 'GENERAL', orden_visualizacion: 9999
+          });
+        } catch { /* may already exist */ }
+      }
+
+      // Step 6 – Upsert loop
+      const total = normalized.length;
+      let created = 0, updated = 0, skipped = 0;
+      const CHUNK = 5;
+
+      for (let i = 0; i < total; i += CHUNK) {
+        const chunk = normalized.slice(i, i + CHUNK);
+        await Promise.all(chunk.map(async (row) => {
+          const orderNumber = row.order_number;
+          if (!orderNumber) { skipped++; return; }
+
+          // Resolve machine
+          const isDbId = (v) => v && /^[a-f0-9]{24}$/i.test(String(v).trim());
+          let machineId = null;
+          if (isDbId(row.machine_id_source)) machineId = row.machine_id_source;
+          if (!machineId && row.machine_id_source) machineId = resolveMachine(null, row.machine_id_source);
+          if (!machineId && row.machine_code_source) machineId = resolveMachine(row.machine_code_source, null);
+          if (!machineId) machineId = resolveMachine(row.machine_name, null);
+          if (!machineId && unassignedMachine) machineId = unassignedMachine.id;
+          if (!machineId) { skipped++; return; }
+
+          const payload = {
+            ...row,
+            order_number: String(orderNumber),
+            machine_id: machineId,
+            status: row.status || 'Pendiente',
+            priority: parseInt(row.priority) || 0,
+            quantity: parseInt(row.quantity) || 0,
+            notes: JSON.stringify(row),
+            multi_unit: parseInt(row.multi_unit) || 0,
+            multi_qty: parseFloat(row.multi_qty) || 0,
+            production_cadence: parseFloat(row.production_cadence) || 0,
+          };
+
+          const existing = dbByOrderNumber.get(String(orderNumber));
+          if (existing) {
+            await base44.entities.WorkOrder.update(existing.id, payload);
+            updated++;
+          } else {
+            await base44.entities.WorkOrder.create(payload);
+            created++;
+          }
+        }));
+
+        setProgress(Math.round(((i + CHUNK) / total) * 80));
+        setProgressLabel(`Procesando órdenes... (${Math.min(i + CHUNK, total)}/${total})`);
+        await new Promise(r => setTimeout(r, 80));
+      }
+
+      // Step 7 – Delete stale records (in DB but not in CDEApp)
+      setProgressLabel('Eliminando registros obsoletos...');
+      const staleRecords = dbList.filter(o => o.order_number && !cdeOrderNumbers.has(String(o.order_number)));
+      let deleted = 0;
+
+      if (staleRecords.length > 0) {
+        const DEL_CHUNK = 10;
+        for (let i = 0; i < staleRecords.length; i += DEL_CHUNK) {
+          const chunk = staleRecords.slice(i, i + DEL_CHUNK);
+          await Promise.allSettled(chunk.map(o => base44.entities.WorkOrder.delete(o.id)));
+          deleted += chunk.length;
+          setProgress(80 + Math.round(((i + DEL_CHUNK) / staleRecords.length) * 20));
+        }
+      }
+
+      setProgress(100);
+      const stats = { time: new Date(), created, updated, deleted, skipped };
+      setLastSyncStats(stats);
+      toast.success(`Sincronización completa: ${created} nuevas, ${updated} actualizadas, ${deleted} eliminadas.`);
+
+      // Reload local display
+      await loadLocalOrders();
+    } catch (error) {
+      console.error('Sync error:', error);
+      toast.error('Error en la sincronización: ' + error.message);
+    } finally {
+      setSyncing(false);
+      setProgress(0);
+      setProgressLabel('');
     }
   };
 
   const clearAllOrders = async () => {
-     if (!confirm("⚠️ ¡PELIGRO! ⚠️\n\nEsta acción eliminará TODAS las órdenes de trabajo de la base de datos.\n\n¿Estás seguro de que deseas vaciar la tabla por completo?")) return;
-
-     setSaving(true);
-     const toastId = toast.loading("Iniciando vaciado completo...");
-     try {
-         // Loop until no orders remain
-         let remaining = 1;
-         let deletedTotal = 0;
-         
-         while (remaining > 0) {
-             // Retrieve orders ID-only for faster fetch
-             const allOrders = await base44.entities.WorkOrder.list(undefined, 2000);
-             remaining = allOrders.length;
-             
-             if (remaining === 0) break;
-
-             // Delete sequentially in small chunks to avoid overload
-             const CHUNK_SIZE = 50;
-             for (let i = 0; i < remaining; i += CHUNK_SIZE) {
-                 const chunk = allOrders.slice(i, i + CHUNK_SIZE);
-                await Promise.all(chunk.map(o => base44.entities.WorkOrder.delete(o.id).catch(() => undefined)));
-                 deletedTotal += chunk.length;
-                 toast.loading(`Eliminando... (${deletedTotal} borrados)`, { id: toastId });
-             }
-         }
-
-         toast.success(`Base de datos vaciada. ${deletedTotal} registros eliminados.`);
-         setRawOrders([]); // Clear local state
-     } catch (e) {
-         console.error(e);
-         toast.error("Error al limpiar órdenes: " + e.message);
-     } finally {
-         setSaving(false);
-         toast.dismiss(toastId);
-     }
-  };
-
-  const syncMachinesToLocalDB = async (background = false) => {
-      const toastId = background ? null : toast.loading("Sincronizando catálogo de máquinas...");
-      try {
-          const machines = await cdeApp.syncMachines();
-          const machineList = Array.isArray(machines) ? machines : (machines.data || []);
-          if (machineList.length === 0) { if (!background) toast.info("No se encontraron máquinas.", { id: toastId }); return; }
-          let existingMachines = [];
-          try {
-              const res = await base44.entities.MachineMasterDatabase.list(undefined, 5000);
-              existingMachines = Array.isArray(res) ? res : [];
-          } catch (e) { console.warn("Could not fetch existing machines", e); }
-          const machineMap = new Map();
-          existingMachines.forEach(m => { if (m.codigo_maquina) machineMap.set(String(m.codigo_maquina).trim(), m.id); });
-          let updated = 0, created = 0;
-          for (const m of machineList) {
-              const code = String(m.code || m.id || "").trim();
-              if (!code) continue;
-              const name = m.name || m.description || `Máquina ${code}`;
-              const location = m.room_name || m.sala || "";
-              // Store explicit CDE ID to ensure robust matching later
-              // We append ID to description to make it searchable even if cde_machine_id column is missing
-              const safeDesc = name || `Máquina ${code}`;
-              const enrichedDesc = safeDesc.includes(`[CDE:${m.id}]`) ? safeDesc : `${safeDesc} [CDE:${m.id}]`;
-              
-              const payload = { 
-                  codigo_maquina: code, 
-                  nombre: name, 
-                  descripcion: enrichedDesc, 
-                  ubicacion: location,
-                  cde_machine_id: String(m.id || "") // Save Source ID
-              };
-              if (machineMap.has(code)) { 
-                  await base44.entities.MachineMasterDatabase.update(machineMap.get(code), payload); 
-                  updated++; 
-              }
-              else { 
-                  await base44.entities.MachineMasterDatabase.create(payload); 
-                  created++; 
-              }
-          }
-          setLastSyncTime(new Date());
-          if (!background) toast.success(`Catálogo: ${created} nuevas, ${updated} actualizadas.`, { id: toastId });
-      } catch (error) {
-          console.error("Error syncing machines:", error);
-          if (!background) toast.error("Error sincronizando máquinas.", { id: toastId });
-      }
-  };
-
-  const fetchFromCdeApp = async () => {
-    setLoading(true);
-    const toastId = toast.loading("Sincronizando datos con CDEApp...");
+    if (!confirm('⚠️ Esta acción eliminará TODAS las órdenes de trabajo de la base de datos.\n\n¿Estás seguro?')) return;
+    setSyncing(true);
     try {
-      // 1. Sync Machines first to ensure we have latest catalog
-      await syncMachinesToLocalDB(true);
-      
-      // 2. Fetch Productions
-      const response = await cdeApp.syncProductions();
-      
-      let data = [];
-      if (Array.isArray(response)) data = response;
-      else if (response?.data && Array.isArray(response.data)) data = response.data;
-      else if (response) data = [response];
-      
-      // 3. Normalize Data
-      const normalized = data.map(row => {
-          const newRow = {};
-          
-          // Map system fields using aliases
-          SYSTEM_FIELDS.forEach(field => {
-              let val = extractValue(row, field);
-              if (val !== undefined) newRow[field.key] = val;
-          });
-
-          // Ensure types
-          newRow.priority = parseInt(newRow.priority) || 0;
-          newRow.quantity = parseInt(newRow.quantity) || 0;
-          newRow.status = newRow.status || 'Pendiente';
-          
-          // Date logic
-          newRow.effective_delivery_date = (newRow.new_delivery_date && !String(newRow.new_delivery_date).startsWith('0000')) 
-              ? newRow.new_delivery_date 
-              : newRow.committed_delivery_date;
-              
-          newRow.effective_start_date = (newRow.modified_start_date && !String(newRow.modified_start_date).startsWith('0000')) 
-              ? newRow.modified_start_date 
-              : newRow.start_date;
-
-          // Preserve CDE source ID for machine if available
-          // IMPORTANT: Check both 'machine_id' and 'machine_code' from source
-          if (row.machine_id) newRow.machine_id_source = String(row.machine_id);
-          if (row.machine_code) newRow.machine_code_source = String(row.machine_code);
-
-          return newRow;
-      });
-
-      setRawOrders(normalized);
-      toast.success(`${normalized.length} registros obtenidos de CDEApp.`, { id: toastId });
-    } catch (error) {
-      console.error("Error fetching CDEApp:", error);
-      toast.error("Error al conectar con CDEApp: " + error.message, { id: toastId });
+      let remaining = 1;
+      let total = 0;
+      while (remaining > 0) {
+        const all = await base44.entities.WorkOrder.list(undefined, 2000);
+        remaining = all.length;
+        if (!remaining) break;
+        const CHUNK = 50;
+        for (let i = 0; i < remaining; i += CHUNK) {
+          await Promise.all(all.slice(i, i + CHUNK).map(o => base44.entities.WorkOrder.delete(o.id).catch(() => {})));
+          total += Math.min(CHUNK, remaining - i);
+        }
+      }
+      toast.success(`${total} registros eliminados.`);
+      setOrders([]);
+      setLastSyncStats(null);
+    } catch (e) {
+      toast.error('Error al vaciar: ' + e.message);
     } finally {
-      setLoading(false);
+      setSyncing(false);
     }
   };
 
+  // ─── FILTER ───────────────────────────────────────────────────────────────────
   const filteredOrders = useMemo(() => {
-      if (!rawOrders) return [];
-      return rawOrders.filter(row => {
-          if (searchQuery) {
-              const query = searchQuery.toLowerCase();
-              if (!Object.values(row).some(val => String(val).toLowerCase().includes(query))) return false;
-          }
-          const { machine, material, order, client, deliveryDateStart, deliveryDateEnd, startDateStart, startDateEnd } = filterValues;
-          if (machine) { const mVal = machine.toLowerCase(); if (!String(row.machine_name || "").toLowerCase().includes(mVal) && !String(row.room || "").toLowerCase().includes(mVal)) return false; }
-          if (material && !String(row.material || "").toLowerCase().includes(material.toLowerCase())) return false;
-          if (order && !String(row.order_number || "").toLowerCase().includes(order.toLowerCase())) return false;
-          if (client && !String(row.client_name || "").toLowerCase().includes(client.toLowerCase())) return false;
-          const checkDateRange = (dateStr, start, end) => {
-              if (!dateStr) return false;
-              const d = new Date(dateStr); if (isNaN(d.getTime())) return false;
-              if (start && d < new Date(start)) return false;
-              if (end) { const e = new Date(end); e.setHours(23,59,59,999); if (d > e) return false; }
-              return true;
-          };
-          if ((deliveryDateStart || deliveryDateEnd) && !checkDateRange(row.effective_delivery_date, deliveryDateStart, deliveryDateEnd)) return false;
-          if ((startDateStart || startDateEnd) && !checkDateRange(row.effective_start_date, startDateStart, startDateEnd)) return false;
-          return true;
-      });
-  }, [rawOrders, searchQuery, filterValues]);
-
-  const createWithRetry = async (payload, retries = 5, delay = 2000) => {
-      try { return await base44.entities.WorkOrder.create(payload); }
-      catch (e) {
-          const isRateLimit = e.status === 429 || (e.message && e.message.includes('429'));
-          if (retries > 0 && isRateLimit) {
-              const nextDelay = delay * 1.5 + Math.random() * 1000;
-              await new Promise(r => setTimeout(r, nextDelay));
-              return createWithRetry(payload, retries - 1, nextDelay);
-          }
-          throw e;
+    return orders.filter(row => {
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        if (!Object.values(row).some(v => String(v).toLowerCase().includes(q))) return false;
       }
-  };
-
-  const saveOrders = async () => {
-      if (filteredOrders.length === 0) { toast.warning("No hay órdenes visibles para guardar."); return; }
-      if (!confirm(`Se van a guardar ${filteredOrders.length} registros.\n\nIMPORTANTE: Esto añadirá nuevas órdenes o actualizará las existentes. Si deseas empezar de cero, usa el botón "Vaciar Base de Datos" primero.\n\n¿Continuar?`)) return;
-
-      setSaving(true);
-      setProgress(0);
-      const toastId = toast.loading("Iniciando sincronización completa...");
-      
-      // GENERATE BATCH ID
-      const currentBatchId = `batch_${Date.now()}`;
-
-      try {
-          const raw = await base44.entities.MachineMasterDatabase.list(undefined, 2000);
-          
-          // Ensure "Sin Asignar" machine exists for fallbacks
-          // More robust search: by code OR by name, to avoid duplicates
-          let unassignedMachine = raw.find(m => m.codigo_maquina === 'ZZ-UNASSIGNED' || m.nombre === '⚠️ SIN ASIGNAR');
-          
-          if (!unassignedMachine) {
-              try {
-                  unassignedMachine = await base44.entities.MachineMasterDatabase.create({
-                      codigo_maquina: 'ZZ-UNASSIGNED',
-                      nombre: '⚠️ SIN ASIGNAR',
-                      descripcion: 'Órdenes con máquina no identificada',
-                      ubicacion: 'GENERAL',
-                      orden_visualizacion: 9999
-                  });
-                  raw.push(unassignedMachine);
-              } catch (e) {
-                  console.warn("Could not create unassigned machine", e);
-                  // If creation failed (likely unique constraint), try to FIND it again in case it was created in parallel or missed
-                  try {
-                      const freshList = await base44.entities.MachineMasterDatabase.list(undefined, 2000);
-                      unassignedMachine = freshList.find(m => m.codigo_maquina === 'ZZ-UNASSIGNED');
-                  } catch {
-                      0;
-                  }
-                  
-                  // ABSOLUTE LAST RESORT: Do NOT default to raw[0] to avoid random assignment.
-                  // If we can't find a fallback machine, let machineId stay null so the loop handles it as an error.
-              }
-          }
-
-          const { resolveMachine, machinesRaw } = buildMachinesMap(raw);
-          toast.loading(`Guardando ${filteredOrders.length} órdenes (Lote: ${currentBatchId})...`, { id: toastId });
-
-          let successCount = 0, failCount = 0, processed = 0;
-          const total = filteredOrders.length;
-          const skippedItems = [];
-          const CHUNK_SIZE = 5; // Increased chunk size for speed
-          const CHUNK_DELAY = 100;
-
-          // 1. UPSERT NEW ORDERS WITH BATCH ID
-          for (let i = 0; i < total; i += CHUNK_SIZE) {
-              const chunk = filteredOrders.slice(i, i + CHUNK_SIZE);
-              await Promise.all(chunk.map(async (row) => {
-                  const orderNumber = row.order_number;
-                  const machineName = row.machine_name;
-                  const machineIdSource = row.machine_id_source;
-                  const machineCodeSource = row.machine_code_source;
-
-                  const isDbId = (v) => v && /^[a-f0-9]{24}$/i.test(String(v).trim());
-
-                  // 1. Machine ID Resolution
-                  let machineId = null;
-                  const rawMachineId = row.machine_id || row._db_machine_id;
-                  
-                  // Priority A: Existing valid DB ID (24 char hex)
-                  if (isDbId(rawMachineId)) {
-                      machineId = String(rawMachineId).trim();
-                  } 
-                  
-                  // Priority B: Resolve via Source ID (CDE ID) - Strict Match
-                  // Si tenemos el ID de origen (machine_id_source), intentamos resolver SOLO por ID.
-                  if (!machineId && machineIdSource) {
-                      const resolvedBySource = resolveMachine(null, machineIdSource);
-                      if (resolvedBySource) {
-                          machineId = resolvedBySource;
-                      }
-                  }
-
-                  // Priority C: Resolve via Machine Code (Explicit from CDE)
-                  if (!machineId && machineCodeSource) {
-                      const resolvedByCode = resolveMachine(machineCodeSource, null);
-                      if (resolvedByCode) {
-                           machineId = resolvedByCode;
-                      }
-                  }
-
-                  // Priority D: Resolve via Name (Only if ID resolution failed)
-                  if (!machineId) {
-                      machineId = resolveMachine(machineName, null);
-                  }
-
-                  // Fallback: If machine not found, assign to "Sin Asignar" machine
-                  if (!machineId) {
-                      if (unassignedMachine) {
-                          machineId = unassignedMachine.id;
-                      } else {
-                          // Last resort if even unassigned machine is missing
-                          const reason = `Máquina no encontrada y no existe fallback: "${machineName || machineIdSource || 'N/A'}"`;
-                          console.warn(`Skipping order: ${reason}`, { order_number: orderNumber });
-                          skippedItems.push({ ...row, _skipReason: reason });
-                          failCount++;
-                          processed++;
-                          setProgress(Math.round((processed / total) * 90)); 
-                          return;
-                      }
-                  }
-
-                  if (!orderNumber || !machineId) {
-                      // ... (Should be covered above)
-                      return; 
-                  }
-
-                  // Add warning to notes if machine was forced to fallback
-                  let notesData = { ...row, import_batch_id: currentBatchId };
-                  if (machineId === unassignedMachine?.id) {
-                      notesData.warning = `Máquina original no encontrada: ${machineName} (${machineIdSource || '?'}). Asignada a SIN ASIGNAR.`;
-                  }
-
-                  const serializedData = JSON.stringify(notesData);
-                  
-                  const payload = {
-                      ...row,
-                      order_number: String(orderNumber),
-                      machine_id: machineId,
-                      import_batch_id: currentBatchId, // CRITICAL: Tag with batch ID
-                      status: row.status || 'Pendiente',
-                      priority: parseInt(row.priority) || 0,
-                      quantity: parseInt(row.quantity) || 0,
-                      notes: serializedData,
-                      multi_unit: parseInt(row.multi_unit) || 0,
-                      multi_qty: parseFloat(row.multi_qty) || 0,
-                      production_cadence: parseFloat(row.production_cadence) || 0,
-                  };
-
-                  try {
-                      // Upsert logic: Check existence by Order Number
-                      let existing = [];
-                      try { existing = await base44.entities.WorkOrder.filter({ order_number: String(orderNumber) }); } catch (e) { /* ignore */ }
-                      
-                      if (existing && existing.length > 0) {
-                          await base44.entities.WorkOrder.update(existing[0].id, payload);
-                          // Deduplicate immediately if multiples found
-                          if (existing.length > 1) {
-                              for (let k = 1; k < existing.length; k++) {
-                                  try { await base44.entities.WorkOrder.delete(existing[k].id); } catch (delErr) { /* ignore */ }
-                              }
-                          }
-                      } else {
-                          await createWithRetry(payload);
-                      }
-                      successCount++;
-                  } catch (e) {
-                      console.error("Error saving order:", orderNumber, e);
-                      failCount++;
-                  } finally {
-                      processed++;
-                      setProgress(Math.round((processed / total) * 90));
-                  }
-              }));
-              if (i + CHUNK_SIZE < total) await new Promise(resolve => setTimeout(resolve, CHUNK_DELAY));
-          }
-
-          // 2. CLEANUP: DELETE ORDERS NOT IN THIS BATCH
-          toast.loading("Limpiando registros antiguos...", { id: toastId });
-          
-          // Fetch ALL orders (using a large limit to be safe, or iterate)
-          // Since filtering by !== is hard, we fetch all and check locally
-          const allOrders = await base44.entities.WorkOrder.list(undefined, 5000);
-          
-          // Parse JSON notes to find batch ID if missing on root
-          const ordersToDelete = allOrders.filter(o => {
-              // 1. Check root field
-              if (o.import_batch_id === currentBatchId) return false;
-              
-              // 2. Check JSON notes (fallback)
-              if (o.notes && typeof o.notes === 'string' && o.notes.startsWith('{')) {
-                  try {
-                      const parsed = JSON.parse(o.notes);
-                      if (parsed.import_batch_id === currentBatchId) return false;
-                  } catch (_) { /* ignore */ }
-              }
-              
-              // If neither matches, it's an old record -> Delete
-              return true;
-          });
-          
-          if (ordersToDelete.length > 0) {
-             console.log(`[Cleanup] Deleting ${ordersToDelete.length} old records...`);
-             const DELETE_CHUNK = 10;
-             for (let i = 0; i < ordersToDelete.length; i += DELETE_CHUNK) {
-                 const chunk = ordersToDelete.slice(i, i + DELETE_CHUNK);
-                 await Promise.allSettled(chunk.map(o => base44.entities.WorkOrder.delete(o.id)));
-                 setProgress(90 + Math.round(((i + DELETE_CHUNK) / ordersToDelete.length) * 10));
-             }
-          }
-
-          if (skippedItems.length > 0) {
-              const missingMachines = [...new Set(skippedItems.map(r => r._skipReason).filter(Boolean))];
-              toast.warning(`${skippedItems.length} órdenes omitidas. Máquinas no encontradas: ${missingMachines.slice(0,3).join(', ')}...`, { duration: 15000 });
-          }
-
-          toast.success(`Sincronización completa. Activos: ${successCount}. Eliminados: ${ordersToDelete.length}.`, { id: toastId });
-          await fetchLocalData();
-      } catch (error) {
-          console.error("Error saving orders:", error);
-          toast.error("Error general al guardar.", { id: toastId });
-      } finally {
-          setSaving(false);
-          setProgress(0);
-      }
-  };
+      const { machine, material, order, client, deliveryDateStart, deliveryDateEnd, startDateStart, startDateEnd } = filterValues;
+      if (machine && !String(row.machine_name || '').toLowerCase().includes(machine.toLowerCase()) && !String(row.room || '').toLowerCase().includes(machine.toLowerCase())) return false;
+      if (material && !String(row.material || '').toLowerCase().includes(material.toLowerCase())) return false;
+      if (order && !String(row.order_number || '').toLowerCase().includes(order.toLowerCase())) return false;
+      if (client && !String(row.client_name || '').toLowerCase().includes(client.toLowerCase())) return false;
+      const checkDate = (dateStr, start, end) => {
+        if (!dateStr) return false;
+        const d = new Date(dateStr); if (isNaN(d.getTime())) return false;
+        if (start && d < new Date(start)) return false;
+        if (end) { const e = new Date(end); e.setHours(23, 59, 59, 999); if (d > e) return false; }
+        return true;
+      };
+      if ((deliveryDateStart || deliveryDateEnd) && !checkDate(row.effective_delivery_date, deliveryDateStart, deliveryDateEnd)) return false;
+      if ((startDateStart || startDateEnd) && !checkDate(row.effective_start_date, startDateStart, startDateEnd)) return false;
+      return true;
+    });
+  }, [orders, searchQuery, filterValues]);
 
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)] p-6 gap-4">
+      {/* Header */}
       <div className="flex-shrink-0 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Importación de Órdenes (CDEApp)</h1>
-          <p className="text-muted-foreground">Sincronización de órdenes de producción desde CDEApp.</p>
-          {lastSyncTime && (
-             <p className="text-xs text-green-600 flex items-center mt-1">
-               <RefreshCw className="h-3 w-3 mr-1" />
-               Última carga: {lastSyncTime.toLocaleTimeString()}
-             </p>
+          <h1 className="text-2xl font-bold tracking-tight">Sincronización de Órdenes (CDEApp)</h1>
+          <p className="text-muted-foreground text-sm">Upsert incremental: añade nuevas, actualiza existentes y elimina obsoletas automáticamente.</p>
+          {lastSyncStats && (
+            <div className="flex items-center gap-3 mt-2 text-xs">
+              <span className="flex items-center gap-1 text-green-600"><CheckCircle2 className="h-3 w-3" />{lastSyncStats.created} nuevas</span>
+              <span className="flex items-center gap-1 text-blue-600"><RefreshCw className="h-3 w-3" />{lastSyncStats.updated} actualizadas</span>
+              <span className="flex items-center gap-1 text-red-500"><Trash2 className="h-3 w-3" />{lastSyncStats.deleted} eliminadas</span>
+              {lastSyncStats.skipped > 0 && <span className="flex items-center gap-1 text-amber-500"><AlertTriangle className="h-3 w-3" />{lastSyncStats.skipped} omitidas</span>}
+              <span className="text-muted-foreground">· {lastSyncStats.time.toLocaleTimeString()}</span>
+            </div>
           )}
         </div>
         <div className="flex gap-2">
-            <Button onClick={fetchFromCdeApp} disabled={loading} className="bg-blue-600 hover:bg-blue-700">
-              {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
-              Importar desde CDEApp
-            </Button>
-            <Button 
-                variant="destructive" 
-                onClick={clearAllOrders}
-                disabled={loading || saving}
-                title="Eliminar todas las órdenes de la base de datos"
-            >
-                <X className="mr-2 h-4 w-4" />
-                Vaciar Base de Datos
-            </Button>
-            <Button onClick={saveOrders} disabled={saving || filteredOrders.length === 0}>
-              {saving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Guardando...</> : <><Save className="mr-2 h-4 w-4" />Guardar ({filteredOrders.length})</>}
-            </Button>
+          <Button onClick={syncAll} disabled={syncing} className="bg-blue-600 hover:bg-blue-700 gap-2">
+            {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+            {syncing ? 'Sincronizando...' : 'Sincronizar con CDEApp'}
+          </Button>
+          <Button variant="outline" onClick={clearAllOrders} disabled={syncing} className="gap-2 text-red-600 border-red-200 hover:bg-red-50">
+            <Trash2 className="h-4 w-4" />
+            Vaciar BD
+          </Button>
         </div>
       </div>
 
-      {saving && (
-          <div className="flex-shrink-0 space-y-2">
-              <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>Guardando órdenes...</span><span>{progress}%</span>
-              </div>
-              <Progress value={progress} className="h-2 w-full" />
+      {/* Progress */}
+      {syncing && (
+        <div className="flex-shrink-0 space-y-1">
+          <div className="flex justify-between text-xs text-muted-foreground">
+            <span>{progressLabel}</span><span>{progress}%</span>
           </div>
+          <Progress value={progress} className="h-2 w-full" />
+        </div>
       )}
 
+      {/* Info box */}
+      {!lastSyncStats && !syncing && orders.length === 0 && (
+        <div className="flex-shrink-0 flex items-start gap-3 p-4 rounded-lg bg-blue-50 border border-blue-200 text-sm text-blue-800">
+          <Info className="h-5 w-5 mt-0.5 flex-shrink-0" />
+          <div>
+            <p className="font-medium">Sincronización inteligente</p>
+            <p className="text-xs mt-1 text-blue-700">Al pulsar "Sincronizar", el sistema comparará automáticamente los datos de CDEApp con la base de datos local: creará las órdenes nuevas, actualizará las modificadas y eliminará las que ya no existen en CDEApp.</p>
+          </div>
+        </div>
+      )}
+
+      {/* Filters */}
       <Card className="flex-shrink-0 bg-slate-50 border-slate-200">
         <CardContent className="p-4 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div className="space-y-2">
-                      <Label className="text-xs font-medium text-slate-500">Sala / Máquina</Label>
-                      <Input placeholder="Buscar..." value={filterValues.machine} onChange={(e) => setFilterValues({...filterValues, machine: e.target.value})} className="h-8 bg-white" />
-                  </div>
-                  <div className="space-y-2">
-                      <Label className="text-xs font-medium text-slate-500">Material</Label>
-                      <Input placeholder="Buscar..." value={filterValues.material} onChange={(e) => setFilterValues({...filterValues, material: e.target.value})} className="h-8 bg-white" />
-                  </div>
-                  <div className="space-y-2">
-                      <Label className="text-xs font-medium text-slate-500">Orden</Label>
-                      <Input placeholder="Buscar..." value={filterValues.order} onChange={(e) => setFilterValues({...filterValues, order: e.target.value})} className="h-8 bg-white" />
-                  </div>
-                  <div className="space-y-2">
-                      <Label className="text-xs font-medium text-slate-500">Cliente</Label>
-                      <Input placeholder="Buscar..." value={filterValues.client} onChange={(e) => setFilterValues({...filterValues, client: e.target.value})} className="h-8 bg-white" />
-                  </div>
-                  <div className="space-y-2">
-                      <Label className="text-xs font-medium text-slate-500">Fecha Entrega (Desde - Hasta)</Label>
-                      <div className="flex gap-2">
-                          <Input type="date" value={filterValues.deliveryDateStart} onChange={(e) => setFilterValues({...filterValues, deliveryDateStart: e.target.value})} className="h-8 bg-white" />
-                          <Input type="date" value={filterValues.deliveryDateEnd} onChange={(e) => setFilterValues({...filterValues, deliveryDateEnd: e.target.value})} className="h-8 bg-white" />
-                      </div>
-                  </div>
-                  <div className="space-y-2">
-                      <Label className="text-xs font-medium text-slate-500">Inicio Límite (Desde - Hasta)</Label>
-                      <div className="flex gap-2">
-                          <Input type="date" value={filterValues.startDateStart} onChange={(e) => setFilterValues({...filterValues, startDateStart: e.target.value})} className="h-8 bg-white" />
-                          <Input type="date" value={filterValues.startDateEnd} onChange={(e) => setFilterValues({...filterValues, startDateEnd: e.target.value})} className="h-8 bg-white" />
-                      </div>
-                  </div>
-                  <div className="space-y-2 lg:col-span-2">
-                      <Label className="text-xs font-medium text-slate-500">Búsqueda Global</Label>
-                      <div className="flex gap-2">
-                          <div className="relative flex-1">
-                              <Search className="absolute left-2 top-2 h-4 w-4 text-muted-foreground" />
-                              <Input placeholder="Buscar en todo..." className="pl-8 h-8 bg-white" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
-                          </div>
-                          <Button variant="outline" size="sm" onClick={() => { setSearchQuery(""); setFilterValues({ machine: "", material: "", order: "", client: "", deliveryDateStart: "", deliveryDateEnd: "", startDateStart: "", startDateEnd: "" }); }} className="h-8">
-                              <X className="mr-2 h-3 w-3" />Limpiar
-                          </Button>
-                      </div>
-                  </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="space-y-1">
+              <Label className="text-xs text-slate-500">Sala / Máquina</Label>
+              <Input placeholder="Buscar..." value={filterValues.machine} onChange={e => setFilterValues({ ...filterValues, machine: e.target.value })} className="h-8 bg-white" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-slate-500">Material</Label>
+              <Input placeholder="Buscar..." value={filterValues.material} onChange={e => setFilterValues({ ...filterValues, material: e.target.value })} className="h-8 bg-white" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-slate-500">Orden</Label>
+              <Input placeholder="Buscar..." value={filterValues.order} onChange={e => setFilterValues({ ...filterValues, order: e.target.value })} className="h-8 bg-white" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-slate-500">Cliente</Label>
+              <Input placeholder="Buscar..." value={filterValues.client} onChange={e => setFilterValues({ ...filterValues, client: e.target.value })} className="h-8 bg-white" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-slate-500">Fecha Entrega (Desde – Hasta)</Label>
+              <div className="flex gap-2">
+                <Input type="date" value={filterValues.deliveryDateStart} onChange={e => setFilterValues({ ...filterValues, deliveryDateStart: e.target.value })} className="h-8 bg-white" />
+                <Input type="date" value={filterValues.deliveryDateEnd} onChange={e => setFilterValues({ ...filterValues, deliveryDateEnd: e.target.value })} className="h-8 bg-white" />
               </div>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-slate-500">Inicio Límite (Desde – Hasta)</Label>
+              <div className="flex gap-2">
+                <Input type="date" value={filterValues.startDateStart} onChange={e => setFilterValues({ ...filterValues, startDateStart: e.target.value })} className="h-8 bg-white" />
+                <Input type="date" value={filterValues.startDateEnd} onChange={e => setFilterValues({ ...filterValues, startDateEnd: e.target.value })} className="h-8 bg-white" />
+              </div>
+            </div>
+            <div className="space-y-1 lg:col-span-2">
+              <Label className="text-xs text-slate-500">Búsqueda Global</Label>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-2 top-2 h-4 w-4 text-muted-foreground" />
+                  <Input placeholder="Buscar en todo..." className="pl-8 h-8 bg-white" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+                </div>
+                <Button variant="outline" size="sm" onClick={() => { setSearchQuery(''); setFilterValues({ machine: '', material: '', order: '', client: '', deliveryDateStart: '', deliveryDateEnd: '', startDateStart: '', startDateEnd: '' }); }} className="h-8">
+                  <X className="mr-1 h-3 w-3" />Limpiar
+                </Button>
+              </div>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
-      {rawOrders.length > 0 ? (
-      <Card className="flex-1 flex flex-col min-h-0 shadow-sm border-0 overflow-hidden">
-      <CardHeader className="flex-shrink-0 py-3 px-4 bg-white border-b">
-        <div className="flex justify-between items-center">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
+      {/* Table */}
+      {orders.length > 0 ? (
+        <Card className="flex-1 flex flex-col min-h-0 shadow-sm border-0 overflow-hidden">
+          <CardHeader className="flex-shrink-0 py-3 px-4 bg-white border-b">
+            <div className="flex justify-between items-center">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
                 <TableIcon className="h-4 w-4 text-slate-500" />
-                Vista de Datos ({filteredOrders.length} registros)
-            </CardTitle>
-        </div>
-      </CardHeader>
-      <CardContent className="flex-1 min-h-0 p-0 relative">
-        <div className="absolute inset-0 overflow-auto">
-          <Table>
-            <TableHeader className="bg-slate-50 sticky top-0 z-20 shadow-sm">
-              <TableRow>
-                <TableHead className="w-[50px] bg-slate-50 font-bold text-xs uppercase tracking-wider text-slate-500 border-b">#</TableHead>
-                {COLUMN_DISPLAY_ORDER.map(key => {
-                    const field = SYSTEM_FIELDS.find(f => f.key === key);
-                    return (
-                        <TableHead key={key} className="whitespace-nowrap px-3 py-2 bg-slate-50 font-bold text-xs uppercase tracking-wider text-slate-500 border-b min-w-[120px]">
-                            {field?.label || key}{field?.required && <span className="text-red-500 ml-1">*</span>}
+                Órdenes en Base de Datos
+              </CardTitle>
+              <Badge variant="secondary">{filteredOrders.length} de {orders.length} registros</Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="flex-1 min-h-0 p-0 relative">
+            <div className="absolute inset-0 overflow-auto">
+              <Table>
+                <TableHeader className="bg-slate-50 sticky top-0 z-20 shadow-sm">
+                  <TableRow>
+                    <TableHead className="w-[40px] bg-slate-50 font-bold text-xs uppercase text-slate-500 border-b">#</TableHead>
+                    {COLUMN_DISPLAY_ORDER.map(key => {
+                      const field = SYSTEM_FIELDS.find(f => f.key === key);
+                      return (
+                        <TableHead key={key} className="whitespace-nowrap px-3 py-2 bg-slate-50 font-bold text-xs uppercase text-slate-500 border-b min-w-[110px]">
+                          {field?.label || key}{field?.required && <span className="text-red-500 ml-1">*</span>}
                         </TableHead>
-                    );
-                })}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-                {filteredOrders.map((row, i) => (
+                      );
+                    })}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredOrders.map((row, i) => (
                     <TableRow key={i} className="hover:bg-muted/50">
-                    <TableCell className="text-xs py-1 px-2 border-r text-muted-foreground">{i + 1}</TableCell>
-                    {COLUMN_DISPLAY_ORDER.map(col => (
+                      <TableCell className="text-xs py-1 px-2 border-r text-muted-foreground">{i + 1}</TableCell>
+                      {COLUMN_DISPLAY_ORDER.map(col => (
                         <TableCell key={`${i}-${col}`} className="whitespace-nowrap text-xs py-1 px-2 border-r last:border-r-0" title={String(row[col] ?? '')}>
-                        {row[col] !== undefined && row[col] !== null
+                          {row[col] !== undefined && row[col] !== null
                             ? (typeof row[col] === 'object' ? JSON.stringify(row[col]) : String(row[col]))
                             : <span className="text-gray-300">-</span>}
                         </TableCell>
-                    ))}
+                      ))}
                     </TableRow>
-                ))}
+                  ))}
                 </TableBody>
-            </Table>
+              </Table>
             </div>
-        </CardContent>
+          </CardContent>
         </Card>
-    ) : (
+      ) : (
         <div className="flex-1 flex flex-col items-center justify-center border-2 border-dashed rounded-lg text-muted-foreground min-h-[200px]">
-            <TableIcon className="h-10 w-10 mb-2 opacity-20" />
-            <p>No hay datos cargados.</p>
-            <p className="text-sm">Pulse "Importar desde CDEApp" para comenzar.</p>
+          <TableIcon className="h-10 w-10 mb-2 opacity-20" />
+          <p className="font-medium">No hay órdenes en la base de datos</p>
+          <p className="text-sm">Pulse "Sincronizar con CDEApp" para importar.</p>
         </div>
-    )}
+      )}
     </div>
   );
 }
