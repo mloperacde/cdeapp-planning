@@ -44,6 +44,15 @@ Deno.serve(async (req) => {
     const existingByOrderNumber = {};
     existing.forEach(o => { if (o.order_number) existingByOrderNumber[o.order_number] = o; });
 
+    // Build strict CDE-ID map: only match machines with explicit cde_machine_id
+    // This prevents false positives from numeric token collisions (e.g. machine_id=51 matching
+    // a machine that has "51" as part of its name/description but is a different machine)
+    const machinesAll = await base44.asServiceRole.entities.MachineMasterDatabase.list('-created_date', 2000);
+    const cdeIdMap = new Map();
+    (machinesAll || []).forEach(m => {
+      if (m.cde_machine_id) cdeIdMap.set(String(m.cde_machine_id).trim(), m.id);
+    });
+
     let created = 0, updated = 0, errors = 0;
 
     for (const raw of rawOrders) {
@@ -51,14 +60,17 @@ Deno.serve(async (req) => {
         const orderNumber = String(raw.orden || raw.order_number || raw.id || '').trim();
         if (!orderNumber) continue;
 
-        // Normalize machine reference
-        const machineCode = String(raw.maquina || raw.machine || raw.codigo_maquina || '').trim();
-
-        // Resolve machine_id from MachineMasterDatabase if possible
-        let machineId = raw.machine_id || machineCode;
-        if (machineCode && !raw.machine_id) {
-          const machines = await base44.asServiceRole.entities.MachineMasterDatabase.filter({ codigo_maquina: machineCode });
-          if (machines.length > 0) machineId = machines[0].id;
+        // Resolve machine via strict CDE ID map only
+        const cdeSourceId = String(raw.machine_id || raw.maquina || '').trim();
+        let machineId = null;
+        if (cdeSourceId) machineId = cdeIdMap.get(cdeSourceId) || null;
+        // If not found by CDE ID, try by machine name field
+        if (!machineId) {
+          const machineName = String(raw.machine_name || raw['Sala / Máquina'] || '').trim();
+          if (machineName) {
+            const found = (machinesAll || []).find(m => m.nombre === machineName || m.codigo_maquina === machineName);
+            if (found) machineId = found.id;
+          }
         }
 
         const quantity = parseFloat(raw.cantidad || raw.quantity || 0) || 0;

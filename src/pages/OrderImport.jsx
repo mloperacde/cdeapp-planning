@@ -205,22 +205,18 @@ export default function OrderImport() {
 
       // Step 5 – Load machines for resolution
       const machinesRaw = await base44.entities.MachineMasterDatabase.list(undefined, 2000);
-      const { resolveMachine } = buildMachinesMap(Array.isArray(machinesRaw) ? machinesRaw : []);
+      const machinesArr = Array.isArray(machinesRaw) ? machinesRaw : [];
+      const { resolveMachine } = buildMachinesMap(machinesArr);
 
-      // Ensure fallback "Sin Asignar" machine
-      let unassignedMachine = (Array.isArray(machinesRaw) ? machinesRaw : []).find(m =>
-        m.codigo_maquina === 'ZZ-UNASSIGNED' || m.nombre === '⚠️ SIN ASIGNAR'
-      );
-      if (!unassignedMachine) {
-        try {
-          unassignedMachine = await base44.entities.MachineMasterDatabase.create({
-            codigo_maquina: 'ZZ-UNASSIGNED', nombre: '⚠️ SIN ASIGNAR',
-            descripcion: 'Órdenes con máquina no identificada', ubicacion: 'GENERAL', orden_visualizacion: 9999
-          });
-        } catch { /* may already exist */ }
-      }
+      // Build a strict CDE-ID-only map: only matches machines with explicit cde_machine_id
+      // This avoids false positives from token-based lookup (e.g. "51" matching a machine whose
+      // description contains the number 51 as a token, which is a different machine in CDEApp)
+      const cdeIdOnlyMap = new Map();
+      machinesArr.forEach(m => {
+        if (m.cde_machine_id) cdeIdOnlyMap.set(String(m.cde_machine_id).trim(), m.id);
+      });
 
-      // Step 6 – Upsert loop
+      // Ensure fallback
       const total = normalized.length;
       let created = 0, updated = 0, skipped = 0;
       const CHUNK = 5;
@@ -232,13 +228,18 @@ export default function OrderImport() {
           if (!orderNumber) { skipped++; return; }
 
           // Resolve machine
+          // IMPORTANT: machine_id_source is the CDEApp internal numeric ID.
+          // We ONLY match it against machines that explicitly have cde_machine_id stored.
+          // Using the general token-based lookup can cause false positives (e.g. "51" matching
+          // a machine whose description/name contains the number 51 as a coincidental token).
           const isDbId = (v) => v && /^[a-f0-9]{24}$/i.test(String(v).trim());
           let machineId = null;
           if (isDbId(row.machine_id_source)) machineId = row.machine_id_source;
-          if (!machineId && row.machine_id_source) machineId = resolveMachine(null, row.machine_id_source);
+          // Strict CDE-ID lookup: ONLY matches machines with explicit cde_machine_id
+          if (!machineId && row.machine_id_source) machineId = cdeIdOnlyMap.get(String(row.machine_id_source).trim()) || null;
+          // Fall back to machine name resolution ("Sala / Máquina" field from CDEApp)
+          if (!machineId && row.machine_name) machineId = resolveMachine(row.machine_name, null);
           if (!machineId && row.machine_code_source) machineId = resolveMachine(row.machine_code_source, null);
-          if (!machineId) machineId = resolveMachine(row.machine_name, null);
-          if (!machineId && unassignedMachine) machineId = unassignedMachine.id;
           if (!machineId) { skipped++; return; }
 
           const payload = {
