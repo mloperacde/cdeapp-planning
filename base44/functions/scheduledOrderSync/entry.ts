@@ -23,7 +23,6 @@ Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
     const apiKey = Deno.env.get('CdeApp');
     if (!apiKey) {
-      console.error('API Key de CDEApp no configurada');
       return Response.json({ error: 'CdeApp secret no configurado' }, { status: 500 });
     }
 
@@ -39,8 +38,8 @@ Deno.serve(async (req) => {
       return Response.json({ success: true, message: 'Sin órdenes que sincronizar', synced: 0 });
     }
 
-    // Get existing WorkOrders for upsert
-    const existing = await base44.asServiceRole.entities.WorkOrder.list('-created_date', 500);
+    // Get existing WorkOrders for upsert (fetch up to 5000)
+    const existing = await base44.asServiceRole.entities.WorkOrder.list('-created_date', 5000);
     const existingByOrderNumber = {};
     existing.forEach(o => { if (o.order_number) existingByOrderNumber[o.order_number] = o; });
 
@@ -77,25 +76,28 @@ Deno.serve(async (req) => {
         const cadence = parseFloat(raw.cadencia || raw.cadence || raw.production_cadence || 0) || 0;
         const estimatedDuration = (cadence > 0 && quantity > 0) ? Math.round((quantity / cadence) * 100) / 100 : (raw.estimated_duration || null);
 
+        // Store the raw CDEApp JSON in notes for full data access
+        const rawNotes = JSON.stringify({ ...raw, import_batch_id: `batch_bg_${Date.now()}` });
+
         const orderData = {
           order_number: orderNumber,
           machine_id: machineId,
-          product_article_code: String(raw.articulo || raw.article_code || raw.codigo_articulo || '').trim(),
-          product_name: String(raw.nombre || raw.product_name || raw.nombre_articulo || '').trim(),
-          client_name: String(raw.cliente || raw.client_name || '').trim(),
+          product_article_code: String(raw['Artículo'] || raw.articulo || raw.article_code || '').trim(),
+          product_name: String(raw['Nombre'] || raw.nombre || raw.product_name || '').trim(),
+          client_name: String(raw['Cliente'] || raw.cliente || raw.client_name || '').trim(),
           quantity,
           production_cadence: cadence,
           estimated_duration: estimatedDuration,
-          priority: parseInt(raw.prioridad || raw.priority || 3) || 3,
-          start_date: raw.fecha_inicio || raw.start_date || null,
-          committed_delivery_date: raw.fecha_entrega || raw.nueva_fecha_entrega || raw.committed_delivery_date || null,
-          status: raw.estado || raw.status || 'Pendiente',
-          notes: raw.observacion || raw.notes || '',
-          material_type: raw.material || raw.material_type || '',
-          machine_location: raw.sala || raw.machine_location || '',
-          external_order_reference: String(raw.pedido || raw.external_order_reference || '').trim(),
-          customer_order_reference: String(raw.su_pedido || raw.customer_order_reference || '').trim(),
-          missing_components_flag: !!(raw.faltas || raw.missing_components_flag),
+          priority: parseInt(raw['Prioridad'] || raw.prioridad || raw.priority || 3) || 3,
+          start_date: raw['Fecha Inicio Limite'] || raw.fecha_inicio || raw.start_date || null,
+          committed_delivery_date: raw['Nueva Fecha Entrega'] || raw['Fecha Entrega'] || raw.fecha_entrega || raw.committed_delivery_date || null,
+          status: raw['Estado'] || raw.estado || raw.status || 'Pendiente',
+          notes: rawNotes,
+          material_type: raw['Material'] || raw.material || raw.material_type || '',
+          machine_location: raw['Sala / Máquina'] || raw.sala || raw.machine_location || '',
+          external_order_reference: String(raw['Pedido'] || raw.pedido || raw.external_order_reference || '').trim(),
+          customer_order_reference: String(raw['Su Pedido'] || raw.su_pedido || raw.customer_order_reference || '').trim(),
+          missing_components_flag: !!(raw['Faltas'] || raw.faltas || raw.missing_components_flag),
           has_customer_delay_note: !!(raw.retraso_cliente || raw.has_customer_delay_note),
         };
 

@@ -263,119 +263,16 @@ export const SyncService = {
 
   async syncOrders(log) {
     log("Syncing Orders...");
-    const currentBatchId = `batch_bg_${Date.now()}`;
-
     try {
-      // 1. Fetch Orders from CDEApp
-      const response = await cdeApp.syncProductions();
-      let rawData = [];
-      if (Array.isArray(response)) rawData = response;
-      else if (response?.data && Array.isArray(response.data)) rawData = response.data;
-      else if (response?.data) rawData = [response.data];
-
-      if (rawData.length === 0) {
-          log("No orders found in CDEApp.");
-          return;
+      // Delegate order sync to the backend function to avoid frontend rate limiting.
+      // The backend function handles all upsert/delete logic server-side in bulk.
+      const res = await base44.functions.invoke('scheduledOrderSync', {});
+      const data = res?.data || {};
+      if (data.success) {
+        log(`Orders: ${data.synced || data.created || 0} synced.`);
+      } else {
+        log(`Orders sync: ${data.message || 'completed'}`);
       }
-
-      // 2. Fetch Machines for resolution
-      let machinesRaw = [];
-      try {
-          machinesRaw = await base44.entities.MachineMasterDatabase.list(undefined, 2000);
-      } catch (e) { console.warn("Error fetching machines for background sync", e); }
-      
-      const { resolveMachine } = buildMachinesMap(machinesRaw);
-
-      // Helper to extract value with aliases (minimal version of what's in OrderImport.jsx)
-      const extractValueMinimal = (obj, key, aliases = []) => {
-          if (obj[key] !== undefined) return obj[key];
-          for (const alias of aliases) { if (obj[alias] !== undefined) return obj[alias]; }
-          return undefined;
-      };
-
-      // 3. Process Orders (Upsert Logic with Batch Tagging)
-      let successCount = 0;
-      let failCount = 0;
-
-      const CHUNK_SIZE = 2;
-      const CHUNK_DELAY = 500;
-
-      for (let i = 0; i < rawData.length; i += CHUNK_SIZE) {
-          const chunk = rawData.slice(i, i + CHUNK_SIZE);
-          
-          await Promise.all(chunk.map(async (rawRow) => {
-              const orderNumber = extractValueMinimal(rawRow, 'order_number', ['Orden', 'numero_orden', 'wo', 'ORDEN']);
-              const machineName = extractValueMinimal(rawRow, 'machine_name', ['Máquina', 'maquina', 'machine', 'recurso']);
-              const machineIdSource = extractValueMinimal(rawRow, 'machine_id_source', ['machine_id', 'id_maquina', 'MACHINE_ID']);
-              
-              let machineId = resolveMachine(machineName, machineIdSource);
-
-              // Fallback to "Sin Asignar" if possible
-              if (!machineId && machinesRaw.length > 0) {
-                  const fallback = machinesRaw.find(m => m.nombre_maquina === 'Sin Asignar' || m.codigo_maquina === '000') || machinesRaw[0];
-                  machineId = fallback.id;
-              }
-
-              if (!orderNumber || !machineId) { failCount++; return; }
-
-              // Normalize payload
-              const payload = {
-                  order_number: String(orderNumber),
-                  machine_id: machineId,
-                  import_batch_id: currentBatchId,
-                  status: rawRow.status || rawRow.Estado || 'Pendiente',
-                  priority: parseInt(rawRow.priority || rawRow.Prioridad) || 0,
-                  quantity: parseInt(rawRow.quantity || rawRow.Cantidad) || 0,
-                  client_name: rawRow.client_name || rawRow.Cliente || '',
-                  product_name: rawRow.product_name || rawRow.Nombre || rawRow.Descripción || '',
-                  product_article_code: rawRow.product_article_code || rawRow.Artículo || '',
-                  committed_delivery_date: rawRow.committed_delivery_date || rawRow['Fecha Entrega'] || '',
-                  notes: JSON.stringify({ ...rawRow, import_batch_id: currentBatchId })
-              };
-
-              try {
-                  let existing = [];
-                  try { existing = await retryOp(() => base44.entities.WorkOrder.filter({ order_number: String(orderNumber) })); } catch { 0; }
-
-                  if (existing && existing.length > 0) {
-                      await retryOp(() => base44.entities.WorkOrder.update(existing[0].id, payload));
-                      if (existing.length > 1) {
-                          for (let k = 1; k < existing.length; k++) {
-                              try { await retryOp(() => base44.entities.WorkOrder.delete(existing[k].id)); } catch { 0; }
-                          }
-                      }
-                  } else {
-                      await retryOp(() => base44.entities.WorkOrder.create(payload));
-                  }
-                  successCount++;
-              } catch (e) {
-                  console.error("Order background sync error", e);
-                  failCount++;
-              }
-          }));
-
-          if (i + CHUNK_SIZE < rawData.length) await sleep(CHUNK_DELAY);
-      }
-
-      // 4. Cleanup old records
-      log("Cleaning up stale orders...");
-      try {
-          const allOrders = await base44.entities.WorkOrder.list(undefined, 5000);
-          const toDelete = allOrders.filter(o => {
-              if (o.import_batch_id === currentBatchId) return false;
-              if (o.notes && o.notes.startsWith('{')) {
-                  try { if (JSON.parse(o.notes).import_batch_id === currentBatchId) return false; } catch { 0; }
-              }
-              return true;
-          });
-
-          for (let i = 0; i < toDelete.length; i += 5) {
-              const delChunk = toDelete.slice(i, i + 5);
-              await Promise.allSettled(delChunk.map(o => base44.entities.WorkOrder.delete(o.id)));
-          }
-          log(`Orders: ${successCount} synced, ${toDelete.length} cleaned up.`);
-      } catch (e) { log(`Cleanup error: ${e.message}`); }
-
     } catch (error) {
       log(`Error syncing orders: ${error.message}`);
     }
