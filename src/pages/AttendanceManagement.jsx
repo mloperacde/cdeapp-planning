@@ -136,7 +136,7 @@ export default function AttendanceManagementPage() {
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="import" className="flex-1 flex flex-col overflow-hidden">
+      <Tabs defaultValue="records" className="flex-1 flex flex-col overflow-hidden">
         <TabsList className="flex w-full flex-nowrap overflow-x-auto mb-2 shrink-0 h-auto bg-white dark:bg-slate-800/50 p-1 border border-slate-200 dark:border-slate-800 rounded-lg">
           <TabsTrigger value="import" className="flex-1 text-xs py-1.5">
             <Upload className="w-3 h-3 mr-1" />
