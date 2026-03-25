@@ -15,8 +15,6 @@ async function cdeApiFetch(endpoint, apiKey) {
   return response.json();
 }
 
-// Parse machine code from CDEApp "Sala / Máquina" field.
-// Format: "ROOM_PREFIX MACHINE_CODE - DESCRIPTION" e.g. "109C 201 - PKV VIALES 1.5ML" → "201"
 function parseMachineCode(machineName) {
   if (!machineName) return null;
   const match = String(machineName).match(/^\S+\s+(\d+)\s*-/);
@@ -25,19 +23,40 @@ function parseMachineCode(machineName) {
 
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-async function retry(fn, retries = 3, baseDelay = 1500) {
+async function retry(fn, retries = 4, baseDelay = 2000) {
   for (let i = 0; i < retries; i++) {
     try {
       return await fn();
     } catch (e) {
       const isRate = e?.message?.includes('Rate limit') || e?.message?.includes('429');
       if (isRate && i < retries - 1) {
-        await sleep(baseDelay * (i + 1));
+        const delay = baseDelay * Math.pow(2, i); // exponential backoff
+        console.log(`[scheduledOrderSync] Rate limit, reintentando en ${delay}ms...`);
+        await sleep(delay);
         continue;
       }
       throw e;
     }
   }
+}
+
+// Fetch ALL existing WorkOrder IDs paginating through entire dataset
+async function fetchAllWorkOrderIds(base44) {
+  const PAGE = 500;
+  const ids = [];
+  let skip = 0;
+  while (true) {
+    const page = await retry(() =>
+      base44.asServiceRole.entities.WorkOrder.list('-created_date', PAGE, skip)
+    );
+    const items = Array.isArray(page) ? page : (page?.items || []);
+    for (const o of items) ids.push(o.id);
+    console.log(`[scheduledOrderSync] Paginación delete: obtenidos ${ids.length} IDs (página skip=${skip}, size=${items.length})`);
+    if (items.length < PAGE) break;
+    skip += PAGE;
+    await sleep(500);
+  }
+  return ids;
 }
 
 Deno.serve(async (req) => {
@@ -62,23 +81,22 @@ Deno.serve(async (req) => {
       return Response.json({ success: true, message: 'Sin órdenes que sincronizar', synced: 0 });
     }
 
-    // 2. Build machine lookup: codigo_maquina -> record id (exact match, no ambiguity)
-    const machinesAll = await base44.asServiceRole.entities.MachineMasterDatabase.list('-created_date', 2000);
+    // 2. Build machine lookup
+    const machinesAll = await retry(() =>
+      base44.asServiceRole.entities.MachineMasterDatabase.list('-created_date', 2000)
+    );
     const machineByCode = new Map();
     for (const m of (machinesAll || [])) {
       if (m.codigo_maquina) machineByCode.set(String(m.codigo_maquina).trim(), m.id);
     }
     const unassignedMachine = machinesAll.find(m => m.codigo_maquina === 'ZZ-UNASSIGNED');
-    const batchId = `batch_${Date.now()}`;
 
-    // 3. Map all CDEApp orders to WorkOrder format
-    const newOrders = [];
+    // 3. Map orders (deduplicate by order_number — keep last occurrence)
+    const orderMap = new Map();
     for (const raw of rawOrders) {
       const orderNumber = String(raw['Orden'] || '').trim();
       if (!orderNumber) continue;
 
-      // Machine resolution: extract code from "109C 201 - PKV VIALES 1.5ML" → "201"
-      // This prevents wrong assignments when multiple machines share the same room prefix (e.g. 109C)
       const machineName = String(raw['Sala / Máquina'] || '').trim();
       const parsedCode = parseMachineCode(machineName);
       let machineId = parsedCode ? (machineByCode.get(parsedCode) || null) : null;
@@ -87,7 +105,7 @@ Deno.serve(async (req) => {
       const quantity = parseFloat(raw['Cantidad'] || 0) || 0;
       const cadence = parseFloat(raw['Cadencia'] || 0) || 0;
 
-      newOrders.push({
+      orderMap.set(orderNumber, {
         order_number: orderNumber,
         machine_id: machineId,
         product_article_code: String(raw['Artículo'] || '').trim(),
@@ -108,23 +126,32 @@ Deno.serve(async (req) => {
         customer_order_reference: String(raw['Su Pedido'] || '').trim(),
         missing_components_flag: !!(raw['Faltas'] && raw['Faltas'] !== 'No' && raw['Faltas'] !== ''),
         has_customer_delay_note: !!(raw['Motivo Retraso']),
-        notes: JSON.stringify({ ...raw, import_batch_id: batchId }),
+        notes: raw['Observación'] || '',
       });
     }
+    const newOrders = Array.from(orderMap.values());
+    console.log(`[scheduledOrderSync] ${newOrders.length} órdenes únicas mapeadas`);
 
-    console.log(`[scheduledOrderSync] ${newOrders.length} órdenes mapeadas. Eliminando órdenes antiguas...`);
+    // 4. Delete ALL existing records (paginated to ensure completeness)
+    const allIds = await fetchAllWorkOrderIds(base44);
+    console.log(`[scheduledOrderSync] Eliminando ${allIds.length} registros existentes...`);
 
-    // 4. Delete ALL existing WorkOrders in batches of 20
-    const existing = await base44.asServiceRole.entities.WorkOrder.list('-created_date', 5000);
-    const DELETE_BATCH = 20;
-    for (let i = 0; i < existing.length; i += DELETE_BATCH) {
-      const chunk = existing.slice(i, i + DELETE_BATCH);
-      await Promise.allSettled(chunk.map(o => base44.asServiceRole.entities.WorkOrder.delete(o.id)));
-      await sleep(300);
+    const DEL_BATCH = 15;
+    let deleted = 0;
+    for (let i = 0; i < allIds.length; i += DEL_BATCH) {
+      const chunk = allIds.slice(i, i + DEL_BATCH);
+      await Promise.allSettled(
+        chunk.map(id => retry(() => base44.asServiceRole.entities.WorkOrder.delete(id), 3, 1000))
+      );
+      deleted += chunk.length;
+      if (deleted % 150 === 0) {
+        console.log(`[scheduledOrderSync] Eliminados ${deleted}/${allIds.length}`);
+      }
+      await sleep(400);
     }
-    console.log(`[scheduledOrderSync] ${existing.length} órdenes eliminadas`);
+    console.log(`[scheduledOrderSync] ${deleted} registros eliminados. Creando nuevos...`);
 
-    // 5. BulkCreate all new orders in chunks of 50 (few API calls total)
+    // 5. BulkCreate all new orders
     const BULK_CHUNK = 50;
     let created = 0;
     let errors = 0;
@@ -138,12 +165,19 @@ Deno.serve(async (req) => {
         console.error(`[scheduledOrderSync] Error bulkCreate chunk ${i}:`, e.message);
         errors += chunk.length;
       }
-      await sleep(600);
+      await sleep(700);
     }
 
-    const summary = `Sync completado: ${created} creadas, ${errors} errores (de ${newOrders.length} totales)`;
+    const summary = `Sync completado: ${deleted} eliminadas, ${created} creadas, ${errors} errores`;
     console.log(`[scheduledOrderSync] ${summary}`);
-    return Response.json({ success: true, message: summary, created, errors, total: newOrders.length });
+    return Response.json({
+      success: true,
+      message: summary,
+      deleted,
+      created,
+      errors,
+      total: newOrders.length
+    });
 
   } catch (error) {
     console.error('[scheduledOrderSync] Error crítico:', error.message);
