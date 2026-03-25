@@ -97,7 +97,20 @@ export default function OrderImport() {
       const transformed = list.map(o => {
         let extra = {};
         try { extra = JSON.parse(o.notes || '{}'); } catch { /* ignore */ }
-        return { ...o, ...extra, _db_machine_id: o.machine_id };
+        return {
+          ...o,
+          ...extra,
+          _db_machine_id: o.machine_id,
+          // Map entity fields → SYSTEM_FIELDS display keys
+          room: o.machine_location,
+          machine_name: o.machine_location,
+          material: o.material_type,
+          client_order_ref: o.customer_order_reference,
+          internal_order_ref: o.external_order_reference,
+          shortages: o.missing_components_flag ? 'Sí' : '',
+          effective_delivery_date: o.committed_delivery_date,
+          effective_start_date: o.start_date,
+        };
       });
       setOrders(transformed);
     } catch (e) {
