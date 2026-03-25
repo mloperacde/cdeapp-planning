@@ -94,24 +94,30 @@ export default function OrderImport() {
     try {
       const res = await base44.entities.WorkOrder.list(undefined, 3000);
       const list = Array.isArray(res) ? res : [];
-      const transformed = list.map(o => {
-        let extra = {};
-        try { extra = JSON.parse(o.notes || '{}'); } catch { /* ignore */ }
-        return {
-          ...o,
-          ...extra,
-          _db_machine_id: o.machine_id,
-          // Map entity fields → SYSTEM_FIELDS display keys
-          room: o.machine_location,
-          machine_name: o.machine_location,
-          material: o.material_type,
-          client_order_ref: o.customer_order_reference,
-          internal_order_ref: o.external_order_reference,
-          shortages: o.missing_components_flag ? 'Sí' : '',
-          effective_delivery_date: o.committed_delivery_date,
-          effective_start_date: o.start_date,
-        };
-      });
+      const transformed = list.map(o => ({
+        // Entity fields as-is
+        ...o,
+        _db_machine_id: o.machine_id,
+        // SYSTEM_FIELDS key → entity field mapping
+        production_id:            o.order_number,
+        machine_id_source:        o.machine_id,
+        type:                     o.product_category,
+        room:                     o.machine_location,
+        machine_name:             o.machine_location,
+        client_order_ref:         o.customer_order_reference,
+        internal_order_ref:       o.external_order_reference,
+        product_family:           o.product_category,
+        shortages:                o.missing_components_flag ? 'Sí' : 'No',
+        delay_reason:             o.has_customer_delay_note ? 'Sí' : '',
+        material:                 o.material_type,
+        production_cadence:       o.production_cadence,
+        effective_delivery_date:  o.committed_delivery_date,
+        new_delivery_date:        o.committed_delivery_date,
+        effective_start_date:     o.start_date,
+        modified_start_date:      o.start_date,
+        planned_end_date:         o.planned_end_date,
+        notes:                    o.notes,
+      }));
       setOrders(transformed);
     } catch (e) {
       toast.error('Error cargando órdenes locales: ' + e.message);
