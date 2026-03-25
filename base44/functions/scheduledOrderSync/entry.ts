@@ -136,23 +136,25 @@ Deno.serve(async (req) => {
     const allIds = await fetchAllWorkOrderIds(base44);
     console.log(`[scheduledOrderSync] Eliminando ${allIds.length} registros existentes...`);
 
-    const DEL_BATCH = 15;
+    const DEL_BATCH = 10;
     let deleted = 0;
     for (let i = 0; i < allIds.length; i += DEL_BATCH) {
       const chunk = allIds.slice(i, i + DEL_BATCH);
       await Promise.allSettled(
-        chunk.map(id => retry(() => base44.asServiceRole.entities.WorkOrder.delete(id), 3, 1000))
+        chunk.map(id => retry(() => base44.asServiceRole.entities.WorkOrder.delete(id), 3, 1500))
       );
       deleted += chunk.length;
-      if (deleted % 150 === 0) {
+      if (deleted % 100 === 0) {
         console.log(`[scheduledOrderSync] Eliminados ${deleted}/${allIds.length}`);
       }
-      await sleep(400);
+      await sleep(700);
     }
+    // Pausa larga entre delete y create para dejar que el rate limiter se recupere
+    if (deleted > 0) await sleep(3000);
     console.log(`[scheduledOrderSync] ${deleted} registros eliminados. Creando nuevos...`);
 
     // 5. BulkCreate all new orders
-    const BULK_CHUNK = 50;
+    const BULK_CHUNK = 40;
     let created = 0;
     let errors = 0;
     for (let i = 0; i < newOrders.length; i += BULK_CHUNK) {
@@ -165,9 +167,8 @@ Deno.serve(async (req) => {
         console.error(`[scheduledOrderSync] Error bulkCreate chunk ${i}:`, e.message);
         errors += chunk.length;
       }
-      await sleep(700);
+      await sleep(1000);
     }
-
     const summary = `Sync completado: ${deleted} eliminadas, ${created} creadas, ${errors} errores`;
     console.log(`[scheduledOrderSync] ${summary}`);
     return Response.json({
