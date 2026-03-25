@@ -37,11 +37,11 @@ export const SyncService = {
 
     log("Starting full sync...");
     
-    // Run in sequence or parallel? Sequence is safer for logging.
+    // Orders are synced exclusively via the backend automation (scheduledOrderSync).
+    // DO NOT call syncOrders here to avoid frontend rate-limit collisions.
     await this.syncRooms(log);
     await this.syncMachines(log);
     await this.syncArticles(log);
-    await this.syncOrders(log);
     
     log("Sync completed.");
   },
