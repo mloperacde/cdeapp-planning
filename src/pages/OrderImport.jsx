@@ -151,146 +151,31 @@ export default function OrderImport() {
     }
   };
 
-  // ─── MAIN SYNC ────────────────────────────────────────────────────────────────
-  // Strategy:
-  //   1. Fetch all productions from CDEApp
-  //   2. Get all current WorkOrders from DB  → build map by order_number
-  //   3. Upsert: update existing, create new
-  //   4. Delete: records in DB whose order_number is NOT in CDEApp response
+  // ─── MAIN SYNC ─────────────────────────────────────────────────────────────────
+  // Delegates entirely to the backend function (scheduledOrderSync) to avoid
+  // frontend rate-limit issues from hundreds of individual API calls.
   const syncAll = async () => {
     setSyncing(true);
     setProgress(0);
-    setProgressLabel('Sincronizando catálogo de máquinas...');
+    setProgressLabel('Iniciando sincronización en el servidor...');
 
     try {
-      // Step 1 – Sync machines
-      await syncMachines();
+      setProgress(10);
+      setProgressLabel('Conectando con CDEApp y procesando órdenes...');
 
-      // Step 2 – Fetch productions from CDEApp
-      setProgressLabel('Obteniendo órdenes de CDEApp...');
-      const response = await cdeSync('sync-productions');
-      let data = Array.isArray(response) ? response : (response?.data && Array.isArray(response.data) ? response.data : []);
-
-      // Step 3 – Normalize CDE data
-      const normalized = data.map(row => {
-        const newRow = {};
-        SYSTEM_FIELDS.forEach(field => {
-          const val = extractValue(row, field);
-          if (val !== undefined) newRow[field.key] = val;
-        });
-        newRow.priority = parseInt(newRow.priority) || 0;
-        newRow.quantity = parseInt(newRow.quantity) || 0;
-        newRow.status = newRow.status || 'Pendiente';
-        newRow.effective_delivery_date = (newRow.new_delivery_date && !String(newRow.new_delivery_date).startsWith('0000'))
-          ? newRow.new_delivery_date : newRow.committed_delivery_date;
-        newRow.effective_start_date = (newRow.modified_start_date && !String(newRow.modified_start_date).startsWith('0000'))
-          ? newRow.modified_start_date : newRow.start_date;
-        if (row.machine_id) newRow.machine_id_source = String(row.machine_id);
-        if (row.machine_code) newRow.machine_code_source = String(row.machine_code);
-        return newRow;
-      });
-
-      const cdeOrderNumbers = new Set(normalized.map(r => String(r.order_number)).filter(Boolean));
-
-      // Step 4 – Load existing DB records
-      setProgressLabel('Cargando registros actuales...');
-      const dbOrders = await base44.entities.WorkOrder.list(undefined, 5000);
-      const dbList = Array.isArray(dbOrders) ? dbOrders : [];
-
-      // Map: order_number → existing DB record
-      const dbByOrderNumber = new Map();
-      dbList.forEach(o => {
-        if (o.order_number) dbByOrderNumber.set(String(o.order_number), o);
-      });
-
-      // Step 5 – Load machines for resolution
-      const machinesRaw = await base44.entities.MachineMasterDatabase.list(undefined, 2000);
-      const machinesArr = Array.isArray(machinesRaw) ? machinesRaw : [];
-      const { resolveMachine } = buildMachinesMap(machinesArr);
-
-      // Build a strict CDE-ID-only map: only matches machines with explicit cde_machine_id
-      // This avoids false positives from token-based lookup (e.g. "51" matching a machine whose
-      // description contains the number 51 as a token, which is a different machine in CDEApp)
-      const cdeIdOnlyMap = new Map();
-      machinesArr.forEach(m => {
-        if (m.cde_machine_id) cdeIdOnlyMap.set(String(m.cde_machine_id).trim(), m.id);
-      });
-
-      // Ensure fallback
-      const total = normalized.length;
-      let created = 0, updated = 0, skipped = 0;
-      const CHUNK = 5;
-
-      for (let i = 0; i < total; i += CHUNK) {
-        const chunk = normalized.slice(i, i + CHUNK);
-        await Promise.all(chunk.map(async (row) => {
-          const orderNumber = row.order_number;
-          if (!orderNumber) { skipped++; return; }
-
-          // Resolve machine
-          // IMPORTANT: machine_id_source is the CDEApp internal numeric ID.
-          // We ONLY match it against machines that explicitly have cde_machine_id stored.
-          // Using the general token-based lookup can cause false positives (e.g. "51" matching
-          // a machine whose description/name contains the number 51 as a coincidental token).
-          const isDbId = (v) => v && /^[a-f0-9]{24}$/i.test(String(v).trim());
-          let machineId = null;
-          if (isDbId(row.machine_id_source)) machineId = row.machine_id_source;
-          // Strict CDE-ID lookup: ONLY matches machines with explicit cde_machine_id
-          if (!machineId && row.machine_id_source) machineId = cdeIdOnlyMap.get(String(row.machine_id_source).trim()) || null;
-          // Fall back to machine name resolution ("Sala / Máquina" field from CDEApp)
-          if (!machineId && row.machine_name) machineId = resolveMachine(row.machine_name, null);
-          if (!machineId && row.machine_code_source) machineId = resolveMachine(row.machine_code_source, null);
-          if (!machineId) { skipped++; return; }
-
-          const payload = {
-            ...row,
-            order_number: String(orderNumber),
-            machine_id: machineId,
-            status: row.status || 'Pendiente',
-            priority: parseInt(row.priority) || 0,
-            quantity: parseInt(row.quantity) || 0,
-            notes: JSON.stringify(row),
-            multi_unit: parseInt(row.multi_unit) || 0,
-            multi_qty: parseFloat(row.multi_qty) || 0,
-            production_cadence: parseFloat(row.production_cadence) || 0,
-          };
-
-          const existing = dbByOrderNumber.get(String(orderNumber));
-          if (existing) {
-            await base44.entities.WorkOrder.update(existing.id, payload);
-            updated++;
-          } else {
-            await base44.entities.WorkOrder.create(payload);
-            created++;
-          }
-        }));
-
-        setProgress(Math.round(((i + CHUNK) / total) * 80));
-        setProgressLabel(`Procesando órdenes... (${Math.min(i + CHUNK, total)}/${total})`);
-        await new Promise(r => setTimeout(r, 80));
-      }
-
-      // Step 7 – Delete stale records (in DB but not in CDEApp)
-      setProgressLabel('Eliminando registros obsoletos...');
-      const staleRecords = dbList.filter(o => o.order_number && !cdeOrderNumbers.has(String(o.order_number)));
-      let deleted = 0;
-
-      if (staleRecords.length > 0) {
-        const DEL_CHUNK = 10;
-        for (let i = 0; i < staleRecords.length; i += DEL_CHUNK) {
-          const chunk = staleRecords.slice(i, i + DEL_CHUNK);
-          await Promise.allSettled(chunk.map(o => base44.entities.WorkOrder.delete(o.id)));
-          deleted += chunk.length;
-          setProgress(80 + Math.round(((i + DEL_CHUNK) / staleRecords.length) * 20));
-        }
-      }
+      const res = await base44.functions.invoke('scheduledOrderSync', {});
+      const data = res?.data || {};
 
       setProgress(100);
-      const stats = { time: new Date(), created, updated, deleted, skipped };
-      setLastSyncStats(stats);
-      toast.success(`Sincronización completa: ${created} nuevas, ${updated} actualizadas, ${deleted} eliminadas.`);
 
-      // Reload local display
+      if (data.success) {
+        const stats = { time: new Date(), created: data.created || 0, updated: 0, deleted: data.deleted || 0, skipped: 0 };
+        setLastSyncStats(stats);
+        toast.success(`Sincronización completa: ${data.created} creadas, ${data.deleted} eliminadas.`);
+      } else {
+        toast.error('Error en la sincronización: ' + (data.message || 'Error desconocido'));
+      }
+
       await loadLocalOrders();
     } catch (error) {
       console.error('Sync error:', error);
