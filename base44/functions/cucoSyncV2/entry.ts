@@ -1,4 +1,23 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.21';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
+
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+async function retryOp(fn, retries = 4, baseDelay = 2000) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await fn();
+    } catch (e) {
+      const isRate = e?.message?.includes('Rate limit') || e?.message?.includes('429');
+      if (isRate && i < retries - 1) {
+        const delay = baseDelay * Math.pow(2, i);
+        console.log(`[cucoSyncV2] Rate limit, retrying in ${delay}ms...`);
+        await sleep(delay);
+        continue;
+      }
+      throw e;
+    }
+  }
+}
 
 Deno.serve(async (req) => {
   try {
@@ -30,7 +49,7 @@ Deno.serve(async (req) => {
       from = today; to = today;
     }
 
-    // Saltar fines de semana y festivos (si no es forzado)
+    // Saltar fines de semana solo cuando es un único día y no forzado
     if (!force && from === to) {
       const targetDate = new Date(from + 'T12:00:00Z');
       const dayOfWeek = targetDate.getUTCDay();
@@ -46,9 +65,9 @@ Deno.serve(async (req) => {
     console.log(`[cucoSyncV2] Syncing ${CLIENT_CODE} from ${from} to ${to}`);
 
     // ── 1. Obtener marcajes de Cuco360 ──────────────────────────────────────
-    const start = encodeURIComponent(`${from} 00:00:00`);
-    const end = encodeURIComponent(`${to} 23:59:59`);
-    const url = `https://cuco360.cucorent.com/api/apiv2/checking/getfullchecks/${CLIENT_CODE}?start_date=${start}&end_date=${end}`;
+    const startEnc = encodeURIComponent(`${from} 00:00:00`);
+    const endEnc = encodeURIComponent(`${to} 23:59:59`);
+    const url = `https://cuco360.cucorent.com/api/apiv2/checking/getfullchecks/${CLIENT_CODE}?start_date=${startEnc}&end_date=${endEnc}`;
 
     const response = await fetch(url, {
       headers: {
@@ -75,9 +94,10 @@ Deno.serve(async (req) => {
     }
 
     // ── 2. Cargar base maestra de empleados ─────────────────────────────────
-    const masterEmployees = await serviceClient.entities.EmployeeMasterDatabase.list(undefined, 2000);
+    const masterEmployees = await retryOp(() =>
+      serviceClient.entities.EmployeeMasterDatabase.list(undefined, 2000)
+    );
 
-    // Mapa por codigo_empleado para cruce rápido
     const masterMapByCodigo = {};
     for (const emp of masterEmployees) {
       if (emp.codigo_empleado) {
@@ -86,6 +106,7 @@ Deno.serve(async (req) => {
     }
 
     // ── 3. Procesar registros de marcaje ────────────────────────────────────
+    const todayBatch = `cuco_v2_sync_${new Date().toISOString().split('T')[0]}`;
     const recordsToCreate = checks.map((check) => {
       const externalId = String(check.cod_int_empleado || check.cod_interno || check.cod_empleado || "").trim();
       const fullDate = check.fec_marcaje || check.fecha;
@@ -107,102 +128,109 @@ Deno.serve(async (req) => {
         record_time: timeStr,
         direction,
         device: check.nom_dispositivo || "API CUCO360",
-        import_batch: `cuco_v2_sync_${new Date().toISOString().split('T')[0]}`
+        import_batch: todayBatch
       };
     }).filter(r => r !== null);
 
-    // ── 4. Limpiar registros previos del día (si es sincronización de un solo día) ─
-    if (from === to) {
-      let existing = await serviceClient.entities.AttendanceRecord.filter({ record_date: from }, "id", 1000);
-      while (existing && existing.length > 0) {
-        for (let i = 0; i < existing.length; i += 20) {
-          const batch = existing.slice(i, i + 20);
-          await Promise.all(batch.map(r => serviceClient.entities.AttendanceRecord.delete(r.id).catch(() => {})));
-          await new Promise(r => setTimeout(r, 50));
+    console.log(`[cucoSyncV2] ${recordsToCreate.length} registros obtenidos de Cuco360`);
+
+    // ── 4. Limpiar registros previos por cada día (para evitar duplicados) ─
+    const uniqueDates = [...new Set(recordsToCreate.map(r => r.record_date))];
+    console.log(`[cucoSyncV2] Limpiando ${uniqueDates.length} días...`);
+
+    for (const d of uniqueDates) {
+      let page = await retryOp(() =>
+        serviceClient.entities.AttendanceRecord.filter({ record_date: d }, "id", 500)
+      );
+      let totalDeleted = 0;
+      while (page && page.length > 0) {
+        for (let i = 0; i < page.length; i += 10) {
+          const batch = page.slice(i, i + 10);
+          await Promise.allSettled(
+            batch.map(r => retryOp(() => serviceClient.entities.AttendanceRecord.delete(r.id), 3, 1500))
+          );
+          totalDeleted += batch.length;
+          await sleep(800);
         }
-        existing = await serviceClient.entities.AttendanceRecord.filter({ record_date: from }, "id", 1000);
+        page = await retryOp(() =>
+          serviceClient.entities.AttendanceRecord.filter({ record_date: d }, "id", 500)
+        );
       }
+      console.log(`[cucoSyncV2] Día ${d}: ${totalDeleted} registros eliminados`);
+      await sleep(500);
     }
 
-    // ── 5. Insertar nuevos registros ────────────────────────────────────────
-    for (let i = 0; i < recordsToCreate.length; i += 20) {
-      await serviceClient.entities.AttendanceRecord.bulkCreate(recordsToCreate.slice(i, i + 20)).catch(e => {
-        console.error("Bulk create error chunk", i, e);
-      });
-      await new Promise(r => setTimeout(r, 200));
+    // Pausa antes de insertar
+    if (uniqueDates.length > 0) await sleep(2000);
+
+    // ── 5. Insertar nuevos registros en chunks ────────────────────────────
+    const BULK = 30;
+    let inserted = 0;
+    for (let i = 0; i < recordsToCreate.length; i += BULK) {
+      const chunk = recordsToCreate.slice(i, i + BULK);
+      await retryOp(() => serviceClient.entities.AttendanceRecord.bulkCreate(chunk));
+      inserted += chunk.length;
+      console.log(`[cucoSyncV2] Insertados ${inserted}/${recordsToCreate.length}`);
+      await sleep(800);
     }
 
-    // ── 6. Análisis de presencia vs. ausencia ───────────────────────────────
-    // Solo aplica cuando sincronizamos un solo día
+    // ── 6. Análisis de presencia (solo para sincronización de un único día) ─
     if (from === to) {
       const syncDate = from;
 
-      // Empleados sujetos a control horario (Alta + sujeto_a_control_horario !== false)
       const controlledEmployees = masterEmployees.filter(emp =>
         emp.estado_empleado === "Alta" &&
         emp.sujeto_a_control_horario !== false
       );
 
-      // Conjunto de códigos que ficharon hoy
       const ficharonHoy = new Set(recordsToCreate.map(r => r.employee_id));
-
-      const ausentes = [];    // Esperados pero sin fichaje
-      const reactivados = []; // Marcados como Ausente pero ficharon
+      const ausentes = [];
+      const reactivados = [];
 
       for (const emp of controlledEmployees) {
         const code = String(emp.codigo_empleado || "").trim();
         if (!code) continue;
-
         const hasFichado = ficharonHoy.has(code);
-
-        if (!hasFichado && emp.disponibilidad !== "Ausente") {
-          // Estaba disponible pero NO fichó → marcar como Ausente
-          ausentes.push(emp);
-        } else if (hasFichado && emp.disponibilidad === "Ausente") {
-          // Estaba marcado como Ausente pero fichó → reactivar
-          reactivados.push(emp);
-        }
+        if (!hasFichado && emp.disponibilidad !== "Ausente") ausentes.push(emp);
+        else if (hasFichado && emp.disponibilidad === "Ausente") reactivados.push(emp);
       }
 
-      // Actualizar disponibilidad de ausentes
       for (const emp of ausentes) {
-        await serviceClient.entities.EmployeeMasterDatabase.update(emp.id, {
+        await retryOp(() => serviceClient.entities.EmployeeMasterDatabase.update(emp.id, {
           disponibilidad: "Ausente",
           ausencia_inicio: `${syncDate}T00:00:00`,
           ausencia_motivo: "Ausencia detectada automáticamente por sistema (sin fichaje)"
-        }).catch(e => console.warn(`Error marcando ausente ${emp.nombre}:`, e));
+        })).catch(e => console.warn(`Error marcando ausente ${emp.nombre}:`, e));
       }
 
-      // Reactivar empleados que ficharon estando marcados como ausentes
       for (const emp of reactivados) {
-        await serviceClient.entities.EmployeeMasterDatabase.update(emp.id, {
+        await retryOp(() => serviceClient.entities.EmployeeMasterDatabase.update(emp.id, {
           disponibilidad: "Disponible",
           ausencia_fin: new Date().toISOString(),
           ausencia_motivo: null
-        }).catch(e => console.warn(`Error reactivando ${emp.nombre}:`, e));
+        })).catch(e => console.warn(`Error reactivando ${emp.nombre}:`, e));
       }
 
-      console.log(`[cucoSyncV2] Análisis: ${ausentes.length} ausentes detectados, ${reactivados.length} reactivados`);
+      console.log(`[cucoSyncV2] Análisis: ${ausentes.length} ausentes, ${reactivados.length} reactivados`);
 
       return Response.json({
         success: true,
-        message: `Sync OK: ${recordsToCreate.length} fichajes importados`,
-        count: recordsToCreate.length,
+        message: `Sync OK: ${inserted} fichajes importados`,
+        count: inserted,
         analysis: {
           employees_controlled: controlledEmployees.length,
           ficharon: ficharonHoy.size,
           ausentes_detectados: ausentes.length,
-          ausentes_nombres: ausentes.map(e => e.nombre),
           reactivados: reactivados.length,
-          reactivados_nombres: reactivados.map(e => e.nombre)
         }
       });
     }
 
     return Response.json({
       success: true,
-      message: `Synced ${recordsToCreate.length} records from CUCO360`,
-      count: recordsToCreate.length
+      message: `Synced ${inserted} records from CUCO360 (${uniqueDates.length} días)`,
+      count: inserted,
+      days: uniqueDates.length
     });
 
   } catch (err) {
