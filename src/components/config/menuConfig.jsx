@@ -33,7 +33,8 @@ import {
   Star,
   Link2,
   FlaskConical,
-  GraduationCap
+  GraduationCap,
+  ArrowLeftRight
 } from 'lucide-react';
 
 export const MENU_STRUCTURE = [
@@ -74,6 +75,8 @@ export const MENU_STRUCTURE = [
   // Fabricación
   { name: 'Empleados producción', path: '/EmployeesShiftManager', icon: Users, category: 'Fabricación' },
   { name: 'Jefes de Turno', path: '/ShiftManagers', icon: Briefcase, category: 'Fabricación' },
+  { name: 'Traspaso de Turnos', path: '/ShiftHandover', icon: ArrowLeftRight, category: 'Fabricación' },
+  { name: 'Apoyos 14-15', path: '/SupportManagement1415', icon: Coffee, category: 'Fabricación' },
   { name: 'Planning Diario', path: '/ShiftAssignmentsPage', icon: CalendarDays, category: 'Fabricación' },
   { name: 'Consulta Máquinas', path: '/MachineManagement', icon: Settings, category: 'Fabricación' },
   { name: 'Control Calidad', path: '/QualityControl', icon: ClipboardCheck, category: 'Fabricación' },
