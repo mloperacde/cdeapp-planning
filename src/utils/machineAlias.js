@@ -13,8 +13,8 @@ export const getMachineAlias = (machine) => {
 
     const compactName = nombre || nombreCorto;
 
-    // Si ya viene con paréntesis, asumimos que es alias final y no lo recomponemos
-    if (compactName && compactName.startsWith("(") && compactName.endsWith(")")) {
+    // Si ya tiene el formato final esperado (sin paréntesis), devolver tal cual
+    if (compactName && /^\w/.test(compactName) && compactName.includes(' - ') && !sala && !codigo) {
         return compactName;
     }
 
@@ -28,8 +28,8 @@ export const getMachineAlias = (machine) => {
 
     const baseName = nombreCorto || nombre;
     if (!baseName) {
-        return `(${prefix})`;
+        return prefix;
     }
 
-    return `(${prefix} - ${baseName})`;
+    return `${prefix} - ${baseName}`;
 };
