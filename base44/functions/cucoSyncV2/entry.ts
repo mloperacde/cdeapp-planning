@@ -107,15 +107,18 @@ Deno.serve(async (req) => {
 
     // ── 3. Procesar registros de marcaje ────────────────────────────────────
     const todayBatch = `cuco_v2_sync_${new Date().toISOString().split('T')[0]}`;
+
     const recordsToCreate = checks.map((check) => {
       const externalId = String(check.cod_int_empleado || check.cod_interno || check.cod_empleado || "").trim();
       const fullDate = check.fec_marcaje || check.fecha;
       if (!externalId || !fullDate) return null;
 
-      const masterEmp = masterMapByCodigo[externalId];
+      // Cuco360 ya envía la hora en tiempo local (Europe/Madrid)
       const dateParts = fullDate.split(' ');
       const dateStr = dateParts[0];
-      const timeStr = (dateParts[1] || "00:00:00").slice(0, 5);
+      const timeStr = (dateParts[1] || '00:00').slice(0, 5);
+
+      const masterEmp = masterMapByCodigo[externalId];
 
       const type = String(check.val_direccion || "").toUpperCase();
       const direction = (type === "S" || type === "SALIDA" || type === "OUT" || type === "2") ? "S" : "E";
