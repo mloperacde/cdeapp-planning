@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { RefreshCw, Save, Trash2, ArrowLeftRight, Mic, Square } from "lucide-react";
+import { RefreshCw, Save, Trash2, ArrowLeftRight, Mic, Square, ChevronsUpDown } from "lucide-react";
 import { format } from "date-fns";
 import { getMachineAlias } from "@/utils/machineAlias";
 
@@ -27,6 +26,8 @@ export default function ShiftHandoverPage() {
   const [otrasIndicaciones, setOtrasIndicaciones] = useState("");
   const [isRecording, setIsRecording] = useState({});
   const [recognition, setRecognition] = useState(null);
+  const [quickSelectMachine, setQuickSelectMachine] = useState("");
+  const machineRefs = React.useRef({});
   const queryClient = useQueryClient();
 
   const { data: machines, isLoading } = useQuery({
@@ -283,7 +284,34 @@ export default function ShiftHandoverPage() {
         {/* Estado de Máquinas */}
         <Card className="mb-6 shadow-lg border-0 bg-white/80 backdrop-blur-sm">
           <CardHeader className="border-b border-slate-100">
-            <CardTitle>Estado de las Máquinas</CardTitle>
+            <div className="flex items-center justify-between gap-4">
+              <CardTitle>Estado de las Máquinas</CardTitle>
+              {machines.length > 0 && (
+                <div className="flex items-center gap-2 min-w-[280px]">
+                  <ChevronsUpDown className="w-4 h-4 text-slate-400 shrink-0" />
+                  <Select
+                    value={quickSelectMachine}
+                    onValueChange={(val) => {
+                      setQuickSelectMachine(val);
+                      if (val && machineRefs.current[val]) {
+                        machineRefs.current[val].scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="h-8 text-sm bg-white border-slate-300">
+                      <SelectValue placeholder="Ir a máquina..." />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-60">
+                      {machines.map(m => (
+                        <SelectItem key={m.id} value={m.id}>
+                          {m.alias || getMachineAlias(m)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
           </CardHeader>
           <CardContent className="p-6">
             {isLoading ? (
@@ -299,7 +327,7 @@ export default function ShiftHandoverPage() {
                   const isCurrentlyRecording = isRecording[recordingKey];
 
                   return (
-                    <div key={machine.id} className="border rounded-lg p-4 bg-slate-50 hover:bg-slate-100 transition-colors">
+                    <div key={machine.id} ref={el => machineRefs.current[machine.id] = el} className="border rounded-lg p-4 bg-slate-50 hover:bg-slate-100 transition-colors">
                       <div className="flex items-start justify-between mb-3">
                         <div>
                           <h3 className="font-semibold text-slate-900 text-lg">
