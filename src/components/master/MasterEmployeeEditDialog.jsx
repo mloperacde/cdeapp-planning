@@ -47,13 +47,8 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
 
   // Mapear máquinas del DataProvider al formato esperado
   const allMachines = useMemo(() => {
-    return sharedMachines.map(m => ({
-      id: m.id,
-      alias: getMachineAlias(m),
-      tipo: m.tipo || '',
-      estado: m.estado || 'Disponible',
-      orden: m.orden || 999
-    })).sort((a, b) => a.orden - b.orden);
+    return [...sharedMachines]
+      .sort((a, b) => (a.orden_visualizacion || a.orden || 999) - (b.orden_visualizacion || b.orden || 999));
   }, [sharedMachines]);
 
   const { data: employeeSkills = [] } = useQuery({
@@ -1428,17 +1423,17 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
                       >
                        <SelectTrigger>
                          <SelectValue placeholder="Sin asignar">
-                           <span className="truncate text-slate-900 dark:text-slate-100">
-                             {selectedMachine ? selectedMachine.alias : "Sin asignar"}
-                           </span>
-                        </SelectValue>
+                            <span className="truncate text-slate-900 dark:text-slate-100">
+                              {selectedMachine ? getMachineAlias(selectedMachine) : "Sin asignar"}
+                            </span>
+                         </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="none">Sin asignar</SelectItem>
                         {allMachines.map((machine) => (
                           <SelectItem key={machine.id} value={machine.id}>
                             <div className="flex items-center gap-2">
-                              <span className="text-slate-900 dark:text-slate-100">{machine.alias}</span>
+                              <span className="text-slate-900 dark:text-slate-100">{getMachineAlias(machine)}</span>
                             </div>
                           </SelectItem>
                         ))}

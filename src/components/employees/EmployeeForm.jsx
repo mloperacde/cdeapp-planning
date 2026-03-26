@@ -169,7 +169,9 @@ export default function EmployeeForm({ employee, machines, onClose }) {
       return data.map(m => ({
         id: m.id,
         nombre: m.nombre,
-        codigo: m.codigo_maquina,
+        codigo_maquina: m.codigo_maquina,
+        ubicacion: m.ubicacion,
+        room_name: m.room_name,
         orden: m.orden_visualizacion || 999
       })).sort((a, b) => a.orden - b.orden);
     },
@@ -964,9 +966,9 @@ export default function EmployeeForm({ employee, machines, onClose }) {
                             <SelectContent>
                               <SelectItem value={null}>Sin asignar</SelectItem>
                               {allMachines.map((machine) => (
-                                <SelectItem key={machine.id} value={machine.id}>
-                                  {machine.alias}
-                                </SelectItem>
+                                 <SelectItem key={machine.id} value={machine.id}>
+                                   {getMachineAlias(machine)}
+                                 </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
@@ -1017,7 +1019,7 @@ export default function EmployeeForm({ employee, machines, onClose }) {
                            <SelectItem value={null}>Sin asignar</SelectItem>
                            {masterMachines.map((machine) => (
                              <SelectItem key={machine.id} value={machine.id}>
-                               {machine.alias || getMachineAlias(machine)}
+                               {getMachineAlias(machine)}
                              </SelectItem>
                            ))}
                           </SelectContent>

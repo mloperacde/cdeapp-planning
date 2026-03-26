@@ -84,11 +84,7 @@ export default function DailyProductionPlanningPage() {
         if (!m.id) return;
         const id = String(m.id);
         if (!uniqueMap.has(id)) {
-          const alias = getMachineAlias(m);
-          const sala = (m.ubicacion || '').trim();
-          const codigo = (m.codigo_maquina || '').trim();
-          
-          uniqueMap.set(id, { ...m, alias, ubicacion: sala, codigo_maquina: codigo });
+          uniqueMap.set(id, { ...m });
         }
       });
       
@@ -1294,9 +1290,9 @@ export default function DailyProductionPlanningPage() {
                                         <label
                                           htmlFor={`machine-${group.areaId}-${machine.id}`}
                                           className="text-[11px] font-medium text-slate-800 truncate cursor-pointer"
-                                          title={machine.alias}
+                                          title={getMachineAlias(machine)}
                                         >
-                                          {machine.alias}
+                                          {getMachineAlias(machine)}
                                         </label>
                                         <div className="flex items-center gap-1 text-[10px] text-slate-400">
                                           {machine.codigo_maquina && (
