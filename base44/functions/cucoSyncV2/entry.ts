@@ -56,7 +56,7 @@ Deno.serve(async (req) => {
       if (dayOfWeek === 0 || dayOfWeek === 6) {
         return Response.json({ success: true, message: "Skipped: Weekend", count: 0 });
       }
-      const holidays = await serviceClient.entities.Holiday.filter({ date: from }, "id,name", 1);
+      const holidays = await serviceClient.entities.Holiday.filter({ date: from }, "id", 1);
       if (holidays && holidays.length > 0) {
         return Response.json({ success: true, message: `Skipped: Holiday (${holidays[0].name})`, count: 0 });
       }
