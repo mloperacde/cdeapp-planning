@@ -113,6 +113,9 @@ Deno.serve(async (req) => {
       const fullDate = check.fec_marcaje || check.fecha;
       if (!externalId || !fullDate) return null;
 
+      // Filtrar marcajes sintéticos/automáticos de Cuco360 (cod_marcaje negativo = no son fichajes físicos reales)
+      if (check.cod_marcaje !== undefined && Number(check.cod_marcaje) < 0) return null;
+
       // Cuco360 ya envía la hora en tiempo local (Europe/Madrid)
       const dateParts = fullDate.split(' ');
       const dateStr = dateParts[0];
