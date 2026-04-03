@@ -1,13 +1,17 @@
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Factory, Calendar, AlertCircle, Edit } from "lucide-react";
+import { Factory, Calendar, AlertCircle, PackageX, X } from "lucide-react";
 import { format, parseISO, isValid } from "date-fns";
 import { es } from "date-fns/locale";
 import { getMachineAlias } from "@/utils/machineAlias";
 
 export default function MachineOrdersList({ machines = [], orders, processes, onEditOrder }) {
-  // Machines are already sorted by 'orden' from query - use them directly
+  const [filterMissing, setFilterMissing] = useState(false);
+
+  const missingCount = orders.filter(o => o.missing_components_flag).length;
+  const activeOrders = filterMissing ? orders.filter(o => o.missing_components_flag) : orders;
 
   const formatDateSafe = (dateStr, fmt = 'dd/MM') => {
     if (!dateStr) return null;
@@ -43,7 +47,7 @@ export default function MachineOrdersList({ machines = [], orders, processes, on
 
   const getMachineOrders = (machineId) => {
     const mid = String(machineId);
-    const filtered = orders.filter(o => String(o.machine_id) === mid);
+    const filtered = activeOrders.filter(o => String(o.machine_id) === mid);
     // Deduplicar por order_number (prioridad al primero)
     const seen = new Set();
     return filtered.filter(o => {
@@ -73,10 +77,37 @@ export default function MachineOrdersList({ machines = [], orders, processes, on
   return (
     <Card className="flex flex-col shadow-none border-0 bg-transparent">
       <CardHeader className="py-2 px-0 pb-4">
-        <CardTitle className="text-lg font-medium flex items-center gap-2">
-          <Factory className="w-5 h-5 text-slate-600" />
-          Tablero de Órdenes por Máquina
-        </CardTitle>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <CardTitle className="text-lg font-medium flex items-center gap-2">
+            <Factory className="w-5 h-5 text-slate-600" />
+            Tablero de Órdenes por Máquina
+          </CardTitle>
+          <div className="flex items-center gap-2">
+            {missingCount > 0 && (
+              <button
+                onClick={() => setFilterMissing(f => !f)}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm font-medium transition-all ${
+                  filterMissing
+                    ? 'bg-red-600 text-white border-red-600 shadow-md'
+                    : 'bg-red-50 text-red-700 border-red-300 hover:bg-red-100'
+                }`}
+              >
+                <PackageX className="w-4 h-4" />
+                {filterMissing ? 'Mostrando faltas' : 'Faltas de material'}
+                <span className={`px-1.5 py-0.5 rounded-full text-xs font-bold ${
+                  filterMissing ? 'bg-white text-red-600' : 'bg-red-600 text-white'
+                }`}>{missingCount}</span>
+                {filterMissing && <X className="w-3.5 h-3.5" />}
+              </button>
+            )}
+          </div>
+        </div>
+        {filterMissing && (
+          <div className="flex items-center gap-2 mt-2 px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            Mostrando solo órdenes con componentes faltantes ({missingCount})
+          </div>
+        )}
       </CardHeader>
       <div className="pb-10">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -121,9 +152,16 @@ export default function MachineOrdersList({ machines = [], orders, processes, on
                             onClick={() => onEditOrder(order)}
                             className={`
                                 relative p-2 rounded-md border cursor-pointer transition-all group hover:shadow-md
-                                ${hasPriorityConflict ? 'border-amber-400 bg-amber-50' : getPriorityColor(order.priority)}
+                                ${order.missing_components_flag
+                                  ? 'border-red-400 bg-red-50 dark:bg-red-950/30'
+                                  : hasPriorityConflict ? 'border-amber-400 bg-amber-50' : getPriorityColor(order.priority)}
                             `}
                         >
+                            {order.missing_components_flag && (
+                              <div className="flex items-center gap-1 text-[9px] font-bold text-red-600 bg-red-100 border border-red-200 rounded px-1.5 py-0.5 mb-1.5 w-fit">
+                                <PackageX className="w-3 h-3" /> FALTAN COMPONENTES
+                              </div>
+                            )}
                             {/* Línea 1: Pry, Orden, Artículo, Nombre, Cliente */}
                             <div className="flex items-center gap-2 mb-1.5 text-xs overflow-hidden whitespace-nowrap">
                                 <Badge className={`${getPriorityBadgeColor(order.priority)} text-[10px] px-1.5 py-0 h-4 border-0 text-white shrink-0`}>
