@@ -56,20 +56,15 @@ export default function ProductionPlanningPage() {
     queryKey: ['machines'],
     queryFn: async () => {
       const data = await base44.entities.MachineMasterDatabase.list(undefined, 1000);
-      return data.map(m => {
-        const sala = (m.ubicacion || '').trim();
-        const codigo = (m.codigo_maquina || m.codigo || '').trim();
-        
-        return {
-            id: m.id,
-            alias: getMachineAlias(m),
-            descripcion: m.descripcion,
-            codigo: codigo,
-            orden: m.orden_visualizacion || 999,
-            tipo: m.tipo,
-            ubicacion: sala
-        };
-      }).sort((a, b) => a.orden - b.orden);
+      return data.map(m => ({
+        id: m.id,
+        nombre: m.nombre || '',
+        codigo_maquina: (m.codigo_maquina || m.codigo || '').trim(),
+        ubicacion: (m.ubicacion || m.room_name || '').trim(),
+        descripcion: m.descripcion,
+        orden: m.orden_visualizacion || 999,
+        tipo: m.tipo,
+      })).sort((a, b) => a.orden - b.orden);
     },
     staleTime: 0,
     gcTime: 0
@@ -80,90 +75,49 @@ export default function ProductionPlanningPage() {
     queryFn: async () => {
       if (!base44.entities.WorkOrder) return [];
       const raw = await base44.entities.WorkOrder.list(undefined, 2000);
-      
-      // Get valid machine IDs for verification
-      const validMachineIds = new Set(machines.map(m => String(m.id)));
 
-      return raw.map(order => {
-        let extra = {};
-        if (order.notes && typeof order.notes === 'string') {
-          try {
-            const parsed = JSON.parse(order.notes);
-            if (parsed && typeof parsed === 'object') {
-                extra = parsed;
-                if (!order.import_batch_id && parsed.import_batch_id) {
-                    order.import_batch_id = parsed.import_batch_id;
-                }
-            }
-          } catch (_) { /* no JSON */ }
+      // Deduplicar por order_number (quedarse con el más reciente)
+      const byOrderNumber = new Map();
+      for (const order of raw) {
+        const key = String(order.order_number || order.id);
+        if (!byOrderNumber.has(key) || order.updated_date > byOrderNumber.get(key).updated_date) {
+          byOrderNumber.set(key, order);
         }
-        
-        const normDate = (val) => {
-          if (!val) return null;
-          if (typeof val !== 'string') return val;
-          if (/^\d{4}-/.test(val)) return val;
-          if (val.includes('/')) {
-            const [datePart, timePart] = val.split(' ');
-            const parts = datePart.split('/');
-            if (parts.length === 3) {
-              const [d, m, y] = parts;
-              if (!isNaN(d) && !isNaN(m) && !isNaN(y)) {
-                const dateStr = `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
-                return timePart ? `${dateStr}T${timePart}:00` : dateStr;
-              }
-            }
+      }
+      const deduped = Array.from(byOrderNumber.values());
+
+      const normDate = (val) => {
+        if (!val) return null;
+        if (typeof val !== 'string') return String(val);
+        if (/^\d{4}-/.test(val)) return val;
+        if (val.includes('/')) {
+          const parts = val.split(' ')[0].split('/');
+          if (parts.length === 3) {
+            const [d, m, y] = parts;
+            if (!isNaN(d) && !isNaN(m) && !isNaN(y))
+              return `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
           }
-          return val;
-        };
-
-        const merged = { ...extra, ...order };
-        
-        // Ensure machine_id is valid string
-        let machineId = merged.machine_id ? String(merged.machine_id) : "";
-        
-        // Safety Check: If machine_id doesn't exist in master DB, mark as 'orphaned' or handle it
-        // We will keep it but maybe UI can group them in "Sin Asignar"
-        if (!validMachineIds.has(machineId)) {
-            // console.warn("Order on unknown machine:", machineId, merged.order_number);
         }
+        return val;
+      };
 
-        return {
-          ...merged,
-          machine_id: machineId, // Explicitly set verified ID
-          // ... rest of date logic ...
-          effective_start_date: (() => {
-            const modStart = normDate(extra['Fecha Inicio Modificada'] || extra.modified_start_date || '');
-            const startLimit = normDate(extra['Fecha Inicio Limite'] || extra.start_date || order.start_date || '');
-            const result = (modStart && !String(modStart).startsWith('0000') && modStart.length > 0) ? modStart : startLimit;
-            return result || null;
-          })(),
-          effective_delivery_date: normDate(
-            extra['Fecha Fin'] || extra['end_date_simple'] || extra.planned_end_date || order.planned_end_date || ''
-          ),
-          start_date: normDate(extra['Fecha Inicio Limite'] || extra.start_date || order.start_date || ''),
-          committed_delivery_date: normDate(extra['Fecha Entrega'] || extra.committed_delivery_date || order.committed_delivery_date || ''),
-          new_delivery_date: normDate(extra['Nueva Fecha Entrega'] || extra.new_delivery_date || ''),
-          planned_end_date: normDate(extra['Fecha Fin'] || extra.planned_end_date || order.planned_end_date || ''),
-          
-          product_article_code: extra.product_article_code || extra['Artículo'] || order.product_article_code,
-          product_name: extra.product_name || extra['Nombre'] || order.product_name,
-          client_name: extra.client_name || extra['Cliente'] || order.client_name,
-          material_type: extra.material_type || extra['material'] || extra['Material'] || order.material_type,
-          multi_qty: (() => {
-            const raw = extra['Mult x Cantidad'] || extra.multi_qty || order.multi_qty;
-            if (!raw) return '';
-            const clean = String(raw).replace(/\./g, '').replace(/,/g, '.');
-            const n = parseFloat(clean);
-            return isNaN(n) ? raw : (Number.isInteger(n) ? n : n);
-          })(),
-          quantity: extra.quantity || extra['Cantidad'] || order.quantity,
-          status: order.status || extra.status || extra['Estado'] || 'Pendiente',
-          priority: order.priority ?? extra.priority ?? extra['Prioridad'] ?? 3,
-          article_status: extra.article_status || extra['Edo. Art.'],
-        };
-      });
+      return deduped.map(order => ({
+        ...order,
+        machine_id: order.machine_id ? String(order.machine_id) : '',
+        effective_start_date: normDate(order.start_date),
+        effective_delivery_date: normDate(order.committed_delivery_date || order.planned_end_date),
+        start_date: normDate(order.start_date),
+        committed_delivery_date: normDate(order.committed_delivery_date),
+        planned_end_date: normDate(order.planned_end_date),
+        priority: order.priority ?? 3,
+        status: order.status || 'Pendiente',
+        multi_qty: (() => {
+          if (!order.multi_qty) return '';
+          const n = parseFloat(String(order.multi_qty).replace(/\./g,'').replace(/,/g,'.'));
+          return isNaN(n) ? order.multi_qty : n;
+        })(),
+      }));
     },
-    // Make sure we refresh if machines change
     enabled: machines.length > 0
   });
 
@@ -843,7 +797,7 @@ export default function ProductionPlanningPage() {
                 <SelectItem value="all">Todas</SelectItem>
                 {machines.map(m => (
                   <SelectItem key={m.id} value={m.id}>
-                    {m.alias || m.nombre}
+                    {getMachineAlias(m)}
                   </SelectItem>
                 ))}
               </SelectContent>

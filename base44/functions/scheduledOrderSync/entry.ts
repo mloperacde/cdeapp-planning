@@ -17,8 +17,14 @@ async function cdeApiFetch(endpoint, apiKey) {
 
 function parseMachineCode(machineName) {
   if (!machineName) return null;
-  const match = String(machineName).match(/^\S+\s+(\d+)\s*-/);
-  return match ? match[1] : null;
+  const s = String(machineName).trim();
+  // Formato: "001A 119 - Nombre" → capturar '119'
+  const match = s.match(/^\S+\s+(\d+[A-Z]?)\s*-/i);
+  if (match) return match[1];
+  // Formato: "119 - Nombre" → capturar '119'
+  const match2 = s.match(/^(\d+[A-Z]?)\s*-/i);
+  if (match2) return match2[1];
+  return null;
 }
 
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
@@ -91,11 +97,12 @@ Deno.serve(async (req) => {
     }
     const unassignedMachine = machinesAll.find(m => m.codigo_maquina === 'ZZ-UNASSIGNED');
 
-    // 3. Map orders (deduplicate by order_number — keep last occurrence)
+    // 3. Map orders (deduplicate strictly by order_number — keep last occurrence)
+    // Also validate: within the same machine, priorities must be unique
     const orderMap = new Map();
     for (const raw of rawOrders) {
-      const orderNumber = String(raw['Orden'] || '').trim();
-      if (!orderNumber) continue;
+      const orderNumber = String(raw['Orden'] || raw['orden'] || '').trim();
+      if (!orderNumber || orderNumber === '0') continue;
 
       const machineName = String(raw['Sala / Máquina'] || '').trim();
       const parsedCode = parseMachineCode(machineName);
@@ -132,6 +139,23 @@ Deno.serve(async (req) => {
     const newOrders = Array.from(orderMap.values());
     console.log(`[scheduledOrderSync] ${newOrders.length} órdenes únicas mapeadas`);
 
+    // Validate: detect duplicate priorities per machine (log only, source data issue)
+    const machinePriorityMap = new Map();
+    let priorityConflicts = 0;
+    for (const o of newOrders) {
+      if (!o.machine_id || !o.priority || o.priority === 0) continue;
+      const key = `${o.machine_id}::${o.priority}`;
+      if (machinePriorityMap.has(key)) {
+        priorityConflicts++;
+        console.warn(`[scheduledOrderSync] CONFLICTO prioridad ${o.priority} en máquina ${o.machine_id}: orden ${o.order_number} vs ${machinePriorityMap.get(key)}`);
+      } else {
+        machinePriorityMap.set(key, o.order_number);
+      }
+    }
+    if (priorityConflicts > 0) {
+      console.warn(`[scheduledOrderSync] Total conflictos de prioridad detectados: ${priorityConflicts} (datos de origen CDEApp)`);
+    }
+
     // 4. Delete ALL existing records (paginated to ensure completeness)
     const allIds = await fetchAllWorkOrderIds(base44);
     console.log(`[scheduledOrderSync] Eliminando ${allIds.length} registros existentes...`);
@@ -153,21 +177,31 @@ Deno.serve(async (req) => {
     if (deleted > 0) await sleep(3000);
     console.log(`[scheduledOrderSync] ${deleted} registros eliminados. Creando nuevos...`);
 
-    // 5. BulkCreate all new orders
-    const BULK_CHUNK = 40;
+    // 5. BulkCreate all new orders in larger batches with longer delays
+    const BULK_CHUNK = 50;
     let created = 0;
     let errors = 0;
     for (let i = 0; i < newOrders.length; i += BULK_CHUNK) {
       const chunk = newOrders.slice(i, i + BULK_CHUNK);
       try {
-        await retry(() => base44.asServiceRole.entities.WorkOrder.bulkCreate(chunk));
+        await retry(() => base44.asServiceRole.entities.WorkOrder.bulkCreate(chunk), 5, 3000);
         created += chunk.length;
         console.log(`[scheduledOrderSync] Creadas ${created}/${newOrders.length}`);
       } catch (e) {
         console.error(`[scheduledOrderSync] Error bulkCreate chunk ${i}:`, e.message);
-        errors += chunk.length;
+        // Retry individually on bulk failure
+        for (const order of chunk) {
+          try {
+            await retry(() => base44.asServiceRole.entities.WorkOrder.create(order), 3, 2000);
+            created++;
+            await sleep(300);
+          } catch (e2) {
+            console.error(`[scheduledOrderSync] Error individual ${order.order_number}:`, e2.message);
+            errors++;
+          }
+        }
       }
-      await sleep(1000);
+      await sleep(2000);
     }
     const summary = `Sync completado: ${deleted} eliminadas, ${created} creadas, ${errors} errores`;
     console.log(`[scheduledOrderSync] ${summary}`);

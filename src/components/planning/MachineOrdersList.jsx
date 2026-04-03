@@ -42,7 +42,32 @@ export default function MachineOrdersList({ machines = [], orders, processes, on
   };
 
   const getMachineOrders = (machineId) => {
-    return orders.filter(o => String(o.machine_id) === String(machineId));
+    const mid = String(machineId);
+    const filtered = orders.filter(o => String(o.machine_id) === mid);
+    // Deduplicar por order_number (prioridad al primero)
+    const seen = new Set();
+    return filtered.filter(o => {
+      const key = String(o.order_number || o.id);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  };
+
+  // Detectar conflictos de prioridad (misma prioridad asignada a >1 orden en la misma máquina)
+  const getPriorityConflicts = (machineOrders) => {
+    const byPriority = new Map();
+    for (const o of machineOrders) {
+      const p = o.priority;
+      if (p === null || p === undefined || p === 0) continue;
+      if (!byPriority.has(p)) byPriority.set(p, []);
+      byPriority.get(p).push(o.order_number);
+    }
+    const conflicts = new Set();
+    for (const [p, nums] of byPriority) {
+      if (nums.length > 1) nums.forEach(n => conflicts.add(n));
+    }
+    return conflicts;
   };
 
   return (
@@ -56,16 +81,8 @@ export default function MachineOrdersList({ machines = [], orders, processes, on
       <div className="pb-10">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {machines.map(machine => {
-          const machineOrders = getMachineOrders(machine.id);
-          // Show machine card even if empty, to visualize capacity/availability
-          // if (machineOrders.length === 0) return null;
-          
-          // Deduplicate orders by ID to prevent duplicates in the list
-          const uniqueOrders = machineOrders.filter((order, index, self) =>
-              index === self.findIndex((t) => (
-                  t.id === order.id
-              ))
-          );
+          const uniqueOrders = getMachineOrders(machine.id);
+          const conflictingOrders = getPriorityConflicts(uniqueOrders);
 
           return (
             <div key={machine.id} className="flex flex-col bg-white dark:bg-slate-950 rounded-lg border shadow-sm h-fit flex-shrink-0">
@@ -82,6 +99,12 @@ export default function MachineOrdersList({ machines = [], orders, processes, on
               </div>
 
               <div className="p-2 space-y-2 min-h-[100px]">
+                {conflictingOrders.size > 0 && (
+                  <div className="flex items-center gap-1.5 px-2 py-1.5 mb-1 rounded bg-amber-50 border border-amber-200 text-[10px] text-amber-700">
+                    <AlertCircle className="w-3 h-3 shrink-0" />
+                    Prioridades duplicadas detectadas
+                  </div>
+                )}
                 {uniqueOrders.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-8 text-slate-400 border-2 border-dashed border-slate-100 rounded-md">
                         <Calendar className="w-8 h-8 mb-2 opacity-20" />
@@ -89,8 +112,8 @@ export default function MachineOrdersList({ machines = [], orders, processes, on
                     </div>
                 ) : (
                     uniqueOrders.map(order => {
-                    const process = processes.find(p => p.id === order.process_id);
                     const isLate = order.effective_delivery_date && new Date(order.effective_delivery_date) < new Date();
+                    const hasPriorityConflict = conflictingOrders.has(String(order.order_number));
                     
                     return (
                         <div 
@@ -98,7 +121,7 @@ export default function MachineOrdersList({ machines = [], orders, processes, on
                             onClick={() => onEditOrder(order)}
                             className={`
                                 relative p-2 rounded-md border cursor-pointer transition-all group hover:shadow-md
-                                ${getPriorityColor(order.priority)}
+                                ${hasPriorityConflict ? 'border-amber-400 bg-amber-50' : getPriorityColor(order.priority)}
                             `}
                         >
                             {/* Línea 1: Pry, Orden, Artículo, Nombre, Cliente */}
