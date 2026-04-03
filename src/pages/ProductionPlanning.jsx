@@ -109,7 +109,7 @@ export default function ProductionPlanningPage() {
         start_date: normDate(order.start_date),
         committed_delivery_date: normDate(order.committed_delivery_date),
         planned_end_date: normDate(order.planned_end_date),
-        priority: order.priority ?? 3,
+        priority: (order.priority !== undefined && order.priority !== null && order.priority !== '') ? order.priority : null,
         status: order.status || 'Pendiente',
         multi_qty: (() => {
           if (!order.multi_qty) return '';
@@ -606,7 +606,8 @@ export default function ProductionPlanningPage() {
               continue;
           }
 
-          const rawPriority = parseInt(row['Prioridad'] || row['priority']);
+          const rawPriorityVal = row['Prioridad'] ?? row['priority'];
+          const rawPriority = (rawPriorityVal !== undefined && rawPriorityVal !== null && rawPriorityVal !== '') ? parseInt(rawPriorityVal) : null;
           const payload = {
               order_number: String(orderNumber),
               machine_id: machineId,
@@ -616,7 +617,7 @@ export default function ProductionPlanningPage() {
             quantity: parseInt(row['Cantidad'] || row['quantity']) || 0,
             material_type: row['Material'] || row['material_type'] || row['material'] || '',
             multi_qty: row['Multiplo x Cantidad'] || row['Multiplo'] || row['multi_qty'] || '',
-            priority: isNaN(rawPriority) ? 3 : rawPriority,
+            priority: (rawPriority !== null && !isNaN(rawPriority)) ? rawPriority : null,
               status: row['Estado'] || row['status'] || 'Pendiente',
               start_date: parseImportDate(row['Fecha Inicio Limite'] || row['Fecha Inicio Modificada'] || row['start_date']),
             committed_delivery_date: parseImportDate(row['Fecha Entrega'] || row['committed_delivery_date'] || row['delivery_date']),

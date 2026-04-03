@@ -123,7 +123,7 @@ Deno.serve(async (req) => {
         estimated_duration: (cadence > 0 && quantity > 0)
           ? Math.round((quantity / cadence) * 100) / 100
           : null,
-        priority: parseInt(raw['Prioridad'] || 3) || 3,
+        priority: (raw['Prioridad'] !== undefined && raw['Prioridad'] !== null && raw['Prioridad'] !== '') ? (parseInt(raw['Prioridad']) || null) : null,
         start_date: raw['Fecha Inicio Limite'] || null,
         committed_delivery_date: raw['Nueva Fecha Entrega'] || raw['Fecha Entrega'] || null,
         status: raw['Estado'] || 'Pendiente',
