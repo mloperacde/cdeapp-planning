@@ -10,8 +10,9 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from '@/components/ui/select';
-import { Plus, Pencil, Trash2, Clock, Users } from 'lucide-react';
+import { Plus, Pencil, Trash2, Clock, Users, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
+import InterventionChangeSummary from '@/components/planning/InterventionChangeSummary';
 
 const TYPE_COLORS = {
   'Mecánico':  'bg-orange-100 text-orange-800',
@@ -35,6 +36,7 @@ export default function InterventionConfigPage() {
   const [editingId, setEditingId] = useState(null);
   const [saving, setSaving] = useState(false);
   const [filterType, setFilterType] = useState('Todos');
+  const [activeTab, setActiveTab] = useState('config');
 
   const load = async () => {
     setLoading(true);
@@ -93,11 +95,42 @@ export default function InterventionConfigPage() {
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Configuración de Intervenciones</h1>
           <p className="text-sm text-slate-500 mt-1">Tiempos entre cambios de orden de producción</p>
         </div>
-        <Button onClick={openNew} className="gap-2">
-          <Plus className="w-4 h-4" /> Nueva Intervención
-        </Button>
+        {activeTab === 'config' && (
+          <Button onClick={openNew} className="gap-2">
+            <Plus className="w-4 h-4" /> Nueva Intervención
+          </Button>
+        )}
       </div>
 
+      {/* Tabs */}
+      <div className="flex gap-1 border-b border-slate-200 dark:border-slate-700">
+        <button
+          onClick={() => setActiveTab('config')}
+          className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === 'config'
+              ? 'border-blue-600 text-blue-600'
+              : 'border-transparent text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          <Clock className="w-4 h-4" /> Intervenciones
+        </button>
+        <button
+          onClick={() => setActiveTab('summary')}
+          className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === 'summary'
+              ? 'border-blue-600 text-blue-600'
+              : 'border-transparent text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          <Calendar className="w-4 h-4" /> Resumen de Cambios
+        </button>
+      </div>
+
+      {activeTab === 'summary' && (
+        <InterventionChangeSummary interventionConfigs={items} />
+      )}
+
+      {activeTab === 'config' && (<>
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {['Mecánico', 'Calidad', 'Supply', 'Almacén'].map(t => {
@@ -177,6 +210,7 @@ export default function InterventionConfigPage() {
           )}
         </div>
       )}
+      </>)}
 
       {/* Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
