@@ -68,7 +68,6 @@ export default function MachineLoadGraph({ orders, machines, dateRange }) {
             const overlapEnd = min([end, dayEndWork]);
             
             if (overlapStart < overlapEnd) {
-                const hours = differenceInHours(overlapEnd, overlapStart); // or minutes / 60
                 const minutes = (overlapEnd - overlapStart) / (1000 * 60 * 60);
                 
                 if (minutes > 0) {

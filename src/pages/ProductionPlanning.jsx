@@ -14,6 +14,7 @@ import PlanningGantt from "../components/planning/PlanningGantt";
 import MachineOrdersList from "../components/planning/MachineOrdersList";
 import ResourceForecast from "../components/planning/ResourceForecast";
 import MachineLoadGraph from "../components/planning/MachineLoadGraph";
+import MachineLoadBalance from "../components/planning/MachineLoadBalance";
 import ScheduleOrderDialog from "../components/planning/ScheduleOrderDialog";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -875,7 +876,8 @@ export default function ProductionPlanningPage() {
                  <TabsList>
                     <TabsTrigger value="personnel">Personal (RRHH)</TabsTrigger>
                     <TabsTrigger value="machines">Máquinas (Carga)</TabsTrigger>
-                 </TabsList>
+                    <TabsTrigger value="balance">Balance de Carga</TabsTrigger>
+                        </TabsList>
              </div>
              
              <TabsContent value="personnel">
@@ -888,13 +890,25 @@ export default function ProductionPlanningPage() {
              </TabsContent>
              
              <TabsContent value="machines">
-                <MachineLoadGraph 
-                   orders={filteredOrders}
-                   machines={visibleMachines}
-                   dateRange={dateRange}
+                 <MachineLoadGraph 
+                    orders={filteredOrders}
+                    machines={visibleMachines}
+                    dateRange={dateRange}
+                 />
+              </TabsContent>
+
+              <TabsContent value="balance">
+                <MachineLoadBalance
+                  orders={filteredOrders}
+                  machines={visibleMachines}
+                  dateRange={dateRange}
+                  onReassignOrder={async (orderId, newMachineId) => {
+                    await base44.entities.WorkOrder.update(orderId, { machine_id: newMachineId });
+                    await queryClient.invalidateQueries({ queryKey: ['workOrders'] });
+                  }}
                 />
-             </TabsContent>
-          </Tabs>
+              </TabsContent>
+             </Tabs>
         </div>
 
         {/* Main Planning View */}
