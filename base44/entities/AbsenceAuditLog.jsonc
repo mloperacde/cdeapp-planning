@@ -1,0 +1,78 @@
+{
+  "name": "AbsenceAuditLog",
+  "type": "object",
+  "properties": {
+    "employee_id": {
+      "type": "string",
+      "description": "ID del empleado afectado (\u2192 EmployeeMasterDatabase.id)"
+    },
+    "employee_name": {
+      "type": "string",
+      "description": "Nombre del empleado (desnormalizado)"
+    },
+    "employee_dept": {
+      "type": "string",
+      "description": "Departamento del empleado (desnormalizado)"
+    },
+    "action_type": {
+      "type": "string",
+      "enum": [
+        "reactivacion_por_presencia",
+        "ausencia_confirmada",
+        "ausencia_auto_creada",
+        "ausencia_cerrada_sistema",
+        "ausencia_manual_creada",
+        "ausencia_manual_aprobada",
+        "ausencia_manual_rechazada"
+      ],
+      "description": "Tipo de acci\u00f3n registrada"
+    },
+    "absence_id": {
+      "type": "string",
+      "description": "ID del registro Absence afectado (si aplica)"
+    },
+    "sync_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha de sincronizaci\u00f3n que gener\u00f3 el evento"
+    },
+    "origen": {
+      "type": "string",
+      "enum": [
+        "cucoSyncV2",
+        "manual_rrhh",
+        "sistema"
+      ],
+      "default": "cucoSyncV2",
+      "description": "Origen del evento"
+    },
+    "estado_anterior": {
+      "type": "string",
+      "description": "Estado de disponibilidad antes de la acci\u00f3n"
+    },
+    "estado_nuevo": {
+      "type": "string",
+      "description": "Estado de disponibilidad despu\u00e9s de la acci\u00f3n"
+    },
+    "motivo": {
+      "type": "string",
+      "description": "Motivo o descripci\u00f3n del evento"
+    },
+    "leido_por_rrhh": {
+      "type": "boolean",
+      "default": false,
+      "description": "Si el evento ha sido revisado por RRHH"
+    },
+    "notas": {
+      "type": "string",
+      "description": "Notas adicionales del sistema"
+    }
+  },
+  "required": [
+    "employee_id",
+    "employee_name",
+    "action_type",
+    "sync_date",
+    "origen"
+  ]
+}

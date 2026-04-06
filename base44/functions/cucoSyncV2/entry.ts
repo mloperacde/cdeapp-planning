@@ -237,6 +237,12 @@ Deno.serve(async (req) => {
         }
       }
 
+      // Helper: escribir registro de auditoría
+      const writeAuditLog = async (entry) => {
+        await retryOp(() => serviceClient.entities.AbsenceAuditLog.create(entry))
+          .catch(e => console.warn(`[cucoSyncV2] Error escribiendo audit log:`, e));
+      };
+
       // ── Reactivar: presencia física prevalece sobre cualquier ausencia ──
       for (const { emp, absence } of reactivados) {
         await retryOp(() => serviceClient.entities.EmployeeMasterDatabase.update(emp.id, {
@@ -253,6 +259,21 @@ Deno.serve(async (req) => {
             comentario_aprobacion: `[SISTEMA] Cerrada automáticamente el ${syncDate}: fichaje de entrada detectado en Cuco360. La presencia física prevalece sobre la ausencia registrada.`
           })).catch(e => console.warn(`[cucoSyncV2] Error cerrando ausencia de ${emp.nombre}:`, e));
         }
+
+        await writeAuditLog({
+          employee_id: emp.id,
+          employee_name: emp.nombre,
+          employee_dept: emp.departamento || "",
+          action_type: "reactivacion_por_presencia",
+          absence_id: absence?.id || null,
+          sync_date: syncDate,
+          origen: "cucoSyncV2",
+          estado_anterior: "Ausente",
+          estado_nuevo: "Disponible",
+          motivo: `Fichaje de entrada detectado en Cuco360. ${absence ? `Ausencia previa (${absence.tipo || absence.motivo}) cerrada automáticamente.` : ""}`,
+          leido_por_rrhh: false,
+          notas: `[SISTEMA] Reactivación automática - sync ${systemNow}`
+        });
         console.log(`[cucoSyncV2] ✅ REACTIVADO (presencia detectada): ${emp.nombre}`);
       }
 
@@ -265,6 +286,21 @@ Deno.serve(async (req) => {
             ausencia_fin: absence.fecha_fin_desconocida ? null : absence.fecha_fin,
             ausencia_motivo: `${absence.tipo || absence.motivo} (ausencia configurada)`
           })).catch(e => console.warn(`[cucoSyncV2] Error confirmando ${emp.nombre}:`, e));
+
+          await writeAuditLog({
+            employee_id: emp.id,
+            employee_name: emp.nombre,
+            employee_dept: emp.departamento || "",
+            action_type: "ausencia_confirmada",
+            absence_id: absence.id,
+            sync_date: syncDate,
+            origen: "cucoSyncV2",
+            estado_anterior: emp.disponibilidad || "Disponible",
+            estado_nuevo: "Ausente",
+            motivo: `${absence.tipo || absence.motivo} - sin fichaje confirma ausencia pre-configurada`,
+            leido_por_rrhh: false,
+            notas: `[SISTEMA] Confirmación automática - sync ${systemNow}`
+          });
         }
         console.log(`[cucoSyncV2] 🔵 CONFIRMADA (ausencia preexistente): ${emp.nombre} - ${absence.tipo || absence.motivo}`);
       }
@@ -278,7 +314,8 @@ Deno.serve(async (req) => {
         })).catch(e => console.warn(`[cucoSyncV2] Error marcando ausente ${emp.nombre}:`, e));
 
         // Crear registro de Absence automático para trazabilidad
-        await retryOp(() => serviceClient.entities.Absence.create({
+        let newAbsenceId = null;
+        const created = await retryOp(() => serviceClient.entities.Absence.create({
           employee_id: emp.id,
           fecha_inicio: `${syncDate}T00:00:00`,
           fecha_fin: `${syncDate}T23:59:59`,
@@ -288,8 +325,24 @@ Deno.serve(async (req) => {
           estado_aprobacion: "Pendiente",
           remunerada: false,
           notas: `[SISTEMA] Generada automáticamente por cucoSyncV2 el ${systemNow}. Sin fichaje detectado en Cuco360 para el día ${syncDate}.`
-        })).catch(e => console.warn(`[cucoSyncV2] Error creando ausencia auto ${emp.nombre}:`, e));
+        })).catch(e => { console.warn(`[cucoSyncV2] Error creando ausencia auto ${emp.nombre}:`, e); return null; });
 
+        if (created) newAbsenceId = created.id;
+
+        await writeAuditLog({
+          employee_id: emp.id,
+          employee_name: emp.nombre,
+          employee_dept: emp.departamento || "",
+          action_type: "ausencia_auto_creada",
+          absence_id: newAbsenceId,
+          sync_date: syncDate,
+          origen: "cucoSyncV2",
+          estado_anterior: "Disponible",
+          estado_nuevo: "Ausente",
+          motivo: "Sin fichaje detectado y sin ausencia pre-configurada. Ausencia No Justificada generada automáticamente.",
+          leido_por_rrhh: false,
+          notas: `[SISTEMA] Creación automática - sync ${systemNow}`
+        });
         console.log(`[cucoSyncV2] 🔴 NUEVA AUSENCIA AUTO: ${emp.nombre}`);
       }
 
