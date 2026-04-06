@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAppData } from "../components/data/DataProvider";
@@ -159,19 +159,21 @@ export default function MasterEmployeeDatabasePage() {
   const [autoSyncDone, setAutoSyncDone] = useState(false);
   const [syncingCuco, setSyncingCuco] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
 
-  // Abrir ficha de empleado desde URL param ?empleado=ID
+  // Abrir ficha de empleado desde URL param ?empleado=ID (solo una vez)
   useEffect(() => {
     if (!masterEmployees || masterEmployees.length === 0) return;
     const params = new URLSearchParams(location.search);
     const empId = params.get('empleado');
-    if (empId) {
-      const emp = masterEmployees.find(e => e.id === empId);
-      if (emp) {
-        setEmployeeToEdit(emp);
-        setEditDialogOpen(true);
-      }
+    if (!empId) return;
+    const emp = masterEmployees.find(e => e.id === empId);
+    if (emp) {
+      setEmployeeToEdit(emp);
+      setEditDialogOpen(true);
     }
+    // Limpiar el param de la URL para evitar que se reabra
+    navigate(location.pathname, { replace: true });
   }, [location.search, masterEmployees]);
 
   const canCreateEmployee = permissions.isAdmin || permissions.canEditEmployees;
