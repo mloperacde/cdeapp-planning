@@ -1,0 +1,396 @@
+{
+  "name": "EmployeeMasterDatabase",
+  "type": "object",
+  "properties": {
+    "codigo_empleado": {
+      "type": "string",
+      "description": "C\u00f3digo \u00fanico del empleado en el sistema maestro (ej: '476'). Usado para cruzar con fichajes del control de acceso (AttendanceRecord.employee_id)"
+    },
+    "nombre": {
+      "type": "string",
+      "description": "Nombre completo del empleado"
+    },
+    "estado_empleado": {
+      "type": "string",
+      "enum": [
+        "Alta",
+        "Baja"
+      ],
+      "default": "Alta",
+      "description": "Estado del empleado"
+    },
+    "fecha_baja": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha de baja del empleado"
+    },
+    "motivo_baja": {
+      "type": "string",
+      "description": "Motivo de la baja"
+    },
+    "sujeto_a_control_horario": {
+      "type": "boolean",
+      "default": true,
+      "description": "Indica si el empleado est\u00e1 sujeto a control horario por marcaje de fichaje (Cuco360)."
+    },
+    "tasa_absentismo": {
+      "type": "number",
+      "description": "Tasa de absentismo individual (%)"
+    },
+    "horas_no_trabajadas": {
+      "type": "number",
+      "default": 0,
+      "description": "Total horas no trabajadas (ausencias)"
+    },
+    "horas_deberian_trabajarse": {
+      "type": "number",
+      "default": 0,
+      "description": "Total horas que deber\u00edan haberse trabajado"
+    },
+    "ultima_actualizacion_absentismo": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha de \u00faltima actualizaci\u00f3n del absentismo"
+    },
+    "fecha_nacimiento": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha de nacimiento"
+    },
+    "dni": {
+      "type": "string",
+      "description": "DNI/NIE"
+    },
+    "nuss": {
+      "type": "string",
+      "description": "N\u00famero de la Seguridad Social"
+    },
+    "sexo": {
+      "type": "string",
+      "enum": [
+        "Masculino",
+        "Femenino",
+        "Otro"
+      ],
+      "description": "Sexo"
+    },
+    "nacionalidad": {
+      "type": "string",
+      "description": "Nacionalidad"
+    },
+    "direccion": {
+      "type": "string",
+      "description": "Direcci\u00f3n completa"
+    },
+    "formacion": {
+      "type": "string",
+      "description": "Formaci\u00f3n acad\u00e9mica"
+    },
+    "email": {
+      "type": "string",
+      "format": "email",
+      "description": "Email"
+    },
+    "telefono_movil": {
+      "type": "string",
+      "description": "Tel\u00e9fono m\u00f3vil"
+    },
+    "contacto_emergencia_nombre": {
+      "type": "string",
+      "description": "Nombre del contacto de emergencia"
+    },
+    "contacto_emergencia_telefono": {
+      "type": "string",
+      "description": "Tel\u00e9fono del contacto de emergencia"
+    },
+    "contacto_emergencia_relacion": {
+      "type": "string",
+      "description": "Relaci\u00f3n con el contacto de emergencia"
+    },
+    "iban": {
+      "type": "string",
+      "description": "IBAN para n\u00f3minas"
+    },
+    "swift_bic": {
+      "type": "string",
+      "description": "C\u00f3digo SWIFT/BIC del banco"
+    },
+    "banco_nombre": {
+      "type": "string",
+      "description": "Nombre del banco"
+    },
+    "departamento": {
+      "type": "string",
+      "description": "Nombre del departamento (desnormalizado)"
+    },
+    "department_id": {
+      "type": "string",
+      "description": "ID del departamento (llave for\u00e1nea \u2192 Department.id)"
+    },
+    "puesto": {
+      "type": "string",
+      "description": "Puesto de trabajo"
+    },
+    "categoria": {
+      "type": "string",
+      "description": "Categor\u00eda profesional"
+    },
+    "tipo_jornada": {
+      "type": "string",
+      "enum": [
+        "Jornada Completa",
+        "Jornada Parcial",
+        "Reducci\u00f3n de Jornada"
+      ],
+      "description": "Tipo de jornada laboral"
+    },
+    "num_horas_jornada": {
+      "type": "number",
+      "description": "N\u00famero de horas semanales"
+    },
+    "tipo_turno": {
+      "type": "string",
+      "enum": [
+        "Rotativo",
+        "Fijo Ma\u00f1ana",
+        "Fijo Tarde",
+        "Turno Partido"
+      ],
+      "description": "Tipo de turno"
+    },
+    "equipo": {
+      "type": "string",
+      "description": "Nombre del equipo al que pertenece (desnormalizado)"
+    },
+    "team_id": {
+      "type": "string",
+      "description": "ID del registro en TeamConfig (llave for\u00e1nea \u2192 TeamConfig.id)"
+    },
+    "team_key": {
+      "type": "string",
+      "enum": [
+        "team_1",
+        "team_2"
+      ],
+      "description": "Clave del equipo"
+    },
+    "team_fixed": {
+      "type": "boolean",
+      "default": false,
+      "description": "Si el empleado tiene equipo fijo (no rota)"
+    },
+    "horario_manana_inicio": {
+      "type": "string",
+      "description": "Hora inicio turno ma\u00f1ana (HH:mm)"
+    },
+    "horario_manana_fin": {
+      "type": "string",
+      "description": "Hora fin turno ma\u00f1ana (HH:mm)"
+    },
+    "horario_tarde_inicio": {
+      "type": "string",
+      "description": "Hora inicio turno tarde (HH:mm)"
+    },
+    "horario_tarde_fin": {
+      "type": "string",
+      "description": "Hora fin turno tarde (HH:mm)"
+    },
+    "turno_partido_entrada1": {
+      "type": "string",
+      "description": "Hora entrada 1 turno partido (HH:mm)"
+    },
+    "turno_partido_salida1": {
+      "type": "string",
+      "description": "Hora salida 1 turno partido (HH:mm)"
+    },
+    "turno_partido_entrada2": {
+      "type": "string",
+      "description": "Hora entrada 2 turno partido (HH:mm)"
+    },
+    "turno_partido_salida2": {
+      "type": "string",
+      "description": "Hora salida 2 turno partido (HH:mm)"
+    },
+    "taquilla_vestuario": {
+      "type": "string",
+      "description": "Vestuario asignado"
+    },
+    "taquilla_numero": {
+      "type": "string",
+      "description": "N\u00famero de taquilla"
+    },
+    "disponibilidad": {
+      "type": "string",
+      "enum": [
+        "Disponible",
+        "Ausente"
+      ],
+      "default": "Disponible",
+      "description": "Disponibilidad actual"
+    },
+    "estado_presencia": {
+      "type": "string",
+      "enum": [
+        "Presente",
+        "Potencialmente Ausente",
+        "Retraso",
+        "Ausente Auto",
+        "Ausente",
+        "No Aplica"
+      ],
+      "default": "No Aplica",
+      "description": "Estado de presencia en tiempo real. Gestionado autom\u00e1ticamente por el monitor de presencia."
+    },
+    "potencialmente_ausente_desde": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp desde el que se detect\u00f3 la posible ausencia. Usado por el monitor para calcular el tiempo hasta auto-crear ausencia."
+    },
+    "ausencia_inicio": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Fecha y hora de inicio de ausencia (cach\u00e9)"
+    },
+    "ausencia_fin": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Fecha y hora de fin de ausencia (cach\u00e9)"
+    },
+    "ausencia_motivo": {
+      "type": "string",
+      "description": "Motivo de la ausencia (cach\u00e9)"
+    },
+    "incluir_en_planning": {
+      "type": "boolean",
+      "default": true,
+      "description": "Si se incluye en el conteo de operarios para planning"
+    },
+    "fecha_alta": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha de alta en la empresa"
+    },
+    "tipo_contrato": {
+      "type": "string",
+      "description": "Tipo de contrato laboral"
+    },
+    "codigo_contrato": {
+      "type": "string",
+      "description": "C\u00f3digo del contrato"
+    },
+    "fecha_fin_contrato": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha de fin del contrato"
+    },
+    "empresa_ett": {
+      "type": "string",
+      "description": "Empresa de trabajo temporal"
+    },
+    "salario_anual": {
+      "type": "number",
+      "description": "Salario anual bruto"
+    },
+    "evaluacion_responsable": {
+      "type": "string",
+      "description": "Evaluaci\u00f3n del responsable"
+    },
+    "propuesta_cambio_categoria": {
+      "type": "string",
+      "enum": [
+        "1",
+        "2",
+        "3"
+      ],
+      "description": "Propuesta de cambio de categor\u00eda"
+    },
+    "propuesta_cambio_quien": {
+      "type": "string",
+      "description": "Nombre de quien propone el cambio"
+    },
+    "horas_causa_mayor_consumidas": {
+      "type": "number",
+      "default": 0,
+      "description": "Horas consumidas de permisos por causa mayor"
+    },
+    "horas_causa_mayor_limite": {
+      "type": "number",
+      "description": "L\u00edmite de horas por causa mayor"
+    },
+    "ultimo_reset_causa_mayor": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha del \u00faltimo reset anual"
+    },
+    "maquina_1": {
+      "type": "string",
+      "description": "ID m\u00e1quina prioridad 1"
+    },
+    "maquina_2": {
+      "type": "string",
+      "description": "ID m\u00e1quina prioridad 2"
+    },
+    "maquina_3": {
+      "type": "string",
+      "description": "ID m\u00e1quina prioridad 3"
+    },
+    "maquina_4": {
+      "type": "string",
+      "description": "ID m\u00e1quina prioridad 4"
+    },
+    "maquina_5": {
+      "type": "string",
+      "description": "ID m\u00e1quina prioridad 5"
+    },
+    "maquina_6": {
+      "type": "string",
+      "description": "ID m\u00e1quina prioridad 6"
+    },
+    "maquina_7": {
+      "type": "string",
+      "description": "ID m\u00e1quina prioridad 7"
+    },
+    "maquina_8": {
+      "type": "string",
+      "description": "ID m\u00e1quina prioridad 8"
+    },
+    "maquina_9": {
+      "type": "string",
+      "description": "ID m\u00e1quina prioridad 9"
+    },
+    "maquina_10": {
+      "type": "string",
+      "description": "ID m\u00e1quina prioridad 10"
+    },
+    "legacy_employee_id": {
+      "type": "string",
+      "description": "CAMPO LEGADO - No usar para nuevas relaciones."
+    },
+    "ultimo_sincronizado": {
+      "type": "string",
+      "format": "date-time",
+      "description": "\u00daltima fecha de sincronizaci\u00f3n"
+    },
+    "estado_sincronizacion": {
+      "type": "string",
+      "enum": [
+        "Sincronizado",
+        "Pendiente",
+        "Error"
+      ],
+      "default": "Pendiente",
+      "description": "Estado de sincronizaci\u00f3n"
+    },
+    "pin": {
+      "type": "integer",
+      "description": "PIN del empleado en Cuco360"
+    },
+    "numero_tarjeta": {
+      "type": "string",
+      "description": "N\u00famero de tarjeta del empleado en Cuco360"
+    }
+  },
+  "required": [
+    "nombre"
+  ]
+}
