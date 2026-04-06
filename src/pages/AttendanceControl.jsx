@@ -587,7 +587,7 @@ export default function AttendanceControl() {
       </div>
 
       <Tabs defaultValue="diario" className="w-full">
-        <TabsList className="mb-4">
+        <TabsList className="mb-4 flex-wrap h-auto">
           <TabsTrigger value="diario">
             <Clock className="w-4 h-4 mr-2" />
             Control Diario

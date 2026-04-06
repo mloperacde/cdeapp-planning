@@ -189,9 +189,30 @@ export default function AttendanceManagementPage() {
             <AttendancePredictions />
           </TabsContent>
 
-          {/* Nueva pestaña Configuración */}
+          {/* Configuración: info sobre la lógica fija del monitor */}
           <TabsContent value="config" className="m-0 space-y-4">
-            <AttendanceConfigWrapper />
+            <div className="p-6 bg-blue-50 dark:bg-blue-950/20 rounded-xl border border-blue-200 dark:border-blue-800">
+              <h3 className="text-base font-semibold text-blue-900 dark:text-blue-200 mb-2">Lógica de detección de ausencias (fija)</h3>
+              <p className="text-sm text-blue-700 dark:text-blue-300 mb-4">El monitor de presencia usa los siguientes umbrales fijos, independientemente del tipo de turno de cada empleado:</p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="bg-white dark:bg-slate-900 rounded-lg p-4 border border-blue-100">
+                  <p className="text-xs text-slate-500 uppercase font-medium mb-1">+5 min sin fichaje</p>
+                  <p className="text-lg font-bold text-orange-600">Potencialmente Ausente</p>
+                  <p className="text-xs text-slate-400 mt-1">Se detecta como posible ausencia. RRHH puede intervenir.</p>
+                </div>
+                <div className="bg-white dark:bg-slate-900 rounded-lg p-4 border border-blue-100">
+                  <p className="text-xs text-slate-500 uppercase font-medium mb-1">+35 min sin fichaje</p>
+                  <p className="text-lg font-bold text-red-600">Ausencia Auto-creada</p>
+                  <p className="text-xs text-slate-400 mt-1">Se crea registro de ausencia pendiente de aprobación por RRHH.</p>
+                </div>
+                <div className="bg-white dark:bg-slate-900 rounded-lg p-4 border border-blue-100">
+                  <p className="text-xs text-slate-500 uppercase font-medium mb-1">Ficha con retraso</p>
+                  <p className="text-lg font-bold text-yellow-600">Retraso</p>
+                  <p className="text-xs text-slate-400 mt-1">Si ficha después de los 5 min, se registra como retraso. La ausencia auto se cancela.</p>
+                </div>
+              </div>
+              <p className="text-xs text-slate-500 mt-4">La hora esperada se calcula según el tipo de turno del empleado (Fijo Mañana/Tarde/Partido) o según el TeamWeekSchedule del equipo si es turno Rotativo.</p>
+            </div>
           </TabsContent>
         </div>
       </Tabs>
