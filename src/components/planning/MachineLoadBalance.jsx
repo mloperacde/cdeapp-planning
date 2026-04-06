@@ -9,7 +9,7 @@ import { getMachineAlias } from "@/utils/machineAlias";
 import { parseDateES } from "@/utils/parseDateES";
 import { toast } from "sonner";
 
-const DAILY_CAPACITY_HOURS = 14;
+const DAILY_CAPACITY_HOURS = 15;
 const WORK_START = 7;
 const WORK_END = 22;
 

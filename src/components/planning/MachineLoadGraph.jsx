@@ -7,7 +7,7 @@ import { es } from "date-fns/locale";
 import { getMachineAlias } from "@/utils/machineAlias";
 import { parseDateES } from "@/utils/parseDateES";
 
-const DAILY_CAPACITY_HOURS = 14;
+const DAILY_CAPACITY_HOURS = 15;
 const WORK_START_HOUR = 7; // 07:00 AM
 const WORK_END_HOUR = 22;  // 10:00 PM (15 hours span, but maybe lunch break?)
 
