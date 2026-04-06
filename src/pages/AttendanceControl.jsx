@@ -7,11 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Upload, Users, Clock, CheckCircle, AlertCircle, RefreshCw, Trash2, Search, LogIn, LogOut, FileWarning, Layers, BarChart2, CalendarClock } from "lucide-react";
+import { Upload, Users, Clock, CheckCircle, AlertCircle, RefreshCw, Trash2, Search, LogIn, LogOut, FileWarning, Layers, BarChart2 } from "lucide-react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 import AbsenteeismReport from "../components/attendance/AbsenteeismReport";
-import ExpectedTimeMonitor from "../components/attendance/ExpectedTimeMonitor";
 
 // Configuración para sincronización directa (Bypass Backend)
 const CUCO_API_KEY = "k9fKmKcVCRc44Rf7dpkxhnfU9z9t0XsgrYgkGQSr9unWFZPOKsySznPHb7bUJzBc";
@@ -592,19 +591,11 @@ export default function AttendanceControl() {
             <Clock className="w-4 h-4 mr-2" />
             Control Diario
           </TabsTrigger>
-          <TabsTrigger value="horarios">
-            <CalendarClock className="w-4 h-4 mr-2" />
-            Monitor Horas Esperadas
-          </TabsTrigger>
           <TabsTrigger value="informe">
             <BarChart2 className="w-4 h-4 mr-2" />
             Informe Absentismo
           </TabsTrigger>
         </TabsList>
-
-        <TabsContent value="horarios">
-          <ExpectedTimeMonitor />
-        </TabsContent>
 
         <TabsContent value="informe">
           <AbsenteeismReport />

@@ -12,10 +12,12 @@ import {
   BarChart3,
   Brain,
   FileSearch,
-  Settings
+  Settings,
+  CalendarClock
 } from "lucide-react";
 import AttendanceControl from "./AttendanceControl";
 import AttendanceDashboard from "../components/attendance/AttendanceDashboard";
+import ExpectedTimeMonitor from "../components/attendance/ExpectedTimeMonitor";
 import AttendanceConfig from "../components/attendance/AttendanceConfig";
 import AttendanceList from "../components/attendance/AttendanceList";
 import AttendancePredictions from "../components/attendance/AttendancePredictions";
@@ -158,6 +160,10 @@ export default function AttendanceManagementPage() {
             <Brain className="w-3 h-3 mr-1" />
             Predicciones
           </TabsTrigger>
+          <TabsTrigger value="horarios" className="flex-1 text-xs py-1.5">
+            <CalendarClock className="w-3 h-3 mr-1" />
+            Monitor Horarios
+          </TabsTrigger>
           <TabsTrigger value="config" className="flex-1 text-xs py-1.5">
             <Settings className="w-3 h-3 mr-1" />
             Configuración
@@ -187,6 +193,10 @@ export default function AttendanceManagementPage() {
 
           <TabsContent value="predictions" className="m-0 space-y-4">
             <AttendancePredictions />
+          </TabsContent>
+
+          <TabsContent value="horarios" className="m-0">
+            <ExpectedTimeMonitor />
           </TabsContent>
 
           {/* Configuración: info sobre la lógica fija del monitor */}

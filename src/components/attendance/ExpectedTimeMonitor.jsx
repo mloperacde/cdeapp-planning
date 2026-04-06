@@ -65,6 +65,8 @@ const STATUS_CONFIG = {
 export default function ExpectedTimeMonitor() {
   const [filterDate, setFilterDate] = useState(new Date().toISOString().slice(0, 10));
   const [search, setSearch] = useState("");
+  const [filterDept, setFilterDept] = useState("");
+  const [filterEquipo, setFilterEquipo] = useState("");
 
   // Empleados sujetos a control
   const { data: employees = [], isLoading: loadingEmp } = useQuery({
@@ -113,6 +115,10 @@ export default function ExpectedTimeMonitor() {
     return map;
   }, [attendanceRecs]);
 
+  // Listas de opciones únicas para filtros
+  const deptOptions = useMemo(() => [...new Set(employees.map(e => e.departamento).filter(Boolean))].sort(), [employees]);
+  const equipoOptions = useMemo(() => [...new Set(employees.map(e => e.equipo || e.team_key).filter(Boolean))].sort(), [employees]);
+
   // Calcular filas
   const rows = useMemo(() => {
     return employees.map(emp => {
@@ -132,13 +138,15 @@ export default function ExpectedTimeMonitor() {
       }
 
       return { emp, expected, firstEntry, diff, status };
-    }).filter(row =>
-      !search ||
-      row.emp.nombre?.toLowerCase().includes(search.toLowerCase()) ||
-      row.emp.departamento?.toLowerCase().includes(search.toLowerCase()) ||
-      row.emp.equipo?.toLowerCase().includes(search.toLowerCase())
-    );
-  }, [employees, teamScheduleMap, firstEntryMap, filterDate, search]);
+    }).filter(row => {
+      if (search && !row.emp.nombre?.toLowerCase().includes(search.toLowerCase()) &&
+          !row.emp.departamento?.toLowerCase().includes(search.toLowerCase()) &&
+          !(row.emp.equipo || row.emp.team_key)?.toLowerCase().includes(search.toLowerCase())) return false;
+      if (filterDept && row.emp.departamento !== filterDept) return false;
+      if (filterEquipo && (row.emp.equipo || row.emp.team_key) !== filterEquipo) return false;
+      return true;
+    });
+  }, [employees, teamScheduleMap, firstEntryMap, filterDate, search, filterDept, filterEquipo]);
 
   const loading = loadingEmp || loadingSched || loadingAtt;
 
@@ -176,14 +184,32 @@ export default function ExpectedTimeMonitor() {
             Actualizar
           </Button>
         </div>
-        <div className="relative w-full sm:w-80">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <Input
-            placeholder="Buscar por nombre, dpto, equipo..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="pl-9"
-          />
+        <div className="flex flex-wrap gap-2">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Input
+              placeholder="Buscar nombre..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="pl-9 w-52"
+            />
+          </div>
+          <select
+            value={filterDept}
+            onChange={e => setFilterDept(e.target.value)}
+            className="text-sm border border-input rounded-md px-3 py-1.5 bg-background text-foreground"
+          >
+            <option value="">Todos los dptos.</option>
+            {deptOptions.map(d => <option key={d} value={d}>{d}</option>)}
+          </select>
+          <select
+            value={filterEquipo}
+            onChange={e => setFilterEquipo(e.target.value)}
+            className="text-sm border border-input rounded-md px-3 py-1.5 bg-background text-foreground"
+          >
+            <option value="">Todos los equipos</option>
+            {equipoOptions.map(e => <option key={e} value={e}>{e}</option>)}
+          </select>
         </div>
       </div>
 
