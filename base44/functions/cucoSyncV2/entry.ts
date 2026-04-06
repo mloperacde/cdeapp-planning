@@ -183,6 +183,29 @@ Deno.serve(async (req) => {
     // ── 6. Análisis de presencia (solo para sincronización de un único día) ─
     if (from === to) {
       const syncDate = from;
+      const systemNow = new Date().toISOString();
+
+      // Cargar ausencias activas (no rechazadas/canceladas) para cruzar con empleados
+      const allAbsences = await retryOp(() =>
+        serviceClient.entities.Absence.list("-fecha_inicio", 2000)
+      );
+
+      // Filtrar ausencias que cubran el día de sincronización
+      const syncDateObj = new Date(syncDate + "T12:00:00Z");
+      const activeAbsencesToday = allAbsences.filter(abs => {
+        if (abs.estado_aprobacion === "Rechazada" || abs.estado_aprobacion === "Cancelada") return false;
+        const start = new Date(abs.fecha_inicio);
+        const end = abs.fecha_fin_desconocida ? new Date("2099-12-31") : new Date(abs.fecha_fin);
+        return start <= syncDateObj && syncDateObj <= end;
+      });
+
+      // Mapa: employee_id → absence
+      const absenceByEmployee = {};
+      for (const abs of activeAbsencesToday) {
+        if (!absenceByEmployee[abs.employee_id]) {
+          absenceByEmployee[abs.employee_id] = abs;
+        }
+      }
 
       const controlledEmployees = masterEmployees.filter(emp =>
         emp.estado_empleado === "Alta" &&
@@ -190,45 +213,100 @@ Deno.serve(async (req) => {
       );
 
       const ficharonHoy = new Set(recordsToCreate.map(r => r.employee_id));
-      const ausentes = [];
-      const reactivados = [];
+      const reactivados = [];   // Ficharon pero estaban como Ausente → presencia PREVALECE
+      const confirmados = [];   // No ficharon pero ya tienen ausencia configurada → confirmar sin cambiar
+      const nuevasAusencias = []; // No ficharon y no tenían ausencia → ausencia automática
 
       for (const emp of controlledEmployees) {
         const code = String(emp.codigo_empleado || "").trim();
         if (!code) continue;
         const hasFichado = ficharonHoy.has(code);
-        if (!hasFichado && emp.disponibilidad !== "Ausente") ausentes.push(emp);
-        else if (hasFichado && emp.disponibilidad === "Ausente") reactivados.push(emp);
+        const absenceRecord = absenceByEmployee[emp.id];
+
+        if (hasFichado && emp.disponibilidad === "Ausente") {
+          // PRESENCIA PREVALECE: cerrar ausencia y marcar disponible
+          reactivados.push({ emp, absence: absenceRecord });
+        } else if (!hasFichado) {
+          if (absenceRecord) {
+            // Ausencia pre-configurada confirmada por ausencia de fichaje
+            confirmados.push({ emp, absence: absenceRecord });
+          } else if (emp.disponibilidad !== "Ausente") {
+            // Sin fichaje y sin ausencia configurada → detección automática
+            nuevasAusencias.push(emp);
+          }
+        }
       }
 
-      for (const emp of ausentes) {
+      // ── Reactivar: presencia física prevalece sobre cualquier ausencia ──
+      for (const { emp, absence } of reactivados) {
+        await retryOp(() => serviceClient.entities.EmployeeMasterDatabase.update(emp.id, {
+          disponibilidad: "Disponible",
+          ausencia_fin: systemNow,
+          ausencia_motivo: null
+        })).catch(e => console.warn(`[cucoSyncV2] Error reactivando ${emp.nombre}:`, e));
+
+        if (absence) {
+          await retryOp(() => serviceClient.entities.Absence.update(absence.id, {
+            fecha_fin: systemNow,
+            fecha_fin_desconocida: false,
+            estado_aprobacion: "Cancelada",
+            comentario_aprobacion: `[SISTEMA] Cerrada automáticamente el ${syncDate}: fichaje de entrada detectado en Cuco360. La presencia física prevalece sobre la ausencia registrada.`
+          })).catch(e => console.warn(`[cucoSyncV2] Error cerrando ausencia de ${emp.nombre}:`, e));
+        }
+        console.log(`[cucoSyncV2] ✅ REACTIVADO (presencia detectada): ${emp.nombre}`);
+      }
+
+      // ── Confirmar ausencias pre-configuradas: sincronizar estado sin alterar el registro ──
+      for (const { emp, absence } of confirmados) {
+        if (emp.disponibilidad !== "Ausente") {
+          await retryOp(() => serviceClient.entities.EmployeeMasterDatabase.update(emp.id, {
+            disponibilidad: "Ausente",
+            ausencia_inicio: absence.fecha_inicio,
+            ausencia_fin: absence.fecha_fin_desconocida ? null : absence.fecha_fin,
+            ausencia_motivo: `${absence.tipo || absence.motivo} (ausencia configurada)`
+          })).catch(e => console.warn(`[cucoSyncV2] Error confirmando ${emp.nombre}:`, e));
+        }
+        console.log(`[cucoSyncV2] 🔵 CONFIRMADA (ausencia preexistente): ${emp.nombre} - ${absence.tipo || absence.motivo}`);
+      }
+
+      // ── Nuevas ausencias automáticas: sin fichaje y sin ausencia configurada ──
+      for (const emp of nuevasAusencias) {
         await retryOp(() => serviceClient.entities.EmployeeMasterDatabase.update(emp.id, {
           disponibilidad: "Ausente",
           ausencia_inicio: `${syncDate}T00:00:00`,
-          ausencia_motivo: "Ausencia detectada automáticamente por sistema (sin fichaje)"
-        })).catch(e => console.warn(`Error marcando ausente ${emp.nombre}:`, e));
+          ausencia_motivo: "Ausencia no comunicada - detección automática por sistema"
+        })).catch(e => console.warn(`[cucoSyncV2] Error marcando ausente ${emp.nombre}:`, e));
+
+        // Crear registro de Absence automático para trazabilidad
+        await retryOp(() => serviceClient.entities.Absence.create({
+          employee_id: emp.id,
+          fecha_inicio: `${syncDate}T00:00:00`,
+          fecha_fin: `${syncDate}T23:59:59`,
+          fecha_fin_desconocida: false,
+          motivo: "Ausencia no comunicada - detección automática",
+          tipo: "Ausencia No Justificada",
+          estado_aprobacion: "Pendiente",
+          remunerada: false,
+          notas: `[SISTEMA] Generada automáticamente por cucoSyncV2 el ${systemNow}. Sin fichaje detectado en Cuco360 para el día ${syncDate}.`
+        })).catch(e => console.warn(`[cucoSyncV2] Error creando ausencia auto ${emp.nombre}:`, e));
+
+        console.log(`[cucoSyncV2] 🔴 NUEVA AUSENCIA AUTO: ${emp.nombre}`);
       }
 
-      for (const emp of reactivados) {
-        await retryOp(() => serviceClient.entities.EmployeeMasterDatabase.update(emp.id, {
-          disponibilidad: "Disponible",
-          ausencia_fin: new Date().toISOString(),
-          ausencia_motivo: null
-        })).catch(e => console.warn(`Error reactivando ${emp.nombre}:`, e));
-      }
-
-      console.log(`[cucoSyncV2] Análisis: ${ausentes.length} ausentes, ${reactivados.length} reactivados`);
+      const summary = {
+        employees_controlled: controlledEmployees.length,
+        ficharon: ficharonHoy.size,
+        reactivados: reactivados.length,
+        ausencias_confirmadas: confirmados.length,
+        nuevas_ausencias_auto: nuevasAusencias.length,
+      };
+      console.log(`[cucoSyncV2] Resumen: ${JSON.stringify(summary)}`);
 
       return Response.json({
         success: true,
-        message: `Sync OK: ${inserted} fichajes importados`,
+        message: `Sync OK: ${inserted} fichajes. Reactivados: ${reactivados.length}, Confirmadas: ${confirmados.length}, Nuevas auto: ${nuevasAusencias.length}`,
         count: inserted,
-        analysis: {
-          employees_controlled: controlledEmployees.length,
-          ficharon: ficharonHoy.size,
-          ausentes_detectados: ausentes.length,
-          reactivados: reactivados.length,
-        }
+        analysis: summary
       });
     }
 

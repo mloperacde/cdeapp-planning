@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { 
   UserX, 
   BarChart3, CalendarDays, FileText, CheckSquare, 
-  LayoutDashboard, Settings, Activity, Brain 
+  LayoutDashboard, Settings, Activity, Brain, Radio
 } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import { startOfMonth, eachDayOfInterval } from "date-fns";
@@ -27,6 +27,7 @@ import AdvancedReportGenerator from "../components/reports/AdvancedReportGenerat
 import AttendanceAnalyzer from "../components/attendance/AttendanceAnalyzer";
 import VacationWorkCompensationManager from "../components/absences/VacationWorkCompensationManager";
 import AbsenceHistoryView from "../components/absences/AbsenceHistoryView";
+import RealTimeAvailabilityPanel from "../components/absences/RealTimeAvailabilityPanel";
 
 export default function AbsenceManagementPage() {
   const { 
@@ -284,6 +285,9 @@ export default function AbsenceManagementPage() {
                 <TabsTrigger value="calendar" className="flex-1 py-2" type="button">
                   <CalendarDays className="w-4 h-4 mr-2"/> Calendario
                 </TabsTrigger>
+                <TabsTrigger value="realtime" className="flex-1 py-2" type="button">
+                  <Radio className="w-4 h-4 mr-2"/> Tiempo Real
+                </TabsTrigger>
                 <TabsTrigger value="types-config" className="flex-1 py-2" type="button">
                   <Settings className="w-4 h-4 mr-2"/> Tipos de Ausencias
                 </TabsTrigger>
@@ -394,6 +398,10 @@ export default function AbsenceManagementPage() {
               initialEmployeeId={initialAbsenceEmployeeId}
               initialEmployeeName={initialAbsenceEmployeeName}
             />
+          </TabsContent>
+
+          <TabsContent value="realtime" className="space-y-4">
+            <RealTimeAvailabilityPanel />
           </TabsContent>
 
           <TabsContent value="history" className="space-y-6">
