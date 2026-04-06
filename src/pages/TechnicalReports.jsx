@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Plus, Search, FileText, Eye, Pencil, Trash2, Bot } from 'lucide-react';
+import { Plus, Search, FileText, Pencil, Trash2, Bot } from 'lucide-react';
 import TechnicalReportEditor from '@/components/technical-reports/TechnicalReportEditor';
 import TechnicalReportChat from '@/components/technical-reports/TechnicalReportChat';
 import { format } from 'date-fns';
@@ -21,7 +21,7 @@ const STATUS_COLORS = {
 export default function TechnicalReports() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
-  const [view, setView] = useState('list'); // 'list' | 'editor' | 'print'
+  const [view, setView] = useState('list');
   const [selectedReport, setSelectedReport] = useState(null);
   const [showChat, setShowChat] = useState(false);
 
@@ -42,16 +42,8 @@ export default function TechnicalReports() {
     r.numeroInforme?.toLowerCase().includes(search.toLowerCase())
   );
 
-  const handleNew = () => {
-    setSelectedReport(null);
-    setView('editor');
-  };
-
-  const handleEdit = (report) => {
-    setSelectedReport(report);
-    setView('editor');
-  };
-
+  const handleNew = () => { setSelectedReport(null); setView('editor'); };
+  const handleEdit = (report) => { setSelectedReport(report); setView('editor'); };
   const handleBack = () => {
     setView('list');
     setSelectedReport(null);
@@ -59,42 +51,36 @@ export default function TechnicalReports() {
   };
 
   if (view === 'editor') {
-    return (
-      <TechnicalReportEditor
-        report={selectedReport}
-        onBack={handleBack}
-      />
-    );
+    return <TechnicalReportEditor report={selectedReport} onBack={handleBack} />;
   }
 
   return (
-    <div className="p-4 md:p-6 max-w-7xl mx-auto">
+    <div className="h-full flex flex-col p-3 md:p-6 gap-4 bg-slate-50 dark:bg-slate-950 overflow-y-auto">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <FileText className="w-7 h-7 text-blue-600" />
-            Informes Técnicos CQV
-          </h1>
-          <p className="text-slate-500 text-sm mt-1">Gestión de informes de Comisionado, Cualificación y Validación</p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 shrink-0 bg-white dark:bg-slate-900 p-2 px-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+            <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+          </div>
+          <div>
+            <h1 className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-tight">Informes Técnicos CQV</h1>
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 hidden sm:block">Gestión de informes de Comisionado, Cualificación y Validación</p>
+          </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setShowChat(!showChat)} className="gap-2">
-            <Bot className="w-4 h-4" />
-            Asistente IA
+          <Button variant="outline" onClick={() => setShowChat(!showChat)} className="gap-2 h-8" size="sm">
+            <Bot className="w-4 h-4" /> Asistente IA
           </Button>
-          <Button onClick={handleNew} className="gap-2 bg-blue-600 hover:bg-blue-700">
-            <Plus className="w-4 h-4" />
-            Nuevo Informe
+          <Button onClick={handleNew} className="gap-2 bg-blue-600 hover:bg-blue-700 h-8" size="sm">
+            <Plus className="w-4 h-4" /> Nuevo Informe
           </Button>
         </div>
       </div>
 
       <div className="flex gap-4">
-        {/* Main content */}
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 space-y-4">
           {/* Search */}
-          <div className="relative mb-4">
+          <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <Input
               placeholder="Buscar por título, artículo, autor o número..."
@@ -105,7 +91,7 @@ export default function TechnicalReports() {
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
             {['Borrador', 'En Revisión', 'Pendiente', 'Validado', 'Rechazado'].map(status => {
               const count = reports.filter(r => r.estadoInforme === status).length;
               return (
@@ -117,7 +103,7 @@ export default function TechnicalReports() {
             })}
           </div>
 
-          {/* Table */}
+          {/* List */}
           {isLoading ? (
             <div className="flex items-center justify-center py-20">
               <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" />
@@ -134,10 +120,7 @@ export default function TechnicalReports() {
           ) : (
             <div className="space-y-3">
               {filtered.map(report => (
-                <div
-                  key={report.id}
-                  className="bg-white dark:bg-card border border-slate-200 dark:border-border rounded-xl p-4 hover:shadow-md transition-shadow"
-                >
+                <div key={report.id} className="bg-white dark:bg-card border border-slate-200 dark:border-border rounded-xl p-4 hover:shadow-md transition-shadow">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap mb-1">
@@ -159,26 +142,16 @@ export default function TechnicalReports() {
                       <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1.5 text-xs text-slate-500">
                         {report.articulo && <span>📦 {report.articulo}</span>}
                         {report.autor && <span>👤 {report.autor}</span>}
-                        {report.fecha && (
-                          <span>📅 {format(new Date(report.fecha), 'dd MMM yyyy', { locale: es })}</span>
-                        )}
-                        {report.hallazgos?.length > 0 && (
-                          <span>⚠️ {report.hallazgos.length} hallazgo(s)</span>
-                        )}
+                        {report.fecha && <span>📅 {format(new Date(report.fecha), 'dd MMM yyyy', { locale: es })}</span>}
+                        {report.hallazgos?.length > 0 && <span>⚠️ {report.hallazgos.length} hallazgo(s)</span>}
                       </div>
                     </div>
                     <div className="flex items-center gap-1 flex-shrink-0">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleEdit(report)}
-                        title="Editar"
-                      >
+                      <Button variant="ghost" size="icon" onClick={() => handleEdit(report)} title="Editar">
                         <Pencil className="w-4 h-4" />
                       </Button>
                       <Button
-                        variant="ghost"
-                        size="icon"
+                        variant="ghost" size="icon"
                         onClick={() => deleteMutation.mutate(report.id)}
                         title="Eliminar"
                         className="text-red-500 hover:text-red-700 hover:bg-red-50"
@@ -193,7 +166,6 @@ export default function TechnicalReports() {
           )}
         </div>
 
-        {/* AI Chat Panel */}
         {showChat && (
           <div className="w-80 flex-shrink-0">
             <TechnicalReportChat onClose={() => setShowChat(false)} />

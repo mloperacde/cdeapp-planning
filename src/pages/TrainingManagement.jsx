@@ -126,23 +126,24 @@ export default function TrainingManagement() {
   }
 
   return (
-    <div className="p-4 md:p-6 space-y-6">
+    <div className="h-full flex flex-col p-3 md:p-6 gap-4 md:gap-6 bg-slate-50 dark:bg-slate-950 overflow-y-auto">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 shrink-0 bg-white dark:bg-slate-900 p-2 px-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow">
-            <GraduationCap className="w-5 h-5 text-white" />
+          <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+            <GraduationCap className="w-4 h-4 text-blue-600 dark:text-blue-400" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-slate-900 dark:text-white">Gestión de Formación</h1>
-            <p className="text-sm text-slate-500">Programas formativos para co-packing y envasado industrial</p>
+            <h1 className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-tight">Gestión de Formación</h1>
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 hidden sm:block">Programas formativos para co-packing y envasado industrial</p>
           </div>
         </div>
-        <Button onClick={() => { setSelectedModule(null); setView('editor'); }} className="gap-2 bg-blue-600 hover:bg-blue-700">
+        <Button onClick={() => { setSelectedModule(null); setView('editor'); }} className="gap-2 bg-blue-600 hover:bg-blue-700 h-8" size="sm">
           <Plus className="w-4 h-4" /> Nuevo Módulo
         </Button>
       </div>
 
+      <div className="space-y-4">
       {/* Stats */}
       <TrainingDashboardStats />
 
@@ -231,6 +232,7 @@ export default function TrainingManagement() {
           <GlobalTrackingView />
         </TabsContent>
       </Tabs>
+      </div>
     </div>
   );
 }
