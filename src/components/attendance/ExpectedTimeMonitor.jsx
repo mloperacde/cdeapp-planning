@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Search, RefreshCw, Clock, AlertTriangle, CheckCircle2, HelpCircle, Users } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Search, RefreshCw, Clock, AlertTriangle, CheckCircle2, HelpCircle, Users, ExternalLink } from "lucide-react";
 
 // Obtiene el lunes de la semana de una fecha dada
 function getMondayOfWeek(dateStr) {
@@ -270,7 +271,16 @@ export default function ExpectedTimeMonitor() {
                     return (
                       <tr key={emp.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
                         <td className="px-3 py-2 font-medium text-slate-800 dark:text-slate-200">
-                          <div>{emp.nombre}</div>
+                          <div className="flex items-center gap-2">
+                            <span>{emp.nombre}</span>
+                            <Link
+                              to={`/MasterEmployeeDatabase?empleado=${emp.id}`}
+                              title="Abrir ficha del empleado"
+                              className="text-blue-500 hover:text-blue-700 flex-shrink-0"
+                            >
+                              <ExternalLink className="w-3.5 h-3.5" />
+                            </Link>
+                          </div>
                           <div className="text-xs text-slate-400">{emp.codigo_empleado}</div>
                         </td>
                         <td className="px-3 py-2 text-slate-500">
