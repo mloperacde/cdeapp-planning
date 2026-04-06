@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Users, TrendingDown, TrendingUp } from "lucide-react";
 import { addDays, format, isValid } from "date-fns";
+import { parseDateES } from "@/utils/parseDateES";
 import { es } from "date-fns/locale";
 import { normalize, isProductionOperator } from "@/utils/employeeFilters";
 
@@ -53,12 +54,10 @@ export default function ResourceForecast({ orders, employees, machines = [], sel
       const activeMachineIds = new Set();
       
       orders.forEach(order => {
-        if (!order.effective_start_date || !order.machine_id) return;
-        
-        const oStart = new Date(order.effective_start_date);
-        const oEnd = order.effective_delivery_date
-          ? new Date(order.effective_delivery_date)
-          : new Date(order.committed_delivery_date || order.start_date || order.effective_start_date);
+        if (!order.start_date || !order.machine_id) return;
+
+        const oStart = parseDateES(order.start_date);
+        const oEnd = parseDateES(order.planned_end_date) || parseDateES(order.committed_delivery_date);
           
         if (isNaN(oStart.getTime())) return;
         

@@ -1,10 +1,11 @@
 import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { BarChart, Activity } from "lucide-react";
-import { addDays, format, isSameDay, isValid, startOfDay, endOfDay, max, min, differenceInHours } from "date-fns";
+import { Activity } from "lucide-react";
+import { addDays, format, isValid, max, min } from "date-fns";
 import { es } from "date-fns/locale";
 import { getMachineAlias } from "@/utils/machineAlias";
+import { parseDateES } from "@/utils/parseDateES";
 
 const DAILY_CAPACITY_HOURS = 14;
 const WORK_START_HOUR = 7; // 07:00 AM
@@ -35,11 +36,11 @@ export default function MachineLoadGraph({ orders, machines, dateRange }) {
 
     orders.forEach(order => {
         if (!order.machine_id) return;
-        
-        const start = order.effective_start_date ? new Date(order.effective_start_date) : null;
-        // End date logic: prioritize planned_end_date (with time) over delivery date
-        const endStr = order.planned_end_date || order.effective_delivery_date;
-        const end = endStr ? new Date(endStr) : null;
+
+        // Parsear fechas con soporte para formato español DD/MM/YYYY HH:mm
+        const start = parseDateES(order.start_date);
+        // Usar planned_end_date (fecha/hora real fin de fabricación) con prioridad
+        const end = parseDateES(order.planned_end_date) || parseDateES(order.committed_delivery_date);
 
         if (!isValid(start) || !isValid(end)) return;
         if (end < start) return;

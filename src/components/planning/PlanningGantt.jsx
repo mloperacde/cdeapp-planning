@@ -2,7 +2,8 @@ import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { getMachineAlias } from "@/utils/machineAlias";
-import { addDays, format, isSameDay, parseISO, isWeekend, isValid } from "date-fns";
+import { addDays, format, isSameDay, isWeekend, isValid } from "date-fns";
+import { parseDateES } from "@/utils/parseDateES";
 import { es } from "date-fns/locale";
 import { AlertCircle, CalendarClock } from "lucide-react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
@@ -65,12 +66,12 @@ export default function PlanningGantt({ orders = [], machines = [], dateRange, o
           return String(o.machine_id) === mId;
       });
       
-      // Scheduled: Has effective_start_date — sorted by start date, then priority
+      // Scheduled: Has start_date — sorted by start date, then priority
       const scheduled = machineOrders
-        .filter(o => o.effective_start_date)
+        .filter(o => o.start_date)
         .sort((a, b) => {
-          const dateA = new Date(a.effective_start_date);
-          const dateB = new Date(b.effective_start_date);
+          const dateA = parseDateES(a.start_date);
+          const dateB = parseDateES(b.start_date);
           if (dateA - dateB !== 0) return dateA - dateB;
           // Same date: sort by priority (1=most urgent first, 0=sin prioridad last)
           const pA = a.priority === 0 ? 99 : (a.priority || 99);
@@ -78,9 +79,9 @@ export default function PlanningGantt({ orders = [], machines = [], dateRange, o
           return pA - pB;
         });
 
-      // Backlog: No effective_start_date — sorted by priority then committed_delivery_date
+      // Backlog: No start_date — sorted by priority then committed_delivery_date
       const backlog = machineOrders
-        .filter(o => !o.effective_start_date)
+        .filter(o => !o.start_date)
         .sort((a, b) => {
           const pA = a.priority === 0 ? 99 : (a.priority || 99);
           const pB = b.priority === 0 ? 99 : (b.priority || 99);
@@ -274,16 +275,14 @@ Ent: ${order.effective_delivery_date || '-'}`;
                   {/* Scheduled Orders - Positioned as time blocks */}
                   <div className="absolute inset-0 overflow-visible pointer-events-none">
                   {machine.scheduled.map((order, idx) => {
-                    // Fecha inicio vigente (con hora si está disponible)
-                    const startStr = order.effective_start_date;
-                    let startDate = parseISO(startStr);
-                    if (!isValid(startDate)) startDate = new Date(startStr);
-                    if (!isValid(startDate)) return null;
+                    // Parsear con soporte para formato español DD/MM/YYYY HH:mm
+                    const startStr = order.start_date;
+                    const startDate = parseDateES(startStr);
+                    if (!startDate || !isValid(startDate)) return null;
 
-                    // Fecha fin real de producción (planned_end_date tiene hora precisa de fin de fabricación)
-                    const endStr = order.planned_end_date || order.effective_delivery_date;
-                    let endDate = endStr ? parseISO(endStr) : startDate;
-                    if (!isValid(endDate)) endDate = startDate;
+                    // Fecha fin real de producción
+                    const endStr = order.planned_end_date || order.committed_delivery_date;
+                    const endDate = parseDateES(endStr) || startDate;
 
                     // Helper: dado un Date, encontrar el índice del día en `days` y la fracción de hora
                     // Asumimos jornada laboral 07:00-22:00 (15h). Fuera de ese rango se clampea.
