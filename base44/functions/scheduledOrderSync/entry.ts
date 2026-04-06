@@ -2,9 +2,12 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
 const CDE_BASE_URL = 'https://cdeapp.es';
 
-async function cdeApiFetch(endpoint, apiKey) {
-  const url = `${CDE_BASE_URL}/api/v1/${endpoint}`;
-  const response = await fetch(url, {
+async function cdeApiFetch(endpoint, apiKey, params = {}) {
+  const url = new URL(`${CDE_BASE_URL}/api/v1/${endpoint}`);
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== undefined && v !== null && v !== '') url.searchParams.append(k, String(v));
+  });
+  const response = await fetch(url.toString(), {
     method: 'GET',
     headers: { 'X-API-Key': apiKey, 'Content-Type': 'application/json' }
   });
@@ -13,6 +16,23 @@ async function cdeApiFetch(endpoint, apiKey) {
     throw new Error(`CDEApp API Error ${response.status}: ${text || response.statusText}`);
   }
   return response.json();
+}
+
+// Fetch ALL productions paginating until exhausted
+async function fetchAllProductions(apiKey) {
+  const LIMIT = 500;
+  const allOrders = [];
+  let skip = 0;
+  while (true) {
+    const data = await cdeApiFetch('sync-productions', apiKey, { limit: LIMIT, skip });
+    const page = Array.isArray(data) ? data : (data?.data || data?.results || []);
+    allOrders.push(...page);
+    console.log(`[scheduledOrderSync] Página skip=${skip}: ${page.length} registros. Total acumulado: ${allOrders.length}`);
+    if (page.length < LIMIT) break; // última página
+    skip += LIMIT;
+    await sleep(500);
+  }
+  return allOrders;
 }
 
 function parseMachineCode(machineName) {
@@ -75,11 +95,8 @@ Deno.serve(async (req) => {
 
     console.log(`[scheduledOrderSync] Iniciando - ${new Date().toISOString()}`);
 
-    // 1. Fetch productions from CDEApp
-    const productionsData = await cdeApiFetch('sync-productions', apiKey);
-    const rawOrders = Array.isArray(productionsData)
-      ? productionsData
-      : (productionsData?.data || productionsData?.results || []);
+    // 1. Fetch ALL productions from CDEApp (paginated)
+    const rawOrders = await fetchAllProductions(apiKey);
 
     console.log(`[scheduledOrderSync] ${rawOrders.length} órdenes recibidas de CDEApp`);
 
@@ -123,7 +140,7 @@ Deno.serve(async (req) => {
         estimated_duration: (cadence > 0 && quantity > 0)
           ? Math.round((quantity / cadence) * 100) / 100
           : null,
-        priority: (raw['Prioridad'] !== undefined && raw['Prioridad'] !== null && raw['Prioridad'] !== '') ? (parseInt(raw['Prioridad']) || null) : null,
+        priority: (raw['Prioridad'] !== undefined && raw['Prioridad'] !== null && raw['Prioridad'] !== '') ? (parseFloat(raw['Prioridad']) || 0) : 0,
         start_date: raw['Fecha Inicio Limite'] || null,
         committed_delivery_date: raw['Nueva Fecha Entrega'] || raw['Fecha Entrega'] || null,
         status: raw['Estado'] || 'Pendiente',
@@ -133,6 +150,7 @@ Deno.serve(async (req) => {
         customer_order_reference: String(raw['Su Pedido'] || '').trim(),
         missing_components_flag: !!(raw['Faltas'] && raw['Faltas'] !== 'No' && raw['Faltas'] !== ''),
         has_customer_delay_note: !!(raw['Motivo Retraso']),
+        planned_end_date: raw['Fecha Fin'] || null,
         notes: raw['Observación'] || '',
       });
     }
@@ -160,48 +178,46 @@ Deno.serve(async (req) => {
     const allIds = await fetchAllWorkOrderIds(base44);
     console.log(`[scheduledOrderSync] Eliminando ${allIds.length} registros existentes...`);
 
-    const DEL_BATCH = 10;
+    const DEL_BATCH = 50;
     let deleted = 0;
     for (let i = 0; i < allIds.length; i += DEL_BATCH) {
       const chunk = allIds.slice(i, i + DEL_BATCH);
       await Promise.allSettled(
-        chunk.map(id => retry(() => base44.asServiceRole.entities.WorkOrder.delete(id), 3, 1500))
+        chunk.map(id => retry(() => base44.asServiceRole.entities.WorkOrder.delete(id), 3, 500))
       );
       deleted += chunk.length;
-      if (deleted % 100 === 0) {
+      if (deleted % 200 === 0) {
         console.log(`[scheduledOrderSync] Eliminados ${deleted}/${allIds.length}`);
       }
-      await sleep(700);
+      await sleep(300);
     }
-    // Pausa larga entre delete y create para dejar que el rate limiter se recupere
-    if (deleted > 0) await sleep(3000);
+    if (deleted > 0) await sleep(1000);
     console.log(`[scheduledOrderSync] ${deleted} registros eliminados. Creando nuevos...`);
 
-    // 5. BulkCreate all new orders in larger batches with longer delays
-    const BULK_CHUNK = 50;
+    // 5. BulkCreate all new orders in batches
+    const BULK_CHUNK = 100;
     let created = 0;
     let errors = 0;
     for (let i = 0; i < newOrders.length; i += BULK_CHUNK) {
       const chunk = newOrders.slice(i, i + BULK_CHUNK);
       try {
-        await retry(() => base44.asServiceRole.entities.WorkOrder.bulkCreate(chunk), 5, 3000);
+        await retry(() => base44.asServiceRole.entities.WorkOrder.bulkCreate(chunk), 5, 1500);
         created += chunk.length;
         console.log(`[scheduledOrderSync] Creadas ${created}/${newOrders.length}`);
       } catch (e) {
         console.error(`[scheduledOrderSync] Error bulkCreate chunk ${i}:`, e.message);
-        // Retry individually on bulk failure
         for (const order of chunk) {
           try {
-            await retry(() => base44.asServiceRole.entities.WorkOrder.create(order), 3, 2000);
+            await retry(() => base44.asServiceRole.entities.WorkOrder.create(order), 3, 1000);
             created++;
-            await sleep(300);
+            await sleep(100);
           } catch (e2) {
             console.error(`[scheduledOrderSync] Error individual ${order.order_number}:`, e2.message);
             errors++;
           }
         }
       }
-      await sleep(2000);
+      await sleep(500);
     }
     const summary = `Sync completado: ${deleted} eliminadas, ${created} creadas, ${errors} errores`;
     console.log(`[scheduledOrderSync] ${summary}`);

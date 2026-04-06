@@ -280,8 +280,8 @@ Ent: ${order.effective_delivery_date || '-'}`;
                     if (!isValid(startDate)) startDate = new Date(startStr);
                     if (!isValid(startDate)) return null;
 
-                    // Fecha fin vigente (con hora si está disponible)
-                    const endStr = order.effective_delivery_date || order.planned_end_date;
+                    // Fecha fin real de producción (planned_end_date tiene hora precisa de fin de fabricación)
+                    const endStr = order.planned_end_date || order.effective_delivery_date;
                     let endDate = endStr ? parseISO(endStr) : startDate;
                     if (!isValid(endDate)) endDate = startDate;
 
