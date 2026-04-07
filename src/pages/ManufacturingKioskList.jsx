@@ -4,27 +4,36 @@ import { base44 } from "@/api/base44Client";
 import { format, startOfWeek, endOfWeek, addWeeks, parseISO, isValid } from "date-fns";
 import { es } from "date-fns/locale";
 import { getMachineAlias } from "@/utils/machineAlias";
-import { ChevronLeft, ChevronRight, RefreshCw, Maximize2, Calendar, AlertTriangle, PackageX, LayoutGrid } from "lucide-react";
+import { ChevronLeft, ChevronRight, RefreshCw, Maximize2, Calendar, AlertTriangle, PackageX, LayoutGrid, Sun, Moon } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const REFRESH_INTERVAL = 5 * 60 * 1000;
-const SCROLL_SPEED = 60; // px per second
-const PAUSE_AT_BOTTOM = 3000; // ms pause before reset
-
-function getPriorityBg(priority) {
-  if (priority == null || priority === 0) return "bg-slate-700/80 border-slate-600";
-  if (priority === 1) return "bg-red-900/80 border-red-600";
-  if (priority === 2) return "bg-orange-900/80 border-orange-600";
-  if (priority === 3) return "bg-blue-900/80 border-blue-600";
-  return "bg-green-900/80 border-green-700";
-}
+const SCROLL_SPEED = 60;
+const PAUSE_AT_BOTTOM = 3000;
+const THEME_KEY = "kiosk_theme";
 
 function getPriorityBadge(priority) {
-  if (priority == null || priority === 0) return { label: "S/P", cls: "bg-slate-600 text-slate-200" };
+  if (priority == null || priority === 0) return { label: "S/P", cls: "bg-slate-400 text-white" };
   if (priority === 1) return { label: "P1", cls: "bg-red-600 text-white" };
   if (priority === 2) return { label: "P2", cls: "bg-orange-500 text-white" };
   if (priority === 3) return { label: "P3", cls: "bg-blue-500 text-white" };
   return { label: `P${priority}`, cls: "bg-green-600 text-white" };
+}
+
+function getPriorityBg(priority, dark) {
+  if (dark) {
+    if (priority == null || priority === 0) return "bg-slate-700/80 border-slate-600";
+    if (priority === 1) return "bg-red-900/80 border-red-600";
+    if (priority === 2) return "bg-orange-900/80 border-orange-600";
+    if (priority === 3) return "bg-blue-900/80 border-blue-600";
+    return "bg-green-900/80 border-green-700";
+  } else {
+    if (priority == null || priority === 0) return "bg-slate-100 border-slate-300";
+    if (priority === 1) return "bg-red-50 border-red-400 border-l-4 border-l-red-500";
+    if (priority === 2) return "bg-orange-50 border-orange-300 border-l-4 border-l-orange-400";
+    if (priority === 3) return "bg-blue-50 border-blue-300 border-l-4 border-l-blue-400";
+    return "bg-green-50 border-green-300 border-l-4 border-l-green-400";
+  }
 }
 
 function formatDT(dateStr) {
@@ -54,26 +63,33 @@ function isOverdue(order) {
   return isValid(d) && d < new Date();
 }
 
-// Single order card — misma ficha oscura que la vista cuadrícula
-function OrderCard({ order }) {
+function OrderCard({ order, isDark }) {
   const badge = getPriorityBadge(order.priority);
   const overdue = isOverdue(order);
   const missing = order.missing_components_flag;
+  const cardBg = isDark
+    ? `${getPriorityBg(order.priority, true)} ${overdue ? "ring-1 ring-yellow-500/60" : ""}`
+    : `${getPriorityBg(order.priority, false)} ${overdue ? "ring-1 ring-yellow-400" : ""}`;
+  const textMain = isDark ? "text-white" : "text-slate-800";
+  const textSub = isDark ? "text-slate-300" : "text-slate-600";
+  const textDim = isDark ? "text-slate-400" : "text-slate-500";
+  const divider = isDark ? "border-white/5" : "border-slate-200";
+
   return (
-    <div className={`rounded px-2 py-1.5 border text-xs ${getPriorityBg(order.priority)} ${overdue ? "ring-1 ring-yellow-500/60" : ""}`}>
+    <div className={`rounded px-2 py-1.5 border text-xs ${cardBg}`}>
       <div className="flex items-center gap-1.5 mb-1">
         <span className={`font-bold text-[10px] rounded px-1.5 py-0.5 shrink-0 ${badge.cls}`}>{badge.label}</span>
-        <span className="font-bold text-white truncate">{order.order_number}</span>
-        {order.client_name && <span className="text-[10px] text-slate-300 truncate flex-1 italic">{order.client_name}</span>}
+        <span className={`font-bold truncate ${textMain}`}>{order.order_number}</span>
+        {order.client_name && <span className={`text-[10px] truncate flex-1 italic ${textSub}`}>{order.client_name}</span>}
         {overdue && <AlertTriangle className="w-3 h-3 text-yellow-400 shrink-0" title="Retraso" />}
         {missing && <PackageX className="w-3 h-3 text-red-400 shrink-0" title="Faltan componentes" />}
       </div>
-      <div className="text-[10px] text-slate-300 truncate mb-0.5">
-        {order.product_article_code && <span className="font-mono text-slate-400 mr-1">{order.product_article_code}</span>}
+      <div className={`text-[10px] truncate mb-0.5 ${textSub}`}>
+        {order.product_article_code && <span className={`font-mono mr-1 ${textDim}`}>{order.product_article_code}</span>}
         {order.product_name}
       </div>
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-slate-400 mt-1 border-t border-white/5 pt-1">
-        {order.quantity != null && <span className="text-slate-300 font-semibold">{order.quantity} uds</span>}
+      <div className={`flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] mt-1 border-t ${divider} pt-1 ${textDim}`}>
+        {order.quantity != null && <span className={`font-semibold ${textSub}`}>{order.quantity} uds</span>}
         {order.start_date && <span>▶ {formatDT(order.start_date)}</span>}
         {order.committed_delivery_date && (
           <span className={overdue ? "text-yellow-400 font-semibold" : ""}>✓ {formatDT(order.committed_delivery_date)}</span>
@@ -86,13 +102,14 @@ function OrderCard({ order }) {
   );
 }
 
-function MachineRow({ machine, orders }) {
+function MachineRow({ machine, orders, isDark }) {
   const firstRow = orders.slice(0, 5);
   const secondRow = orders.slice(5, 10);
   const extra = orders.length > 10 ? orders.length - 10 : 0;
+  const machineBg = isDark ? "bg-slate-800 border-slate-700" : "bg-white border-slate-200 shadow-sm";
 
   return (
-    <div className="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden mb-3">
+    <div className={`${machineBg} rounded-lg border overflow-hidden mb-3`}>
       <div className="flex items-center gap-3 px-3 py-2 bg-slate-700 border-b border-slate-600">
         <span className="font-bold text-sm text-white tracking-wide">{getMachineAlias(machine)}</span>
         <span className="text-xs font-mono bg-slate-600 text-slate-200 px-1.5 py-0.5 rounded">{orders.length} órd.</span>
@@ -100,16 +117,15 @@ function MachineRow({ machine, orders }) {
           <span className="text-xs text-slate-400 truncate">{machine.nombre}</span>
         )}
       </div>
-      {/* Orders grid */}
       <div className="p-2 space-y-2">
         <div className="grid grid-cols-5 gap-1.5">
-          {firstRow.map(o => <OrderCard key={o.id} order={o} />)}
+          {firstRow.map(o => <OrderCard key={o.id} order={o} isDark={isDark} />)}
         </div>
         {secondRow.length > 0 && (
           <div className="grid grid-cols-5 gap-1.5">
-            {secondRow.map(o => <OrderCard key={o.id} order={o} />)}
+            {secondRow.map(o => <OrderCard key={o.id} order={o} isDark={isDark} />)}
             {extra > 0 && (
-              <div className="flex items-center justify-center rounded border border-dashed border-slate-600 text-slate-400 text-sm font-medium">
+              <div className={`flex items-center justify-center rounded border border-dashed ${isDark ? "border-slate-600 text-slate-400" : "border-slate-300 text-slate-400"} text-sm font-medium`}>
                 +{extra} más
               </div>
             )}
@@ -123,6 +139,7 @@ function MachineRow({ machine, orders }) {
 export default function ManufacturingKioskList() {
   const [weekOffset, setWeekOffset] = useState(0);
   const [lastRefresh, setLastRefresh] = useState(new Date());
+  const [isDark, setIsDark] = useState(() => (localStorage.getItem(THEME_KEY) ?? "dark") === "dark");
   const scrollRef = useRef(null);
   const animFrameRef = useRef(null);
   const lastTimeRef = useRef(null);
@@ -134,10 +151,15 @@ export default function ManufacturingKioskList() {
     if (el.requestFullscreen && !document.fullscreenElement) {
       el.requestFullscreen().catch(() => {});
     }
-    return () => {
-      if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
-    };
   }, []);
+
+  const toggleTheme = () => {
+    setIsDark(d => {
+      const next = !d;
+      localStorage.setItem(THEME_KEY, next ? "dark" : "light");
+      return next;
+    });
+  };
 
   const weekStart = startOfWeek(addWeeks(new Date(), weekOffset), { weekStartsOn: 1 });
   const weekEnd = endOfWeek(addWeeks(new Date(), weekOffset), { weekStartsOn: 1 });
@@ -191,33 +213,25 @@ export default function ManufacturingKioskList() {
     return () => clearInterval(timer);
   }, [handleRefresh]);
 
-  // Auto-scroll logic
+  // Auto-scroll
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
     lastTimeRef.current = null;
     pauseRef.current = false;
-
     const step = (ts) => {
       if (!lastTimeRef.current) lastTimeRef.current = ts;
       const dt = ts - lastTimeRef.current;
       lastTimeRef.current = ts;
-
       if (!pauseRef.current) {
         el.scrollTop += (SCROLL_SPEED * dt) / 1000;
-        // Reached bottom
         if (el.scrollTop + el.clientHeight >= el.scrollHeight - 5) {
           pauseRef.current = true;
-          setTimeout(() => {
-            el.scrollTop = 0;
-            pauseRef.current = false;
-            lastTimeRef.current = null;
-          }, PAUSE_AT_BOTTOM);
+          setTimeout(() => { el.scrollTop = 0; pauseRef.current = false; lastTimeRef.current = null; }, PAUSE_AT_BOTTOM);
         }
       }
       animFrameRef.current = requestAnimationFrame(step);
     };
-
     animFrameRef.current = requestAnimationFrame(step);
     return () => cancelAnimationFrame(animFrameRef.current);
   }, [machines, workOrders]);
@@ -253,65 +267,75 @@ export default function ManufacturingKioskList() {
     else document.exitFullscreen();
   };
 
+  // Theme-dependent classes
+  const bg = isDark ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-900";
+  const headerBg = isDark ? "bg-slate-800 border-slate-700" : "bg-white border-slate-200";
+  const statsBg = isDark ? "bg-slate-800/50 border-slate-700/50" : "bg-slate-50 border-slate-200";
+  const btnHover = isDark ? "hover:bg-slate-700" : "hover:bg-slate-100";
+  const textMuted = isDark ? "text-slate-400" : "text-slate-500";
+
   return (
-    <div className="h-screen bg-slate-900 text-white flex flex-col overflow-hidden">
+    <div className={`h-screen ${bg} flex flex-col overflow-hidden`}>
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-3 bg-slate-800 border-b border-slate-700 shrink-0">
+      <div className={`flex items-center justify-between px-6 py-3 ${headerBg} border-b shrink-0`}>
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 text-blue-400">
+          <div className={`flex items-center gap-2 ${isDark ? "text-blue-400" : "text-blue-600"}`}>
             <Calendar className="w-5 h-5" />
-            <span className="font-bold text-lg tracking-wide uppercase">Objetivo de Fabricación</span>
+            <span className={`font-bold text-lg tracking-wide uppercase ${isDark ? "" : "text-slate-800"}`}>Objetivo de Fabricación</span>
           </div>
-          <div className="h-5 w-px bg-slate-600" />
+          <div className={`h-5 w-px ${isDark ? "bg-slate-600" : "bg-slate-300"}`} />
           <div className="flex items-center gap-2">
-            <button onClick={() => setWeekOffset(w => w - 1)} className="p-1.5 rounded hover:bg-slate-700 transition-colors">
+            <button onClick={() => setWeekOffset(w => w - 1)} className={`p-1.5 rounded ${btnHover} transition-colors`}>
               <ChevronLeft className="w-4 h-4" />
             </button>
-            <span className="text-sm font-semibold text-white min-w-[220px] text-center">
+            <span className={`text-sm font-semibold min-w-[220px] text-center ${isDark ? "text-white" : "text-slate-700"}`}>
               Semana {format(weekStart, "dd MMM", { locale: es })} – {format(weekEnd, "dd MMM yyyy", { locale: es })}
             </span>
-            <button onClick={() => setWeekOffset(w => w + 1)} className="p-1.5 rounded hover:bg-slate-700 transition-colors">
+            <button onClick={() => setWeekOffset(w => w + 1)} className={`p-1.5 rounded ${btnHover} transition-colors`}>
               <ChevronRight className="w-4 h-4" />
             </button>
             {weekOffset !== 0 && (
-              <button onClick={() => setWeekOffset(0)} className="px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 rounded transition-colors">
+              <button onClick={() => setWeekOffset(0)} className="px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors">
                 Esta semana
               </button>
             )}
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-xs text-slate-400">
+          <span className={`text-xs ${textMuted}`}>
             Actualizado: {format(lastRefresh, "HH:mm")} · Auto-refresh 5min
           </span>
-          <button onClick={handleRefresh} className="p-1.5 rounded hover:bg-slate-700 transition-colors" title="Actualizar ahora">
-            <RefreshCw className="w-4 h-4 text-slate-400" />
+          <button onClick={handleRefresh} className={`p-1.5 rounded ${btnHover} transition-colors`} title="Actualizar ahora">
+            <RefreshCw className={`w-4 h-4 ${textMuted}`} />
           </button>
-          <Link to="/ManufacturingKiosk" className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-slate-600 hover:bg-slate-500 text-white rounded transition-colors">
+          <Link to="/ManufacturingKiosk" className={`flex items-center gap-1.5 px-3 py-1.5 text-xs ${isDark ? "bg-slate-600 hover:bg-slate-500 text-white" : "bg-slate-200 hover:bg-slate-300 text-slate-700"} rounded transition-colors`}>
             <LayoutGrid className="w-3.5 h-3.5" />
             Vista cuadrícula
           </Link>
-          <button onClick={toggleFullscreen} className="p-1.5 rounded hover:bg-slate-700 transition-colors" title="Pantalla completa">
-            <Maximize2 className="w-4 h-4 text-slate-400" />
+          <button onClick={toggleTheme} className={`p-1.5 rounded ${btnHover} transition-colors`} title="Cambiar tema">
+            {isDark ? <Sun className="w-4 h-4 text-yellow-400" /> : <Moon className="w-4 h-4 text-slate-500" />}
+          </button>
+          <button onClick={toggleFullscreen} className={`p-1.5 rounded ${btnHover} transition-colors`} title="Pantalla completa">
+            <Maximize2 className={`w-4 h-4 ${textMuted}`} />
           </button>
         </div>
       </div>
 
       {/* Stats bar */}
-      <div className="flex items-center gap-6 px-6 py-2 bg-slate-800/50 border-b border-slate-700/50 text-xs shrink-0 flex-wrap">
-        <span><span className="text-white font-bold">{activeMachines.length}</span> <span className="text-slate-400">máquinas activas</span></span>
-        <span><span className="text-white font-bold">{weekOrders.length}</span> <span className="text-slate-400">órdenes</span></span>
-        <span className="text-red-400"><span className="font-bold">{weekOrders.filter(o => o.priority === 1).length}</span> P1</span>
-        <span className="text-orange-400"><span className="font-bold">{weekOrders.filter(o => o.priority === 2).length}</span> P2</span>
-        <span className="text-blue-400"><span className="font-bold">{weekOrders.filter(o => o.priority === 3).length}</span> P3</span>
-        <span className="text-yellow-400"><span className="font-bold">{weekOrders.filter(isOverdue).length}</span> con retraso</span>
-        <span className="text-red-300"><span className="font-bold">{weekOrders.filter(o => o.missing_components_flag).length}</span> faltan componentes</span>
+      <div className={`flex items-center gap-6 px-6 py-2 ${statsBg} border-b text-xs shrink-0 flex-wrap`}>
+        <span><span className={`${isDark ? "text-white" : "text-slate-800"} font-bold`}>{activeMachines.length}</span> <span className={textMuted}>máquinas activas</span></span>
+        <span><span className={`${isDark ? "text-white" : "text-slate-800"} font-bold`}>{weekOrders.length}</span> <span className={textMuted}>órdenes</span></span>
+        <span className={isDark ? "text-red-400" : "text-red-600"}><span className="font-bold">{weekOrders.filter(o => o.priority === 1).length}</span> P1</span>
+        <span className={isDark ? "text-orange-400" : "text-orange-500"}><span className="font-bold">{weekOrders.filter(o => o.priority === 2).length}</span> P2</span>
+        <span className={isDark ? "text-blue-400" : "text-blue-600"}><span className="font-bold">{weekOrders.filter(o => o.priority === 3).length}</span> P3</span>
+        <span className={isDark ? "text-yellow-400" : "text-yellow-600"}><span className="font-bold">{weekOrders.filter(isOverdue).length}</span> con retraso</span>
+        <span className={isDark ? "text-red-300" : "text-red-500"}><span className="font-bold">{weekOrders.filter(o => o.missing_components_flag).length}</span> faltan componentes</span>
       </div>
 
       {/* Scrollable content */}
       <div ref={scrollRef} className="flex-1 overflow-auto p-4">
         {activeMachines.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-slate-500">
+          <div className={`flex flex-col items-center justify-center h-full ${textMuted}`}>
             <Calendar className="w-16 h-16 mb-4 opacity-30" />
             <p className="text-xl">Sin órdenes para esta semana</p>
           </div>
@@ -322,6 +346,7 @@ export default function ManufacturingKioskList() {
                 key={machine.id}
                 machine={machine}
                 orders={getOrdersForMachine(machine.id)}
+                isDark={isDark}
               />
             ))}
           </div>
