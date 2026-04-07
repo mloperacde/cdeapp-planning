@@ -1,17 +1,18 @@
 import { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { Search, RefreshCw, Clock, AlertTriangle, CheckCircle2, HelpCircle, Users, ExternalLink } from "lucide-react";
+import { Search, RefreshCw, Clock, AlertTriangle, CheckCircle2, HelpCircle, Users, ExternalLink, Settings } from "lucide-react";
+import MasterEmployeeEditDialog from "@/components/master/MasterEmployeeEditDialog";
 
 // Obtiene el lunes de la semana de una fecha dada
 function getMondayOfWeek(dateStr) {
   const d = new Date(dateStr + "T12:00:00");
-  const day = d.getDay(); // 0=Dom, 1=Lun...
+  const day = d.getDay();
   const diff = day === 0 ? -6 : 1 - day;
   d.setDate(d.getDate() + diff);
   return d.toISOString().slice(0, 10);
@@ -42,7 +43,6 @@ function calcExpectedTime(emp, teamScheduleMap, dateStr) {
     return { hora: hora || null, turno, fuente: `Equipo ${emp.team_key} semana ${monday}` };
   }
 
-  // Sin tipo de turno definido
   return { hora: null, turno: "N/D", fuente: "Sin tipo de turno", warning: true };
 }
 
@@ -67,22 +67,24 @@ export default function ExpectedTimeMonitor() {
   const [search, setSearch] = useState("");
   const [filterDept, setFilterDept] = useState("");
   const [filterEquipo, setFilterEquipo] = useState("");
+  const [editingEmployee, setEditingEmployee] = useState(null);
+  const queryClient = useQueryClient();
 
-  // Empleados sujetos a control
+  // Empleados sujetos a control horario
   const { data: employees = [], isLoading: loadingEmp } = useQuery({
     queryKey: ["emp_control_horario"],
     queryFn: () => base44.entities.EmployeeMasterDatabase.filter({
       estado_empleado: "Alta",
       sujeto_a_control_horario: true,
     }, "nombre", 500),
-    staleTime: 60000,
+    staleTime: 30000,
   });
 
   // TeamWeekSchedule — cargar todos
   const { data: schedules = [], isLoading: loadingSched } = useQuery({
     queryKey: ["teamWeekSchedule"],
     queryFn: () => base44.entities.TeamWeekSchedule.list("-fecha_inicio_semana", 200),
-    staleTime: 60000,
+    staleTime: 30000,
   });
 
   // Fichajes del día seleccionado
@@ -91,6 +93,14 @@ export default function ExpectedTimeMonitor() {
     queryFn: () => base44.entities.AttendanceRecord.filter({ record_date: filterDate }, "record_time", 2000),
     staleTime: 10000,
   });
+
+  // Al cerrar el diálogo de edición, refrescar datos del monitor
+  const handleEditClose = () => {
+    setEditingEmployee(null);
+    queryClient.invalidateQueries({ queryKey: ["emp_control_horario"] });
+    queryClient.invalidateQueries({ queryKey: ["att_expected", filterDate] });
+    refetch();
+  };
 
   // Map team_key + semana → schedule
   const teamScheduleMap = useMemo(() => {
@@ -103,27 +113,30 @@ export default function ExpectedTimeMonitor() {
     return map;
   }, [schedules]);
 
-  // Primera entrada por empleado
+  // ── BUG FIX: el AttendanceRecord.employee_id guarda el codigo_empleado (ej "476"),
+  // NO el id de EmployeeMasterDatabase. El lookup debe hacerse por codigo_empleado.
   const firstEntryMap = useMemo(() => {
     const map = new Map();
     attendanceRecs
       .filter(r => r.direction === "E")
-      .sort((a, b) => a.record_time.localeCompare(b.record_time))
+      .sort((a, b) => (r => r)(a.record_time.localeCompare(b.record_time)))
       .forEach(r => {
-        if (!map.has(r.employee_id)) map.set(r.employee_id, r.record_time);
+        const key = String(r.employee_id).trim();
+        if (!map.has(key)) map.set(key, r.record_time);
       });
     return map;
   }, [attendanceRecs]);
 
-  // Listas de opciones únicas para filtros
   const deptOptions = useMemo(() => [...new Set(employees.map(e => e.departamento).filter(Boolean))].sort(), [employees]);
   const equipoOptions = useMemo(() => [...new Set(employees.map(e => e.equipo || e.team_key).filter(Boolean))].sort(), [employees]);
 
-  // Calcular filas
+  // Calcular filas: buscar primera entrada usando codigo_empleado (coincide con AttendanceRecord.employee_id)
   const rows = useMemo(() => {
     return employees.map(emp => {
       const expected = calcExpectedTime(emp, teamScheduleMap, filterDate);
-      const firstEntry = firstEntryMap.get(emp.codigo_empleado) || null;
+      // Clave de lookup: codigo_empleado del empleado coincide con employee_id del AttendanceRecord
+      const codigoKey = emp.codigo_empleado ? String(emp.codigo_empleado).trim() : null;
+      const firstEntry = codigoKey ? (firstEntryMap.get(codigoKey) || null) : null;
       const diff = diffMinutes(expected.hora, firstEntry);
 
       let status;
@@ -150,7 +163,6 @@ export default function ExpectedTimeMonitor() {
 
   const loading = loadingEmp || loadingSched || loadingAtt;
 
-  // Estadísticas rápidas
   const stats = useMemo(() => ({
     total: rows.length,
     ok: rows.filter(r => r.status === "ok").length,
@@ -159,11 +171,9 @@ export default function ExpectedTimeMonitor() {
     sin_turno: rows.filter(r => r.status === "sin_turno").length,
   }), [rows]);
 
-  // Detectar empleados rotativos sin horario configurado para la semana
   const monday = getMondayOfWeek(filterDate);
-  const rotativosSinHorario = rows.filter(r =>
-    r.emp.tipo_turno === "Rotativo" && r.expected.warning
-  );
+  const rotativosSinHorario = rows.filter(r => r.emp.tipo_turno === "Rotativo" && r.expected.warning);
+  const sinTurnoConfigured = rows.filter(r => !r.emp.tipo_turno);
 
   return (
     <div className="space-y-4">
@@ -223,10 +233,22 @@ export default function ExpectedTimeMonitor() {
                 {rotativosSinHorario.length} empleado(s) rotativo(s) sin horario de equipo para la semana del {monday}
               </p>
               <p className="text-xs text-amber-700 dark:text-amber-500 mt-0.5">
-                Sin TeamWeekSchedule configurado, el monitor de presencia no puede determinar su hora esperada y puede generar falsas ausencias.
+                Sin TeamWeekSchedule configurado, no se puede determinar la hora esperada.
                 Equipos afectados: {[...new Set(rotativosSinHorario.map(r => r.emp.team_key))].join(", ")}
               </p>
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Alerta: sin tipo de turno */}
+      {sinTurnoConfigured.length > 0 && (
+        <Card className="border-slate-300 bg-slate-50 dark:bg-slate-900/40">
+          <CardContent className="py-3 px-4 flex items-start gap-3">
+            <HelpCircle className="w-5 h-5 text-slate-500 mt-0.5 flex-shrink-0" />
+            <p className="text-sm text-slate-700 dark:text-slate-300">
+              <span className="font-semibold">{sinTurnoConfigured.length} empleado(s)</span> sin tipo de turno configurado — usa el botón <em>Configurar</em> en su fila para completar los datos.
+            </p>
           </CardContent>
         </Card>
       )}
@@ -269,9 +291,7 @@ export default function ExpectedTimeMonitor() {
           <CardHeader className="pb-2">
             <CardTitle className="text-base">
               Hora esperada por empleado — {filterDate}
-              <span className="ml-2 text-sm font-normal text-slate-500">
-                (semana del {monday})
-              </span>
+              <span className="ml-2 text-sm font-normal text-slate-500">(semana del {monday})</span>
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
@@ -288,14 +308,16 @@ export default function ExpectedTimeMonitor() {
                     <th className="text-center px-3 py-2 font-medium text-slate-600 dark:text-slate-300">Diferencia</th>
                     <th className="text-left px-3 py-2 font-medium text-slate-600 dark:text-slate-300">Fuente cálculo</th>
                     <th className="text-center px-3 py-2 font-medium text-slate-600 dark:text-slate-300">Estado</th>
+                    <th className="px-3 py-2"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                   {rows.map(({ emp, expected, firstEntry, diff, status }) => {
                     const cfg = STATUS_CONFIG[status];
                     const Icon = cfg.icon;
+                    const needsConfig = status === "sin_turno" || !expected.hora;
                     return (
-                      <tr key={emp.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                      <tr key={emp.id} className={`hover:bg-slate-50 dark:hover:bg-slate-800/40 ${needsConfig ? "bg-amber-50/30 dark:bg-amber-950/10" : ""}`}>
                         <td className="px-3 py-2 font-medium text-slate-800 dark:text-slate-200">
                           <div className="flex items-center gap-2">
                             <span>{emp.nombre}</span>
@@ -314,7 +336,9 @@ export default function ExpectedTimeMonitor() {
                           <div className="text-xs text-slate-400">{emp.equipo || emp.team_key || "—"}</div>
                         </td>
                         <td className="px-3 py-2">
-                          <Badge variant="outline" className="text-xs">{emp.tipo_turno || "N/D"}</Badge>
+                          <Badge variant="outline" className={`text-xs ${!emp.tipo_turno ? "border-amber-400 text-amber-700" : ""}`}>
+                            {emp.tipo_turno || "⚠ Sin configurar"}
+                          </Badge>
                         </td>
                         <td className="px-3 py-2">
                           {expected.warning ? (
@@ -357,6 +381,20 @@ export default function ExpectedTimeMonitor() {
                             {cfg.label}
                           </Badge>
                         </td>
+                        <td className="px-3 py-2 text-center">
+                          {needsConfig && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 px-2 text-xs border-amber-300 text-amber-700 hover:bg-amber-50"
+                              onClick={() => setEditingEmployee(emp)}
+                              title="Configurar horario del empleado"
+                            >
+                              <Settings className="w-3 h-3 mr-1" />
+                              Configurar
+                            </Button>
+                          )}
+                        </td>
                       </tr>
                     );
                   })}
@@ -371,6 +409,15 @@ export default function ExpectedTimeMonitor() {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Diálogo de edición: abre ficha del empleado en tab Horarios */}
+      {editingEmployee && (
+        <MasterEmployeeEditDialog
+          employee={editingEmployee}
+          open={true}
+          onClose={handleEditClose}
+        />
       )}
     </div>
   );
