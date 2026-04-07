@@ -4,7 +4,8 @@ import { base44 } from "@/api/base44Client";
 import { format, startOfWeek, endOfWeek, addWeeks, parseISO, isValid } from "date-fns";
 import { es } from "date-fns/locale";
 import { getMachineAlias } from "@/utils/machineAlias";
-import { ChevronLeft, ChevronRight, RefreshCw, Maximize2, Calendar, AlertTriangle, PackageX } from "lucide-react";
+import { ChevronLeft, ChevronRight, RefreshCw, Maximize2, Calendar, AlertTriangle, PackageX, List } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const REFRESH_INTERVAL = 5 * 60 * 1000;
 
@@ -185,6 +186,10 @@ export default function ManufacturingKiosk() {
           <button onClick={handleRefresh} className="p-1.5 rounded hover:bg-slate-700 transition-colors" title="Actualizar ahora">
             <RefreshCw className="w-4 h-4 text-slate-400" />
           </button>
+          <Link to="/ManufacturingKioskList" className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-slate-600 hover:bg-slate-500 text-white rounded transition-colors">
+            <List className="w-3.5 h-3.5" />
+            Vista lista
+          </Link>
           <button onClick={toggleFullscreen} className="p-1.5 rounded hover:bg-slate-700 transition-colors" title="Pantalla completa">
             <Maximize2 className="w-4 h-4 text-slate-400" />
           </button>
