@@ -50,11 +50,21 @@ export default function MachineOrdersList({ machines = [], orders, processes, on
     const filtered = activeOrders.filter(o => String(o.machine_id) === mid);
     // Deduplicar por order_number (prioridad al primero)
     const seen = new Set();
-    return filtered.filter(o => {
+    const deduped = filtered.filter(o => {
       const key = String(o.order_number || o.id);
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
+    });
+    // Ordenar: P1, P2, P3... S/P al final (priority=0 o null/undefined), S/P por fecha inicio
+    return deduped.sort((a, b) => {
+      const pa = (a.priority == null || a.priority === 0) ? 9999 : a.priority;
+      const pb = (b.priority == null || b.priority === 0) ? 9999 : b.priority;
+      if (pa !== pb) return pa - pb;
+      // Ambos S/P: ordenar por start_date
+      const da = a.effective_start_date || a.start_date || '';
+      const db = b.effective_start_date || b.start_date || '';
+      return da.localeCompare(db);
     });
   };
 

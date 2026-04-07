@@ -71,6 +71,7 @@ import TrainingManagement from "./TrainingManagement";
 import RoomLayoutManager from "./RoomLayoutManager";
 import ProductionPlannerChat from "./ProductionPlannerChat";
 import InterventionConfigPage from "./InterventionConfigPage";
+import ManufacturingKiosk from "./ManufacturingKiosk";
 
 import { BrowserRouter, HashRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -306,6 +307,7 @@ function PagesContent() {
                 <Route path="/RoomLayoutManager" element={<RoomLayoutManager />} />
                 <Route path="/ProductionPlannerChat" element={<ProductionPlannerChat />} />
                 <Route path="/InterventionConfig" element={<InterventionConfigPage />} />
+                <Route path="/ManufacturingKiosk" element={<ManufacturingKiosk />} />
                 {/* Rutas faltantes - redirecciones */}
                 <Route path="/Employees" element={<MasterEmployeeDatabase />} />
                 <Route path="/AdvancedConfiguration" element={<Configuration />} />

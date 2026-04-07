@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Factory, Plus, RefreshCw, DownloadCloud, AlertCircle } from "lucide-react";
+import { Factory, Plus, RefreshCw, DownloadCloud, AlertCircle, Monitor } from "lucide-react";
 import { getMachineAlias } from "@/utils/machineAlias";
 import { format, startOfWeek, endOfWeek } from "date-fns";
 import WorkOrderForm from "../components/planning/WorkOrderForm";
@@ -753,6 +753,13 @@ export default function ProductionPlanningPage() {
             <span className="hidden md:inline">Recargar</span>
           </Button>
           
+          <Link to="/ManufacturingKiosk" target="_blank">
+             <Button variant="outline" size="sm" className="h-8 text-xs border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800">
+               <Monitor className="w-3 h-3 mr-1.5" />
+               <span className="hidden md:inline">Kiosco Objetivos</span>
+             </Button>
+          </Link>
+
           <Link to="/OrderImport">
              <Button variant="secondary" className="bg-green-600 hover:bg-green-700 text-white border-0">
                  <DownloadCloud className="w-4 h-4" />
