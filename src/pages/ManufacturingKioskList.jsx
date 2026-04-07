@@ -145,11 +145,11 @@ export default function ManufacturingKioskList() {
   const lastTimeRef = useRef(null);
   const pauseRef = useRef(false);
 
-  // Auto-fullscreen on mount
+  const [showFsButton, setShowFsButton] = useState(false);
   useEffect(() => {
     const el = document.documentElement;
     if (el.requestFullscreen && !document.fullscreenElement) {
-      el.requestFullscreen().catch(() => {});
+      el.requestFullscreen().catch(() => setShowFsButton(true));
     }
   }, []);
 
@@ -213,22 +213,26 @@ export default function ManufacturingKioskList() {
     return () => clearInterval(timer);
   }, [handleRefresh]);
 
-  // Auto-scroll
+  // Smooth auto-scroll
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    lastTimeRef.current = null;
     pauseRef.current = false;
+    let lastTs = null;
     const step = (ts) => {
-      if (!lastTimeRef.current) lastTimeRef.current = ts;
-      const dt = ts - lastTimeRef.current;
-      lastTimeRef.current = ts;
       if (!pauseRef.current) {
-        el.scrollTop += (SCROLL_SPEED * dt) / 1000;
-        if (el.scrollTop + el.clientHeight >= el.scrollHeight - 5) {
-          pauseRef.current = true;
-          setTimeout(() => { el.scrollTop = 0; pauseRef.current = false; lastTimeRef.current = null; }, PAUSE_AT_BOTTOM);
+        if (lastTs !== null) {
+          const dt = Math.min(ts - lastTs, 50);
+          el.scrollTop += (SCROLL_SPEED * dt) / 1000;
         }
+        lastTs = ts;
+        if (el.scrollTop + el.clientHeight >= el.scrollHeight - 2) {
+          pauseRef.current = true;
+          lastTs = null;
+          setTimeout(() => { el.scrollTop = 0; pauseRef.current = false; }, PAUSE_AT_BOTTOM);
+        }
+      } else {
+        lastTs = null;
       }
       animFrameRef.current = requestAnimationFrame(step);
     };
@@ -315,6 +319,11 @@ export default function ManufacturingKioskList() {
           <button onClick={toggleTheme} className={`p-1.5 rounded ${btnHover} transition-colors`} title="Cambiar tema">
             {isDark ? <Sun className="w-4 h-4 text-yellow-400" /> : <Moon className="w-4 h-4 text-slate-500" />}
           </button>
+          {showFsButton && (
+            <button onClick={() => { document.documentElement.requestFullscreen(); setShowFsButton(false); }} className="px-3 py-1.5 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded font-medium">
+              ⛶ Pantalla completa
+            </button>
+          )}
           <button onClick={toggleFullscreen} className={`p-1.5 rounded ${btnHover} transition-colors`} title="Pantalla completa">
             <Maximize2 className={`w-4 h-4 ${textMuted}`} />
           </button>
