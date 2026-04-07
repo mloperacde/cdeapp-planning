@@ -1,4 +1,7 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+
+const SCROLL_SPEED = 50;
+const PAUSE_AT_BOTTOM = 3000;
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { format, startOfWeek, endOfWeek, addWeeks, parseISO, isValid } from "date-fns";
@@ -57,6 +60,11 @@ function isOverdue(order) {
 
 export default function ManufacturingKiosk() {
   const [weekOffset, setWeekOffset] = useState(0);
+  const [lastRefresh, setLastRefresh] = useState(new Date());
+  const scrollRef = useRef(null);
+  const animFrameRef = useRef(null);
+  const lastTimeRef = useRef(null);
+  const pauseRef = useRef(false);
 
   // Auto-fullscreen on mount
   useEffect(() => {
@@ -65,7 +73,6 @@ export default function ManufacturingKiosk() {
       el.requestFullscreen().catch(() => {});
     }
   }, []);
-  const [lastRefresh, setLastRefresh] = useState(new Date());
 
   const weekStart = startOfWeek(addWeeks(new Date(), weekOffset), { weekStartsOn: 1 });
   const weekEnd = endOfWeek(addWeeks(new Date(), weekOffset), { weekStartsOn: 1 });
@@ -120,6 +127,29 @@ export default function ManufacturingKiosk() {
     const timer = setInterval(handleRefresh, REFRESH_INTERVAL);
     return () => clearInterval(timer);
   }, [handleRefresh]);
+
+  // Auto-scroll
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    lastTimeRef.current = null;
+    pauseRef.current = false;
+    const step = (ts) => {
+      if (!lastTimeRef.current) lastTimeRef.current = ts;
+      const dt = ts - lastTimeRef.current;
+      lastTimeRef.current = ts;
+      if (!pauseRef.current) {
+        el.scrollTop += (SCROLL_SPEED * dt) / 1000;
+        if (el.scrollTop + el.clientHeight >= el.scrollHeight - 5) {
+          pauseRef.current = true;
+          setTimeout(() => { el.scrollTop = 0; pauseRef.current = false; lastTimeRef.current = null; }, PAUSE_AT_BOTTOM);
+        }
+      }
+      animFrameRef.current = requestAnimationFrame(step);
+    };
+    animFrameRef.current = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(animFrameRef.current);
+  }, [machines, workOrders]);
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) document.documentElement.requestFullscreen();
@@ -217,7 +247,7 @@ export default function ManufacturingKiosk() {
       </div>
 
       {/* Machine Grid */}
-      <div className="flex-1 overflow-auto p-4">
+      <div ref={scrollRef} className="flex-1 overflow-auto p-4">
         {activeMachines.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-slate-500">
             <Calendar className="w-16 h-16 mb-4 opacity-30" />
@@ -280,13 +310,7 @@ export default function ManufacturingKiosk() {
                               <span title="Fin planificado">⏹ {formatDT(order.planned_end_date)}</span>
                             )}
                           </div>
-                          {/* Alerts text */}
-                          {(overdue || missing) && (
-                            <div className="flex flex-wrap gap-1 mt-1">
-                              {overdue && <span className="text-[9px] bg-yellow-500/20 text-yellow-300 border border-yellow-500/40 rounded px-1 py-0.5">RETRASO</span>}
-                              {missing && <span className="text-[9px] bg-red-500/20 text-red-300 border border-red-500/40 rounded px-1 py-0.5">FALTAN COMPONENTES</span>}
-                            </div>
-                          )}
+
                         </div>
                       );
                     })}

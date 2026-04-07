@@ -11,16 +11,23 @@ const REFRESH_INTERVAL = 5 * 60 * 1000;
 const SCROLL_SPEED = 60; // px per second
 const PAUSE_AT_BOTTOM = 3000; // ms pause before reset
 
-function getPriorityStyles(priority) {
-  if (priority === 1) return { card: "border-l-4 border-l-red-500 bg-red-50", badge: "bg-red-500 text-white", label: "P1" };
-  if (priority === 2) return { card: "border-l-4 border-l-orange-400 bg-orange-50", badge: "bg-orange-400 text-white", label: "P2" };
-  if (priority === 3) return { card: "border-l-4 border-l-blue-400 bg-blue-50", badge: "bg-blue-500 text-white", label: "P3" };
-  if (priority === 4) return { card: "border-l-4 border-l-green-400 bg-green-50", badge: "bg-green-500 text-white", label: "P4" };
-  if (priority === 5) return { card: "border-l-4 border-l-slate-300 bg-slate-50", badge: "bg-slate-400 text-white", label: "P5" };
-  return { card: "border-l-4 border-l-slate-200 bg-slate-50", badge: "bg-slate-300 text-slate-700", label: "S/P" };
+function getPriorityBg(priority) {
+  if (priority == null || priority === 0) return "bg-slate-700/80 border-slate-600";
+  if (priority === 1) return "bg-red-900/80 border-red-600";
+  if (priority === 2) return "bg-orange-900/80 border-orange-600";
+  if (priority === 3) return "bg-blue-900/80 border-blue-600";
+  return "bg-green-900/80 border-green-700";
 }
 
-function formatDate(dateStr) {
+function getPriorityBadge(priority) {
+  if (priority == null || priority === 0) return { label: "S/P", cls: "bg-slate-600 text-slate-200" };
+  if (priority === 1) return { label: "P1", cls: "bg-red-600 text-white" };
+  if (priority === 2) return { label: "P2", cls: "bg-orange-500 text-white" };
+  if (priority === 3) return { label: "P3", cls: "bg-blue-500 text-white" };
+  return { label: `P${priority}`, cls: "bg-green-600 text-white" };
+}
+
+function formatDT(dateStr) {
   if (!dateStr) return null;
   let d = parseISO(dateStr);
   if (!isValid(d)) d = new Date(dateStr);
@@ -47,61 +54,62 @@ function isOverdue(order) {
   return isValid(d) && d < new Date();
 }
 
-// Single order card (compact, horizontal)
+// Single order card — misma ficha oscura que la vista cuadrícula
 function OrderCard({ order }) {
-  const { card, badge, label } = getPriorityStyles(order.priority);
+  const badge = getPriorityBadge(order.priority);
   const overdue = isOverdue(order);
   const missing = order.missing_components_flag;
   return (
-    <div className={`rounded-lg border border-slate-200 px-3 py-2 flex flex-col gap-0.5 min-w-0 ${card} ${overdue ? "ring-2 ring-yellow-400" : ""}`}>
-      <div className="flex items-center gap-2 min-w-0">
-        <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded shrink-0 ${badge}`}>{label}</span>
-        <span className="font-bold text-slate-800 text-sm truncate">{order.order_number}</span>
-        {order.client_name && <span className="text-xs text-slate-400 truncate flex-1 italic">{order.client_name}</span>}
-        {overdue && <AlertTriangle className="w-3.5 h-3.5 text-yellow-500 shrink-0" />}
-        {missing && <PackageX className="w-3.5 h-3.5 text-red-500 shrink-0" />}
+    <div className={`rounded px-2 py-1.5 border text-xs ${getPriorityBg(order.priority)} ${overdue ? "ring-1 ring-yellow-500/60" : ""}`}>
+      <div className="flex items-center gap-1.5 mb-1">
+        <span className={`font-bold text-[10px] rounded px-1.5 py-0.5 shrink-0 ${badge.cls}`}>{badge.label}</span>
+        <span className="font-bold text-white truncate">{order.order_number}</span>
+        {order.client_name && <span className="text-[10px] text-slate-300 truncate flex-1 italic">{order.client_name}</span>}
+        {overdue && <AlertTriangle className="w-3 h-3 text-yellow-400 shrink-0" title="Retraso" />}
+        {missing && <PackageX className="w-3 h-3 text-red-400 shrink-0" title="Faltan componentes" />}
       </div>
-      <div className="text-xs text-slate-600 truncate">
+      <div className="text-[10px] text-slate-300 truncate mb-0.5">
         {order.product_article_code && <span className="font-mono text-slate-400 mr-1">{order.product_article_code}</span>}
-        <span>{order.product_name}</span>
+        {order.product_name}
       </div>
-      <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-0.5">
-        {order.quantity != null && <span className="font-semibold text-slate-600">{order.quantity} uds</span>}
-        {order.start_date && <span>▶ {formatDate(order.start_date)}</span>}
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-slate-400 mt-1 border-t border-white/5 pt-1">
+        {order.quantity != null && <span className="text-slate-300 font-semibold">{order.quantity} uds</span>}
+        {order.start_date && <span>▶ {formatDT(order.start_date)}</span>}
         {order.committed_delivery_date && (
-          <span className={overdue ? "text-yellow-600 font-semibold" : ""}>✓ {formatDate(order.committed_delivery_date)}</span>
+          <span className={overdue ? "text-yellow-400 font-semibold" : ""}>✓ {formatDT(order.committed_delivery_date)}</span>
+        )}
+        {order.planned_end_date && order.planned_end_date !== order.committed_delivery_date && (
+          <span>⏹ {formatDT(order.planned_end_date)}</span>
         )}
       </div>
     </div>
   );
 }
 
-// Machine row: up to 5 orders per visual row, wraps into 2 rows if more
 function MachineRow({ machine, orders }) {
   const firstRow = orders.slice(0, 5);
   const secondRow = orders.slice(5, 10);
   const extra = orders.length > 10 ? orders.length - 10 : 0;
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mb-3">
-      {/* Machine header */}
-      <div className="flex items-center gap-3 px-4 py-2.5 bg-slate-700 text-white">
-        <span className="font-bold text-base tracking-wide">{getMachineAlias(machine)}</span>
-        <span className="text-xs bg-slate-500 text-slate-200 px-2 py-0.5 rounded-full font-mono">{orders.length} órd.</span>
+    <div className="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden mb-3">
+      <div className="flex items-center gap-3 px-3 py-2 bg-slate-700 border-b border-slate-600">
+        <span className="font-bold text-sm text-white tracking-wide">{getMachineAlias(machine)}</span>
+        <span className="text-xs font-mono bg-slate-600 text-slate-200 px-1.5 py-0.5 rounded">{orders.length} órd.</span>
         {machine.nombre && machine.nombre !== getMachineAlias(machine) && (
           <span className="text-xs text-slate-400 truncate">{machine.nombre}</span>
         )}
       </div>
       {/* Orders grid */}
-      <div className="p-3 space-y-2">
-        <div className="grid grid-cols-5 gap-2">
+      <div className="p-2 space-y-2">
+        <div className="grid grid-cols-5 gap-1.5">
           {firstRow.map(o => <OrderCard key={o.id} order={o} />)}
         </div>
         {secondRow.length > 0 && (
-          <div className="grid grid-cols-5 gap-2">
+          <div className="grid grid-cols-5 gap-1.5">
             {secondRow.map(o => <OrderCard key={o.id} order={o} />)}
             {extra > 0 && (
-              <div className="flex items-center justify-center rounded-lg border border-dashed border-slate-300 text-slate-400 text-sm font-medium">
+              <div className="flex items-center justify-center rounded border border-dashed border-slate-600 text-slate-400 text-sm font-medium">
                 +{extra} más
               </div>
             )}
@@ -246,27 +254,27 @@ export default function ManufacturingKioskList() {
   };
 
   return (
-    <div className="h-screen bg-slate-100 text-slate-900 flex flex-col overflow-hidden">
+    <div className="h-screen bg-slate-900 text-white flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-3 bg-white border-b border-slate-200 shadow-sm shrink-0">
+      <div className="flex items-center justify-between px-6 py-3 bg-slate-800 border-b border-slate-700 shrink-0">
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 text-slate-700">
-            <Calendar className="w-5 h-5 text-blue-600" />
-            <span className="font-bold text-lg tracking-wide uppercase text-slate-800">Objetivo de Fabricación</span>
+          <div className="flex items-center gap-2 text-blue-400">
+            <Calendar className="w-5 h-5" />
+            <span className="font-bold text-lg tracking-wide uppercase">Objetivo de Fabricación</span>
           </div>
-          <div className="h-5 w-px bg-slate-200" />
+          <div className="h-5 w-px bg-slate-600" />
           <div className="flex items-center gap-2">
-            <button onClick={() => setWeekOffset(w => w - 1)} className="p-1.5 rounded hover:bg-slate-100 transition-colors text-slate-600">
+            <button onClick={() => setWeekOffset(w => w - 1)} className="p-1.5 rounded hover:bg-slate-700 transition-colors">
               <ChevronLeft className="w-4 h-4" />
             </button>
-            <span className="text-sm font-semibold text-slate-700 min-w-[220px] text-center">
+            <span className="text-sm font-semibold text-white min-w-[220px] text-center">
               Semana {format(weekStart, "dd MMM", { locale: es })} – {format(weekEnd, "dd MMM yyyy", { locale: es })}
             </span>
-            <button onClick={() => setWeekOffset(w => w + 1)} className="p-1.5 rounded hover:bg-slate-100 transition-colors text-slate-600">
+            <button onClick={() => setWeekOffset(w => w + 1)} className="p-1.5 rounded hover:bg-slate-700 transition-colors">
               <ChevronRight className="w-4 h-4" />
             </button>
             {weekOffset !== 0 && (
-              <button onClick={() => setWeekOffset(0)} className="px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors">
+              <button onClick={() => setWeekOffset(0)} className="px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 rounded transition-colors">
                 Esta semana
               </button>
             )}
@@ -274,36 +282,36 @@ export default function ManufacturingKioskList() {
         </div>
         <div className="flex items-center gap-3">
           <span className="text-xs text-slate-400">
-            {format(lastRefresh, "HH:mm")} · Auto-refresh 5min
+            Actualizado: {format(lastRefresh, "HH:mm")} · Auto-refresh 5min
           </span>
-          <button onClick={handleRefresh} className="p-1.5 rounded hover:bg-slate-100 transition-colors text-slate-500" title="Actualizar">
-            <RefreshCw className="w-4 h-4" />
+          <button onClick={handleRefresh} className="p-1.5 rounded hover:bg-slate-700 transition-colors" title="Actualizar ahora">
+            <RefreshCw className="w-4 h-4 text-slate-400" />
           </button>
-          <Link to="/ManufacturingKiosk" className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-slate-700 hover:bg-slate-800 text-white rounded transition-colors">
+          <Link to="/ManufacturingKiosk" className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-slate-600 hover:bg-slate-500 text-white rounded transition-colors">
             <LayoutGrid className="w-3.5 h-3.5" />
             Vista cuadrícula
           </Link>
-          <button onClick={toggleFullscreen} className="p-1.5 rounded hover:bg-slate-100 transition-colors text-slate-500" title="Pantalla completa">
-            <Maximize2 className="w-4 h-4" />
+          <button onClick={toggleFullscreen} className="p-1.5 rounded hover:bg-slate-700 transition-colors" title="Pantalla completa">
+            <Maximize2 className="w-4 h-4 text-slate-400" />
           </button>
         </div>
       </div>
 
       {/* Stats bar */}
-      <div className="flex items-center gap-6 px-6 py-1.5 bg-slate-50 border-b border-slate-200 text-xs shrink-0 flex-wrap">
-        <span><span className="font-bold text-slate-800">{activeMachines.length}</span> <span className="text-slate-500">máquinas activas</span></span>
-        <span><span className="font-bold text-slate-800">{weekOrders.length}</span> <span className="text-slate-500">órdenes</span></span>
-        <span className="text-red-600"><span className="font-bold">{weekOrders.filter(o => o.priority === 1).length}</span> P1</span>
-        <span className="text-orange-500"><span className="font-bold">{weekOrders.filter(o => o.priority === 2).length}</span> P2</span>
-        <span className="text-blue-600"><span className="font-bold">{weekOrders.filter(o => o.priority === 3).length}</span> P3</span>
-        <span className="text-yellow-600"><span className="font-bold">{weekOrders.filter(isOverdue).length}</span> con retraso</span>
-        <span className="text-red-500"><span className="font-bold">{weekOrders.filter(o => o.missing_components_flag).length}</span> faltan componentes</span>
+      <div className="flex items-center gap-6 px-6 py-2 bg-slate-800/50 border-b border-slate-700/50 text-xs shrink-0 flex-wrap">
+        <span><span className="text-white font-bold">{activeMachines.length}</span> <span className="text-slate-400">máquinas activas</span></span>
+        <span><span className="text-white font-bold">{weekOrders.length}</span> <span className="text-slate-400">órdenes</span></span>
+        <span className="text-red-400"><span className="font-bold">{weekOrders.filter(o => o.priority === 1).length}</span> P1</span>
+        <span className="text-orange-400"><span className="font-bold">{weekOrders.filter(o => o.priority === 2).length}</span> P2</span>
+        <span className="text-blue-400"><span className="font-bold">{weekOrders.filter(o => o.priority === 3).length}</span> P3</span>
+        <span className="text-yellow-400"><span className="font-bold">{weekOrders.filter(isOverdue).length}</span> con retraso</span>
+        <span className="text-red-300"><span className="font-bold">{weekOrders.filter(o => o.missing_components_flag).length}</span> faltan componentes</span>
       </div>
 
       {/* Scrollable content */}
-      <div ref={scrollRef} className="flex-1 overflow-auto px-4 py-3">
+      <div ref={scrollRef} className="flex-1 overflow-auto p-4">
         {activeMachines.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-slate-400">
+          <div className="flex flex-col items-center justify-center h-full text-slate-500">
             <Calendar className="w-16 h-16 mb-4 opacity-30" />
             <p className="text-xl">Sin órdenes para esta semana</p>
           </div>
