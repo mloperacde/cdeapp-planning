@@ -43,7 +43,7 @@ export default function Layout({ children, currentPageName }) {
   // Normalizar: quitar query params y trailing slash
   const normalizedPath = currentPath.split('?')[0].replace(/\/$/, '') || '/Dashboard';
   
-  const isFullScreenDisplay = normalizedPath === '/ShiftAssignmentsDisplay' || normalizedPath === '/ManufacturingKiosk';
+  const isFullScreenDisplay = normalizedPath === '/ShiftAssignmentsDisplay' || normalizedPath === '/ManufacturingKiosk' || normalizedPath === '/ManufacturingKioskList';
   const hasAccess = canAccessPage(normalizedPath) || normalizedPath === '/BreaksDebug' || normalizedPath === '/Breaks';
 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);

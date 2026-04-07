@@ -57,6 +57,14 @@ function isOverdue(order) {
 
 export default function ManufacturingKiosk() {
   const [weekOffset, setWeekOffset] = useState(0);
+
+  // Auto-fullscreen on mount
+  useEffect(() => {
+    const el = document.documentElement;
+    if (el.requestFullscreen && !document.fullscreenElement) {
+      el.requestFullscreen().catch(() => {});
+    }
+  }, []);
   const [lastRefresh, setLastRefresh] = useState(new Date());
 
   const weekStart = startOfWeek(addWeeks(new Date(), weekOffset), { weekStartsOn: 1 });
@@ -217,7 +225,7 @@ export default function ManufacturingKiosk() {
             <p className="text-sm mt-2 text-slate-600">{workOrders.length} órdenes cargadas en total</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 auto-rows-min">
+          <div className="grid grid-cols-3 gap-3 auto-rows-min">
             {activeMachines.map(machine => {
               const orders = getOrdersForMachine(machine.id);
               return (
@@ -244,7 +252,8 @@ export default function ManufacturingKiosk() {
                             <span className={`font-bold text-[10px] rounded px-1.5 py-0.5 shrink-0 ${badge.cls}`}>
                               {badge.label}
                             </span>
-                            <span className="font-bold text-white truncate flex-1">{order.order_number}</span>
+                            <span className="font-bold text-white truncate">{order.order_number}</span>
+                            {order.client_name && <span className="text-[10px] text-slate-300 truncate flex-1 italic">{order.client_name}</span>}
                             {overdue && <AlertTriangle className="w-3 h-3 text-yellow-400 shrink-0" title="Retraso" />}
                             {missing && <PackageX className="w-3 h-3 text-red-400 shrink-0" title="Faltan componentes" />}
                           </div>
@@ -253,10 +262,7 @@ export default function ManufacturingKiosk() {
                             {order.product_article_code && <span className="font-mono text-slate-400 mr-1">{order.product_article_code}</span>}
                             {order.product_name}
                           </div>
-                          {/* Row 3: Client */}
-                          {order.client_name && (
-                            <div className="text-[10px] text-slate-400 truncate mb-0.5 italic">{order.client_name}</div>
-                          )}
+
                           {/* Row 4: Qty + Dates */}
                           <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-slate-400 mt-1 border-t border-white/5 pt-1">
                             {order.quantity != null && (

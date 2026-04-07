@@ -56,7 +56,8 @@ function OrderCard({ order }) {
     <div className={`rounded-lg border border-slate-200 px-3 py-2 flex flex-col gap-0.5 min-w-0 ${card} ${overdue ? "ring-2 ring-yellow-400" : ""}`}>
       <div className="flex items-center gap-2 min-w-0">
         <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded shrink-0 ${badge}`}>{label}</span>
-        <span className="font-bold text-slate-800 text-sm truncate flex-1">{order.order_number}</span>
+        <span className="font-bold text-slate-800 text-sm truncate">{order.order_number}</span>
+        {order.client_name && <span className="text-xs text-slate-400 truncate flex-1 italic">{order.client_name}</span>}
         {overdue && <AlertTriangle className="w-3.5 h-3.5 text-yellow-500 shrink-0" />}
         {missing && <PackageX className="w-3.5 h-3.5 text-red-500 shrink-0" />}
       </div>
@@ -64,7 +65,6 @@ function OrderCard({ order }) {
         {order.product_article_code && <span className="font-mono text-slate-400 mr-1">{order.product_article_code}</span>}
         <span>{order.product_name}</span>
       </div>
-      {order.client_name && <div className="text-xs text-slate-400 truncate italic">{order.client_name}</div>}
       <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-0.5">
         {order.quantity != null && <span className="font-semibold text-slate-600">{order.quantity} uds</span>}
         {order.start_date && <span>▶ {formatDate(order.start_date)}</span>}
