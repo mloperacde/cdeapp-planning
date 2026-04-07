@@ -8,7 +8,7 @@ import { ChevronLeft, ChevronRight, RefreshCw, Maximize2, Calendar, AlertTriangl
 import { Link } from "react-router-dom";
 
 const REFRESH_INTERVAL = 5 * 60 * 1000;
-const SCROLL_SPEED = 50;
+const SCROLL_SPEED = 30;
 const PAUSE_AT_BOTTOM = 3000;
 const THEME_KEY = "kiosk_theme";
 

@@ -153,95 +153,46 @@ export default function MachineOrdersList({ machines = [], orders, processes, on
                     </div>
                 ) : (
                     uniqueOrders.map(order => {
-                    const isLate = order.effective_delivery_date && new Date(order.effective_delivery_date) < new Date();
+                    const isLate = (order.committed_delivery_date || order.effective_delivery_date) && new Date(order.committed_delivery_date || order.effective_delivery_date) < new Date();
                     const hasPriorityConflict = conflictingOrders.has(String(order.order_number));
-                    
+                    const missing = order.missing_components_flag;
                     return (
-                        <div 
-                            key={order.id} 
+                        <div
+                            key={order.id}
                             onClick={() => onEditOrder(order)}
-                            className={`
-                                relative p-2 rounded-md border cursor-pointer transition-all group hover:shadow-md
-                                ${order.missing_components_flag
-                                  ? 'border-red-400 bg-red-50 dark:bg-red-950/30'
-                                  : hasPriorityConflict ? 'border-amber-400 bg-amber-50' : getPriorityColor(order.priority)}
-                            `}
+                            className={`relative px-2 py-1.5 rounded border cursor-pointer transition-all hover:shadow-md text-xs
+                                ${missing ? 'border-red-400 bg-red-50 dark:bg-red-950/30'
+                                  : hasPriorityConflict ? 'border-amber-400 bg-amber-50'
+                                  : getPriorityColor(order.priority)}
+                                ${isLate ? 'ring-1 ring-yellow-400' : ''}`}
                         >
-                            {order.missing_components_flag && (
-                              <div className="flex items-center gap-1 text-[9px] font-bold text-red-600 bg-red-100 border border-red-200 rounded px-1.5 py-0.5 mb-1.5 w-fit">
-                                <PackageX className="w-3 h-3" /> FALTAN COMPONENTES
-                              </div>
-                            )}
-                            {/* Línea 1: Pry, Orden, Artículo, Nombre, Cliente */}
-                            <div className="flex items-center gap-2 mb-1.5 text-xs overflow-hidden whitespace-nowrap">
-                                <Badge className={`${getPriorityBadgeColor(order.priority)} text-[10px] px-1.5 py-0 h-4 border-0 text-white shrink-0`}>
-                                    {order.priority === 0 ? 'S/P' : `P${order.priority}`}
-                                </Badge>
-                                <span className="font-bold shrink-0">{order.order_number}</span>
-                                {order.product_article_code && (
-                                    <>
-                                        <span className="text-slate-400 shrink-0">|</span>
-                                        <span className="font-medium shrink-0" title="Artículo">{order.product_article_code}</span>
-                                    </>
-                                )}
-                                {order.product_name && (
-                                    <>
-                                        <span className="text-slate-400 shrink-0">|</span>
-                                        <span className="truncate font-medium flex-1" title={order.product_name}>{order.product_name}</span>
-                                    </>
-                                )}
-                                {order.client_name && (
-                                    <>
-                                        <span className="text-slate-400 shrink-0">|</span>
-                                        <span className="italic truncate max-w-[80px]" title={order.client_name}>{order.client_name}</span>
-                                    </>
-                                )}
-                                {isLate && (
-                                    <div className="text-red-600 animate-pulse ml-auto shrink-0" title="Retrasada">
-                                        <AlertCircle className="w-3.5 h-3.5" />
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Línea 2: Cantidad, Multiplo, Materiales, Fechas */}
-                            <div className="flex items-center gap-2 text-[10px] text-slate-600 dark:text-slate-400 overflow-hidden whitespace-nowrap border-t border-black/5 dark:border-white/5 pt-1.5">
-                                <span className="font-semibold shrink-0" title="Cantidad">
-                                    {order.quantity ? `${order.quantity} uds` : 'Sin cantidad'}
+                            {/* Row 1: badge + order + client + icons */}
+                            <div className="flex items-center gap-1.5 mb-1">
+                                <span className={`font-bold text-[10px] rounded px-1.5 py-0.5 shrink-0 text-white ${getPriorityBadgeColor(order.priority)}`}>
+                                    {(order.priority === 0 || order.priority == null) ? 'S/P' : `P${order.priority}`}
                                 </span>
-
-                                {order.multi_qty && (
-                                    <>
-                                        <span className="text-slate-300 shrink-0">•</span>
-                                        <span className="truncate max-w-[80px]" title={`Multiplo: ${order.multi_qty}`}>Multi: {order.multi_qty}</span>
-                                    </>
-                                )}
-                                
-                                {order.material_type && (
-                                    <>
-                                        <span className="text-slate-300 shrink-0">•</span>
-                                        <span className="truncate max-w-[100px]" title={`Material: ${order.material_type}`}>{order.material_type}</span>
-                                    </>
-                                )}
-
-                                <div className="ml-auto flex items-center gap-2 shrink-0">
-                                    {order.effective_delivery_date && (
-                                        <span className={`flex items-center gap-1 ${isLate ? 'text-red-700 font-bold' : ''}`} title="Fecha Entrega (Vigente)">
-                                           Ent: {formatDateSafe(order.effective_delivery_date) || '-'}
-                                        </span>
-                                    )}
-                                    
-                                    {order.effective_start_date && (
-                                        <span className="text-slate-500" title="Fecha Inicio (Vigente)">
-                                           Ini: {formatDateSafe(order.effective_start_date) || '-'}
-                                        </span>
-                                    )}
-
-                                    {order.planned_end_date && (
-                                        <span className="text-slate-500" title="Fecha Fin">
-                                           Fin: {formatDateSafe(order.planned_end_date) || '-'}
-                                        </span>
-                                    )}
+                                <span className="font-bold truncate">{order.order_number}</span>
+                                {order.client_name && <span className="text-[10px] truncate flex-1 italic text-slate-500">{order.client_name}</span>}
+                                {isLate && <AlertCircle className="w-3 h-3 text-yellow-500 shrink-0" title="Retraso" />}
+                                {missing && <PackageX className="w-3 h-3 text-red-500 shrink-0" title="Faltan componentes" />}
+                            </div>
+                            {/* Row 2: article + name */}
+                            {(order.product_article_code || order.product_name) && (
+                                <div className="text-[10px] truncate mb-0.5 text-slate-600">
+                                    {order.product_article_code && <span className="font-mono text-slate-400 mr-1">{order.product_article_code}</span>}
+                                    {order.product_name}
                                 </div>
+                            )}
+                            {/* Row 3: qty + dates */}
+                            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-slate-500 mt-1 border-t border-black/5 pt-1">
+                                {order.quantity != null && <span className="font-semibold text-slate-600">{order.quantity} uds</span>}
+                                {(order.effective_start_date || order.start_date) && <span>▶ {formatDateSafe(order.effective_start_date || order.start_date)}</span>}
+                                {(order.committed_delivery_date || order.effective_delivery_date) && (
+                                    <span className={isLate ? 'text-yellow-600 font-semibold' : ''}>
+                                        ✓ {formatDateSafe(order.committed_delivery_date || order.effective_delivery_date)}
+                                    </span>
+                                )}
+                                {order.planned_end_date && <span>⏹ {formatDateSafe(order.planned_end_date)}</span>}
                             </div>
                         </div>
                     );
