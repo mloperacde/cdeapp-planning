@@ -80,6 +80,13 @@ export default function ExpectedTimeMonitor() {
     staleTime: 30000,
   });
 
+  // TeamConfig — para resolver team_key desde nombre de equipo
+  const { data: teamConfigs = [] } = useQuery({
+    queryKey: ["teamConfig"],
+    queryFn: () => base44.entities.TeamConfig.list(),
+    staleTime: 60000,
+  });
+
   // TeamWeekSchedule — cargar todos
   const { data: schedules = [], isLoading: loadingSched } = useQuery({
     queryKey: ["teamWeekSchedule"],
@@ -101,6 +108,15 @@ export default function ExpectedTimeMonitor() {
     queryClient.invalidateQueries({ queryKey: ["att_expected", filterDate] });
     refetch();
   };
+
+  // Map team_name → team_key (para empleados que tienen equipo pero no team_key)
+  const teamNameToKey = useMemo(() => {
+    const map = new Map();
+    teamConfigs.forEach(tc => {
+      if (tc.team_name && tc.team_key) map.set(tc.team_name.trim().toLowerCase(), tc.team_key);
+    });
+    return map;
+  }, [teamConfigs]);
 
   // Map team_key + semana → schedule
   const teamScheduleMap = useMemo(() => {
@@ -133,8 +149,11 @@ export default function ExpectedTimeMonitor() {
   // Calcular filas: buscar primera entrada usando codigo_empleado (coincide con AttendanceRecord.employee_id)
   const rows = useMemo(() => {
     return employees.map(emp => {
-      const expected = calcExpectedTime(emp, teamScheduleMap, filterDate);
-      // Clave de lookup: codigo_empleado del empleado coincide con employee_id del AttendanceRecord
+      // Resolver team_key si falta: buscar por nombre de equipo en TeamConfig
+      const resolvedTeamKey = emp.team_key ||
+        (emp.equipo ? teamNameToKey.get(emp.equipo.trim().toLowerCase()) : null);
+      const empWithKey = resolvedTeamKey !== emp.team_key ? { ...emp, team_key: resolvedTeamKey } : emp;
+      const expected = calcExpectedTime(empWithKey, teamScheduleMap, filterDate);
       const codigoKey = emp.codigo_empleado ? String(emp.codigo_empleado).trim() : null;
       const firstEntry = codigoKey ? (firstEntryMap.get(codigoKey) || null) : null;
       const diff = diffMinutes(expected.hora, firstEntry);
