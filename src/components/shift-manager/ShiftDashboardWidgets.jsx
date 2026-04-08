@@ -7,7 +7,8 @@ import {
     CheckCircle2, UserX, RefreshCw, Clock, 
     Sunrise, Sunset, Users, KeyRound,
     UserCog, UsersRound, TrendingUp,
-    MessageSquare, ArrowLeftRight, Coffee, Cake, Calendar, AlertTriangle, MapPin
+    MessageSquare, ArrowLeftRight, Coffee, Cake, Calendar, AlertTriangle, MapPin,
+    ClipboardList
 } from "lucide-react";
 import { format, isSameDay } from "date-fns";
 import { es } from "date-fns/locale";
@@ -460,6 +461,14 @@ export function CommunicationWidget() {
             url: createPageUrl("SupportManagement1415"),
             color: "violet",
             description: "14:00 - 15:00"
+        },
+        {
+            id: "dailyChecklist",
+            title: "Escaleta Diaria",
+            icon: ClipboardList,
+            url: createPageUrl("ShiftTaskChecklist"),
+            color: "blue",
+            description: "Checklist de tareas diarias"
         }
     ];
 

@@ -820,15 +820,80 @@ function LeaderAssignment({ leaderName, shift, config, onToggle, onEmployeeSelec
 }
 
 export function TasksConfig({ config, setConfig }) {
-  const [newTask, setNewTask] = useState({ time: "", description: "", role: "Todos", subdepartment: "" });
+  const [newTask, setNewTask] = useState({ 
+    time: "", 
+    activity: "", 
+    description: "", 
+    role: "Jefe Turno", 
+    subdepartment: null,
+    type: "checkbox" 
+  });
 
-  const addTask = () => {
-    if (!newTask.time || !newTask.description) return;
+  const loadDefaultTemplate = () => {
+    const defaultTasks = [
+      { time: "07:00", activity: "Ronda de Arranque", description: "Turno iniciado en App", type: "checkbox" },
+      { time: "07:00", activity: "Ronda de Arranque", description: "Asistencia completa", type: "checkbox" },
+      { time: "07:00", activity: "Ronda de Arranque", description: "Máquinas sin averías", type: "checkbox" },
+      { time: "07:00", activity: "Ronda de Arranque", description: "Velocidad proyectada", type: "text" },
+      { time: "07:00", activity: "Ronda de Arranque", description: "Responsable palets asignado", type: "checkbox" },
+      
+      { time: "08:00", activity: "Ronda Funcionamiento", description: "Uso correcto de EPIs", type: "checkbox" },
+      { time: "08:00", activity: "Ronda Funcionamiento", description: "Orden y Limpieza (Suelo/Mesas)", type: "checkbox" },
+      { time: "08:00", activity: "Ronda Funcionamiento", description: "Entorno Seguro (Cables/Derrames)", type: "checkbox" },
+      { time: "08:00", activity: "Ronda Funcionamiento", description: "Climatización correcta", type: "checkbox" },
+      { time: "08:00", activity: "Ronda Funcionamiento", description: "Eficiencia App vs. Real", type: "checkbox" },
+      
+      { time: "09:00", activity: "Admin", description: "Descansos organizados", type: "checkbox" },
+      { time: "09:00", activity: "Admin", description: "Control personal y App", type: "checkbox" },
+      { time: "09:00", activity: "Admin", description: "Email revisado", type: "checkbox" },
+      
+      { time: "09:30", activity: "Ronda General Planta", description: "Playa limpia y ordenada", type: "checkbox" },
+      { time: "09:30", activity: "Ronda General Planta", description: "Pasillos libres (No doble fila)", type: "checkbox" },
+      { time: "09:30", activity: "Ronda General Planta", description: "Identificación de palets", type: "checkbox" },
+      { time: "09:30", activity: "Ronda General Planta", description: "Stock de EPIs disponible", type: "checkbox" },
+      
+      { time: "10:00", activity: "Revisión Eficiencia", description: "% Eficiencia", type: "text" },
+      { time: "10:00", activity: "Revisión Eficiencia", description: "Tiempo Paradas (Avería/Calidad)", type: "checkbox" },
+      
+      { time: "11:00", activity: "Análisis Proceso", description: "Línea Analizada", type: "text" },
+      { time: "11:00", activity: "Análisis Proceso", description: "Δ vs Ideal", type: "text" },
+      
+      { time: "12:00", activity: "Control Calidad", description: "Línea Analizada", type: "text" },
+      { time: "12:00", activity: "Control Calidad", description: "Cumple estándar (Sí/No)", type: "boolean" },
+      
+      { time: "13:00", activity: "Evaluación Nuevos", description: "Personal evaluado", type: "text" },
+      { time: "13:00", activity: "Evaluación Nuevos", description: "Notas", type: "text" },
+      
+      { time: "14:00", activity: "Pasación Turno", description: "Reunión equipo y Andrea", type: "checkbox" },
+      
+      { time: "14:30", activity: "Ronda Cierre", description: "Feedback desempeño por sala", type: "checkbox" },
+      { time: "14:30", activity: "Ronda Cierre", description: "Eficiencia Final (%)", type: "text" },
+    ];
+
+    const tasksWithIds = defaultTasks.map(t => ({
+      id: generateId(),
+      role: "Jefe Turno",
+      subdepartment: null,
+      ...t
+    }));
+
     setConfig(prev => ({
       ...prev,
-      tasks: [...prev.tasks, { id: generateId(), ...newTask }].sort((a, b) => a.time.localeCompare(b.time))
+      tasks: tasksWithIds
     }));
-    setNewTask({ time: "", description: "", role: "Todos", subdepartment: "" });
+    toast.success("Plantilla de tareas cargada correctamente.");
+  };
+
+  const addTask = () => {
+    if (!newTask.time || !newTask.activity || !newTask.description) {
+      toast.error("Por favor, rellena Hora, Actividad y Punto de Control.");
+      return;
+    }
+    setConfig(prev => ({
+      ...prev,
+      tasks: [...(prev.tasks || []), { id: generateId(), ...newTask }].sort((a, b) => a.time.localeCompare(b.time))
+    }));
+    setNewTask({ time: "", activity: "", description: "", role: "Jefe Turno", subdepartment: null, type: "checkbox" });
   };
 
   const deleteTask = (id) => {
@@ -840,12 +905,18 @@ export function TasksConfig({ config, setConfig }) {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Escaleta de Supervisión</CardTitle>
-        <CardDescription>Define las tareas y horarios para los Jefes de Equipo</CardDescription>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0">
+        <div>
+          <CardTitle>Escaleta de Supervisión (Jefes de Turno)</CardTitle>
+          <CardDescription>Configura las actividades y puntos de control diarios</CardDescription>
+        </div>
+        <Button variant="outline" size="sm" onClick={loadDefaultTemplate} className="text-blue-600 border-blue-200 hover:bg-blue-50">
+          <RefreshCw className="w-4 h-4 mr-2" />
+          Cargar Plantilla Estándar
+        </Button>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-end bg-slate-50 p-4 rounded-lg border">
+        <div className="grid grid-cols-1 md:grid-cols-7 gap-4 items-end bg-slate-50 p-4 rounded-lg border">
           <div className="space-y-2">
             <Label>Hora</Label>
             <Input 
@@ -854,26 +925,32 @@ export function TasksConfig({ config, setConfig }) {
               onChange={(e) => setNewTask({ ...newTask, time: e.target.value })} 
             />
           </div>
-          <div className="space-y-2 md:col-span-2">
-            <Label>Tarea / Descripción</Label>
+          <div className="space-y-2">
+            <Label>Actividad</Label>
             <Input 
-              placeholder="Descripción de la tarea" 
+              placeholder="Ej: Ronda de Arranque" 
+              value={newTask.activity} 
+              onChange={(e) => setNewTask({ ...newTask, activity: e.target.value })} 
+            />
+          </div>
+          <div className="space-y-2 md:col-span-2">
+            <Label>Punto de Control</Label>
+            <Input 
+              placeholder="Ej: Asistencia completa" 
               value={newTask.description} 
               onChange={(e) => setNewTask({ ...newTask, description: e.target.value })} 
             />
           </div>
           <div className="space-y-2">
-            <Label>Rol</Label>
-            <Select value={newTask.role} onValueChange={(val) => setNewTask({ ...newTask, role: val })}>
+            <Label>Tipo Entrada</Label>
+            <Select value={newTask.type} onValueChange={(val) => setNewTask({ ...newTask, type: val })}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Todos">Todos</SelectItem>
-                <SelectItem value="Jefe Turno">Jefe Turno</SelectItem>
-                <SelectItem value="Responsable Área">Responsable Área</SelectItem>
-                <SelectItem value="Calidad">Calidad</SelectItem>
-                <SelectItem value="Mantenimiento">Mantenimiento</SelectItem>
+                <SelectItem value="checkbox">Checklist (✓/×)</SelectItem>
+                <SelectItem value="text">Texto / Valor</SelectItem>
+                <SelectItem value="boolean">Sí / No</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -898,52 +975,69 @@ export function TasksConfig({ config, setConfig }) {
           </div>
         </div>
 
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[80px]">Hora</TableHead>
-              <TableHead>Tarea</TableHead>
-              <TableHead className="w-[120px]">Rol</TableHead>
-              <TableHead className="w-[120px]">Área/Sala</TableHead>
-              <TableHead className="w-[80px] text-right">Acciones</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {config.tasks.map(task => (
-              <TableRow key={task.id}>
-                <TableCell className="font-medium">
-                  <div className="flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-slate-500" />
-                    {task.time}
-                  </div>
-                </TableCell>
-                <TableCell>{task.description}</TableCell>
-                <TableCell>
-                  <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
-                    {task.role || 'Todos'}
-                  </span>
-                </TableCell>
-                <TableCell>
-                  <span className="text-xs text-slate-600">
-                    {task.subdepartment || 'Todas'}
-                  </span>
-                </TableCell>
-                <TableCell className="text-right">
-                  <Button variant="ghost" size="icon" className="text-red-500" onClick={() => deleteTask(task.id)}>
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-            {config.tasks.length === 0 && (
+        <div className="border rounded-lg overflow-hidden">
+          <Table>
+            <TableHeader className="bg-slate-50">
               <TableRow>
-                <TableCell colSpan={3} className="text-center text-slate-500 py-8">
-                  No hay tareas definidas en la escaleta.
-                </TableCell>
+                <TableHead className="w-[80px]">Hora</TableHead>
+                <TableHead className="w-[180px]">Actividad</TableHead>
+                <TableHead>Punto de Control</TableHead>
+                <TableHead className="w-[120px]">Tipo</TableHead>
+                <TableHead className="w-[120px]">Área/Sala</TableHead>
+                <TableHead className="w-[80px] text-right">Acciones</TableHead>
               </TableRow>
-            )}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {config.tasks?.length > 0 ? (
+                config.tasks.map((task, idx) => {
+                  const showActivity = idx === 0 || config.tasks[idx-1].activity !== task.activity || config.tasks[idx-1].time !== task.time;
+                  
+                  return (
+                    <TableRow key={task.id} className={showActivity ? "border-t-2" : "border-t"}>
+                      <TableCell className="font-medium">
+                        {showActivity && (
+                          <div className="flex items-center gap-2">
+                            <Clock className="w-4 h-4 text-slate-400" />
+                            {task.time}
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell className="font-semibold text-slate-700">
+                        {showActivity ? task.activity : ""}
+                      </TableCell>
+                      <TableCell>{task.description}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="text-[10px] uppercase font-bold">
+                          {task.type === 'checkbox' ? 'Checklist' : task.type === 'boolean' ? 'Sí/No' : 'Texto'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-xs text-slate-600">
+                          {task.subdepartment || 'Todas'}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => deleteTask(task.id)}>
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center text-slate-500 py-12">
+                    <div className="flex flex-col items-center gap-2">
+                      <ClipboardList className="w-12 h-12 text-slate-200" />
+                      <p>No hay tareas definidas en la escaleta.</p>
+                      <Button variant="link" onClick={loadDefaultTemplate}>Cargar plantilla estándar</Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </CardContent>
     </Card>
   );
