@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Trash2, Factory, Clock, RefreshCw, GripVertical, Pencil, X, Cog } from "lucide-react";
+import { Plus, Trash2, Factory, Clock, RefreshCw, GripVertical, Pencil, X, Cog, ClipboardList } from "lucide-react";
 import { cdeApi } from "@/services/cdeApi";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
