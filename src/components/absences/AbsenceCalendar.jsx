@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Calendar as CalendarIcon, UserX, Building2, TrendingUp, AlertCircle } from "lucide-react";
+import { Calendar as CalendarIcon, UserX, Building2, TrendingUp, AlertCircle, Users, UserCheck } from "lucide-react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, getDay } from "date-fns";
 import { es } from "date-fns/locale";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -104,15 +104,23 @@ export default function AbsenceCalendar({ absences: propsAbsences, employees: pr
       const start = new Date(abs.fecha_inicio);
       const end = abs.fecha_fin_desconocida ? new Date() : new Date(abs.fecha_fin);
       const isInRange = day >= start && day <= end;
-      
       if (!isInRange) return false;
-      
       const employee = employees.find(e => e.id === abs.employee_id);
       const matchesDept = filterDept === "all" || employee?.departamento === filterDept;
       const matchesType = selectedType === "all" || abs.absence_type_id === selectedType;
-      
       return matchesDept && matchesType && abs.estado_aprobacion === "Aprobada";
     });
+  };
+
+  const getAvailabilityForDay = (day, dayAbsences) => {
+    const activeEmployees = employees.filter(e =>
+      e.estado_empleado === 'Alta' &&
+      e.incluir_en_planning !== false &&
+      (filterDept === 'all' || e.departamento === filterDept)
+    );
+    const absentIds = new Set(dayAbsences.map(a => a.employee_id));
+    const disponibles = activeEmployees.filter(e => !absentIds.has(e.id));
+    return { total: activeEmployees.length, disponibles: disponibles.length, ausentes: dayAbsences.length };
   };
 
   return (
@@ -258,55 +266,99 @@ export default function AbsenceCalendar({ absences: propsAbsences, employees: pr
 
             {calendarDays.map(day => {
               const absencesForDay = getAbsencesForDay(day);
+              const availability = getAvailabilityForDay(day, absencesForDay);
               const isToday = isSameDay(day, new Date());
               const isWeekend = getDay(day) === 0 || getDay(day) === 6;
+              const availPct = availability.total > 0 ? Math.round((availability.disponibles / availability.total) * 100) : 100;
+              const hasAbsences = absencesForDay.length > 0;
+
+              const dayCell = (
+                <div
+                  key={day.toString()}
+                  className={`aspect-square border dark:border-slate-700 rounded-lg p-2 ${
+                    isToday ? 'ring-2 ring-blue-500 dark:ring-blue-400' :
+                    isWeekend ? 'bg-slate-50 dark:bg-slate-800/50' :
+                    'bg-white dark:bg-slate-800'
+                  } hover:shadow-md transition-shadow relative overflow-hidden flex flex-col cursor-pointer`}
+                >
+                  <div className="flex justify-between items-start">
+                    <div className={`text-sm font-semibold mb-1 ${
+                      isToday ? 'text-blue-600 dark:text-blue-400' :
+                      isWeekend ? 'text-slate-400 dark:text-slate-500' :
+                      'text-slate-700 dark:text-slate-200'
+                    }`}>
+                      {format(day, 'd')}
+                    </div>
+                    <div className="text-[10px] text-slate-400 uppercase">
+                      {format(day, 'MMM', { locale: es })}
+                    </div>
+                  </div>
+
+                  {!isWeekend && availability.total > 0 && (
+                    <div className="mt-auto">
+                      <div className={`text-[10px] font-semibold mb-1 ${
+                        availPct >= 90 ? 'text-green-600' : availPct >= 70 ? 'text-amber-600' : 'text-red-600'
+                      }`}>
+                        <UserCheck className="inline w-2.5 h-2.5 mr-0.5" />{availability.disponibles}/{availability.total}
+                      </div>
+                      <div className="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-1">
+                        <div
+                          className={`h-1 rounded-full ${
+                            availPct >= 90 ? 'bg-green-500' : availPct >= 70 ? 'bg-amber-500' : 'bg-red-500'
+                          }`}
+                          style={{ width: `${availPct}%` }}
+                        />
+                      </div>
+                      {hasAbsences && (
+                        <div className="text-[9px] text-red-500 mt-0.5">
+                          <UserX className="inline w-2 h-2 mr-0.5" />{availability.ausentes} aus.
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+
+              if (!hasAbsences) return <div key={day.toString()}>{dayCell}</div>;
 
               return (
-                  <div
-                    key={day.toString()}
-                    className={`aspect-square border dark:border-slate-700 rounded-lg p-2 ${
-                      isToday ? 'ring-2 ring-blue-500 dark:ring-blue-400' :
-                      isWeekend ? 'bg-slate-50 dark:bg-slate-800/50' :
-                      'bg-white dark:bg-slate-800'
-                    } hover:shadow-md transition-shadow relative overflow-hidden flex flex-col`}
-                  >
-                    <div className="flex justify-between items-start">
-                      <div className={`text-sm font-semibold mb-1 ${
-                        isToday ? 'text-blue-600 dark:text-blue-400' :
-                        isWeekend ? 'text-slate-400 dark:text-slate-500' :
-                        'text-slate-700 dark:text-slate-200'
-                      }`}>
-                        {format(day, 'd')}
-                      </div>
-                      <div className="text-[10px] text-slate-400 uppercase">
-                        {format(day, 'MMM', { locale: es })}
+                <Popover key={day.toString()}>
+                  <PopoverTrigger asChild>{dayCell}</PopoverTrigger>
+                  <PopoverContent className="w-72 p-0" align="center">
+                    <div className="p-3 border-b bg-slate-50 dark:bg-slate-800">
+                      <p className="text-sm font-bold text-slate-800 dark:text-slate-100">
+                        {format(day, "EEEE, d 'de' MMMM", { locale: es })}
+                      </p>
+                      <div className="flex gap-3 mt-2 text-xs">
+                        <span className="flex items-center gap-1 text-green-600 font-semibold">
+                          <UserCheck className="w-3.5 h-3.5" />{availability.disponibles} disponibles
+                        </span>
+                        <span className="flex items-center gap-1 text-red-500 font-semibold">
+                          <UserX className="w-3.5 h-3.5" />{availability.ausentes} ausentes
+                        </span>
+                        <span className="flex items-center gap-1 text-slate-400">
+                          <Users className="w-3.5 h-3.5" />{availability.total} total
+                        </span>
                       </div>
                     </div>
-
-                    {absencesForDay.length > 0 && (
-                      <div className="space-y-1 overflow-y-auto max-h-[calc(100%-24px)] custom-scrollbar">
-                        {Object.entries(
-                          absencesForDay.reduce((acc, abs) => {
-                            const employee = employees.find(e => e.id === abs.employee_id);
-                            const dept = employee?.departamento || "Sin Dept.";
-                            acc[dept] = (acc[dept] || 0) + 1;
-                            return acc;
-                          }, {})
-                        ).map(([dept, count]) => (
-                          <div
-                            key={dept}
-                            className="text-[10px] px-1.5 py-0.5 rounded flex justify-between items-center bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-medium"
-                            title={`${count} ausencias en ${dept}`}
-                          >
-                            <span className="truncate max-w-[70%]">{dept}</span>
-                            <span className="font-bold ml-1">{count}</span>
+                    <div className="p-3 max-h-52 overflow-y-auto space-y-1.5">
+                      {absencesForDay.map(abs => {
+                        const emp = employees.find(e => e.id === abs.employee_id);
+                        return (
+                          <div key={abs.id} className="flex items-start gap-2 text-xs">
+                            <div className="w-1.5 h-1.5 rounded-full bg-red-400 mt-1.5 shrink-0" />
+                            <div>
+                              <p className="font-semibold text-slate-800 dark:text-slate-200">{emp?.nombre || '—'}</p>
+                              <p className="text-slate-500">{abs.tipo || abs.motivo || 'Sin motivo'} · {emp?.departamento || '—'}</p>
+                            </div>
                           </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+                        );
+                      })}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              );
+            })}
           </div>
         </CardContent>
       </Card>

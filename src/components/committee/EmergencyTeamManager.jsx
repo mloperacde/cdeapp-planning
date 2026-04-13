@@ -89,20 +89,6 @@ export default function EmergencyTeamManager({ employees = [] }) {
     refetchOnWindowFocus: true
   });
 
-  if (isError) {
-    return (
-      <div className="p-4 border border-red-200 bg-red-50 text-red-700 rounded-md">
-        <h3 className="font-bold flex items-center gap-2">
-          <AlertTriangle className="w-5 h-5" /> Error cargando datos
-        </h3>
-        <p className="text-sm mt-1">{error.message}</p>
-        <p className="text-xs mt-2 text-slate-500 font-mono">
-          Verifica que la entidad 'EmergencyTeamMember' exista en Base44 y tengas permisos de lectura.
-        </p>
-      </div>
-    );
-  }
-
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.EmergencyTeamMember.delete(id),
     onSuccess: () => {
@@ -200,6 +186,20 @@ export default function EmergencyTeamManager({ employees = [] }) {
     Object.values(membersByRole).forEach(list => list.forEach(m => assignedIds.add(m.id)));
     return emergencyMembers.filter(m => !assignedIds.has(m.id));
   }, [emergencyMembers, membersByRole]);
+
+  if (isError) {
+    return (
+      <div className="p-4 border border-red-200 bg-red-50 text-red-700 rounded-md">
+        <h3 className="font-bold flex items-center gap-2">
+          <AlertTriangle className="w-5 h-5" /> Error cargando datos
+        </h3>
+        <p className="text-sm mt-1">{error.message}</p>
+        <p className="text-xs mt-2 text-slate-500 font-mono">
+          Verifica que la entidad 'EmergencyTeamMember' exista en Base44 y tengas permisos de lectura.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
