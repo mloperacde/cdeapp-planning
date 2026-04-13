@@ -2,7 +2,7 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-const SPAIN_OFFSET = 1; // UTC+1 base
+const SPAIN_OFFSET = 2; // UTC+2 CEST (horario de verano España)
 
 function todayAtTime(timeStr) {
   if (!timeStr) return null;
@@ -14,14 +14,32 @@ function todayAtTime(timeStr) {
   ));
 }
 
-function getActiveTurnoStart(emp) {
+// Devuelve el número de semana ISO del año para una fecha
+function getISOWeek(date) {
+  const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+}
+
+function getActiveTurnoStart(emp, assignedShift) {
+  // assignedShift: 'Mañana' | 'Tarde' | null (null = usar todos los horarios)
   const now = new Date();
-  const shifts = [
-    emp.horario_manana_inicio,
-    emp.horario_tarde_inicio,
-    emp.turno_partido_entrada1,
-    emp.turno_partido_entrada2,
-  ];
+  const shifts = [];
+
+  if (!assignedShift || assignedShift === 'Mañana') {
+    if (emp.horario_manana_inicio) shifts.push(emp.horario_manana_inicio);
+  }
+  if (!assignedShift || assignedShift === 'Tarde') {
+    if (emp.horario_tarde_inicio) shifts.push(emp.horario_tarde_inicio);
+  }
+  // Turno partido siempre se incluye si no hay assignedShift
+  if (!assignedShift) {
+    if (emp.turno_partido_entrada1) shifts.push(emp.turno_partido_entrada1);
+    if (emp.turno_partido_entrada2) shifts.push(emp.turno_partido_entrada2);
+  }
+
   const candidates = [];
   for (const t of shifts) {
     if (!t) continue;
@@ -67,6 +85,20 @@ Deno.serve(async (req) => {
       return Response.json({ processed: 0, timestamp: now.toISOString() });
     }
 
+    // Cargar calendario de rotación semanal para la semana actual
+    await sleep(200);
+    const currentWeek = getISOWeek(now);
+    const currentYear = now.getUTCFullYear();
+    const weekSchedules = await base44.asServiceRole.entities.TeamWeekSchedule.filter({
+      year: currentYear,
+      week_number: currentWeek,
+    });
+    // Mapa: team_key -> turno asignado esta semana ('Mañana' | 'Tarde')
+    const teamShiftMap = {};
+    for (const ws of weekSchedules) {
+      if (ws.team_key && ws.shift) teamShiftMap[ws.team_key] = ws.shift;
+    }
+
     await sleep(200);
     const attendanceRecords = await base44.asServiceRole.entities.AttendanceRecord.filter({ record_date: today });
     const presentToday = new Set(
@@ -98,7 +130,16 @@ Deno.serve(async (req) => {
 
       const empCode = emp.codigo_empleado;
       const isPresent = empCode && presentToday.has(empCode);
-      const turno = getActiveTurnoStart(emp);
+      // Determinar turno asignado según calendario de rotación (solo para rotativos)
+      let assignedShift = null;
+      if (emp.tipo_turno === 'Rotativo' && emp.team_key) {
+        assignedShift = teamShiftMap[emp.team_key] || null;
+      } else if (emp.tipo_turno === 'Fijo Mañana') {
+        assignedShift = 'Mañana';
+      } else if (emp.tipo_turno === 'Fijo Tarde') {
+        assignedShift = 'Tarde';
+      }
+      const turno = getActiveTurnoStart(emp, assignedShift);
 
       if (!turno) { results.sin_cambios++; continue; }
 
