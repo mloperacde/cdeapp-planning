@@ -33,6 +33,8 @@ export default function AbsenceHistoryView({ employees: propEmployees, absences:
     tipo_ausencia: "all",
     estado_aprobacion: "all",
     search: "",
+    fecha_desde: "",
+    fecha_hasta: "",
   });
 
   const departamentos = useMemo(() => {
@@ -112,6 +114,19 @@ export default function AbsenceHistoryView({ employees: propEmployees, absences:
           }
         }
 
+        if (filters.fecha_desde) {
+          const desde = new Date(filters.fecha_desde);
+          const absStart = parseDate(abs.fecha_inicio);
+          if (!absStart || absStart < desde) return false;
+        }
+
+        if (filters.fecha_hasta) {
+          const hasta = new Date(filters.fecha_hasta);
+          hasta.setHours(23, 59, 59, 999);
+          const absStart = parseDate(abs.fecha_inicio);
+          if (!absStart || absStart > hasta) return false;
+        }
+
         return true;
       });
   }, [absences, employees, filters]);
@@ -137,7 +152,7 @@ export default function AbsenceHistoryView({ employees: propEmployees, absences:
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-7 gap-3">
           <div className="space-y-1">
             <Label className="text-xs">Empleado</Label>
             <Select
@@ -225,6 +240,24 @@ export default function AbsenceHistoryView({ employees: propEmployees, absences:
               placeholder="Texto libre..."
               value={filters.search}
               onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value }))}
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Desde</Label>
+            <Input
+              type="date"
+              className="h-8 text-xs"
+              value={filters.fecha_desde}
+              onChange={(e) => setFilters((f) => ({ ...f, fecha_desde: e.target.value }))}
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Hasta</Label>
+            <Input
+              type="date"
+              className="h-8 text-xs"
+              value={filters.fecha_hasta}
+              onChange={(e) => setFilters((f) => ({ ...f, fecha_hasta: e.target.value }))}
             />
           </div>
         </div>

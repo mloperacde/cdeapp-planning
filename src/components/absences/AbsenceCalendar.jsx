@@ -274,12 +274,11 @@ export default function AbsenceCalendar({ absences: propsAbsences, employees: pr
 
               const dayCell = (
                 <div
-                  key={day.toString()}
                   className={`aspect-square border dark:border-slate-700 rounded-lg p-2 ${
                     isToday ? 'ring-2 ring-blue-500 dark:ring-blue-400' :
                     isWeekend ? 'bg-slate-50 dark:bg-slate-800/50' :
                     'bg-white dark:bg-slate-800'
-                  } hover:shadow-md transition-shadow relative overflow-hidden flex flex-col cursor-pointer`}
+                  } hover:shadow-md transition-shadow relative flex flex-col cursor-pointer`}
                 >
                   <div className="flex justify-between items-start">
                     <div className={`text-sm font-semibold mb-1 ${
