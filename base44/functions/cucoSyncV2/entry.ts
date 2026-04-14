@@ -1,5 +1,55 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
+const SPAIN_OFFSET_HOURS = 2; // UTC+2 CEST
+
+/**
+ * Devuelve true si la hora actual (Spain/Madrid) ya supera el inicio del turno
+ * del empleado + graceMinutes. Si el empleado no tiene turno configurado o su
+ * turno aún no ha comenzado, devuelve false (no se puede declarar ausente todavía).
+ */
+function shiftHasStarted(emp, assignedShift, graceMinutes = 35) {
+  const nowUTC = new Date();
+  // Hora local Spain
+  const nowLocal = new Date(nowUTC.getTime() + SPAIN_OFFSET_HOURS * 3600000);
+  const nowMinutes = nowLocal.getUTCHours() * 60 + nowLocal.getUTCMinutes();
+
+  const candidates = [];
+
+  const addCandidate = (timeStr) => {
+    if (!timeStr) return;
+    const [h, m] = timeStr.split(':').map(Number);
+    if (isNaN(h) || isNaN(m)) return;
+    candidates.push(h * 60 + m);
+  };
+
+  if (!assignedShift || assignedShift === 'Mañana') {
+    addCandidate(emp.horario_manana_inicio);
+  }
+  if (!assignedShift || assignedShift === 'Tarde') {
+    addCandidate(emp.horario_tarde_inicio);
+  }
+  if (!assignedShift) {
+    addCandidate(emp.turno_partido_entrada1);
+    addCandidate(emp.turno_partido_entrada2);
+  }
+
+  if (candidates.length === 0) return false; // Sin turno configurado → no aplica
+
+  // Solo consideramos los turnos que ya han pasado el margen de gracia
+  return candidates.some(startMin => nowMinutes >= startMin + graceMinutes);
+}
+
+/**
+ * Devuelve el número de semana ISO para una fecha
+ */
+function getISOWeek(date) {
+  const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+}
+
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
 async function retryOp(fn, retries = 4, baseDelay = 2000) {
@@ -185,6 +235,18 @@ Deno.serve(async (req) => {
       const syncDate = from;
       const systemNow = new Date().toISOString();
 
+      // Cargar calendario de rotación semanal
+      const now = new Date();
+      const currentWeek = getISOWeek(now);
+      const currentYear = now.getUTCFullYear();
+      const weekSchedules = await retryOp(() =>
+        serviceClient.entities.TeamWeekSchedule.filter({ year: currentYear, week_number: currentWeek })
+      ).catch(() => []);
+      const teamShiftMap = {};
+      for (const ws of weekSchedules) {
+        if (ws.team_key && ws.shift) teamShiftMap[ws.team_key] = ws.shift;
+      }
+
       // Cargar ausencias activas (no rechazadas/canceladas) para cruzar con empleados
       const allAbsences = await retryOp(() =>
         serviceClient.entities.Absence.list("-fecha_inicio", 2000)
@@ -215,13 +277,23 @@ Deno.serve(async (req) => {
       const ficharonHoy = new Set(recordsToCreate.map(r => r.employee_id));
       const reactivados = [];   // Ficharon pero estaban como Ausente → presencia PREVALECE
       const confirmados = [];   // No ficharon pero ya tienen ausencia configurada → confirmar sin cambiar
-      const nuevasAusencias = []; // No ficharon y no tenían ausencia → ausencia automática
+      const nuevasAusencias = []; // No ficharon, turno ya iniciado y sin ausencia configurada
 
       for (const emp of controlledEmployees) {
         const code = String(emp.codigo_empleado || "").trim();
         if (!code) continue;
         const hasFichado = ficharonHoy.has(code);
         const absenceRecord = absenceByEmployee[emp.id];
+
+        // Determinar turno asignado
+        let assignedShift = null;
+        if (emp.tipo_turno === 'Rotativo' && emp.team_key) {
+          assignedShift = teamShiftMap[emp.team_key] || null;
+        } else if (emp.tipo_turno === 'Fijo Mañana') {
+          assignedShift = 'Mañana';
+        } else if (emp.tipo_turno === 'Fijo Tarde') {
+          assignedShift = 'Tarde';
+        }
 
         if (hasFichado && emp.disponibilidad === "Ausente") {
           // PRESENCIA PREVALECE: cerrar ausencia y marcar disponible
@@ -231,8 +303,11 @@ Deno.serve(async (req) => {
             // Ausencia pre-configurada confirmada por ausencia de fichaje
             confirmados.push({ emp, absence: absenceRecord });
           } else if (emp.disponibilidad !== "Ausente") {
-            // Sin fichaje y sin ausencia configurada → detección automática
-            nuevasAusencias.push(emp);
+            // Solo crear ausencia automática si el turno ya ha comenzado (+ 35 min de margen)
+            if (shiftHasStarted(emp, assignedShift, 35)) {
+              nuevasAusencias.push(emp);
+            }
+            // Si el turno aún no comenzó → ignorar, se revisará en la próxima sync
           }
         }
       }
