@@ -1,42 +1,98 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
-const SPAIN_OFFSET_HOURS = 2; // UTC+2 CEST
+// ─────────────────────────────────────────────────────────────────────────────
+// Utilidades de tiempo
+// ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Devuelve true si la hora actual (Spain/Madrid) ya supera el inicio del turno
- * del empleado + graceMinutes. Si el empleado no tiene turno configurado o su
- * turno aún no ha comenzado, devuelve false (no se puede declarar ausente todavía).
+ * Devuelve la hora actual en España (Europe/Madrid) como minutos desde medianoche.
+ * Usa el offset dinámico: UTC+2 en verano (CEST), UTC+1 en invierno (CET).
  */
-function shiftHasStarted(emp, assignedShift, graceMinutes = 35) {
-  const nowUTC = new Date();
-  // Hora local Spain
-  const nowLocal = new Date(nowUTC.getTime() + SPAIN_OFFSET_HOURS * 3600000);
-  const nowMinutes = nowLocal.getUTCHours() * 60 + nowLocal.getUTCMinutes();
+function getNowSpainMinutes() {
+  const now = new Date();
+  // Usamos toLocaleString para obtener la hora real en Spain (respeta DST automáticamente)
+  const localStr = now.toLocaleString('en-US', { timeZone: 'Europe/Madrid', hour12: false, hour: '2-digit', minute: '2-digit' });
+  const [h, m] = localStr.split(':').map(Number);
+  return h * 60 + m;
+}
 
-  const candidates = [];
+/**
+ * Devuelve la hora actual en Spain como objeto Date ajustado.
+ */
+function getNowSpain() {
+  const now = new Date();
+  const localStr = now.toLocaleString('en-CA', { timeZone: 'Europe/Madrid', hour12: false });
+  return new Date(localStr.replace(',', ''));
+}
 
-  const addCandidate = (timeStr) => {
-    if (!timeStr) return;
-    const [h, m] = timeStr.split(':').map(Number);
-    if (isNaN(h) || isNaN(m)) return;
-    candidates.push(h * 60 + m);
-  };
+/**
+ * Convierte "HH:mm" a minutos desde medianoche.
+ */
+function timeToMinutes(timeStr) {
+  if (!timeStr) return null;
+  const [h, m] = timeStr.split(':').map(Number);
+  if (isNaN(h) || isNaN(m)) return null;
+  return h * 60 + m;
+}
 
-  if (!assignedShift || assignedShift === 'Mañana') {
-    addCandidate(emp.horario_manana_inicio);
+/**
+ * Dado un empleado y su turno asignado para HOY, devuelve el objeto de horario:
+ * { shiftStart, shiftEnd } en minutos, o null si no aplica turno hoy.
+ * 
+ * assignedShift: 'Mañana' | 'Tarde' | null (para turno partido / sin turno)
+ */
+function getEmployeeShiftToday(emp, assignedShift) {
+  const nowMinutes = getNowSpainMinutes();
+
+  if (emp.tipo_turno === 'Turno Partido') {
+    // Para turno partido consideramos la franja que esté activa ahora o la próxima
+    const e1 = timeToMinutes(emp.turno_partido_entrada1);
+    const s1 = timeToMinutes(emp.turno_partido_salida1);
+    const e2 = timeToMinutes(emp.turno_partido_entrada2);
+    const s2 = timeToMinutes(emp.turno_partido_salida2);
+    // Buscar la primera franja del día
+    if (e1 !== null) return { shiftStart: e1, shiftEnd: s1 };
+    return null;
   }
-  if (!assignedShift || assignedShift === 'Tarde') {
-    addCandidate(emp.horario_tarde_inicio);
-  }
-  if (!assignedShift) {
-    addCandidate(emp.turno_partido_entrada1);
-    addCandidate(emp.turno_partido_entrada2);
+
+  if (assignedShift === 'Mañana') {
+    const start = timeToMinutes(emp.horario_manana_inicio);
+    const end = timeToMinutes(emp.horario_manana_fin);
+    if (start === null) return null;
+    return { shiftStart: start, shiftEnd: end };
   }
 
-  if (candidates.length === 0) return false; // Sin turno configurado → no aplica
+  if (assignedShift === 'Tarde') {
+    const start = timeToMinutes(emp.horario_tarde_inicio);
+    const end = timeToMinutes(emp.horario_tarde_fin);
+    if (start === null) return null;
+    return { shiftStart: start, shiftEnd: end };
+  }
 
-  // Solo consideramos los turnos que ya han pasado el margen de gracia
-  return candidates.some(startMin => nowMinutes >= startMin + graceMinutes);
+  // Sin turno asignado claro → intentamos inferir por hora actual
+  const mStart = timeToMinutes(emp.horario_manana_inicio);
+  const tStart = timeToMinutes(emp.horario_tarde_inicio);
+  
+  // Tomamos el turno cuyo inicio sea más próximo (ya pasado o futuro cercano)
+  if (mStart !== null && tStart !== null) {
+    // El que ha comenzado más recientemente
+    const mDiff = nowMinutes - mStart;
+    const tDiff = nowMinutes - tStart;
+    if (mDiff >= 0 && (tDiff < 0 || mDiff < tDiff)) {
+      return { shiftStart: mStart, shiftEnd: timeToMinutes(emp.horario_manana_fin) };
+    }
+    if (tDiff >= 0) {
+      return { shiftStart: tStart, shiftEnd: timeToMinutes(emp.horario_tarde_fin) };
+    }
+    // Ninguno ha empezado aún → el que empieza antes
+    return mStart < tStart
+      ? { shiftStart: mStart, shiftEnd: timeToMinutes(emp.horario_manana_fin) }
+      : { shiftStart: tStart, shiftEnd: timeToMinutes(emp.horario_tarde_fin) };
+  }
+  if (mStart !== null) return { shiftStart: mStart, shiftEnd: timeToMinutes(emp.horario_manana_fin) };
+  if (tStart !== null) return { shiftStart: tStart, shiftEnd: timeToMinutes(emp.horario_tarde_fin) };
+
+  return null;
 }
 
 /**
@@ -48,6 +104,16 @@ function getISOWeek(date) {
   d.setUTCDate(d.getUTCDate() + 4 - dayNum);
   const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
   return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+}
+
+/**
+ * Formatea minutos como "HH:mm"
+ */
+function minutesToTime(minutes) {
+  if (minutes === null || minutes === undefined) return '00:00';
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
@@ -69,6 +135,10 @@ async function retryOp(fn, retries = 4, baseDelay = 2000) {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Handler principal
+// ─────────────────────────────────────────────────────────────────────────────
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -78,10 +148,13 @@ Deno.serve(async (req) => {
     const { date, start_date, end_date, force, debug_mode } = body;
 
     if (debug_mode) {
+      const nowMin = getNowSpainMinutes();
       return Response.json({
         success: true,
         message: "Function cucoSyncV2 is deployed and reachable.",
-        has_key: !!Deno.env.get("CUCO360_API_KEY")
+        has_key: !!Deno.env.get("CUCO360_API_KEY"),
+        spain_time_minutes: nowMin,
+        spain_time_formatted: minutesToTime(nowMin)
       });
     }
 
@@ -113,6 +186,7 @@ Deno.serve(async (req) => {
     }
 
     console.log(`[cucoSyncV2] Syncing ${CLIENT_CODE} from ${from} to ${to}`);
+    console.log(`[cucoSyncV2] Hora Spain actual: ${minutesToTime(getNowSpainMinutes())}`);
 
     // ── 1. Obtener marcajes de Cuco360 ──────────────────────────────────────
     const startEnc = encodeURIComponent(`${from} 00:00:00`);
@@ -163,10 +237,9 @@ Deno.serve(async (req) => {
       const fullDate = check.fec_marcaje || check.fecha;
       if (!externalId || !fullDate) return null;
 
-      // Filtrar marcajes sintéticos/automáticos de Cuco360 (cod_marcaje negativo = no son fichajes físicos reales)
+      // Filtrar marcajes sintéticos/automáticos de Cuco360 (cod_marcaje negativo)
       if (check.cod_marcaje !== undefined && Number(check.cod_marcaje) < 0) return null;
 
-      // Cuco360 ya envía la hora en tiempo local (Europe/Madrid)
       const dateParts = fullDate.split(' ');
       const dateStr = dateParts[0];
       const timeStr = (dateParts[1] || '00:00').slice(0, 5);
@@ -190,7 +263,7 @@ Deno.serve(async (req) => {
 
     console.log(`[cucoSyncV2] ${recordsToCreate.length} registros obtenidos de Cuco360`);
 
-    // ── 4. Limpiar registros previos por cada día (para evitar duplicados) ─
+    // ── 4. Limpiar registros previos por cada día ─────────────────────────
     const uniqueDates = [...new Set(recordsToCreate.map(r => r.record_date))];
     console.log(`[cucoSyncV2] Limpiando ${uniqueDates.length} días...`);
 
@@ -216,7 +289,6 @@ Deno.serve(async (req) => {
       await sleep(500);
     }
 
-    // Pausa antes de insertar
     if (uniqueDates.length > 0) await sleep(2000);
 
     // ── 5. Insertar nuevos registros en chunks ────────────────────────────
@@ -233,26 +305,29 @@ Deno.serve(async (req) => {
     // ── 6. Análisis de presencia (solo para sincronización de un único día) ─
     if (from === to) {
       const syncDate = from;
+      const nowSpain = getNowSpain();
+      const nowMinutes = getNowSpainMinutes();
       const systemNow = new Date().toISOString();
 
-      // Cargar calendario de rotación semanal
-      const now = new Date();
-      const currentWeek = getISOWeek(now);
-      const currentYear = now.getUTCFullYear();
+      // Cargar calendario de rotación semanal para la semana actual
+      const currentWeek = getISOWeek(nowSpain);
+      const currentYear = nowSpain.getFullYear();
       const weekSchedules = await retryOp(() =>
         serviceClient.entities.TeamWeekSchedule.filter({ year: currentYear, week_number: currentWeek })
       ).catch(() => []);
+
+      // teamShiftMap: team_key → 'Mañana' | 'Tarde'
       const teamShiftMap = {};
       for (const ws of weekSchedules) {
         if (ws.team_key && ws.shift) teamShiftMap[ws.team_key] = ws.shift;
       }
+      console.log(`[cucoSyncV2] Turnos semana ${currentWeek}/${currentYear}:`, JSON.stringify(teamShiftMap));
 
-      // Cargar ausencias activas (no rechazadas/canceladas) para cruzar con empleados
+      // Cargar ausencias activas para cruzar con empleados
       const allAbsences = await retryOp(() =>
         serviceClient.entities.Absence.list("-fecha_inicio", 2000)
       );
 
-      // Filtrar ausencias que cubran el día de sincronización
       const syncDateObj = new Date(syncDate + "T12:00:00Z");
       const activeAbsencesToday = allAbsences.filter(abs => {
         if (abs.estado_aprobacion === "Rechazada" || abs.estado_aprobacion === "Cancelada") return false;
@@ -261,7 +336,6 @@ Deno.serve(async (req) => {
         return start <= syncDateObj && syncDateObj <= end;
       });
 
-      // Mapa: employee_id → absence
       const absenceByEmployee = {};
       for (const abs of activeAbsencesToday) {
         if (!absenceByEmployee[abs.employee_id]) {
@@ -274,10 +348,19 @@ Deno.serve(async (req) => {
         emp.sujeto_a_control_horario !== false
       );
 
-      const ficharonHoy = new Set(recordsToCreate.map(r => r.employee_id));
-      const reactivados = [];   // Ficharon pero estaban como Ausente → presencia PREVALECE
-      const confirmados = [];   // No ficharon pero ya tienen ausencia configurada → confirmar sin cambiar
-      const nuevasAusencias = []; // No ficharon, turno ya iniciado y sin ausencia configurada
+      // Set de empleados que ficharon HOY (entrada)
+      const ficharonHoy = new Set(
+        recordsToCreate.filter(r => r.direction === 'E').map(r => r.employee_id)
+      );
+
+      const reactivados = [];
+      const confirmados = [];
+      const nuevosRetrasos = [];
+      const nuevasAusencias = [];
+
+      // UMBRALES
+      const RETRASO_MIN = 5;   // minutos tras inicio de turno → retraso
+      const AUSENCIA_MIN = 20; // minutos tras inicio de turno → ausencia automática
 
       for (const emp of controlledEmployees) {
         const code = String(emp.codigo_empleado || "").trim();
@@ -285,7 +368,7 @@ Deno.serve(async (req) => {
         const hasFichado = ficharonHoy.has(code);
         const absenceRecord = absenceByEmployee[emp.id];
 
-        // Determinar turno asignado
+        // Determinar turno asignado esta semana
         let assignedShift = null;
         if (emp.tipo_turno === 'Rotativo' && emp.team_key) {
           assignedShift = teamShiftMap[emp.team_key] || null;
@@ -295,44 +378,56 @@ Deno.serve(async (req) => {
           assignedShift = 'Tarde';
         }
 
-        if (hasFichado && emp.disponibilidad === "Ausente") {
-          // PRESENCIA PREVALECE: cerrar ausencia y marcar disponible
-          reactivados.push({ emp, absence: absenceRecord });
-        } else if (!hasFichado) {
+        // Obtener el horario de turno del empleado para hoy
+        const shiftInfo = getEmployeeShiftToday(emp, assignedShift);
+
+        if (hasFichado) {
+          // PRESENCIA DETECTADA: si estaba como ausente o retraso → reactivar
+          if (emp.disponibilidad === "Ausente" || emp.estado_presencia === "Retraso" || emp.estado_presencia === "Ausente Auto") {
+            reactivados.push({ emp, absence: absenceRecord });
+          }
+        } else {
+          // SIN FICHAJE
           if (absenceRecord) {
-            // Ausencia pre-configurada confirmada por ausencia de fichaje
+            // Ausencia pre-configurada → confirmar
             confirmados.push({ emp, absence: absenceRecord });
-          } else if (emp.disponibilidad !== "Ausente") {
-            // Solo crear ausencia automática si el turno ya ha comenzado (+ 35 min de margen)
-            if (shiftHasStarted(emp, assignedShift, 35)) {
-              nuevasAusencias.push(emp);
+          } else if (shiftInfo !== null) {
+            const minutesSinceStart = nowMinutes - shiftInfo.shiftStart;
+
+            if (minutesSinceStart >= AUSENCIA_MIN && emp.estado_presencia !== "Ausente Auto" && emp.disponibilidad !== "Ausente") {
+              // ≥20 min sin fichar → ausencia automática
+              nuevasAusencias.push({ emp, shiftInfo });
+            } else if (minutesSinceStart >= RETRASO_MIN && minutesSinceStart < AUSENCIA_MIN && emp.estado_presencia !== "Retraso" && emp.estado_presencia !== "Ausente Auto" && emp.disponibilidad !== "Ausente") {
+              // 5-19 min sin fichar → retraso
+              nuevosRetrasos.push({ emp, shiftInfo });
             }
-            // Si el turno aún no comenzó → ignorar, se revisará en la próxima sync
           }
         }
       }
 
-      // Helper: escribir registro de auditoría
+      // Helper: escribir audit log
       const writeAuditLog = async (entry) => {
         await retryOp(() => serviceClient.entities.AbsenceAuditLog.create(entry))
-          .catch(e => console.warn(`[cucoSyncV2] Error escribiendo audit log:`, e));
+          .catch(e => console.warn(`[cucoSyncV2] Error audit log:`, e));
       };
 
-      // ── Reactivar: presencia física prevalece sobre cualquier ausencia ──
+      // ── Reactivar: presencia física prevalece ────────────────────────────
       for (const { emp, absence } of reactivados) {
         await retryOp(() => serviceClient.entities.EmployeeMasterDatabase.update(emp.id, {
           disponibilidad: "Disponible",
+          estado_presencia: "Presente",
           ausencia_fin: systemNow,
-          ausencia_motivo: null
+          ausencia_motivo: null,
+          potencialmente_ausente_desde: null
         })).catch(e => console.warn(`[cucoSyncV2] Error reactivando ${emp.nombre}:`, e));
 
-        if (absence) {
+        if (absence && (emp.disponibilidad === "Ausente" || emp.estado_presencia === "Ausente Auto")) {
           await retryOp(() => serviceClient.entities.Absence.update(absence.id, {
             fecha_fin: systemNow,
             fecha_fin_desconocida: false,
             estado_aprobacion: "Cancelada",
-            comentario_aprobacion: `[SISTEMA] Cerrada automáticamente el ${syncDate}: fichaje de entrada detectado en Cuco360. La presencia física prevalece sobre la ausencia registrada.`
-          })).catch(e => console.warn(`[cucoSyncV2] Error cerrando ausencia de ${emp.nombre}:`, e));
+            comentario_aprobacion: `[SISTEMA] Cerrada automáticamente el ${syncDate}: fichaje detectado. La presencia física prevalece.`
+          })).catch(e => console.warn(`[cucoSyncV2] Error cerrando ausencia ${emp.nombre}:`, e));
         }
 
         await writeAuditLog({
@@ -343,20 +438,21 @@ Deno.serve(async (req) => {
           absence_id: absence?.id || null,
           sync_date: syncDate,
           origen: "cucoSyncV2",
-          estado_anterior: "Ausente",
-          estado_nuevo: "Disponible",
-          motivo: `Fichaje de entrada detectado en Cuco360. ${absence ? `Ausencia previa (${absence.tipo || absence.motivo}) cerrada automáticamente.` : ""}`,
+          estado_anterior: emp.estado_presencia || emp.disponibilidad,
+          estado_nuevo: "Presente",
+          motivo: `Fichaje de entrada detectado. ${absence ? `Ausencia previa cerrada automáticamente.` : ""}`,
           leido_por_rrhh: false,
-          notas: `[SISTEMA] Reactivación automática - sync ${systemNow}`
+          notas: `[SISTEMA] Reactivación - sync ${systemNow}`
         });
-        console.log(`[cucoSyncV2] ✅ REACTIVADO (presencia detectada): ${emp.nombre}`);
+        console.log(`[cucoSyncV2] ✅ REACTIVADO: ${emp.nombre}`);
       }
 
-      // ── Confirmar ausencias pre-configuradas: sincronizar estado sin alterar el registro ──
+      // ── Confirmar ausencias pre-configuradas ─────────────────────────────
       for (const { emp, absence } of confirmados) {
         if (emp.disponibilidad !== "Ausente") {
           await retryOp(() => serviceClient.entities.EmployeeMasterDatabase.update(emp.id, {
             disponibilidad: "Ausente",
+            estado_presencia: "Ausente",
             ausencia_inicio: absence.fecha_inicio,
             ausencia_fin: absence.fecha_fin_desconocida ? null : absence.fecha_fin,
             ausencia_motivo: `${absence.tipo || absence.motivo} (ausencia configurada)`
@@ -374,33 +470,64 @@ Deno.serve(async (req) => {
             estado_nuevo: "Ausente",
             motivo: `${absence.tipo || absence.motivo} - sin fichaje confirma ausencia pre-configurada`,
             leido_por_rrhh: false,
-            notas: `[SISTEMA] Confirmación automática - sync ${systemNow}`
+            notas: `[SISTEMA] Confirmación - sync ${systemNow}`
           });
         }
-        console.log(`[cucoSyncV2] 🔵 CONFIRMADA (ausencia preexistente): ${emp.nombre} - ${absence.tipo || absence.motivo}`);
+        console.log(`[cucoSyncV2] 🔵 CONFIRMADA: ${emp.nombre} - ${absence.tipo || absence.motivo}`);
       }
 
-      // ── Nuevas ausencias automáticas: sin fichaje y sin ausencia configurada ──
-      for (const emp of nuevasAusencias) {
+      // ── Marcar como RETRASO (5-19 min sin fichar) ────────────────────────
+      for (const { emp, shiftInfo } of nuevosRetrasos) {
+        await retryOp(() => serviceClient.entities.EmployeeMasterDatabase.update(emp.id, {
+          estado_presencia: "Retraso",
+          potencialmente_ausente_desde: systemNow
+        })).catch(e => console.warn(`[cucoSyncV2] Error marcando retraso ${emp.nombre}:`, e));
+
+        await writeAuditLog({
+          employee_id: emp.id,
+          employee_name: emp.nombre,
+          employee_dept: emp.departamento || "",
+          action_type: "ausencia_confirmada",
+          absence_id: null,
+          sync_date: syncDate,
+          origen: "cucoSyncV2",
+          estado_anterior: emp.estado_presencia || "Presente",
+          estado_nuevo: "Retraso",
+          motivo: `Retraso detectado: turno ${minutesToTime(shiftInfo.shiftStart)} — sin fichaje a las ${minutesToTime(nowMinutes)}`,
+          leido_por_rrhh: false,
+          notas: `[SISTEMA] Retraso detectado - sync ${systemNow}`
+        });
+        console.log(`[cucoSyncV2] ⚠️ RETRASO: ${emp.nombre} (turno ${minutesToTime(shiftInfo.shiftStart)})`);
+      }
+
+      // ── Nuevas ausencias automáticas (≥20 min sin fichar) ────────────────
+      for (const { emp, shiftInfo } of nuevasAusencias) {
+        // Calcular horas reales del turno (no 00:00-23:59)
+        const absenceStart = `${syncDate}T${minutesToTime(shiftInfo.shiftStart)}:00`;
+        const absenceEnd = shiftInfo.shiftEnd !== null
+          ? `${syncDate}T${minutesToTime(shiftInfo.shiftEnd)}:00`
+          : `${syncDate}T${minutesToTime(shiftInfo.shiftStart + 480)}:00`; // fallback: +8h
+
         await retryOp(() => serviceClient.entities.EmployeeMasterDatabase.update(emp.id, {
           disponibilidad: "Ausente",
-          ausencia_inicio: `${syncDate}T00:00:00`,
-          ausencia_motivo: "Ausencia no comunicada - detección automática por sistema"
+          estado_presencia: "Ausente Auto",
+          ausencia_inicio: absenceStart,
+          ausencia_motivo: "Ausencia no comunicada - detección automática",
+          potencialmente_ausente_desde: systemNow
         })).catch(e => console.warn(`[cucoSyncV2] Error marcando ausente ${emp.nombre}:`, e));
 
-        // Crear registro de Absence automático para trazabilidad
         let newAbsenceId = null;
         const created = await retryOp(() => serviceClient.entities.Absence.create({
           employee_id: emp.id,
-          fecha_inicio: `${syncDate}T00:00:00`,
-          fecha_fin: `${syncDate}T23:59:59`,
-          fecha_fin_desconocida: false,
+          fecha_inicio: absenceStart,
+          fecha_fin: absenceEnd,
+          fecha_fin_desconocida: true, // Se mantendrá activa hasta que fiche
           motivo: "Ausencia no comunicada - detección automática",
           tipo: "Ausencia No Justificada",
           estado_aprobacion: "Pendiente",
           remunerada: false,
-          notas: `[SISTEMA] Generada automáticamente por cucoSyncV2 el ${systemNow}. Sin fichaje detectado en Cuco360 para el día ${syncDate}.`
-        })).catch(e => { console.warn(`[cucoSyncV2] Error creando ausencia auto ${emp.nombre}:`, e); return null; });
+          notas: `[SISTEMA] Ausencia auto por cucoSyncV2 el ${systemNow}. Turno esperado: ${minutesToTime(shiftInfo.shiftStart)}-${minutesToTime(shiftInfo.shiftEnd)}. Sin fichaje detectado en Cuco360.`
+        })).catch(e => { console.warn(`[cucoSyncV2] Error creando ausencia ${emp.nombre}:`, e); return null; });
 
         if (created) newAbsenceId = created.id;
 
@@ -412,13 +539,13 @@ Deno.serve(async (req) => {
           absence_id: newAbsenceId,
           sync_date: syncDate,
           origen: "cucoSyncV2",
-          estado_anterior: "Disponible",
-          estado_nuevo: "Ausente",
-          motivo: "Sin fichaje detectado y sin ausencia pre-configurada. Ausencia No Justificada generada automáticamente.",
+          estado_anterior: emp.estado_presencia || "Disponible",
+          estado_nuevo: "Ausente Auto",
+          motivo: `Sin fichaje ${minutesToTime(nowMinutes)}. Turno esperado: ${minutesToTime(shiftInfo.shiftStart)}-${minutesToTime(shiftInfo.shiftEnd)}. Ausencia No Justificada generada automáticamente.`,
           leido_por_rrhh: false,
           notas: `[SISTEMA] Creación automática - sync ${systemNow}`
         });
-        console.log(`[cucoSyncV2] 🔴 NUEVA AUSENCIA AUTO: ${emp.nombre}`);
+        console.log(`[cucoSyncV2] 🔴 AUSENCIA AUTO: ${emp.nombre} (turno ${minutesToTime(shiftInfo.shiftStart)}-${minutesToTime(shiftInfo.shiftEnd)})`);
       }
 
       const summary = {
@@ -426,13 +553,17 @@ Deno.serve(async (req) => {
         ficharon: ficharonHoy.size,
         reactivados: reactivados.length,
         ausencias_confirmadas: confirmados.length,
+        nuevos_retrasos: nuevosRetrasos.length,
         nuevas_ausencias_auto: nuevasAusencias.length,
+        hora_spain: minutesToTime(nowMinutes),
+        semana_iso: currentWeek,
+        turnos_equipo: teamShiftMap
       };
       console.log(`[cucoSyncV2] Resumen: ${JSON.stringify(summary)}`);
 
       return Response.json({
         success: true,
-        message: `Sync OK: ${inserted} fichajes. Reactivados: ${reactivados.length}, Confirmadas: ${confirmados.length}, Nuevas auto: ${nuevasAusencias.length}`,
+        message: `Sync OK: ${inserted} fichajes. Reactivados: ${reactivados.length}, Confirmadas: ${confirmados.length}, Retrasos: ${nuevosRetrasos.length}, Ausencias auto: ${nuevasAusencias.length}`,
         count: inserted,
         analysis: summary
       });
