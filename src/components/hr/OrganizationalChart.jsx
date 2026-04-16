@@ -10,6 +10,7 @@ import {
   ZoomIn, ZoomOut, Maximize2, Minimize2, ChevronDown, ChevronUp,
   ArrowLeft, ArrowRight, RotateCcw
 } from "lucide-react";
+import OrgChartPDFExport from "./OrgChartPDFExport";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -343,7 +344,13 @@ export default function OrganizationalChart({
 
               {!isCompact && deptPositions.length > 0 && (
                 <div className="space-y-0.5 bg-slate-50 dark:bg-slate-800/40 p-1.5 rounded text-[9px] border border-slate-100 dark:border-slate-700 mb-1.5">
-                  {deptPositions.map(pos => (
+                  {[...deptPositions].sort((a, b) => {
+                    const ao = a.orden ?? 99;
+                    const bo = b.orden ?? 99;
+                    if (ao !== bo) return ao - bo;
+                    const levelOrder = { Executive:0, Director:1, Manager:2, Lead:3, Senior:4, Mid:5, Junior:6 };
+                    return (levelOrder[a.level] ?? 99) - (levelOrder[b.level] ?? 99);
+                  }).map(pos => (
                     <div key={pos.id} className="flex justify-between items-center gap-1">
                       <span className="truncate text-slate-600 dark:text-slate-400" title={pos.name}>{pos.name}</span>
                       <Badge variant="secondary" className="text-[8px] h-3.5 px-1 shrink-0">{pos.max_headcount || 1}</Badge>
@@ -411,6 +418,16 @@ export default function OrganizationalChart({
           Guardando orden...
         </div>
       )}
+
+      {/* Export PDF button */}
+      <div className="absolute top-3 left-3 z-39" style={{ zIndex: 39 }}>
+        <OrgChartPDFExport
+          departments={departments}
+          positions={positions}
+          employees={employees}
+          siblingOrder={Object.values(siblingOrder).reduce((acc, group) => ({ ...acc, ...group }), {})}
+        />
+      </div>
 
       {/* Toolbar */}
       <div className="absolute top-3 right-3 z-40 flex gap-1.5 bg-white/95 dark:bg-card/95 backdrop-blur-sm p-1.5 rounded-lg shadow-md border border-slate-200 dark:border-border">
