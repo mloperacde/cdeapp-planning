@@ -241,7 +241,8 @@ export default function OrganizationalChart({
     const children = getSortedChildren(dept.id);
     const deptPositions = positions.filter(p => p.department_id === dept.id);
     const stats = deptStats[dept.id] || { employees: 0, headcount: 0 };
-    const manager = employees.find(e => e.id === dept.manager_id);
+    const managerIds = [dept.manager_id, dept.manager_id_2, dept.manager_id_3, dept.manager_id_4].filter(Boolean);
+    const managers = managerIds.map(id => employees.find(e => e.id === id)).filter(Boolean);
     const isCollapsed = collapsedNodes.has(dept.id);
     const hasChildren = children.length > 0;
     const nodeKey = dept.parent_id || 'root';
@@ -333,12 +334,16 @@ export default function OrganizationalChart({
                 {!isCompact && dept.code && <Badge variant="outline" className="text-[9px] mt-0.5 h-4">{dept.code}</Badge>}
               </div>
               
-              {manager && !isCompact && (
-                <div className="flex items-center justify-center gap-1 mb-1.5 bg-blue-50 dark:bg-blue-950/30 px-1.5 py-0.5 rounded">
-                  <UserCircle className="w-3 h-3 text-blue-600 shrink-0" />
-                  <span className="text-[9px] font-medium text-blue-800 dark:text-blue-300 truncate max-w-[120px]" title={manager.nombre}>
-                    {manager.nombre}
-                  </span>
+              {managers.length > 0 && !isCompact && (
+                <div className="flex flex-col gap-0.5 mb-1.5 bg-blue-50 dark:bg-blue-950/30 px-1.5 py-1 rounded">
+                  {managers.map((mgr, i) => (
+                    <div key={mgr.id} className="flex items-center gap-1">
+                      <UserCircle className="w-3 h-3 text-blue-600 shrink-0" />
+                      <span className="text-[9px] font-medium text-blue-800 dark:text-blue-300 truncate max-w-[120px]" title={mgr.nombre}>
+                        {mgr.nombre}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               )}
 
