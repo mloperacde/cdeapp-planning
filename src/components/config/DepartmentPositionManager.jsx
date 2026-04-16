@@ -1091,7 +1091,10 @@ export default function DepartmentPositionManager() {
                                      <div className="col-span-1 text-xs text-slate-600">{emp.equipo || '-'}</div>
                                      <div className="col-span-2 flex justify-end gap-1">
                                         <Button variant="ghost" size="sm" className="h-7 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50" 
-                                           onClick={() => { setEmpToEdit(emp); setIsEmpDialogOpen(true); }}>
+                                           onClick={() => { 
+                                             setEmpToEdit({ ...emp, tempDepartamento: emp.departamento, tempPuesto: emp.puesto }); 
+                                             setIsEmpDialogOpen(true); 
+                                           }}>
                                            <Edit className="w-3.5 h-3.5 mr-1" /> Editar
                                         </Button>
                                      </div>
@@ -1406,14 +1409,13 @@ export default function DepartmentPositionManager() {
                 <div className="space-y-2">
                    <Label>Nuevo Departamento</Label>
                    <Select 
-                      value={empToEdit?.tempDepartamento || selectedDeptId} 
+                      value={empToEdit?.tempDepartamento ?? (selectedDept?.name || '')} 
                       onValueChange={(val) => {
-                        const dept = departments.find(d => d.id === val);
-                        setEmpToEdit({...empToEdit, tempDepartamento: dept?.name, tempDepartamentoId: val});
-                        // Reset puesto when changing department
-                        if (val !== selectedDeptId) {
-                          setEmpToEdit(prev => ({...prev, tempPuesto: ''}));
-                        }
+                        setEmpToEdit(prev => ({
+                          ...prev,
+                          tempDepartamento: val,
+                          tempPuesto: ''  // Reset puesto al cambiar departamento
+                        }));
                       }}
                    >
                      <SelectTrigger>
@@ -1430,18 +1432,18 @@ export default function DepartmentPositionManager() {
                 <div className="space-y-2">
                    <Label>Puesto en el Departamento</Label>
                    <Select 
-                      value={empToEdit?.tempPuesto} 
-                      onValueChange={(val) => setEmpToEdit({...empToEdit, tempPuesto: val})}
+                      value={empToEdit?.tempPuesto || ''} 
+                      onValueChange={(val) => setEmpToEdit(prev => ({...prev, tempPuesto: val}))}
                    >
                      <SelectTrigger>
                        <SelectValue placeholder="Seleccionar puesto..." />
                      </SelectTrigger>
                      <SelectContent>
                        <SelectItem value="none_assigned">-- Sin Puesto Específico --</SelectItem>
-                       {(empToEdit?.tempDepartamento 
-                          ? positions.filter(p => p.department_name === empToEdit.tempDepartamento)
-                          : deptPositions
-                       ).map(p => (
+                       {(() => {
+                         const activeDeptName = empToEdit?.tempDepartamento ?? selectedDept?.name;
+                         return positions.filter(p => p.department_name === activeDeptName);
+                       })().map(p => (
                           <SelectItem key={p.id} value={p.name}>{p.name}</SelectItem>
                        ))}
                      </SelectContent>
