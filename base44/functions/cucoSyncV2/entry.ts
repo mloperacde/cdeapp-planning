@@ -312,14 +312,22 @@ Deno.serve(async (req) => {
       // Cargar calendario de rotación semanal para la semana actual
       const currentWeek = getISOWeek(nowSpain);
       const currentYear = nowSpain.getFullYear();
+      // Obtener lunes de esta semana para filtrar TeamWeekSchedule por fecha_inicio_semana
+      const mondayOfWeek = (() => {
+        const d = new Date(nowSpain);
+        const day = d.getDay();
+        const diff = (day === 0) ? -6 : 1 - day;
+        d.setDate(d.getDate() + diff);
+        return d.toISOString().split('T')[0];
+      })();
       const weekSchedules = await retryOp(() =>
-        serviceClient.entities.TeamWeekSchedule.filter({ year: currentYear, week_number: currentWeek })
+        serviceClient.entities.TeamWeekSchedule.filter({ fecha_inicio_semana: mondayOfWeek })
       ).catch(() => []);
 
       // teamShiftMap: team_key → 'Mañana' | 'Tarde'
       const teamShiftMap = {};
       for (const ws of weekSchedules) {
-        if (ws.team_key && ws.shift) teamShiftMap[ws.team_key] = ws.shift;
+        if (ws.team_key && ws.turno) teamShiftMap[ws.team_key] = ws.turno; // campo correcto: turno
       }
       console.log(`[cucoSyncV2] Turnos semana ${currentWeek}/${currentYear}:`, JSON.stringify(teamShiftMap));
 

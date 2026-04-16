@@ -23,7 +23,10 @@
         "ausencia_cerrada_sistema",
         "ausencia_manual_creada",
         "ausencia_manual_aprobada",
-        "ausencia_manual_rechazada"
+        "ausencia_manual_rechazada",
+        "retraso_detectado",
+        "turno_reset",
+        "turno_iniciado"
       ],
       "description": "Tipo de acci\u00f3n registrada"
     },
@@ -36,23 +39,47 @@
       "format": "date",
       "description": "Fecha de sincronizaci\u00f3n que gener\u00f3 el evento"
     },
+    "turno_afectado": {
+      "type": "string",
+      "enum": [
+        "Ma\u00f1ana",
+        "Tarde",
+        "Noche",
+        "No aplica"
+      ],
+      "description": "Turno de trabajo en el que ocurri\u00f3 el evento"
+    },
+    "turno_inicio_esperado": {
+      "type": "string",
+      "description": "Hora de inicio de turno esperada (HH:mm)"
+    },
+    "turno_fin_esperado": {
+      "type": "string",
+      "description": "Hora de fin de turno esperada (HH:mm)"
+    },
+    "hora_evento": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp exacto del momento en que ocurri\u00f3 el evento"
+    },
     "origen": {
       "type": "string",
       "enum": [
         "cucoSyncV2",
+        "shiftAudit",
         "manual_rrhh",
         "sistema"
       ],
-      "default": "cucoSyncV2",
+      "default": "shiftAudit",
       "description": "Origen del evento"
     },
     "estado_anterior": {
       "type": "string",
-      "description": "Estado de disponibilidad antes de la acci\u00f3n"
+      "description": "Estado de presencia antes de la acci\u00f3n"
     },
     "estado_nuevo": {
       "type": "string",
-      "description": "Estado de disponibilidad despu\u00e9s de la acci\u00f3n"
+      "description": "Estado de presencia despu\u00e9s de la acci\u00f3n"
     },
     "motivo": {
       "type": "string",
