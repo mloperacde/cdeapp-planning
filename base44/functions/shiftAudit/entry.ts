@@ -84,7 +84,8 @@ function getMondayOfWeek(date) {
 function getEmployeeShiftInfo(emp, teamShiftMap) {
   let assignedShiftName = null;
 
-  if (emp.tipo_turno === 'Rotativo' && emp.team_key) {
+  if (emp.tipo_turno === 'Rotativo') {
+    if (!emp.team_key) return null; // Sin team_key → no se puede determinar turno, omitir
     assignedShiftName = teamShiftMap[emp.team_key] || null;
   } else if (emp.tipo_turno === 'Fijo Mañana') {
     assignedShiftName = 'Mañana';
