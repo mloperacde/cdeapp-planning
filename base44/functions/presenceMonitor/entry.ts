@@ -1,303 +1,285 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
+/**
+ * presenceMonitor - Monitor de presencia en tiempo real
+ * 
+ * RESPONSABILIDAD: Únicamente actualiza estado_presencia en EmployeeMasterDatabase.
+ * NO crea registros de Absence. La creación de ausencias es responsabilidad de shiftAudit.
+ * 
+ * Esto evita duplicación de ausencias cuando ambos sistemas corren simultáneamente.
+ */
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-const SPAIN_OFFSET = 2; // UTC+2 CEST (horario de verano España)
+function getNowSpain() {
+  const now = new Date();
+  const localStr = now.toLocaleString('en-CA', { timeZone: 'Europe/Madrid', hour12: false });
+  return new Date(localStr.replace(',', ''));
+}
 
-function todayAtTime(timeStr) {
+function getNowSpainMinutes() {
+  const now = new Date();
+  const localStr = now.toLocaleString('en-US', {
+    timeZone: 'Europe/Madrid', hour12: false, hour: '2-digit', minute: '2-digit'
+  });
+  const [h, m] = localStr.split(':').map(Number);
+  return h * 60 + m;
+}
+
+function getSpainDateStr() {
+  const now = new Date();
+  return now.toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' });
+}
+
+function timeToMinutes(timeStr) {
   if (!timeStr) return null;
-  const [h, m] = timeStr.split(':').map(Number);
-  const now = new Date();
-  return new Date(Date.UTC(
-    now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(),
-    h - SPAIN_OFFSET, m, 0
-  ));
+  const [h, m] = String(timeStr).split(':').map(Number);
+  if (isNaN(h) || isNaN(m)) return null;
+  return h * 60 + m;
 }
 
-// Devuelve el número de semana ISO del año para una fecha
-function getISOWeek(date) {
-  const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
-  const dayNum = d.getUTCDay() || 7;
-  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+function getMondayOfWeek(date) {
+  const d = new Date(date);
+  const day = d.getDay();
+  const diff = (day === 0) ? -6 : 1 - day;
+  d.setDate(d.getDate() + diff);
+  return d.toISOString().split('T')[0];
 }
 
-function getActiveTurnoStart(emp, assignedShift) {
-  // assignedShift: 'Mañana' | 'Tarde' | null (null = usar todos los horarios)
-  const now = new Date();
-  const shifts = [];
+function getEmployeeShiftInfo(emp, teamShiftMap) {
+  let assignedShiftName = null;
 
-  if (!assignedShift || assignedShift === 'Mañana') {
-    if (emp.horario_manana_inicio) shifts.push(emp.horario_manana_inicio);
-  }
-  if (!assignedShift || assignedShift === 'Tarde') {
-    if (emp.horario_tarde_inicio) shifts.push(emp.horario_tarde_inicio);
-  }
-  // Turno partido siempre se incluye si no hay assignedShift
-  if (!assignedShift) {
-    if (emp.turno_partido_entrada1) shifts.push(emp.turno_partido_entrada1);
-    if (emp.turno_partido_entrada2) shifts.push(emp.turno_partido_entrada2);
+  if (emp.tipo_turno === 'Rotativo') {
+    if (!emp.team_key) return null;
+    assignedShiftName = teamShiftMap[emp.team_key] || null;
+  } else if (emp.tipo_turno === 'Fijo Mañana') {
+    assignedShiftName = 'Mañana';
+  } else if (emp.tipo_turno === 'Fijo Tarde') {
+    assignedShiftName = 'Tarde';
+  } else if (emp.tipo_turno === 'Turno Partido') {
+    const e1 = timeToMinutes(emp.turno_partido_entrada1);
+    const s2 = timeToMinutes(emp.turno_partido_salida2) || timeToMinutes(emp.turno_partido_salida1);
+    if (e1 !== null) return { turnoNombre: 'Mañana', shiftStart: e1, shiftEnd: s2 };
+    return null;
   }
 
-  const candidates = [];
-  for (const t of shifts) {
-    if (!t) continue;
-    const shiftStart = todayAtTime(t);
-    if (!shiftStart) continue;
-    const diffMin = (now - shiftStart) / 60000;
-    if (diffMin >= 5 && diffMin <= 480) candidates.push({ shiftStart, diffMin });
-  }
-  if (candidates.length === 0) return null;
-  candidates.sort((a, b) => a.diffMin - b.diffMin);
-  return candidates[0];
-}
+  if (!assignedShiftName) return null;
 
-function todayISO() {
-  return new Date().toISOString().slice(0, 10);
+  if (assignedShiftName === 'Mañana') {
+    const start = timeToMinutes(emp.horario_manana_inicio);
+    const end = timeToMinutes(emp.horario_manana_fin);
+    if (start === null) return null;
+    return { turnoNombre: 'Mañana', shiftStart: start, shiftEnd: end };
+  }
+
+  if (assignedShiftName === 'Tarde') {
+    const start = timeToMinutes(emp.horario_tarde_inicio);
+    const end = timeToMinutes(emp.horario_tarde_fin);
+    if (start === null) return null;
+    return { turnoNombre: 'Tarde', shiftStart: start, shiftEnd: end };
+  }
+
+  return null;
 }
 
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
+    const svc = base44.asServiceRole;
 
+    // Autenticación opcional (puede ser llamado por scheduler sin usuario)
     let user = null;
     try { user = await base44.auth.me(); } catch (_) {}
     if (user && user.role !== 'admin') {
       return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const today = todayISO();
-    const now = new Date();
-    const dayOfWeek = now.getUTCDay();
+    const nowSpain = getNowSpain();
+    const nowMinutes = getNowSpainMinutes();
+    const today = getSpainDateStr();
 
+    // Saltar fines de semana
+    const dayOfWeek = nowSpain.getDay();
     if (dayOfWeek === 0 || dayOfWeek === 6) {
-      return Response.json({ skipped: true, reason: 'Weekend', timestamp: now.toISOString() });
+      return Response.json({ skipped: true, reason: 'Weekend' });
     }
 
-    await sleep(200);
-    const employees = await base44.asServiceRole.entities.EmployeeMasterDatabase.filter({
+    // Verificar festivos
+    const holidays = await svc.entities.Holiday.filter({ date: today }, 'id', 1).catch(() => []);
+    if (holidays && holidays.length > 0) {
+      return Response.json({ skipped: true, reason: `Holiday: ${holidays[0]?.name}` });
+    }
+
+    // Calendario de rotación (misma lógica que shiftAudit)
+    const mondayStr = getMondayOfWeek(nowSpain);
+    const allWeekSchedules = await svc.entities.TeamWeekSchedule.filter({ fecha_inicio_semana: mondayStr }).catch(() => []);
+    const teamShiftMap = {};
+    for (const ws of allWeekSchedules) {
+      if (ws.team_key && ws.turno) teamShiftMap[ws.team_key] = ws.turno;
+    }
+
+    // Empleados activos sujetos a control
+    const employees = await svc.entities.EmployeeMasterDatabase.filter({
       estado_empleado: 'Alta',
       sujeto_a_control_horario: true,
-    });
+    }, undefined, 2000);
 
     if (!employees || employees.length === 0) {
-      return Response.json({ processed: 0, timestamp: now.toISOString() });
+      return Response.json({ processed: 0 });
     }
 
-    // Cargar calendario de rotación semanal para la semana actual
-    await sleep(200);
-    const currentWeek = getISOWeek(now);
-    const currentYear = now.getUTCFullYear();
-    const weekSchedules = await base44.asServiceRole.entities.TeamWeekSchedule.filter({
-      year: currentYear,
-      week_number: currentWeek,
-    });
-    // Mapa: team_key -> turno asignado esta semana ('Mañana' | 'Tarde')
-    const teamShiftMap = {};
-    for (const ws of weekSchedules) {
-      if (ws.team_key && ws.shift) teamShiftMap[ws.team_key] = ws.shift;
+    // Fichajes de hoy
+    const attendanceRecords = await svc.entities.AttendanceRecord.filter({ record_date: today }, undefined, 2000).catch(() => []);
+    const firstEntryMinutes = {};
+    for (const r of attendanceRecords) {
+      if (r.direction !== 'E') continue;
+      const empId = String(r.employee_id);
+      const mins = timeToMinutes(r.record_time);
+      if (mins === null) continue;
+      if (firstEntryMinutes[empId] === undefined || mins < firstEntryMinutes[empId]) {
+        firstEntryMinutes[empId] = mins;
+      }
+    }
+    const presentToday = new Set(Object.keys(firstEntryMinutes));
+
+    // Ausencias activas hoy (para saber si hay ausencia formal)
+    const todayDate = new Date(today + 'T12:00:00Z');
+    const allAbsences = await svc.entities.Absence.list('-fecha_inicio', 2000).catch(() => []);
+    const activeAbsencesMap = {};
+    for (const abs of allAbsences) {
+      if (abs.estado_aprobacion === 'Rechazada' || abs.estado_aprobacion === 'Cancelada') continue;
+      const start = new Date(abs.fecha_inicio);
+      const end = abs.fecha_fin_desconocida ? new Date('2099-12-31') : new Date(abs.fecha_fin);
+      if (start <= todayDate && todayDate <= end) {
+        if (!activeAbsencesMap[abs.employee_id]) activeAbsencesMap[abs.employee_id] = abs;
+      }
     }
 
-    await sleep(200);
-    const attendanceRecords = await base44.asServiceRole.entities.AttendanceRecord.filter({ record_date: today });
-    const presentToday = new Set(
-      attendanceRecords.filter(r => r.direction === 'E').map(r => r.employee_id)
-    );
+    const RETRASO_MIN = 5;
+    const AUSENTE_MIN = 30;
 
-    await sleep(200);
-    const existingAbsences = await base44.asServiceRole.entities.Absence.filter({});
-    const autoAbsencesToday = existingAbsences.filter(a =>
-      a.motivo?.startsWith('AUTO:') &&
-      a.fecha_inicio?.startsWith(today) &&
-      a.estado_aprobacion === 'Pendiente'
-    );
-    const autoAbsenceByEmp = new Map(autoAbsencesToday.map(a => [a.employee_id, a]));
-
-    const results = {
-      potencialmente_ausentes: [],
-      retrasados: [],
-      ausencias_auto_creadas: [],
-      reactivaciones: [],
-      sin_cambios: 0,
-    };
-
+    const results = { presentes: 0, retrasos: 0, potencialmente_ausentes: 0, ausentes: 0, sin_turno: 0 };
     let opCount = 0;
 
     for (const emp of employees) {
-      if (opCount > 0 && opCount % 4 === 0) await sleep(600);
+      const shiftInfo = getEmployeeShiftInfo(emp, teamShiftMap);
+
+      if (!shiftInfo) { results.sin_turno++; continue; }
+
+      const minutesSinceStart = nowMinutes - shiftInfo.shiftStart;
+
+      // Si el turno no ha comenzado (más de 30 min antes), omitir
+      if (minutesSinceStart < -30) { results.sin_turno++; continue; }
+
+      // Si el turno ya terminó hace más de 60 min, omitir
+      if (shiftInfo.shiftEnd && nowMinutes > shiftInfo.shiftEnd + 60) { results.sin_turno++; continue; }
+
+      const empCode = String(emp.codigo_empleado || '').trim();
+      const hasFichado = empCode && presentToday.has(empCode);
+      const absenceFormal = activeAbsencesMap[emp.id];
+
       opCount++;
+      if (opCount % 8 === 0) await sleep(500);
 
-      const empCode = emp.codigo_empleado;
-      const isPresent = empCode && presentToday.has(empCode);
-      // Determinar turno asignado según calendario de rotación (solo para rotativos)
-      let assignedShift = null;
-      if (emp.tipo_turno === 'Rotativo' && emp.team_key) {
-        assignedShift = teamShiftMap[emp.team_key] || null;
-      } else if (emp.tipo_turno === 'Fijo Mañana') {
-        assignedShift = 'Mañana';
-      } else if (emp.tipo_turno === 'Fijo Tarde') {
-        assignedShift = 'Tarde';
-      }
-      const turno = getActiveTurnoStart(emp, assignedShift);
-
-      if (!turno) { results.sin_cambios++; continue; }
-
-      const minutesSinceStart = turno.diffMin;
-
-      if (isPresent) {
-        const autoAbsence = autoAbsenceByEmp.get(emp.id);
-        if (autoAbsence) {
-          await base44.asServiceRole.entities.Absence.update(autoAbsence.id, {
-            estado_aprobacion: 'Cancelada',
-            notas: `Cancelada automáticamente: empleado registró presencia a las ${now.toISOString()}`,
-          });
-          await sleep(150);
-          await base44.asServiceRole.entities.EmployeeMasterDatabase.update(emp.id, {
-            disponibilidad: 'Disponible',
-            estado_presencia: minutesSinceStart > 5 ? 'Retraso' : 'Presente',
-            ausencia_motivo: null,
-          });
-          await sleep(150);
-          await base44.asServiceRole.entities.AbsenceAuditLog.create({
-            employee_id: emp.id,
-            employee_name: emp.nombre,
-            employee_dept: emp.departamento || '',
-            action_type: 'reactivacion_por_presencia',
-            absence_id: autoAbsence.id,
-            sync_date: today,
-            origen: 'cucoSyncV2',
-            estado_anterior: 'Ausente',
-            estado_nuevo: 'Disponible',
-            motivo: `Empleado fichó entrada a los ${Math.round(minutesSinceStart)} min del inicio de turno. Ausencia auto cancelada.`,
-            leido_por_rrhh: false,
-          });
-          results.reactivaciones.push(emp.nombre);
-          continue;
+      // ── Con ausencia formal: marcar como Ausente ──
+      if (absenceFormal && !hasFichado) {
+        if (emp.estado_presencia !== 'Ausente') {
+          await svc.entities.EmployeeMasterDatabase.update(emp.id, {
+            disponibilidad: 'Ausente',
+            estado_presencia: 'Ausente',
+            ausencia_inicio: absenceFormal.fecha_inicio,
+            ausencia_fin: absenceFormal.fecha_fin_desconocida ? null : absenceFormal.fecha_fin,
+            ausencia_motivo: absenceFormal.tipo || absenceFormal.motivo,
+          }).catch(e => console.warn(`[presenceMonitor] Error ausencia formal ${emp.nombre}:`, e.message));
+          results.ausentes++;
+        } else {
+          results.ausentes++;
         }
-
-        if (emp.estado_presencia === 'Potencialmente Ausente') {
-          await base44.asServiceRole.entities.EmployeeMasterDatabase.update(emp.id, {
-            estado_presencia: 'Retraso',
-            disponibilidad: 'Disponible',
-          });
-          await sleep(150);
-          await base44.asServiceRole.entities.AbsenceAuditLog.create({
-            employee_id: emp.id,
-            employee_name: emp.nombre,
-            employee_dept: emp.departamento || '',
-            action_type: 'reactivacion_por_presencia',
-            sync_date: today,
-            origen: 'cucoSyncV2',
-            estado_anterior: 'Potencialmente Ausente',
-            estado_nuevo: 'Retraso',
-            motivo: `Empleado fichó con ${Math.round(minutesSinceStart)} min de retraso.`,
-            leido_por_rrhh: false,
-          });
-          results.retrasados.push(emp.nombre);
-          continue;
-        }
-
-        if (emp.estado_presencia !== 'Presente' && emp.estado_presencia !== 'Retraso') {
-          await base44.asServiceRole.entities.EmployeeMasterDatabase.update(emp.id, {
-            estado_presencia: 'Presente',
-            disponibilidad: 'Disponible',
-          });
-        }
-        results.sin_cambios++;
         continue;
       }
 
-      // No ha fichado
-      const hasActiveManualAbsence = existingAbsences.some(a =>
-        a.employee_id === emp.id &&
-        a.estado_aprobacion !== 'Cancelada' &&
-        a.estado_aprobacion !== 'Rechazada' &&
-        new Date(a.fecha_inicio) <= now &&
-        (a.fecha_fin_desconocida || new Date(a.fecha_fin) >= now)
-      );
+      // ── Ha fichado: marcar como Presente o Retraso, y reactivar si venía de ausente ──
+      if (hasFichado) {
+        const fichajeMinutes = firstEntryMinutes[empCode];
+        const retrasoReal = fichajeMinutes !== undefined ? fichajeMinutes - shiftInfo.shiftStart : minutesSinceStart;
+        const nuevoEstado = retrasoReal > RETRASO_MIN ? 'Retraso' : 'Presente';
 
-      if (hasActiveManualAbsence) { results.sin_cambios++; continue; }
+        if (['Ausente Auto', 'Ausente', 'Potencialmente Ausente', 'Retraso'].includes(emp.estado_presencia)) {
+          // Reactivación: cancelar ausencia auto si existe
+          if (absenceFormal && emp.estado_presencia === 'Ausente Auto') {
+            await svc.entities.Absence.update(absenceFormal.id, {
+              fecha_fin: new Date().toISOString(),
+              fecha_fin_desconocida: false,
+              estado_aprobacion: 'Cancelada',
+              comentario_aprobacion: `[SISTEMA] Fichaje detectado. Presencia física confirmada.`,
+            }).catch(e => console.warn(`[presenceMonitor] Error cancelando ausencia:`, e.message));
+          }
 
-      if (minutesSinceStart >= 5 && minutesSinceStart < 35) {
-        if (emp.estado_presencia !== 'Potencialmente Ausente' &&
-            emp.estado_presencia !== 'Ausente' &&
-            emp.estado_presencia !== 'Ausente Auto') {
-          await base44.asServiceRole.entities.EmployeeMasterDatabase.update(emp.id, {
-            estado_presencia: 'Potencialmente Ausente',
-            potencialmente_ausente_desde: now.toISOString(),
-          });
-          await sleep(150);
-          await base44.asServiceRole.entities.AbsenceAuditLog.create({
-            employee_id: emp.id,
-            employee_name: emp.nombre,
-            employee_dept: emp.departamento || '',
-            action_type: 'ausencia_auto_creada',
-            sync_date: today,
-            origen: 'cucoSyncV2',
-            estado_anterior: 'Disponible',
-            estado_nuevo: 'Potencialmente Ausente',
-            motivo: `Sin fichaje ${Math.round(minutesSinceStart)} min después del inicio de turno. Auto-ausencia en ${Math.round(35 - minutesSinceStart)} min.`,
-            leido_por_rrhh: false,
-          });
-          results.potencialmente_ausentes.push(emp.nombre);
+          await svc.entities.EmployeeMasterDatabase.update(emp.id, {
+            disponibilidad: 'Disponible',
+            estado_presencia: nuevoEstado,
+            potencialmente_ausente_desde: null,
+            ausencia_motivo: null,
+          }).catch(e => console.warn(`[presenceMonitor] Error reactivando ${emp.nombre}:`, e.message));
+          results.retrasos++;
+        } else if (emp.estado_presencia !== 'Presente' && emp.estado_presencia !== 'Retraso') {
+          await svc.entities.EmployeeMasterDatabase.update(emp.id, {
+            disponibilidad: 'Disponible',
+            estado_presencia: nuevoEstado,
+            potencialmente_ausente_desde: null,
+          }).catch(e => console.warn(`[presenceMonitor] Error marcando presente ${emp.nombre}:`, e.message));
+          results.presentes++;
+        } else {
+          results.presentes++;
         }
-      } else if (minutesSinceStart >= 35) {
-        const existingAutoAbsence = autoAbsenceByEmp.get(emp.id);
-        if (!existingAutoAbsence && emp.estado_presencia !== 'Ausente Auto') {
-          const newAbsence = await base44.asServiceRole.entities.Absence.create({
-            employee_id: emp.id,
-            fecha_inicio: new Date(Date.UTC(
-              now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(),
-              turno.shiftStart.getUTCHours(), turno.shiftStart.getUTCMinutes(), 0
-            )).toISOString(),
-            fecha_fin_desconocida: true,
-            motivo: `AUTO: Sin fichaje de entrada. Turno iniciado sin presencia registrada.`,
-            tipo: 'Ausencia No Justificada',
-            remunerada: false,
-            estado_aprobacion: 'Pendiente',
-            notas: `Ausencia generada automáticamente. Pendiente de revisión por RRHH.`,
-          });
-          await sleep(150);
-          await base44.asServiceRole.entities.EmployeeMasterDatabase.update(emp.id, {
+        continue;
+      }
+
+      // ── Sin fichaje ──
+      // IMPORTANTE: NO crear ausencias aquí. Eso es responsabilidad exclusiva de shiftAudit.
+      // Solo actualizar estado_presencia para el panel de tiempo real.
+
+      if (minutesSinceStart >= AUSENTE_MIN) {
+        // Solo marcar como Ausente Auto si aún no lo está
+        if (emp.estado_presencia !== 'Ausente Auto' && emp.estado_presencia !== 'Ausente') {
+          await svc.entities.EmployeeMasterDatabase.update(emp.id, {
             disponibilidad: 'Ausente',
             estado_presencia: 'Ausente Auto',
-            ausencia_inicio: now.toISOString(),
-            ausencia_motivo: 'Ausencia automática - Sin fichaje',
-          });
-          await sleep(150);
-          await base44.asServiceRole.entities.AbsenceAuditLog.create({
-            employee_id: emp.id,
-            employee_name: emp.nombre,
-            employee_dept: emp.departamento || '',
-            action_type: 'ausencia_auto_creada',
-            absence_id: newAbsence.id,
-            sync_date: today,
-            origen: 'cucoSyncV2',
-            estado_anterior: 'Potencialmente Ausente',
-            estado_nuevo: 'Ausente',
-            motivo: `Ausencia auto-creada: ${Math.round(minutesSinceStart)} min sin fichaje. Requiere aprobación de RRHH.`,
-            leido_por_rrhh: false,
-          });
-          results.ausencias_auto_creadas.push(emp.nombre);
+            potencialmente_ausente_desde: new Date().toISOString(),
+            ausencia_motivo: `Ausencia no comunicada - turno ${shiftInfo.turnoNombre}`,
+          }).catch(e => console.warn(`[presenceMonitor] Error marcando ausente ${emp.nombre}:`, e.message));
+          results.ausentes++;
+        } else {
+          results.ausentes++;
         }
+      } else if (minutesSinceStart >= RETRASO_MIN) {
+        // Potencialmente ausente
+        if (!['Potencialmente Ausente', 'Ausente Auto', 'Ausente'].includes(emp.estado_presencia)) {
+          await svc.entities.EmployeeMasterDatabase.update(emp.id, {
+            estado_presencia: 'Potencialmente Ausente',
+            potencialmente_ausente_desde: new Date().toISOString(),
+          }).catch(e => console.warn(`[presenceMonitor] Error pot.ausente ${emp.nombre}:`, e.message));
+          results.potencialmente_ausentes++;
+        } else {
+          results.potencialmente_ausentes++;
+        }
+      } else {
+        // Turno recién comenzado sin fichar aún, no hacer nada
+        results.sin_turno++;
       }
     }
 
+    console.log(`[presenceMonitor] Resumen:`, JSON.stringify({ today, nowMinutes, ...results }));
+
     return Response.json({
       success: true,
-      timestamp: now.toISOString(),
       today,
-      summary: {
-        empleados_procesados: employees.length,
-        potencialmente_ausentes: results.potencialmente_ausentes.length,
-        retrasados: results.retrasados.length,
-        ausencias_auto_creadas: results.ausencias_auto_creadas.length,
-        reactivaciones: results.reactivaciones.length,
-      },
-      details: results,
+      teamShiftMap,
+      empleados_procesados: employees.length,
+      ...results,
     });
+
   } catch (error) {
-    return Response.json({ error: error.message, stack: error.stack }, { status: 500 });
+    console.error('[presenceMonitor] Error fatal:', error);
+    return Response.json({ error: error.message }, { status: 500 });
   }
 });
