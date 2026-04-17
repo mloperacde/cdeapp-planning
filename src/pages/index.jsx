@@ -1,6 +1,7 @@
 import Layout from "../Layout";
 
 import AbsenceManagement from "./AbsenceManagement";
+import PresenceAbsenceHub from "./PresenceAbsenceHub";
 import AbsenceTypeConfig from "./AbsenceTypeConfig";
 import AdvancedHRDashboard from "./AdvancedHRDashboard";
 import AppUserManagement from "./AppUserManagement";
@@ -95,6 +96,7 @@ const queryClient = new QueryClient({
 const PAGES = {
   Dashboard: Dashboard,
   AbsenceManagement: AbsenceManagement,
+  PresenceAbsenceHub: PresenceAbsenceHub,
   AbsenceTypeConfig: AbsenceTypeConfig,
   AdvancedHRDashboard: AdvancedHRDashboard,
   ArticleManagement: ArticleManagement,
@@ -193,6 +195,7 @@ function PagesContent() {
                 
                 
                 <Route path="/AbsenceManagement" element={<AbsenceManagement />} />
+                <Route path="/PresenceAbsenceHub" element={<PresenceAbsenceHub />} />
                 <Route path="/EmailNotifications" element={<EmailNotifications />} />
                 <Route path="/EmployeeAbsenceInfo" element={<EmployeeAbsenceInfo />} />
                 
