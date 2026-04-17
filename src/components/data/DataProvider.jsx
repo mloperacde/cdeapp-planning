@@ -81,13 +81,14 @@ export function DataProvider({ children }) {
     retry: 1, // Reducir reintentos
   });
 
-  // 4. AUSENCIAS - Cache 5 min
+  // 4. AUSENCIAS - Sin caché (datos críticos en tiempo real)
   const absencesQuery = useQuery({
     queryKey: ['absences'],
-    queryFn: () => isLocal ? Promise.resolve([]) : base44.entities.Absence.list('-fecha_inicio', 500),
-    staleTime: 10 * 60 * 1000, // 10 min
-    gcTime: 30 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    queryFn: () => isLocal ? Promise.resolve([]) : base44.entities.Absence.list('-fecha_inicio', 1000),
+    staleTime: 0, // Siempre fresco
+    gcTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: true,
+    refetchInterval: 2 * 60 * 1000, // Refresca cada 2 min
   });
 
   // 5. TIPOS DE AUSENCIAS - Cache 15 min (config estable, fuente única)

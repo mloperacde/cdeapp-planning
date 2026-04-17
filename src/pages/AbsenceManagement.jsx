@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { useAppData } from "../components/data/DataProvider";
+import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
@@ -7,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { 
   UserX, 
   BarChart3, CalendarDays, FileText, CheckSquare, 
-  LayoutDashboard, Settings, Activity, Brain, Radio, Radar
+  LayoutDashboard, Settings, Activity, Brain, Radio, Radar, RefreshCw
 } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import { startOfMonth, eachDayOfInterval } from "date-fns";
@@ -31,12 +32,18 @@ import RealTimeAvailabilityPanel from "../components/absences/RealTimeAvailabili
 import PresenceMonitorPanel from "../components/absences/PresenceMonitorPanel";
 
 export default function AbsenceManagementPage() {
+  const queryClient = useQueryClient();
   const { 
     user: currentUser,
     absences = [], 
     employees = [],
     absenceTypes = []
   } = useAppData();
+
+  const handleRefresh = () => {
+    queryClient.invalidateQueries({ queryKey: ['absences'] });
+    queryClient.invalidateQueries({ queryKey: ['employeeMasterDatabase'] });
+  };
 
   const isShiftManager = useMemo(() => {
     // Simplified check - real app would check specific permissions/roles
@@ -240,8 +247,20 @@ export default function AbsenceManagementPage() {
             </div>
           </div>
           
+          <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-8 text-xs gap-2"
+                onClick={handleRefresh}
+                title="Actualizar datos"
+              >
+                <RefreshCw className="w-3 h-3" />
+                Actualizar
+              </Button>
           {!isShiftManager && (
-            <div className="flex items-center gap-2">
+            <>
               <Button
                 type="button"
                 variant="ghost"
@@ -263,8 +282,9 @@ export default function AbsenceManagementPage() {
                   <AttendanceAnalyzer />
                 </DialogContent>
               </Dialog>
-            </div>
+            </>
           )}
+          </div>
         </div>
 
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full flex flex-col gap-6">
@@ -397,8 +417,6 @@ export default function AbsenceManagementPage() {
           <TabsContent value="list" className="space-y-6">
             <UnifiedAbsenceManager 
               sourceContext="absence_page" 
-              initialAbsences={absences} 
-              initialEmployees={employees}
               initialEmployeeId={initialAbsenceEmployeeId}
               initialEmployeeName={initialAbsenceEmployeeName}
             />
@@ -413,12 +431,11 @@ export default function AbsenceManagementPage() {
           </TabsContent>
 
           <TabsContent value="history" className="space-y-6">
-            <AbsenceHistoryView employees={employees} absences={absences} />
+            <AbsenceHistoryView employees={employees} />
           </TabsContent>
 
           <TabsContent value="approval">
             <AbsenceApprovalPanel 
-              absences={absences} 
               employees={employees} 
               absenceTypes={absenceTypes} 
               currentUser={currentUser} 

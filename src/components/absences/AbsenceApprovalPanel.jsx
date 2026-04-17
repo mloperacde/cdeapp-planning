@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,10 +12,17 @@ import { toast } from "sonner";
 import { notifyAbsenceDecisionAdvanced } from "../notifications/AdvancedNotificationService";
 import PayrollExportButton from "./PayrollExportButton";
 
-export default function AbsenceApprovalPanel({ absences, employees, masterEmployees = [], absenceTypes, currentUser }) {
+export default function AbsenceApprovalPanel({ employees, masterEmployees = [], absenceTypes, currentUser }) {
   const [expandedId, setExpandedId] = useState(null);
   const [comentario, setComentario] = useState("");
   const queryClient = useQueryClient();
+
+  const { data: absences = [] } = useQuery({
+    queryKey: ['absences'],
+    queryFn: () => base44.entities.Absence.list('-fecha_inicio', 1000),
+    staleTime: 0,
+    refetchOnWindowFocus: true,
+  });
 
   const pendingAbsences = absences.filter(abs => abs.estado_aprobacion === "Pendiente");
 

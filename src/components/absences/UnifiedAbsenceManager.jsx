@@ -18,7 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { UserX, Plus, Edit, Trash2, Search, CheckCircle2, AlertCircle, Clock, FileText, Sparkles } from "lucide-react";
+import { UserX, Plus, Edit, Trash2, Search, CheckCircle2, AlertCircle, Clock, FileText, Sparkles, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
@@ -45,20 +45,19 @@ export default function UnifiedAbsenceManager(props) {
 
   // formData state removed as it is handled by AbsenceForm component
 
-  const { data: fetchedAbsences = EMPTY_ARRAY } = useQuery({
+  const { data: absences = EMPTY_ARRAY } = useQuery({
     queryKey: ['absences'],
     queryFn: () => base44.entities.Absence.list('-fecha_inicio', 1000),
-    enabled: !props.initialAbsences,
+    staleTime: 0,
+    refetchOnWindowFocus: true,
   });
 
-  const { data: fetchedEmployees = EMPTY_ARRAY } = useQuery({
+  const { data: employees = EMPTY_ARRAY } = useQuery({
     queryKey: ['employeeMasterDatabase'],
     queryFn: () => base44.entities.EmployeeMasterDatabase.list('nombre', 1000),
-    enabled: !props.initialEmployees,
+    staleTime: 60 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
-
-  const absences = props.initialAbsences || fetchedAbsences;
-  const employees = props.initialEmployees || fetchedEmployees;
 
   const { data: absenceTypes = EMPTY_ARRAY } = useQuery({
     queryKey: ['absenceTypes'],
@@ -461,10 +460,23 @@ export default function UnifiedAbsenceManager(props) {
               <UserX className="w-5 h-5 text-blue-600" />
               Comunicación de Ausencias Activas
             </CardTitle>
-            <Button onClick={() => setShowForm(true)} className="bg-blue-600 hover:bg-blue-700">
-              <Plus className="w-4 h-4 mr-2" />
-              Comunicar Ausencia
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  queryClient.invalidateQueries({ queryKey: ['absences'] });
+                  queryClient.invalidateQueries({ queryKey: ['employeeMasterDatabase'] });
+                }}
+                title="Recargar listado"
+              >
+                <RefreshCw className="w-4 h-4" />
+              </Button>
+              <Button onClick={() => setShowForm(true)} className="bg-blue-600 hover:bg-blue-700">
+                <Plus className="w-4 h-4 mr-2" />
+                Comunicar Ausencia
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="p-6">

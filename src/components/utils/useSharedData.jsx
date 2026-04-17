@@ -18,10 +18,11 @@ export function useSharedEmployees() {
 export function useSharedAbsences() {
   return useQuery({
     queryKey: ['absences'],
-    queryFn: () => base44.entities.Absence.list('-fecha_inicio', 500),
-    staleTime: 5 * 60 * 1000, // 5 minutos
-    gcTime: 10 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    queryFn: () => base44.entities.Absence.list('-fecha_inicio', 1000),
+    staleTime: 0, // Siempre fresco - datos críticos en tiempo real
+    gcTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: true,
+    refetchInterval: 2 * 60 * 1000, // Refresca cada 2 min
   });
 }
 
