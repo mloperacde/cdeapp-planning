@@ -193,9 +193,20 @@ Deno.serve(async (req) => {
     const attendanceRecords = await retryOp(() =>
       svc.entities.AttendanceRecord.filter({ record_date: today }, undefined, 2000)
     ).catch(() => []);
-    const presentToday = new Set(
-      attendanceRecords.filter(r => r.direction === 'E').map(r => String(r.employee_id))
-    );
+
+    // Mapa: employee_id → minutos de la primera entrada del día
+    const firstEntryMinutes = {};
+    for (const r of attendanceRecords) {
+      if (r.direction !== 'E') continue;
+      const empId = String(r.employee_id);
+      const mins = timeToMinutes(r.record_time);
+      if (mins === null) continue;
+      if (firstEntryMinutes[empId] === undefined || mins < firstEntryMinutes[empId]) {
+        firstEntryMinutes[empId] = mins;
+      }
+    }
+
+    const presentToday = new Set(Object.keys(firstEntryMinutes));
 
     // Ausencias activas hoy
     const todayDate = new Date(today + 'T12:00:00Z');
@@ -354,8 +365,10 @@ Deno.serve(async (req) => {
 
       // ── CASO 2: Ha fichado → Presente (o Retraso si tarde) ─────────────
       if (hasFichado) {
-        // Fichajes hasta 30 min antes del turno cuentan como Presente puntual
-        const nuevoEstado = minutesSinceStart > RETRASO_MIN ? 'Retraso' : 'Presente';
+        // Calcular retraso basado en la hora REAL del fichaje, no en la hora actual
+        const fichajeMinutes = firstEntryMinutes[empCode];
+        const retrasoReal = fichajeMinutes !== undefined ? fichajeMinutes - shiftInfo.shiftStart : minutesSinceStart;
+        const nuevoEstado = retrasoReal > RETRASO_MIN ? 'Retraso' : 'Presente';
 
         // Reactivación: venía de ausente/potencialmente ausente
         if (['Ausente Auto', 'Ausente', 'Potencialmente Ausente', 'Retraso'].includes(emp.estado_presencia)) {
@@ -389,7 +402,7 @@ Deno.serve(async (req) => {
             origen: 'shiftAudit',
             estado_anterior: emp.estado_presencia,
             estado_nuevo: nuevoEstado,
-            motivo: `Fichaje detectado a los ${Math.round(minutesSinceStart)} min del inicio de turno. ${nuevoEstado === 'Retraso' ? 'Marcado como retraso.' : 'Presente.'} ${absenceFormal ? 'Ausencia auto cancelada.' : ''}`,
+            motivo: `Fichaje detectado a los ${Math.round(retrasoReal)} min del inicio de turno. ${nuevoEstado === 'Retraso' ? 'Marcado como retraso.' : 'Presente.'} ${absenceFormal ? 'Ausencia auto cancelada.' : ''}`,
             leido_por_rrhh: false,
           });
           results.reactivados++;
@@ -415,7 +428,7 @@ Deno.serve(async (req) => {
               origen: 'shiftAudit',
               estado_anterior: emp.estado_presencia || 'No Aplica',
               estado_nuevo: 'Retraso',
-              motivo: `Fichaje con ${Math.round(minutesSinceStart)} min de retraso sobre turno ${turnoObjetivo} (${minutesToTime(shiftInfo.shiftStart)})`,
+              motivo: `Fichaje con ${Math.round(retrasoReal)} min de retraso sobre turno ${turnoObjetivo} (${minutesToTime(shiftInfo.shiftStart)}). Hora fichaje: ${minutesToTime(fichajeMinutes)}.`,
               leido_por_rrhh: false,
             });
             results.retrasos++;
