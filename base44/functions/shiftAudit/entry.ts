@@ -307,8 +307,8 @@ Deno.serve(async (req) => {
 
       const minutesSinceStart = nowMinutes - shiftInfo.shiftStart;
 
-      // Si el turno todavía no ha comenzado, omitir
-      if (minutesSinceStart < 0) {
+      // Si el turno todavía no ha comenzado (con margen de 30 min antes), omitir
+      if (minutesSinceStart < -30) {
         results.sin_turno++;
         continue;
       }
@@ -354,6 +354,7 @@ Deno.serve(async (req) => {
 
       // ── CASO 2: Ha fichado → Presente (o Retraso si tarde) ─────────────
       if (hasFichado) {
+        // Fichajes hasta 30 min antes del turno cuentan como Presente puntual
         const nuevoEstado = minutesSinceStart > RETRASO_MIN ? 'Retraso' : 'Presente';
 
         // Reactivación: venía de ausente/potencialmente ausente
