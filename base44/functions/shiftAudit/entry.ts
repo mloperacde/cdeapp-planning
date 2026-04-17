@@ -318,8 +318,9 @@ Deno.serve(async (req) => {
 
       const minutesSinceStart = nowMinutes - shiftInfo.shiftStart;
 
-      // Si el turno todavía no ha comenzado (con margen de 30 min antes), omitir
-      if (minutesSinceStart < -30) {
+      // Si el turno todavía no ha comenzado, omitir completamente
+      // Solo empezamos a contar retrasos/ausencias a partir de la hora exacta de inicio
+      if (minutesSinceStart < 0) {
         results.sin_turno++;
         continue;
       }
