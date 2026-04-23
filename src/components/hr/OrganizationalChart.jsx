@@ -295,12 +295,17 @@ export default function OrganizationalChart({
             style={{ borderColor: color }}
           >
             {/* Header with dept color */}
-            <div className="px-2 py-2 text-center" style={{ background: color }}>
+            <div className="px-2 py-2 text-center relative" style={{ background: color }}>
               <h4 className="font-bold text-white leading-tight text-[11px] tracking-wide">{dept.name}</h4>
               {dept.code && <div className="text-[9px] text-white/80 mt-0.5">{dept.code}</div>}
+              {/* Employee count badge - always visible in header */}
+              <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 z-10 bg-white dark:bg-slate-700 border-2 rounded-full px-2 py-0.5 flex items-center gap-0.5 shadow-sm whitespace-nowrap" style={{ borderColor: color }}>
+                <span className="text-[9px] font-bold" style={{ color }}>{stats.employees}</span>
+                <span className="text-[8px] text-slate-500 dark:text-slate-400">empl.</span>
+              </div>
             </div>
 
-            <div className="px-2 py-1.5">
+            <div className="px-2 pt-5 pb-1.5">
               {/* Actions menu - top right overlay */}
               <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity z-20 flex gap-0.5">
                 {siblings.length > 1 && (
@@ -338,11 +343,6 @@ export default function OrganizationalChart({
                   {managers.map(m => m.nombre).join(' · ')}
                 </div>
               )}
-
-              {/* Employee count */}
-              <div className="text-[9px] text-slate-500 text-center mb-1">
-                {stats.employees} empleado{stats.employees !== 1 ? 's' : ''}
-              </div>
 
               {/* Positions with employee names (or count-only for high-volume positions) */}
               {!isCompact && deptPositions.map(pos => {
