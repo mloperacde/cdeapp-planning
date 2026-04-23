@@ -195,20 +195,22 @@ export default function OrganizationalChart({
     return () => el.removeEventListener('wheel', handleWheel);
   }, []);
 
-  // Employee count calculation
-  const normalizeDeptName = (name) => (name || '').toString().trim().toUpperCase();
+  // Employee count calculation - normalize removes accents and uppercases
+  const normalizeStr = (name) => (name || '').toString().trim().toUpperCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const normalizeDeptName = normalizeStr;
 
   const employeeCountByDept = React.useMemo(() => {
     const map = new Map();
     departments.forEach(dept => {
-      const n = normalizeDeptName(dept.name);
+      const n = normalizeStr(dept.name);
       let count;
-      if (n === "PRODUCCIÓN T1" || n === "PRODUCCIÓN T1.1") {
-        count = employees.filter(e => normalizeDeptName(e.departamento) === "PRODUCCIÓN" && e.team_key === "team_1").length;
-      } else if (n === "PRODUCCIÓN T2" || n === "PRODUCCIÓN T2.2") {
-        count = employees.filter(e => normalizeDeptName(e.departamento) === "PRODUCCIÓN" && e.team_key === "team_2").length;
+      if (n === "PRODUCCION T1" || n === "PRODUCCION T1.1") {
+        count = employees.filter(e => normalizeStr(e.departamento) === "PRODUCCION" && e.team_key === "team_1").length;
+      } else if (n === "PRODUCCION T2" || n === "PRODUCCION T2.2") {
+        count = employees.filter(e => normalizeStr(e.departamento) === "PRODUCCION" && e.team_key === "team_2").length;
       } else {
-        count = employees.filter(e => normalizeDeptName(e.departamento) === n).length;
+        count = employees.filter(e => normalizeStr(e.departamento) === n).length;
       }
       map.set(dept.id, count);
     });
@@ -357,16 +359,16 @@ export default function OrganizationalChart({
                     return (levelOrder[a.level] ?? 99) - (levelOrder[b.level] ?? 99);
                   }).map(pos => {
                     const deptEmpsForPos = (() => {
-                      const n = normalizeDeptName(dept.name);
+                      const n = normalizeStr(dept.name);
                       let emps;
-                      if (n === "PRODUCCIÓN T1" || n === "PRODUCCIÓN T1.1") {
-                        emps = employees.filter(e => normalizeDeptName(e.departamento) === "PRODUCCIÓN" && e.team_key === "team_1");
-                      } else if (n === "PRODUCCIÓN T2" || n === "PRODUCCIÓN T2.2") {
-                        emps = employees.filter(e => normalizeDeptName(e.departamento) === "PRODUCCIÓN" && e.team_key === "team_2");
+                      if (n === "PRODUCCION T1" || n === "PRODUCCION T1.1") {
+                        emps = employees.filter(e => normalizeStr(e.departamento) === "PRODUCCION" && e.team_key === "team_1");
+                      } else if (n === "PRODUCCION T2" || n === "PRODUCCION T2.2") {
+                        emps = employees.filter(e => normalizeStr(e.departamento) === "PRODUCCION" && e.team_key === "team_2");
                       } else {
-                        emps = employees.filter(e => normalizeDeptName(e.departamento) === n);
+                        emps = employees.filter(e => normalizeStr(e.departamento) === n);
                       }
-                      return emps.filter(e => (e.puesto || '').toString().trim().toUpperCase() === (pos.name || '').toString().trim().toUpperCase()).length;
+                      return emps.filter(e => normalizeStr(e.puesto) === normalizeStr(pos.name)).length;
                     })();
                     return (
                       <div key={pos.id} className="flex justify-between items-center gap-1">
@@ -411,10 +413,7 @@ export default function OrganizationalChart({
             <div className="w-px h-6 bg-slate-300"></div>
             <ul className="flex justify-center gap-2 pt-4 border-t border-slate-300 relative">
               {children.map(child => (
-                <div key={child.id} className="relative px-1">
-                  <div className="absolute -top-4 left-1/2 w-px h-4 bg-slate-300 -translate-x-1/2"></div>
-                  <OrgNode dept={child} parentKey={dept.id} />
-                </div>
+                <OrgNode key={child.id} dept={child} parentKey={dept.id} />
               ))}
             </ul>
           </>
