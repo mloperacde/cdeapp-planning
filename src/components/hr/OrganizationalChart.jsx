@@ -368,7 +368,8 @@ export default function OrganizationalChart({
                       } else {
                         emps = employees.filter(e => normalizeStr(e.departamento) === n);
                       }
-                      return emps.filter(e => normalizeStr(e.puesto) === normalizeStr(pos.name)).length;
+                      const normPos = (s) => normalizeStr(s).replace(/PROCESOS\b/, 'PROCESO');
+                      return emps.filter(e => normPos(e.puesto) === normPos(pos.name)).length;
                     })();
                     return (
                       <div key={pos.id} className="flex justify-between items-center gap-1">

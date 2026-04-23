@@ -13,9 +13,11 @@ import { FileDown, Users, Briefcase, Image, Globe } from "lucide-react";
 // Puestos mostrados en Producción para versión "con nombres"
 const PRODUCCION_PUESTOS_PERMITIDOS = [
   'JEFE DE TURNO', 'JEFE TURNO',
+  'JEFE DE TURNO PRODUCCION', 'JEFE TURNO PRODUCCION',
   'AYUDANTE DE JEFE DE TURNO', 'AYUDANTE JEFE DE TURNO',
-  'TÉCNICO DE PROCESO', 'TECNICO DE PROCESO',
-  'TÉCNICO PROCESO', 'TECNICO PROCESO',
+  'AYUDANTE JEFE DE TURNO PRODUCCION', 'AYUDANTE DE JEFE DE TURNO PRODUCCION',
+  'TECNICO DE PROCESO', 'TECNICO PROCESO',
+  'TECNICO DE PROCESOS', 'TECNICO PROCESOS',
 ];
 
 const LEVEL_ORDER = {
@@ -53,9 +55,9 @@ function isProduccionDept(deptName) {
 }
 
 function empMatchesPuesto(empPuesto, posName) {
-  const ep = normalize(empPuesto).replace(/LINEA|LÍNEA/g, 'LINEA');
-  const pp = normalize(posName).replace(/LINEA|LÍNEA/g, 'LINEA');
-  return ep === pp;
+  // Normalize + remove trailing S from PROCESO/PROCESOS for flexible matching
+  const norm = (s) => normalize(s).replace(/LINEA|L[IÍ]NEA/g, 'LINEA').replace(/PROCESOS\b/, 'PROCESO');
+  return norm(empPuesto) === norm(posName);
 }
 
 function getEmployeesForDept(dept, employees) {
