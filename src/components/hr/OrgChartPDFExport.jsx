@@ -122,7 +122,8 @@ function renderNodeCard(dept, departments, positions, employees, siblingOrder, m
     }
   }
 
-  const managersHtml = managerNames.length > 0
+  // En positions-only no mostrar responsables (anonimato)
+  const managersHtml = (mode === 'with-names' && managerNames.length > 0)
     ? `<div style="font-size:7.5px;color:#4f46e5;background:#eef2ff;padding:2px 6px;border-radius:4px;margin-bottom:4px;text-align:center;">${managerNames.join(' · ')}</div>`
     : '';
 
@@ -159,7 +160,7 @@ function renderNodeCard(dept, departments, positions, employees, siblingOrder, m
         </div>
         <div style="padding:4px 6px;">
           ${managersHtml}
-          <div style="font-size:7.5px;color:#64748b;text-align:center;margin-bottom:${positionsHtml ? '3' : '0'}px;">${deptEmps.length} empleado${deptEmps.length !== 1 ? 's' : ''}</div>
+          ${mode === 'with-names' ? `<div style="font-size:7.5px;color:#64748b;text-align:center;margin-bottom:${positionsHtml ? '3' : '0'}px;">${deptEmps.length} empleado${deptEmps.length !== 1 ? 's' : ''}</div>` : `<div style="font-size:7.5px;color:#64748b;text-align:center;margin-bottom:${positionsHtml ? '3' : '0'}px;">Total: ${deptEmps.length}</div>`}
           ${positionsHtml}
         </div>
       </div>
@@ -187,17 +188,36 @@ function buildPdfHtml({ mode, departments, positions, employees, siblingOrder })
   <meta charset="UTF-8">
   <title>${title}</title>
   <style>
-    @page { size: A2 landscape; margin: 10mm 8mm; }
-    @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+    @page { size: A3 landscape; margin: 6mm; }
+    @media print {
+      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .page { transform-origin: top left; }
+    }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Segoe UI', Arial, sans-serif; background: #f8fafc; color: #1e293b; }
-    .page { background: #fff; min-height: 100%; padding: 12px 14px; }
-    .header { display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #3b82f6; padding-bottom:8px; margin-bottom:16px; }
-    .header h1 { font-size:17px; font-weight:800; color:#1e3a8a; }
-    .header .meta { font-size:9px; color:#64748b; text-align:right; line-height:1.6; }
-    .tree { display:flex; gap:16px; flex-wrap:nowrap; align-items:flex-start; justify-content:center; overflow-x:auto; padding-bottom:8px; }
-    .legend { margin-top:12px; font-size:8px; color:#94a3b8; border-top:1px solid #e2e8f0; padding-top:5px; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #fff; color: #1e293b; }
+    .page { background: #fff; padding: 8px 10px; }
+    .header { display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #3b82f6; padding-bottom:6px; margin-bottom:10px; }
+    .header h1 { font-size:14px; font-weight:800; color:#1e3a8a; }
+    .header .meta { font-size:8px; color:#64748b; text-align:right; line-height:1.5; }
+    .tree-wrapper { width:100%; overflow:hidden; }
+    .tree { display:flex; gap:10px; flex-wrap:nowrap; align-items:flex-start; justify-content:center; transform-origin:top center; }
+    .legend { margin-top:8px; font-size:7px; color:#94a3b8; border-top:1px solid #e2e8f0; padding-top:4px; }
   </style>
+  <script>
+    window.onload = function() {
+      var tree = document.querySelector('.tree');
+      var wrapper = document.querySelector('.tree-wrapper');
+      if (!tree || !wrapper) return;
+      var treeW = tree.scrollWidth;
+      var wrapperW = wrapper.clientWidth;
+      if (treeW > wrapperW) {
+        var scale = wrapperW / treeW;
+        tree.style.transform = 'scale(' + scale + ')';
+        tree.style.transformOrigin = 'top left';
+        wrapper.style.height = (tree.scrollHeight * scale) + 'px';
+      }
+    };
+  </script>
 </head>
 <body>
   <div class="page">
@@ -210,7 +230,7 @@ function buildPdfHtml({ mode, departments, positions, employees, siblingOrder })
         ${mode === 'with-names' ? '<div style="color:#f59e0b;">⚠ Producción: solo Jefes Turno, Ayudantes y Técnicos de Proceso</div>' : ''}
       </div>
     </div>
-    <div class="tree">${treeHtml}</div>
+    <div class="tree-wrapper"><div class="tree">${treeHtml}</div></div>
     <div class="legend">* Puestos ordenados por jerarquía · Los conteos muestran asignados/máximo permitido · Los responsables aparecen en azul bajo cada departamento</div>
   </div>
 </body>
