@@ -5,20 +5,17 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { FileDown, Users, Briefcase } from "lucide-react";
+import { FileDown, Users, Briefcase, Image, Globe } from "lucide-react";
 
 // Puestos mostrados en Producción para versión "con nombres"
 const PRODUCCION_PUESTOS_PERMITIDOS = [
-  'JEFE DE TURNO',
-  'JEFE TURNO',
-  'AYUDANTE DE JEFE DE TURNO',
-  'AYUDANTE JEFE DE TURNO',
-  'TÉCNICO DE PROCESO',
-  'TECNICO DE PROCESO',
-  'TÉCNICO PROCESO',
-  'TECNICO PROCESO',
+  'JEFE DE TURNO', 'JEFE TURNO',
+  'AYUDANTE DE JEFE DE TURNO', 'AYUDANTE JEFE DE TURNO',
+  'TÉCNICO DE PROCESO', 'TECNICO DE PROCESO',
+  'TÉCNICO PROCESO', 'TECNICO PROCESO',
 ];
 
 const LEVEL_ORDER = {
@@ -84,13 +81,11 @@ function renderNodeCard(dept, departments, positions, employees, siblingOrder, m
   const managerNames = getManagerNames(dept, employees);
   const isProd = isProduccionDept(dept.name);
 
-  // Build positions HTML
   let positionsHtml = '';
   if (deptPositions.length > 0) {
     if (mode === 'with-names') {
       deptPositions.forEach(pos => {
         const assigned = deptEmps.filter(e => empMatchesPuesto(e.puesto, pos.name));
-        // En producción, solo mostrar puestos permitidos
         if (isProd) {
           const posNorm = normalize(pos.name);
           const allowed = PRODUCCION_PUESTOS_PERMITIDOS.some(p => posNorm.includes(normalize(p)));
@@ -108,7 +103,6 @@ function renderNodeCard(dept, departments, positions, employees, siblingOrder, m
         positionsHtml += `</div>`;
       });
     } else {
-      // positions-only
       deptPositions.forEach(pos => {
         const count = deptEmps.filter(e => empMatchesPuesto(e.puesto, pos.name)).length;
         const max = pos.max_headcount || 1;
@@ -122,7 +116,6 @@ function renderNodeCard(dept, departments, positions, employees, siblingOrder, m
     }
   }
 
-  // En positions-only no mostrar responsables (anonimato)
   const managersHtml = (mode === 'with-names' && managerNames.length > 0)
     ? `<div style="font-size:7.5px;color:#4f46e5;background:#eef2ff;padding:2px 6px;border-radius:4px;margin-bottom:4px;text-align:center;">${managerNames.join(' · ')}</div>`
     : '';
@@ -132,12 +125,10 @@ function renderNodeCard(dept, departments, positions, employees, siblingOrder, m
 
   const childrenHtml = hasChildren
     ? `<div style="display:flex;justify-content:center;margin-top:0;">
-        <div style="position:relative;display:flex;gap:8px;padding-top:20px;padding-left:0;list-style:none;">
+        <div style="position:relative;display:flex;gap:8px;padding-top:20px;list-style:none;">
           <div style="position:absolute;top:0;left:50%;width:1px;height:20px;background:#cbd5e1;transform:translateX(-50%);"></div>
           ${children.length > 1 ? `<div style="position:absolute;top:20px;left:calc(${100 / children.length / 2}%);right:calc(${100 / children.length / 2}%);height:1px;background:#cbd5e1;"></div>` : ''}
           ${children.map((child, i) => {
-            const isFirst = i === 0;
-            const isLast = i === children.length - 1;
             const isOnly = children.length === 1;
             return `<div style="display:flex;flex-direction:column;align-items:center;position:relative;">
               ${!isOnly ? `<div style="position:absolute;top:0;left:50%;width:1px;height:20px;background:#cbd5e1;transform:translateX(-50%);"></div>` : ''}
@@ -160,7 +151,9 @@ function renderNodeCard(dept, departments, positions, employees, siblingOrder, m
         </div>
         <div style="padding:4px 6px;">
           ${managersHtml}
-          ${mode === 'with-names' ? `<div style="font-size:7.5px;color:#64748b;text-align:center;margin-bottom:${positionsHtml ? '3' : '0'}px;">${deptEmps.length} empleado${deptEmps.length !== 1 ? 's' : ''}</div>` : `<div style="font-size:7.5px;color:#64748b;text-align:center;margin-bottom:${positionsHtml ? '3' : '0'}px;">Total: ${deptEmps.length}</div>`}
+          ${mode === 'with-names'
+            ? `<div style="font-size:7.5px;color:#64748b;text-align:center;margin-bottom:${positionsHtml ? '3' : '0'}px;">${deptEmps.length} empleado${deptEmps.length !== 1 ? 's' : ''}</div>`
+            : `<div style="font-size:7.5px;color:#64748b;text-align:center;margin-bottom:${positionsHtml ? '3' : '0'}px;">Total: ${deptEmps.length}</div>`}
           ${positionsHtml}
         </div>
       </div>
@@ -171,16 +164,29 @@ function renderNodeCard(dept, departments, positions, employees, siblingOrder, m
     </div>`;
 }
 
-// ─── Full HTML document ────────────────────────────────────────────────────────
+// ─── Build the inner tree HTML (shared between PDF and HTML export) ────────────
 
-function buildPdfHtml({ mode, departments, positions, employees, siblingOrder }) {
+function buildTreeHtml({ mode, departments, positions, employees, siblingOrder }) {
   const rootDepts = getSortedChildren(departments, null, siblingOrder);
-  const title = mode === 'with-names' ? 'Organigrama con Nombres' : 'Organigrama por Puestos';
-  const today = new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
-
-  const treeHtml = rootDepts.map(dept =>
+  return rootDepts.map(dept =>
     `<div style="flex-shrink:0;">${renderNodeCard(dept, departments, positions, employees, siblingOrder, mode, 0)}</div>`
   ).join('');
+}
+
+function getTitle(mode) {
+  return mode === 'with-names' ? 'Organigrama con Nombres' : 'Organigrama por Puestos';
+}
+
+function getToday() {
+  return new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
+}
+
+// ─── PDF (print) ───────────────────────────────────────────────────────────────
+
+function buildPdfHtml({ mode, departments, positions, employees, siblingOrder }) {
+  const title = getTitle(mode);
+  const today = getToday();
+  const treeHtml = buildTreeHtml({ mode, departments, positions, employees, siblingOrder });
 
   return `<!DOCTYPE html>
 <html lang="es">
@@ -189,10 +195,7 @@ function buildPdfHtml({ mode, departments, positions, employees, siblingOrder })
   <title>${title}</title>
   <style>
     @page { size: A3 landscape; margin: 6mm; }
-    @media print {
-      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-      .page { transform-origin: top left; }
-    }
+    @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Segoe UI', Arial, sans-serif; background: #fff; color: #1e293b; }
     .page { background: #fff; padding: 8px 10px; }
@@ -200,7 +203,7 @@ function buildPdfHtml({ mode, departments, positions, employees, siblingOrder })
     .header h1 { font-size:14px; font-weight:800; color:#1e3a8a; }
     .header .meta { font-size:8px; color:#64748b; text-align:right; line-height:1.5; }
     .tree-wrapper { width:100%; overflow:hidden; }
-    .tree { display:flex; gap:10px; flex-wrap:nowrap; align-items:flex-start; justify-content:center; transform-origin:top center; }
+    .tree { display:flex; gap:10px; flex-wrap:nowrap; align-items:flex-start; justify-content:center; transform-origin:top left; }
     .legend { margin-top:8px; font-size:7px; color:#94a3b8; border-top:1px solid #e2e8f0; padding-top:4px; }
   </style>
   <script>
@@ -231,8 +234,142 @@ function buildPdfHtml({ mode, departments, positions, employees, siblingOrder })
       </div>
     </div>
     <div class="tree-wrapper"><div class="tree">${treeHtml}</div></div>
-    <div class="legend">* Puestos ordenados por jerarquía · Los conteos muestran asignados/máximo permitido · Los responsables aparecen en azul bajo cada departamento</div>
+    <div class="legend">* Puestos ordenados por jerarquía · Los conteos muestran asignados/máximo permitido</div>
   </div>
+</body>
+</html>`;
+}
+
+// ─── HTML interactivo (descargable, con zoom y scroll) ─────────────────────────
+
+function buildInteractiveHtml({ mode, departments, positions, employees, siblingOrder }) {
+  const title = getTitle(mode);
+  const today = getToday();
+  const treeHtml = buildTreeHtml({ mode, departments, positions, employees, siblingOrder });
+
+  return `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${title} — Central de Envasados</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #f1f5f9; color: #1e293b; }
+    .topbar {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      background: #1e3a8a; color: #fff;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+    .topbar h1 { font-size: 15px; font-weight: 800; }
+    .topbar .meta { font-size: 11px; opacity: 0.8; }
+    .controls {
+      display: flex; align-items: center; gap: 8px;
+    }
+    .controls button {
+      background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4);
+      color: #fff; padding: 4px 12px; border-radius: 6px; cursor: pointer;
+      font-size: 13px; font-weight: 700; transition: background 0.15s;
+    }
+    .controls button:hover { background: rgba(255,255,255,0.35); }
+    .zoom-label { font-size: 12px; min-width: 40px; text-align: center; }
+    #canvas-area {
+      margin-top: 56px;
+      overflow: auto;
+      width: 100vw;
+      height: calc(100vh - 56px);
+      cursor: grab;
+    }
+    #canvas-area:active { cursor: grabbing; }
+    #tree-root {
+      display: inline-flex;
+      gap: 16px;
+      flex-wrap: nowrap;
+      align-items: flex-start;
+      padding: 30px;
+      transform-origin: top left;
+      transition: transform 0.1s;
+      background: #f1f5f9;
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div>
+      <h1>📊 ${title}</h1>
+      <div class="meta">Central de Envasados · ${today}${mode === 'with-names' ? ' · ⚠ Producción: solo roles clave' : ''}</div>
+    </div>
+    <div class="controls">
+      <button onclick="zoom(-0.1)">−</button>
+      <span class="zoom-label" id="zlabel">100%</span>
+      <button onclick="zoom(0.1)">+</button>
+      <button onclick="resetZoom()" style="font-size:11px;padding:4px 8px;">↺ Reset</button>
+    </div>
+  </div>
+  <div id="canvas-area">
+    <div id="tree-root">${treeHtml}</div>
+  </div>
+  <script>
+    var scale = 1;
+    var isDragging = false;
+    var startX, startY, scrollLeft, scrollTop;
+    var area = document.getElementById('canvas-area');
+    var root = document.getElementById('tree-root');
+
+    function applyScale() {
+      root.style.transform = 'scale(' + scale + ')';
+      root.style.width = (root.scrollWidth / scale) + 'px';
+      root.style.height = (root.scrollHeight / scale) + 'px';
+      document.getElementById('zlabel').textContent = Math.round(scale * 100) + '%';
+    }
+
+    function zoom(delta) {
+      scale = Math.min(3, Math.max(0.2, scale + delta));
+      applyScale();
+    }
+
+    function resetZoom() {
+      scale = 1;
+      applyScale();
+      area.scrollTo(0, 0);
+    }
+
+    // Mouse wheel zoom
+    area.addEventListener('wheel', function(e) {
+      e.preventDefault();
+      zoom(e.deltaY < 0 ? 0.1 : -0.1);
+    }, { passive: false });
+
+    // Drag to pan
+    area.addEventListener('mousedown', function(e) {
+      isDragging = true;
+      startX = e.pageX - area.offsetLeft;
+      startY = e.pageY - area.offsetTop;
+      scrollLeft = area.scrollLeft;
+      scrollTop = area.scrollTop;
+    });
+    area.addEventListener('mouseleave', function() { isDragging = false; });
+    area.addEventListener('mouseup', function() { isDragging = false; });
+    area.addEventListener('mousemove', function(e) {
+      if (!isDragging) return;
+      e.preventDefault();
+      var x = e.pageX - area.offsetLeft;
+      var y = e.pageY - area.offsetTop;
+      area.scrollLeft = scrollLeft - (x - startX);
+      area.scrollTop = scrollTop - (y - startY);
+    });
+
+    // Auto-fit on load
+    window.onload = function() {
+      var treeW = root.scrollWidth;
+      var areaW = area.clientWidth;
+      if (treeW > areaW) {
+        scale = Math.max(0.2, areaW / treeW * 0.95);
+        applyScale();
+      }
+    };
+  </script>
 </body>
 </html>`;
 }
@@ -250,24 +387,68 @@ export default function OrgChartPDFExport({ departments, positions, employees, s
     setTimeout(() => win.print(), 800);
   };
 
+  const openInteractive = (mode) => {
+    const html = buildInteractiveHtml({ mode, departments, positions, employees, siblingOrder });
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+  };
+
+  const downloadHtml = (mode) => {
+    const html = buildInteractiveHtml({ mode, departments, positions, employees, siblingOrder });
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `organigrama-${mode}-${new Date().toISOString().slice(0, 10)}.html`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5">
           <FileDown className="w-3.5 h-3.5" />
-          Exportar PDF
+          Exportar
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
+      <DropdownMenuContent align="end" className="w-64">
+
+        <DropdownMenuLabel className="text-xs text-slate-500 font-semibold">🖨 PDF (imprimir)</DropdownMenuLabel>
         <DropdownMenuItem onClick={() => openPdf('with-names')} className="gap-2">
           <Users className="w-4 h-4 text-blue-600" />
-          Con nombres de empleados
+          <span>Con nombres de empleados</span>
         </DropdownMenuItem>
-        <DropdownMenuSeparator />
         <DropdownMenuItem onClick={() => openPdf('positions-only')} className="gap-2">
           <Briefcase className="w-4 h-4 text-indigo-600" />
-          Solo puestos y conteos
+          <span>Solo puestos y conteos</span>
         </DropdownMenuItem>
+
+        <DropdownMenuSeparator />
+
+        <DropdownMenuLabel className="text-xs text-slate-500 font-semibold">🌐 HTML interactivo (zoom + scroll)</DropdownMenuLabel>
+        <DropdownMenuItem onClick={() => openInteractive('with-names')} className="gap-2">
+          <Globe className="w-4 h-4 text-blue-600" />
+          <span>Con nombres — abrir en navegador</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => openInteractive('positions-only')} className="gap-2">
+          <Globe className="w-4 h-4 text-indigo-600" />
+          <span>Solo puestos — abrir en navegador</span>
+        </DropdownMenuItem>
+
+        <DropdownMenuSeparator />
+
+        <DropdownMenuLabel className="text-xs text-slate-500 font-semibold">💾 Descargar archivo HTML</DropdownMenuLabel>
+        <DropdownMenuItem onClick={() => downloadHtml('with-names')} className="gap-2">
+          <Image className="w-4 h-4 text-green-600" />
+          <span>Con nombres — descargar .html</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => downloadHtml('positions-only')} className="gap-2">
+          <Image className="w-4 h-4 text-emerald-600" />
+          <span>Solo puestos — descargar .html</span>
+        </DropdownMenuItem>
+
       </DropdownMenuContent>
     </DropdownMenu>
   );
