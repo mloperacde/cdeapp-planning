@@ -2,11 +2,9 @@ import React from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { 
-  Users, UserCircle, MoreHorizontal, Plus, Edit, Trash2,
+  MoreHorizontal, Plus, Edit, Trash2,
   ZoomIn, ZoomOut, Maximize2, Minimize2, ChevronDown, ChevronUp,
   ArrowLeft, ArrowRight, RotateCcw
 } from "lucide-react";
@@ -238,16 +236,35 @@ export default function OrganizationalChart({
     return stats;
   }, [departments, positions, employeeCountByDept]);
 
+  // Helper: get employees for a dept (same logic as export)
+  const getEmpsForDept = React.useCallback((dept) => {
+    const n = normalizeStr(dept.name);
+    if (n === "PRODUCCION T1" || n === "PRODUCCION T1.1")
+      return employees.filter(e => normalizeStr(e.departamento) === "PRODUCCION" && e.team_key === "team_1");
+    if (n === "PRODUCCION T2" || n === "PRODUCCION T2.2")
+      return employees.filter(e => normalizeStr(e.departamento) === "PRODUCCION" && e.team_key === "team_2");
+    return employees.filter(e => normalizeStr(e.departamento) === n);
+  }, [employees]);
+
+  // Helper: normalize puesto for matching (singular PROCESO)
+  const normPuesto = (s) => normalizeStr(s).replace(/PROCESOS\b/, 'PROCESO');
+
   // Recursive node
   const OrgNode = ({ dept, parentKey }) => {
     const children = getSortedChildren(dept.id);
-    const deptPositions = positions.filter(p => p.department_id === dept.id);
+    const deptPositions = [...positions.filter(p => p.department_id === dept.id)].sort((a, b) => {
+      const ao = a.orden ?? 99; const bo = b.orden ?? 99;
+      if (ao !== bo) return ao - bo;
+      const lvl = { Executive:0, Director:1, Manager:2, Lead:3, Senior:4, Mid:5, Junior:6 };
+      return (lvl[a.level] ?? 99) - (lvl[b.level] ?? 99);
+    });
     const stats = deptStats[dept.id] || { employees: 0, headcount: 0 };
     const managerIds = [dept.manager_id, dept.manager_id_2, dept.manager_id_3, dept.manager_id_4].filter(Boolean);
     const managers = managerIds.map(id => employees.find(e => e.id === id)).filter(Boolean);
     const isCollapsed = collapsedNodes.has(dept.id);
     const hasChildren = children.length > 0;
     const nodeKey = dept.parent_id || 'root';
+    const color = dept.color || '#3b82f6';
 
     // Sibling order position
     const siblings = getSortedChildren(dept.parent_id || null);
@@ -255,44 +272,39 @@ export default function OrganizationalChart({
     const isFirst = sibIdx === 0;
     const isLast = sibIdx === siblings.length - 1;
 
+    // Employees for this dept
+    const deptEmps = getEmpsForDept(dept);
+
     return (
       <li className="flex flex-col items-center">
         <div className="relative group">
-          <Card 
-            className={`
-              ${isCompact ? 'w-44' : 'w-60'} 
-              border-t-4 shadow-md z-10 relative bg-white dark:bg-card hover:shadow-lg transition-all
-              ${isCollapsed && hasChildren ? 'ring-2 ring-slate-200' : ''}
-            `} 
-            style={{ borderTopColor: dept.color || '#3b82f6' }}
+          {/* Card styled like export */}
+          <div
+            className={`${isCompact ? 'w-40' : 'w-52'} rounded-lg border-2 shadow-md bg-white dark:bg-card overflow-hidden hover:shadow-lg transition-all z-10 relative`}
+            style={{ borderColor: color }}
           >
-            <CardContent className={`${isCompact ? 'p-2' : 'p-3'}`}>
-              {/* Actions menu */}
-              <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-20 flex gap-0.5">
-                {/* Sibling reorder buttons */}
+            {/* Header with dept color */}
+            <div className="px-2 py-2 text-center" style={{ background: color }}>
+              <h4 className="font-bold text-white leading-tight text-[11px] tracking-wide">{dept.name}</h4>
+              {dept.code && <div className="text-[9px] text-white/80 mt-0.5">{dept.code}</div>}
+            </div>
+
+            <div className="px-2 py-1.5">
+              {/* Actions menu - top right overlay */}
+              <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity z-20 flex gap-0.5">
                 {siblings.length > 1 && (
-                  <div className="flex gap-0.5">
-                    <Button
-                      variant="ghost" size="icon"
-                      className="h-5 w-5 bg-white/80 shadow-sm hover:bg-slate-100"
-                      disabled={isFirst}
-                      title="Mover izquierda"
-                      onClick={(e) => { e.stopPropagation(); moveSiblingInChart(nodeKey, dept.id, -1); }}
-                    >
+                  <>
+                    <Button variant="ghost" size="icon" className="h-5 w-5 bg-white/80 shadow-sm hover:bg-slate-100" disabled={isFirst}
+                      onClick={(e) => { e.stopPropagation(); moveSiblingInChart(nodeKey, dept.id, -1); }}>
                       <ArrowLeft className="w-3 h-3" />
                     </Button>
-                    <Button
-                      variant="ghost" size="icon"
-                      className="h-5 w-5 bg-white/80 shadow-sm hover:bg-slate-100"
-                      disabled={isLast}
-                      title="Mover derecha"
-                      onClick={(e) => { e.stopPropagation(); moveSiblingInChart(nodeKey, dept.id, 1); }}
-                    >
+                    <Button variant="ghost" size="icon" className="h-5 w-5 bg-white/80 shadow-sm hover:bg-slate-100" disabled={isLast}
+                      onClick={(e) => { e.stopPropagation(); moveSiblingInChart(nodeKey, dept.id, 1); }}>
                       <ArrowRight className="w-3 h-3" />
                     </Button>
-                  </div>
+                  </>
                 )}
-                {(onEdit || onAddChild) && (
+                {(onEdit || onAddChild || onMove || onDelete) && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="icon" className="h-5 w-5 bg-white/80 shadow-sm hover:bg-white">
@@ -300,106 +312,49 @@ export default function OrganizationalChart({
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      {onAddChild && (
-                        <DropdownMenuItem onClick={() => onAddChild(dept.id)}>
-                          <Plus className="w-4 h-4 mr-2" /> Añadir Sub-depto.
-                        </DropdownMenuItem>
-                      )}
-                      {onEdit && (
-                        <DropdownMenuItem onClick={() => onEdit(dept)}>
-                          <Edit className="w-4 h-4 mr-2" /> Editar
-                        </DropdownMenuItem>
-                      )}
-                      {onMove && (
-                        <DropdownMenuItem onClick={() => onMove(dept)}>
-                          <ArrowLeft className="w-4 h-4 mr-2 rotate-180" /> Mover a...
-                        </DropdownMenuItem>
-                      )}
-                      {onDelete && (
-                        <>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem 
-                            className="text-red-600 focus:text-red-600" 
-                            onClick={() => { if(confirm('¿Eliminar departamento?')) onDelete(dept.id); }}
-                          >
-                            <Trash2 className="w-4 h-4 mr-2" /> Eliminar
-                          </DropdownMenuItem>
-                        </>
-                      )}
+                      {onAddChild && <DropdownMenuItem onClick={() => onAddChild(dept.id)}><Plus className="w-4 h-4 mr-2" /> Añadir Sub-depto.</DropdownMenuItem>}
+                      {onEdit && <DropdownMenuItem onClick={() => onEdit(dept)}><Edit className="w-4 h-4 mr-2" /> Editar</DropdownMenuItem>}
+                      {onMove && <DropdownMenuItem onClick={() => onMove(dept)}><ArrowLeft className="w-4 h-4 mr-2 rotate-180" /> Mover a...</DropdownMenuItem>}
+                      {onDelete && (<><DropdownMenuSeparator /><DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={() => { if(confirm('¿Eliminar departamento?')) onDelete(dept.id); }}><Trash2 className="w-4 h-4 mr-2" /> Eliminar</DropdownMenuItem></>)}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 )}
               </div>
 
-              <div className="text-center mb-1 mt-1 pr-6">
-                <h4 className={`font-bold text-slate-800 dark:text-slate-200 leading-tight ${isCompact ? 'text-[10px]' : 'text-xs'}`}>{dept.name}</h4>
-                {!isCompact && dept.code && <Badge variant="outline" className="text-[9px] mt-0.5 h-4">{dept.code}</Badge>}
-              </div>
-              
+              {/* Managers */}
               {managers.length > 0 && !isCompact && (
-                <div className="flex flex-col gap-0.5 mb-1.5 bg-blue-50 dark:bg-blue-950/30 px-1.5 py-1 rounded">
-                  {managers.map((mgr, i) => (
-                    <div key={mgr.id} className="flex items-center gap-1">
-                      <UserCircle className="w-3 h-3 text-blue-600 shrink-0" />
-                      <span className="text-[9px] font-medium text-blue-800 dark:text-blue-300 truncate max-w-[120px]" title={mgr.nombre}>
-                        {mgr.nombre}
-                      </span>
-                    </div>
-                  ))}
+                <div className="text-[9px] text-indigo-700 dark:text-indigo-300 font-medium text-center bg-indigo-50 dark:bg-indigo-950/30 rounded px-1 py-0.5 mb-1">
+                  {managers.map(m => m.nombre).join(' · ')}
                 </div>
               )}
 
-              {!isCompact && deptPositions.length > 0 && (
-                <div className="space-y-0.5 bg-slate-50 dark:bg-slate-800/40 p-1.5 rounded text-[9px] border border-slate-100 dark:border-slate-700 mb-1.5">
-                  {[...deptPositions].sort((a, b) => {
-                    const ao = a.orden ?? 99;
-                    const bo = b.orden ?? 99;
-                    if (ao !== bo) return ao - bo;
-                    const levelOrder = { Executive:0, Director:1, Manager:2, Lead:3, Senior:4, Mid:5, Junior:6 };
-                    return (levelOrder[a.level] ?? 99) - (levelOrder[b.level] ?? 99);
-                  }).map(pos => {
-                    const deptEmpsForPos = (() => {
-                      const n = normalizeStr(dept.name);
-                      let emps;
-                      if (n === "PRODUCCION T1" || n === "PRODUCCION T1.1") {
-                        emps = employees.filter(e => normalizeStr(e.departamento) === "PRODUCCION" && e.team_key === "team_1");
-                      } else if (n === "PRODUCCION T2" || n === "PRODUCCION T2.2") {
-                        emps = employees.filter(e => normalizeStr(e.departamento) === "PRODUCCION" && e.team_key === "team_2");
-                      } else {
-                        emps = employees.filter(e => normalizeStr(e.departamento) === n);
-                      }
-                      const normPos = (s) => normalizeStr(s).replace(/PROCESOS\b/, 'PROCESO');
-                      return emps.filter(e => normPos(e.puesto) === normPos(pos.name)).length;
-                    })();
-                    return (
-                      <div key={pos.id} className="flex justify-between items-center gap-1">
-                        <span className="truncate text-slate-600 dark:text-slate-400" title={pos.name}>{pos.name}</span>
-                        <Badge variant="secondary" className="text-[8px] h-3.5 px-1 shrink-0">{deptEmpsForPos}</Badge>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              <div className={`pt-1.5 border-t border-slate-100 dark:border-slate-700 text-[9px] text-slate-500 grid grid-cols-2 gap-1`}>
-                <div className="flex flex-col">
-                  <span className="text-[8px] uppercase tracking-wider text-slate-400">Emp.</span>
-                  <span className="font-bold text-indigo-600 text-xs">{stats.employees}</span>
-                </div>
-                <div className="flex flex-col text-right">
-                  <span className="text-[8px] uppercase tracking-wider text-slate-400">HC</span>
-                  <span className="font-bold text-slate-600 dark:text-slate-300 text-xs">{stats.headcount}</span>
-                </div>
+              {/* Employee count */}
+              <div className="text-[9px] text-slate-500 text-center mb-1">
+                {stats.employees} empleado{stats.employees !== 1 ? 's' : ''}
               </div>
-            </CardContent>
-          </Card>
+
+              {/* Positions with employee names */}
+              {!isCompact && deptPositions.map(pos => {
+                const assigned = deptEmps.filter(e => normPuesto(e.puesto) === normPuesto(pos.name));
+                return (
+                  <div key={pos.id} className="border-t border-slate-100 dark:border-slate-700 pt-1 pb-0.5">
+                    <div className="text-[9px] font-bold text-slate-700 dark:text-slate-300 leading-tight">{pos.name}</div>
+                    {assigned.length > 0
+                      ? assigned.map(emp => (
+                          <div key={emp.id} className="text-[8.5px] text-slate-500 dark:text-slate-400 pl-2 leading-snug">• {emp.nombre}</div>
+                        ))
+                      : <div className="text-[8.5px] text-slate-400 italic pl-2">Sin asignar</div>
+                    }
+                  </div>
+                );
+              })}
+            </div>
+          </div>
 
           {/* Collapse/Expand toggle */}
           {hasChildren && (
             <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 z-30">
-              <Button 
-                size="icon" 
-                variant="outline"
+              <Button size="icon" variant="outline"
                 className="h-6 w-6 rounded-full bg-white shadow-sm border border-slate-200 hover:bg-slate-50 p-0"
                 onClick={(e) => { e.stopPropagation(); toggleCollapse(dept.id); }}
               >
