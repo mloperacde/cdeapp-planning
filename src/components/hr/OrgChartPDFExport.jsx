@@ -145,15 +145,16 @@ function renderNodeCard(dept, departments, positions, employees, siblingOrder, m
   return `
     <div style="display:inline-flex;flex-direction:column;align-items:center;">
       <div style="width:${w}px;border:1.5px solid ${color};border-radius:6px;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,0.1);overflow:hidden;">
-        <div style="background:${color};padding:5px 8px;text-align:center;">
+        <div style="background:${color};padding:5px 8px 12px;text-align:center;position:relative;">
           <div style="font-size:${fs}px;font-weight:800;color:#fff;letter-spacing:0.5px;line-height:1.3;">${dept.name}</div>
           ${dept.code ? `<div style="font-size:7px;color:rgba(255,255,255,0.8);">${dept.code}</div>` : ''}
+          <div style="position:absolute;bottom:-9px;left:50%;transform:translateX(-50%);background:#fff;border:2px solid ${color};border-radius:999px;padding:1px 7px;display:inline-flex;align-items:center;gap:2px;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,0.12);">
+            <span style="font-size:8px;font-weight:800;color:${color};">${deptEmps.length}</span>
+            <span style="font-size:7px;color:#64748b;">empl.</span>
+          </div>
         </div>
-        <div style="padding:4px 6px;">
+        <div style="padding:14px 6px 4px;">
           ${managersHtml}
-          ${mode === 'with-names'
-            ? `<div style="font-size:7.5px;color:#64748b;text-align:center;margin-bottom:${positionsHtml ? '3' : '0'}px;">${deptEmps.length} empleado${deptEmps.length !== 1 ? 's' : ''}</div>`
-            : `<div style="font-size:7.5px;color:#64748b;text-align:center;margin-bottom:${positionsHtml ? '3' : '0'}px;">Total: ${deptEmps.length}</div>`}
           ${positionsHtml}
         </div>
       </div>
