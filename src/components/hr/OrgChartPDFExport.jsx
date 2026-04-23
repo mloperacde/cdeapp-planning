@@ -105,12 +105,10 @@ function renderNodeCard(dept, departments, positions, employees, siblingOrder, m
     } else {
       deptPositions.forEach(pos => {
         const count = deptEmps.filter(e => empMatchesPuesto(e.puesto, pos.name)).length;
-        const max = pos.max_headcount || 1;
-        const full = count >= max;
         positionsHtml += `
           <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid #f1f5f9;padding:2px 0;">
             <span style="font-size:8px;color:#374151;flex:1;margin-right:4px;">${pos.name}</span>
-            <span style="font-size:8px;font-weight:700;color:${full ? '#059669' : '#4f46e5'};background:${full ? '#d1fae5' : '#eef2ff'};padding:1px 5px;border-radius:8px;white-space:nowrap;">${count}/${max}</span>
+            <span style="font-size:8px;font-weight:700;color:#4f46e5;background:#eef2ff;padding:1px 5px;border-radius:8px;white-space:nowrap;">${count}</span>
           </div>`;
       });
     }

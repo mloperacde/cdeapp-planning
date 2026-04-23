@@ -355,12 +355,26 @@ export default function OrganizationalChart({
                     if (ao !== bo) return ao - bo;
                     const levelOrder = { Executive:0, Director:1, Manager:2, Lead:3, Senior:4, Mid:5, Junior:6 };
                     return (levelOrder[a.level] ?? 99) - (levelOrder[b.level] ?? 99);
-                  }).map(pos => (
-                    <div key={pos.id} className="flex justify-between items-center gap-1">
-                      <span className="truncate text-slate-600 dark:text-slate-400" title={pos.name}>{pos.name}</span>
-                      <Badge variant="secondary" className="text-[8px] h-3.5 px-1 shrink-0">{pos.max_headcount || 1}</Badge>
-                    </div>
-                  ))}
+                  }).map(pos => {
+                    const deptEmpsForPos = (() => {
+                      const n = normalizeDeptName(dept.name);
+                      let emps;
+                      if (n === "PRODUCCIÓN T1" || n === "PRODUCCIÓN T1.1") {
+                        emps = employees.filter(e => normalizeDeptName(e.departamento) === "PRODUCCIÓN" && e.team_key === "team_1");
+                      } else if (n === "PRODUCCIÓN T2" || n === "PRODUCCIÓN T2.2") {
+                        emps = employees.filter(e => normalizeDeptName(e.departamento) === "PRODUCCIÓN" && e.team_key === "team_2");
+                      } else {
+                        emps = employees.filter(e => normalizeDeptName(e.departamento) === n);
+                      }
+                      return emps.filter(e => (e.puesto || '').toString().trim().toUpperCase() === (pos.name || '').toString().trim().toUpperCase()).length;
+                    })();
+                    return (
+                      <div key={pos.id} className="flex justify-between items-center gap-1">
+                        <span className="truncate text-slate-600 dark:text-slate-400" title={pos.name}>{pos.name}</span>
+                        <Badge variant="secondary" className="text-[8px] h-3.5 px-1 shrink-0">{deptEmpsForPos}</Badge>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
 
