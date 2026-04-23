@@ -246,8 +246,19 @@ export default function OrganizationalChart({
     return employees.filter(e => normalizeStr(e.departamento) === n);
   }, [employees]);
 
-  // Helper: normalize puesto for matching (singular PROCESO)
-  const normPuesto = (s) => normalizeStr(s).replace(/PROCESOS\b/, 'PROCESO');
+  // Helper: normalize puesto for matching
+  // - Singulariza PROCESOS→PROCESO
+  // - Elimina la preposición "DE " para equiparar "OPERARIA LIMPIEZA" con "OPERARIA DE LIMPIEZA"
+  const normPuesto = (s) => normalizeStr(s)
+    .replace(/PROCESOS\b/, 'PROCESO')
+    .replace(/\bDE\s+/g, '');
+
+  // Puestos de alto volumen: solo mostrar conteo, sin nombres
+  const PUESTOS_SOLO_CONTEO = [
+    'RESPONSABLE DE LINEA',
+    'ADJUNTA RESPONSABLE DE LINEA',
+    'OPERARIA DE ENVASADO',
+  ].map(p => normPuesto(p));
 
   // Recursive node
   const OrgNode = ({ dept, parentKey }) => {
@@ -333,18 +344,25 @@ export default function OrganizationalChart({
                 {stats.employees} empleado{stats.employees !== 1 ? 's' : ''}
               </div>
 
-              {/* Positions with employee names */}
+              {/* Positions with employee names (or count-only for high-volume positions) */}
               {!isCompact && deptPositions.map(pos => {
                 const assigned = deptEmps.filter(e => normPuesto(e.puesto) === normPuesto(pos.name));
+                const soloConteo = PUESTOS_SOLO_CONTEO.includes(normPuesto(pos.name));
                 return (
                   <div key={pos.id} className="border-t border-slate-100 dark:border-slate-700 pt-1 pb-0.5">
-                    <div className="text-[9px] font-bold text-slate-700 dark:text-slate-300 leading-tight">{pos.name}</div>
-                    {assigned.length > 0
-                      ? assigned.map(emp => (
-                          <div key={emp.id} className="text-[8.5px] text-slate-500 dark:text-slate-400 pl-2 leading-snug">• {emp.nombre}</div>
-                        ))
-                      : <div className="text-[8.5px] text-slate-400 italic pl-2">Sin asignar</div>
-                    }
+                    <div className="flex items-center justify-between gap-1">
+                      <div className="text-[9px] font-bold text-slate-700 dark:text-slate-300 leading-tight">{pos.name}</div>
+                      {soloConteo && (
+                        <span className="text-[8px] font-bold text-indigo-600 bg-indigo-50 dark:bg-indigo-950/30 px-1.5 py-0.5 rounded shrink-0">{assigned.length}</span>
+                      )}
+                    </div>
+                    {!soloConteo && (
+                      assigned.length > 0
+                        ? assigned.map(emp => (
+                            <div key={emp.id} className="text-[8.5px] text-slate-500 dark:text-slate-400 pl-2 leading-snug">• {emp.nombre}</div>
+                          ))
+                        : <div className="text-[8.5px] text-slate-400 italic pl-2">Sin asignar</div>
+                    )}
                   </div>
                 );
               })}
