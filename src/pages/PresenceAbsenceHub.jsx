@@ -22,7 +22,7 @@ import {
   RefreshCw, Upload, Search, CheckCircle, AlertCircle,
   LogIn, LogOut, Trash2, Brain, ChevronRight, Radio,
   FileText, Layers, TrendingDown, Activity, CheckSquare,
-  Eye, Plus, Download, Radar, CalendarDays
+  Eye, Plus, Download, Radar, CalendarDays, Coffee
 } from "lucide-react";
 
 // Feature Components
@@ -43,6 +43,8 @@ import VacationPendingConsumptionManager from "../components/absences/VacationPe
 import UnpaidLeaveTracker from "../components/absences/UnpaidLeaveTracker";
 import AbsenceNotifications from "../components/employees/AbsenceNotifications";
 import AbsenceDashboard from "../components/employees/AbsenceDashboard";
+import PresenceDashboard from "../components/attendance/PresenceDashboard";
+import BreakAnalysis from "../components/attendance/BreakAnalysis";
 
 // ── Cuco360 config ──────────────────────────────────────────────────────────
 const CUCO_API_KEY = "k9fKmKcVCRc44Rf7dpkxhnfU9z9t0XsgrYgkGQSr9unWFZPOKsySznPHb7bUJzBc";
@@ -415,6 +417,8 @@ export default function PresenceAbsenceHub() {
   ];
 
   const PRESENCE_SUB_TABS = [
+    { id: "presencia", label: "Presencia en Tiempo Real", icon: Activity },
+    { id: "pausas", label: "Auditoría de Pausas", icon: Coffee },
     { id: "daily", label: "Marcajes del día", icon: LogIn },
     { id: "monitor", label: "Monitor turno", icon: Radar },
     { id: "realtime", label: "Tiempo real", icon: Radio },
@@ -541,11 +545,19 @@ export default function PresenceAbsenceHub() {
           <div>
             <SubTabNav
               tabs={PRESENCE_SUB_TABS}
-              active={getSubTab("presence", "daily")}
+              active={getSubTab("presence", "presencia")}
               onChange={(s) => setSubTab("presence", s)}
             />
 
-            {getSubTab("presence", "daily") === "daily" && (
+            {getSubTab("presence", "presencia") === "presencia" && (
+              <PresenceDashboard date={filterDate} />
+            )}
+
+            {getSubTab("presence", "presencia") === "pausas" && (
+              <BreakAnalysis date={filterDate} />
+            )}
+
+            {getSubTab("presence", "presencia") === "daily" && (
               <div className="space-y-4">
                 {/* Toolbar */}
                 <div className="flex flex-wrap gap-2 items-center">
@@ -665,8 +677,8 @@ export default function PresenceAbsenceHub() {
               </div>
             )}
 
-            {getSubTab("presence", "daily") === "monitor" && <PresenceMonitorPanel />}
-            {getSubTab("presence", "daily") === "realtime" && <RealTimeAvailabilityPanel />}
+            {getSubTab("presence", "presencia") === "monitor" && <PresenceMonitorPanel />}
+            {getSubTab("presence", "presencia") === "realtime" && <RealTimeAvailabilityPanel />}
           </div>
         )}
 
