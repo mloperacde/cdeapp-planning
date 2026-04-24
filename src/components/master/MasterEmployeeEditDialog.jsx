@@ -231,6 +231,14 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
 
     if (sourceData && open) {
       const updatedFormData = { ...sourceData };
+      // Limpiar departamento duplicado (ej: "PRODUCCIÓNPRODUCCIÓN" → "PRODUCCIÓN")
+      if (updatedFormData.departamento) {
+        const raw = updatedFormData.departamento.trim();
+        const half = raw.slice(0, raw.length / 2);
+        if (half === raw.slice(raw.length / 2)) {
+          updatedFormData.departamento = half;
+        }
+      }
       if (normalizeDept(updatedFormData.departamento) === "PRODUCCION") {
         updatedFormData.categoria = normalizeLegacyCategory(updatedFormData.categoria);
       }
@@ -819,7 +827,10 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
                   <Label>Departamento</Label>
                   <Select
                     value={formData.departamento || ""}
-                    onValueChange={(value) => setFormData({ ...formData, departamento: value, puesto: "" })}
+                    onValueChange={(value) => {
+                      const dept = departments.find(d => d.name === value);
+                      setFormData({ ...formData, departamento: value, department_id: dept?.id || formData.department_id, puesto: "" });
+                    }}
                     disabled={isLoadingDepts}
                   >
                     <SelectTrigger>
