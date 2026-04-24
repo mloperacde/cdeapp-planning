@@ -1,0 +1,75 @@
+{
+  "name": "BreakRecord",
+  "type": "object",
+  "properties": {
+    "employee_id": {
+      "type": "string",
+      "description": "ID del registro en EmployeeMasterDatabase (llave for\u00e1nea)"
+    },
+    "employee_name": {
+      "type": "string",
+      "description": "Nombre del empleado (desnormalizado)"
+    },
+    "employee_code": {
+      "type": "string",
+      "description": "C\u00f3digo del empleado (codigo_empleado)"
+    },
+    "department": {
+      "type": "string",
+      "description": "Departamento del empleado (desnormalizado)"
+    },
+    "record_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha de la jornada laboral"
+    },
+    "shift": {
+      "type": "string",
+      "enum": [
+        "Ma\u00f1ana",
+        "Tarde",
+        "Noche",
+        "N/A"
+      ],
+      "description": "Turno de trabajo"
+    },
+    "break_type": {
+      "type": "string",
+      "description": "Tipo de interrupci\u00f3n seg\u00fan el campo 'incident' (ej: VESTUARIOS/ASEOS, DESCANSO)"
+    },
+    "break_start": {
+      "type": "string",
+      "description": "Hora de inicio de la interrupci\u00f3n (HH:mm, fichaje S con incidente)"
+    },
+    "break_end": {
+      "type": "string",
+      "description": "Hora de fin de la interrupci\u00f3n (HH:mm, fichaje E siguiente)"
+    },
+    "duration_minutes": {
+      "type": "number",
+      "description": "Duraci\u00f3n de la interrupci\u00f3n en minutos"
+    },
+    "work_session_start": {
+      "type": "string",
+      "description": "Primer fichaje E del d\u00eda (inicio real de jornada, HH:mm)"
+    },
+    "work_session_end": {
+      "type": "string",
+      "description": "\u00daltimo fichaje S con incident N/A del d\u00eda (fin real de jornada, HH:mm)"
+    },
+    "total_work_minutes": {
+      "type": "number",
+      "description": "Total de minutos en planta (desde primer E hasta \u00faltimo S)"
+    },
+    "import_batch": {
+      "type": "string",
+      "description": "Identificador del lote de procesamiento"
+    }
+  },
+  "required": [
+    "employee_id",
+    "record_date",
+    "break_type",
+    "break_start"
+  ]
+}

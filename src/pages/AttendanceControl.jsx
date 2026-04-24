@@ -7,10 +7,12 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Upload, Users, Clock, CheckCircle, AlertCircle, RefreshCw, Trash2, Search, LogIn, LogOut, FileWarning, Layers, BarChart2 } from "lucide-react";
+import { Upload, Users, Clock, CheckCircle, AlertCircle, RefreshCw, Trash2, Search, LogIn, LogOut, FileWarning, Layers, BarChart2, Activity, Coffee } from "lucide-react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 import AbsenteeismReport from "../components/attendance/AbsenteeismReport";
+import PresenceDashboard from "../components/attendance/PresenceDashboard";
+import BreakAnalysis from "../components/attendance/BreakAnalysis";
 
 // Configuración para sincronización directa (Bypass Backend)
 const CUCO_API_KEY = "k9fKmKcVCRc44Rf7dpkxhnfU9z9t0XsgrYgkGQSr9unWFZPOKsySznPHb7bUJzBc";
@@ -585,17 +587,37 @@ export default function AttendanceControl() {
         </div>
       </div>
 
-      <Tabs defaultValue="diario" className="w-full">
+      <Tabs defaultValue="presencia" className="w-full">
         <TabsList className="mb-4 flex-wrap h-auto">
+          <TabsTrigger value="presencia">
+            <Activity className="w-4 h-4 mr-2" />
+            Presencia en Tiempo Real
+          </TabsTrigger>
+          <TabsTrigger value="pausas">
+            <Coffee className="w-4 h-4 mr-2" />
+            Auditoría de Pausas
+          </TabsTrigger>
           <TabsTrigger value="diario">
             <Clock className="w-4 h-4 mr-2" />
-            Control Diario
+            Fichajes del Día
           </TabsTrigger>
           <TabsTrigger value="informe">
             <BarChart2 className="w-4 h-4 mr-2" />
             Informe Absentismo
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="presencia">
+          <div className="p-1">
+            <PresenceDashboard date={filterDate} />
+          </div>
+        </TabsContent>
+
+        <TabsContent value="pausas">
+          <div className="p-1">
+            <BreakAnalysis date={filterDate} />
+          </div>
+        </TabsContent>
 
         <TabsContent value="informe">
           <AbsenteeismReport />
