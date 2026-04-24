@@ -84,22 +84,22 @@ Deno.serve(async (req) => {
       const firstEntry = fichajes.find(f => f.direction === 'E');
       const lastFinalExit = [...fichajes].reverse().find(f => f.direction === 'S' && !isBreakIncident(f.incident));
 
-      // Determinar estado actual
+      // Determinar estado actual basado en el ÚLTIMO fichaje
       let status = 'Ausente';
       let statusDetail = '';
 
       if (firstEntry) {
-        if (!lastFinalExit || toMinutes(lastFinalExit.record_time) > currentMinutes) {
-          // Ha entrado pero no ha hecho la salida final
-          if (lastRecord.direction === 'S' && isBreakIncident(lastRecord.incident)) {
-            status = 'En Pausa';
-            statusDetail = lastRecord.incident;
-          } else {
-            status = 'Presente';
-          }
-        } else {
+        if (lastRecord.direction === 'E') {
+          // El último fichaje es entrada → empleado está dentro
+          status = 'Presente';
+        } else if (lastRecord.direction === 'S' && isBreakIncident(lastRecord.incident)) {
+          // El último fichaje es salida con incidente (pausa/vestuario) → en pausa
+          status = 'En Pausa';
+          statusDetail = lastRecord.incident;
+        } else if (lastRecord.direction === 'S' && !isBreakIncident(lastRecord.incident)) {
+          // El último fichaje es salida sin incidente → turno completado
           status = 'Completado';
-          statusDetail = `Salida: ${lastFinalExit.record_time}`;
+          statusDetail = `Salida: ${lastRecord.record_time}`;
         }
       }
 
