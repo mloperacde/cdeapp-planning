@@ -127,7 +127,8 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
       .replace(/[\u0300-\u036f]/g, "")
       .toUpperCase();
 
-  const isProduction = normalizeDept(formData?.departamento) === "PRODUCCION";
+  const selectedDeptName = departments.find(d => d.id === formData.department_id)?.name || formData.departamento || "";
+  const isProduction = normalizeDept(selectedDeptName) === "PRODUCCION";
 
   const fetchStoreCategories = async () => {
     try {
@@ -196,11 +197,9 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
 
   // Derived state for filtering positions based on selected department
   const filteredPositions = useMemo(() => {
-    if (!formData.departamento) return [];
-    const selectedDept = departments.find(d => d.name === formData.departamento);
-    if (!selectedDept) return [];
-    return positions.filter(p => p.department_id === selectedDept.id);
-  }, [formData.departamento, departments, positions]);
+    if (!formData.department_id) return [];
+    return positions.filter(p => p.department_id === formData.department_id);
+  }, [formData.department_id, positions]);
 
   // Query para obtener datos frescos del empleado individual al abrir el diálogo
   // Esto asegura que veamos los saldos actualizados aunque la lista padre esté cacheada
@@ -826,10 +825,10 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
                 <div className="space-y-2">
                   <Label>Departamento</Label>
                   <Select
-                    value={formData.departamento || ""}
+                    value={formData.department_id || ""}
                     onValueChange={(value) => {
-                      const dept = departments.find(d => d.name === value);
-                      setFormData({ ...formData, departamento: value, department_id: dept?.id || formData.department_id, puesto: "" });
+                      const dept = departments.find(d => d.id === value);
+                      setFormData({ ...formData, department_id: value, departamento: dept?.name || "", puesto: "" });
                     }}
                     disabled={isLoadingDepts}
                   >
@@ -843,7 +842,7 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
                         </div>
                       ) : departments.length > 0 ? (
                         departments.map((dept) => (
-                          <SelectItem key={dept.id} value={dept.name}>
+                          <SelectItem key={dept.id} value={dept.id}>
                             {dept.name}
                           </SelectItem>
                         ))
@@ -859,7 +858,7 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
                   <Select
                     value={formData.puesto || ""}
                     onValueChange={(value) => setFormData({ ...formData, puesto: value })}
-                    disabled={!formData.departamento || isLoadingPositions}
+                    disabled={!formData.department_id || isLoadingPositions}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder={isLoadingPositions ? "Cargando puestos..." : "Seleccionar puesto"} />
@@ -877,7 +876,7 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
                         ))
                       ) : (
                         <div className="p-2 text-sm text-muted-foreground">
-                           {formData.departamento 
+                           {formData.department_id 
                              ? "No hay puestos en este departamento" 
                              : "Selecciona un departamento"}
                         </div>
