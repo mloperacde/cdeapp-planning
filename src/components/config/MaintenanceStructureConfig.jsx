@@ -11,8 +11,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Trash2, Wrench, GripVertical, Pencil, X, Users } from "lucide-react";
+import { Plus, Trash2, Wrench, GripVertical, Pencil, X, Users, RefreshCw, Cog } from "lucide-react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
+import { cdeApi } from "@/services/cdeApi";
+import { base44 } from "@/api/base44Client";
+import { toast } from "sonner";
+
+const normalizeKey = (str) =>
+  String(str || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
 
 const generateId = () => Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
 
@@ -23,6 +33,120 @@ export function MaintenanceStructureConfig({ config, setConfig }) {
   const [newAreaName, setNewAreaName] = useState("");
   const [editingArea, setEditingArea] = useState(null);
   const [isAddingRoom, setIsAddingRoom] = useState(null);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [isSyncingMachines, setIsSyncingMachines] = useState(false);
+
+  const handleSyncRooms = async () => {
+    try {
+      setIsSyncing(true);
+      toast.info("Conectando con cdeapp.es...");
+      const response = await cdeApi.getRooms();
+      if (!response.success || !Array.isArray(response.data)) throw new Error("Respuesta inválida de la API");
+
+      const apiRooms = response.data;
+      setConfig(prev => {
+        let areas = [...(prev.areas || [])];
+        const allExistingRooms = new Map();
+        areas.forEach(area => area.rooms?.forEach(room => allExistingRooms.set(String(room.id), area.id)));
+
+        let defaultAreaId = areas.find(a => a.name === "Sin Asignar" || a.name === "Planta Principal")?.id;
+        if (!defaultAreaId) {
+          if (areas.length > 0) {
+            defaultAreaId = areas[0].id;
+          } else {
+            defaultAreaId = generateId();
+            areas.push({ id: defaultAreaId, name: "Planta Principal", rooms: [] });
+          }
+        }
+
+        let newCount = 0, updateCount = 0;
+        apiRooms.forEach(apiRoom => {
+          const roomId = String(apiRoom.external_id);
+          const roomName = apiRoom.nombre;
+          const existingAreaId = allExistingRooms.get(roomId);
+          if (existingAreaId) {
+            const areaIdx = areas.findIndex(a => a.id === existingAreaId);
+            if (areaIdx >= 0) {
+              const roomIdx = areas[areaIdx].rooms.findIndex(r => String(r.id) === roomId);
+              if (roomIdx >= 0 && areas[areaIdx].rooms[roomIdx].name !== roomName) {
+                areas[areaIdx].rooms[roomIdx] = { ...areas[areaIdx].rooms[roomIdx], name: roomName };
+                updateCount++;
+              }
+            }
+          } else {
+            const areaIdx = areas.findIndex(a => a.id === defaultAreaId);
+            if (areaIdx >= 0) { areas[areaIdx].rooms.push({ id: roomId, name: roomName }); newCount++; }
+          }
+        });
+
+        if (newCount > 0 || updateCount > 0) {
+          toast.success(`Sincronización completada: ${newCount} nuevas, ${updateCount} actualizadas.`);
+        } else {
+          toast.success("Sincronización completada: Todo está actualizado.");
+        }
+        return { ...prev, areas };
+      });
+    } catch (error) {
+      toast.error(`Error: ${error.message}`);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleSyncMachines = async () => {
+    try {
+      setIsSyncingMachines(true);
+      toast.info("Importando máquinas desde catálogo maestro...");
+      const machines = await base44.entities.MachineMasterDatabase.list(undefined, 1000);
+      if (!machines?.length) { toast.info("No se encontraron máquinas en el catálogo maestro."); return; }
+
+      const areas = config.areas || [];
+      const roomIndex = new Map();
+      areas.forEach(area => {
+        (area.rooms || []).forEach(room => {
+          const key = normalizeKey(room.name);
+          if (key && !roomIndex.has(key)) {
+            roomIndex.set(key, { areaId: area.id, areaName: area.name, roomId: room.id, roomName: room.name });
+          }
+        });
+      });
+
+      // Actualizar machine_assignments en el config (no en MachineMasterDatabase)
+      const roomEntries = Array.from(roomIndex.entries());
+      const newAssignments = { ...(config.machine_assignments || {}) };
+      let autoAssigned = 0;
+
+      for (const m of machines) {
+        const salaRaw = m.ubicacion || "";
+        if (!salaRaw || newAssignments[m.id]?.room_id) continue;
+        const key = normalizeKey(salaRaw);
+        if (!key) continue;
+
+        let target = roomIndex.get(key);
+        if (!target) {
+          for (const [roomKey, info] of roomEntries) {
+            if (!roomKey) continue;
+            if (roomKey.length >= 3 && key.includes(roomKey)) { target = info; break; }
+            if (key.length >= 3 && roomKey.includes(key)) { target = info; break; }
+          }
+        }
+        if (!target) continue;
+
+        newAssignments[m.id] = {
+          area_id: target.areaId, area_name: target.areaName,
+          room_id: target.roomId, room_name: target.roomName
+        };
+        autoAssigned++;
+      }
+
+      setConfig(prev => ({ ...prev, machine_assignments: newAssignments }));
+      toast.success(`Catálogo sincronizado: ${machines.length} máquinas, ${autoAssigned} asignadas automáticamente.`);
+    } catch (error) {
+      toast.error(`Error al sincronizar máquinas: ${error.message}`);
+    } finally {
+      setIsSyncingMachines(false);
+    }
+  };
 
   const addArea = () => {
     if (!newAreaName.trim()) return;
@@ -117,16 +241,34 @@ export function MaintenanceStructureConfig({ config, setConfig }) {
           <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Zonas de Mantenimiento</h2>
           <p className="text-sm text-slate-500">Define las áreas y salas que cubre el equipo de mantenimiento.</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Input
             placeholder="Nueva Área..."
             value={newAreaName}
             onChange={e => setNewAreaName(e.target.value)}
-            className="w-64"
+            className="w-48"
             onKeyDown={e => { if (e.key === 'Enter') addArea(); }}
           />
           <Button onClick={addArea} disabled={!newAreaName.trim()}>
             <Plus className="w-4 h-4 mr-2" /> Crear Área
+          </Button>
+          <Button
+            onClick={handleSyncRooms}
+            disabled={isSyncing}
+            variant="outline"
+            className="border-orange-200 bg-orange-50 hover:bg-orange-100 text-orange-700 whitespace-nowrap"
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
+            Sincronizar Salas
+          </Button>
+          <Button
+            onClick={handleSyncMachines}
+            disabled={isSyncingMachines}
+            variant="outline"
+            className="border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 whitespace-nowrap"
+          >
+            <Cog className={`w-4 h-4 mr-2 ${isSyncingMachines ? 'animate-spin' : ''}`} />
+            Sincronizar Máquinas
           </Button>
         </div>
       </div>
@@ -263,7 +405,11 @@ export function MaintenanceStructureConfig({ config, setConfig }) {
         <div className="text-center py-12 border-2 border-dashed rounded-xl bg-slate-50">
           <Wrench className="w-12 h-12 text-slate-300 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-slate-900">No hay zonas configuradas</h3>
-          <p className="text-slate-500">Crea un área para empezar a organizar las zonas de mantenimiento.</p>
+          <p className="text-slate-500 mb-4">Crea un área o sincroniza las salas para empezar.</p>
+          <Button onClick={handleSyncRooms} variant="outline" disabled={isSyncing}>
+            <RefreshCw className={`w-4 h-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
+            Sincronizar con cdeapp.es
+          </Button>
         </div>
       )}
     </div>
