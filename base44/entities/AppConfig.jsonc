@@ -1,0 +1,41 @@
+{
+  "name": "AppConfig",
+  "type": "object",
+  "properties": {
+    "config_key": {
+      "type": "string",
+      "description": "Clave \u00fanica de configuraci\u00f3n (ej: branding, manufacturing_config, maintenance_config)"
+    },
+    "value": {
+      "type": "string",
+      "description": "Valor de configuraci\u00f3n serializado como JSON string (para configuraciones complejas)"
+    },
+    "app_name": {
+      "type": "string",
+      "description": "Nombre de la aplicaci\u00f3n"
+    },
+    "app_subtitle": {
+      "type": "string",
+      "description": "Subt\u00edtulo de la aplicaci\u00f3n"
+    },
+    "primary_color": {
+      "type": "string",
+      "description": "Color primario en formato hex"
+    },
+    "logo_url": {
+      "type": "string",
+      "description": "URL del logotipo"
+    },
+    "updated_by": {
+      "type": "string",
+      "description": "Email del usuario que actualiz\u00f3"
+    },
+    "updated_by_name": {
+      "type": "string",
+      "description": "Nombre del usuario que actualiz\u00f3"
+    }
+  },
+  "required": [
+    "config_key"
+  ]
+}

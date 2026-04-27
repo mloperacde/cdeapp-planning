@@ -23,6 +23,7 @@ import WorkScheduleConfig from "../components/config/WorkScheduleConfig";
 import { StructureConfig, AssignmentsConfig, TasksConfig } from "../components/config/ManufacturingStructureConfig";
 import { MaintenanceStructureConfig, MaintenanceAssignmentsConfig } from "../components/config/MaintenanceStructureConfig";
 import MachineRoomAssignment from "../components/config/MachineRoomAssignment";
+import MachineRoomAssignmentMaintenance from "../components/config/MachineRoomAssignmentMaintenance";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
@@ -336,12 +337,13 @@ function MaintenanceConfigWrapper() {
     queryFn: () => base44.entities.EmployeeMasterDatabase.list('nombre'),
   });
 
-  const [config, setConfig] = useState({ areas: [], assignments: {} });
+  const [config, setConfig] = useState({ areas: [], assignments: {}, machine_assignments: {} });
 
   useEffect(() => {
     if (!configRecord) return;
     try {
-      const raw = configRecord.value || configRecord.description || null;
+      // Leer de value, app_subtitle o description (por compatibilidad)
+      const raw = configRecord.value || configRecord.app_subtitle || configRecord.description || null;
       if (!raw) return;
       const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
       setConfig(prev => ({ ...prev, ...parsed }));
@@ -353,7 +355,12 @@ function MaintenanceConfigWrapper() {
   const saveMutation = useMutation({
     mutationFn: async (newConfig) => {
       const serialized = JSON.stringify(newConfig);
-      const payload = { config_key: "maintenance_config", value: serialized, description: serialized };
+      const payload = {
+        config_key: "maintenance_config",
+        value: serialized,
+        app_subtitle: serialized,
+        description: serialized
+      };
       if (configRecord?.id) {
         return await base44.entities.AppConfig.update(configRecord.id, payload);
       }
@@ -396,7 +403,7 @@ function MaintenanceConfigWrapper() {
         </TabsContent>
 
         <TabsContent value="machines">
-          <MachineRoomAssignment config={config} />
+          <MachineRoomAssignmentMaintenance config={config} setConfig={setConfig} />
         </TabsContent>
 
         <TabsContent value="assignments">
