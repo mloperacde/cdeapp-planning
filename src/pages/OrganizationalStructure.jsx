@@ -13,13 +13,15 @@ import {
   Briefcase,
   Save,
   ClipboardList,
-  Clock
+  Clock,
+  Wrench
 } from "lucide-react";
 import AdminOnly from "@/components/security/AdminOnly";
 import DepartmentPositionManager from "../components/config/DepartmentPositionManager";
 import TeamManagementConfig from "../components/config/TeamManagementConfig";
 import WorkScheduleConfig from "../components/config/WorkScheduleConfig";
 import { StructureConfig, AssignmentsConfig, TasksConfig } from "../components/config/ManufacturingStructureConfig";
+import { MaintenanceStructureConfig, MaintenanceAssignmentsConfig } from "../components/config/MaintenanceStructureConfig";
 import MachineRoomAssignment from "../components/config/MachineRoomAssignment";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
@@ -172,6 +174,10 @@ export default function OrganizationalStructure() {
                 <Factory className="w-3 h-3 mr-2" />
                 Fabricación
               </TabsTrigger>
+              <TabsTrigger value="maintenance" className="flex-1 text-xs py-1.5">
+                <Wrench className="w-3 h-3 mr-2" />
+                Mantenimiento
+              </TabsTrigger>
             </TabsList>
 
             <div className="flex-1 overflow-y-auto min-h-0 pr-1 space-y-2">
@@ -287,11 +293,117 @@ export default function OrganizationalStructure() {
                 </Card>
               </TabsContent>
 
+              <TabsContent value="maintenance" className="m-0 h-full">
+                <Card className="shadow-sm border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 h-full flex flex-col">
+                  <CardHeader className="border-b border-slate-100 dark:border-slate-800 py-3 px-4 shrink-0">
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <Wrench className="w-4 h-4 text-orange-600" />
+                      Configuración de Mantenimiento
+                    </CardTitle>
+                    <CardDescription className="text-xs">
+                      Zonas, Salas y Asignaciones de Técnicos de Mantenimiento
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="p-4 overflow-y-auto">
+                    <MaintenanceConfigWrapper />
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
             </div>
           </Tabs>
         </div>
       </div>
     </AdminOnly>
+  );
+}
+
+function MaintenanceConfigWrapper() {
+  const queryClient = useQueryClient();
+  const [activeSubTab, setActiveSubTab] = useState("structure");
+
+  const { data: configRecord } = useQuery({
+    queryKey: ["appConfig", "maintenance_config"],
+    queryFn: async () => {
+      const configs = await base44.entities.AppConfig.filter({ config_key: "maintenance_config" });
+      return configs[0] || null;
+    },
+    staleTime: 0,
+  });
+
+  const { data: employees = [] } = useQuery({
+    queryKey: ['employees_maintenance_config'],
+    queryFn: () => base44.entities.EmployeeMasterDatabase.list('nombre'),
+  });
+
+  const [config, setConfig] = useState({ areas: [], assignments: {} });
+
+  useEffect(() => {
+    if (!configRecord) return;
+    try {
+      const raw = configRecord.value || configRecord.description || null;
+      if (!raw) return;
+      const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+      setConfig(prev => ({ ...prev, ...parsed }));
+    } catch (e) {
+      console.error("Error parsing maintenance config", e);
+    }
+  }, [configRecord]);
+
+  const saveMutation = useMutation({
+    mutationFn: async (newConfig) => {
+      const serialized = JSON.stringify(newConfig);
+      const payload = { config_key: "maintenance_config", value: serialized, description: serialized };
+      if (configRecord?.id) {
+        return await base44.entities.AppConfig.update(configRecord.id, payload);
+      }
+      return await base44.entities.AppConfig.create(payload);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(["appConfig", "maintenance_config"]);
+      toast.success("Configuración guardada correctamente");
+    },
+    onError: () => toast.error("Error al guardar la configuración"),
+  });
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-end mb-4">
+        <Button onClick={() => saveMutation.mutate(config)} disabled={saveMutation.isPending} className="bg-orange-600 hover:bg-orange-700">
+          <Save className="w-4 h-4 mr-2" />
+          {saveMutation.isPending ? "Guardando..." : "Guardar Cambios"}
+        </Button>
+      </div>
+
+      <Tabs value={activeSubTab} onValueChange={setActiveSubTab} className="space-y-4">
+        <TabsList className="grid w-full grid-cols-3 lg:w-[600px]">
+          <TabsTrigger value="structure" className="flex items-center gap-2">
+            <Wrench className="w-4 h-4" />
+            Áreas/Salas
+          </TabsTrigger>
+          <TabsTrigger value="machines" className="flex items-center gap-2">
+            <Briefcase className="w-4 h-4" />
+            Máquinas
+          </TabsTrigger>
+          <TabsTrigger value="assignments" className="flex items-center gap-2">
+            <Users className="w-4 h-4" />
+            Asignaciones
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="structure">
+          <MaintenanceStructureConfig config={config} setConfig={setConfig} />
+        </TabsContent>
+
+        <TabsContent value="machines">
+          <MachineRoomAssignment config={config} />
+        </TabsContent>
+
+        <TabsContent value="assignments">
+          <MaintenanceAssignmentsConfig config={config} setConfig={setConfig} employees={employees} />
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 }
 
