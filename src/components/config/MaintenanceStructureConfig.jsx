@@ -434,13 +434,16 @@ const ROLES = [
 export function MaintenanceAssignmentsConfig({ config, setConfig, employees = [] }) {
   const areas = config.areas || [];
 
-  // Empleados de mantenimiento + empleados de producción con puesto "Técnico Procesos"
+  // Empleados de mantenimiento + empleados de producción con puesto "Técnico de Proceso"
   const empList = employees.filter(e => {
     const dept = (e.departamento || "").toUpperCase();
-    const puesto = (e.puesto || "").toUpperCase();
+    // Normalizar: eliminar tildes para comparación robusta
+    const puesto = (e.puesto || "")
+      .toUpperCase()
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     const isMantenimiento = dept.includes("MANTEN");
-    const isTecnicoProcesos = puesto.includes("TECNICO PROCESO") || puesto.includes("TÉCNICO PROCESO");
-    return isMantenimiento || isTecnicoProcesos;
+    const isTecnicoProceso = puesto.includes("TECNICO DE PROCESO") || puesto.includes("TECNICO PROCESO");
+    return isMantenimiento || isTecnicoProceso;
   });
 
   const getAssignment = (shift, areaId, slot) => {
