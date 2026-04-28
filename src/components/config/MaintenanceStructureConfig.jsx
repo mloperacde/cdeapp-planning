@@ -434,13 +434,14 @@ const ROLES = [
 export function MaintenanceAssignmentsConfig({ config, setConfig, employees = [] }) {
   const areas = config.areas || [];
 
-  // Filtrar solo técnicos de mantenimiento (o todos si no hay filtro)
-  const maintenanceEmployees = employees.filter(e => {
+  // Empleados de mantenimiento + empleados de producción con puesto "Técnico Procesos"
+  const empList = employees.filter(e => {
     const dept = (e.departamento || "").toUpperCase();
-    return dept.includes("MANTEN") || dept.includes("MANTENIMIENTO");
+    const puesto = (e.puesto || "").toUpperCase();
+    const isMantenimiento = dept.includes("MANTEN");
+    const isTecnicoProcesos = puesto.includes("TECNICO PROCESO") || puesto.includes("TÉCNICO PROCESO");
+    return isMantenimiento || isTecnicoProcesos;
   });
-  // Si no hay filtrados, mostrar todos
-  const empList = maintenanceEmployees.length > 0 ? maintenanceEmployees : employees;
 
   const getAssignment = (shift, areaId, slot) => {
     return config.assignments?.[shift]?.[areaId]?.[slot] || "";
