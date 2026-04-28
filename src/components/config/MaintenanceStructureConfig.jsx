@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Plus, Trash2, Wrench, GripVertical, Pencil, X, Users, RefreshCw, Cog } from "lucide-react";
+import { MaintenanceAssignmentsExportButton } from "@/components/maintenance/MaintenanceAssignmentsPDF";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { cdeApi } from "@/services/cdeApi";
 import { base44 } from "@/api/base44Client";
@@ -473,6 +474,11 @@ export function MaintenanceAssignmentsConfig({ config, setConfig, employees = []
 
   return (
     <div className="space-y-8">
+      {areas.length > 0 && (
+        <div className="flex justify-end">
+          <MaintenanceAssignmentsExportButton config={config} employees={empList} />
+        </div>
+      )}
       {areas.length === 0 && (
         <div className="text-center py-12 border-2 border-dashed rounded-xl bg-slate-50">
           <Users className="w-12 h-12 text-slate-300 mx-auto mb-4" />
