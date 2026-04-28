@@ -420,9 +420,15 @@ export function MaintenanceStructureConfig({ config, setConfig }) {
 // Pestaña: Asignaciones por equipos
 // ─────────────────────────────────────────────
 const SHIFTS = [
-  { key: "manana", label: "Turno Mañana" },
-  { key: "tarde", label: "Turno Tarde" },
-  { key: "noche", label: "Turno Noche" },
+  { key: "turno1", label: "Turno 1" },
+  { key: "turno2", label: "Turno 2" },
+];
+
+const ROLES = [
+  { key: "jefe_turno", label: "Jefe de Turno" },
+  { key: "tecnico_principal", label: "Técnico Principal" },
+  { key: "apoyo_1", label: "Técnico de Apoyo 1" },
+  { key: "apoyo_2", label: "Técnico de Apoyo 2" },
 ];
 
 export function MaintenanceAssignmentsConfig({ config, setConfig, employees = [] }) {
@@ -478,7 +484,7 @@ export function MaintenanceAssignmentsConfig({ config, setConfig, employees = []
               <Wrench className="w-5 h-5 text-orange-500" />
               {shift.label}
             </CardTitle>
-            <CardDescription>Asigna técnicos de mantenimiento a cada zona para este turno</CardDescription>
+            <CardDescription>Asigna el personal de mantenimiento a cada zona para este equipo</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -497,49 +503,36 @@ export function MaintenanceAssignmentsConfig({ config, setConfig, employees = []
                   </div>
 
                   <div className="space-y-2">
-                    <Label className="text-xs text-slate-500 uppercase font-bold tracking-wider">Técnico Principal</Label>
-                    <Select
-                      value={getAssignment(shift.key, area.id, "principal")}
-                      onValueChange={val => setAssignment(shift.key, area.id, "principal", val)}
-                    >
-                      <SelectTrigger className="bg-white h-9">
-                        <SelectValue placeholder="Sin asignar..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value={null}>Sin asignar</SelectItem>
-                        {empList.map(emp => (
-                          <SelectItem key={emp.id} value={emp.id}>{emp.nombre}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="text-xs text-slate-500 uppercase font-bold tracking-wider">Técnico Apoyo</Label>
-                    <Select
-                      value={getAssignment(shift.key, area.id, "apoyo")}
-                      onValueChange={val => setAssignment(shift.key, area.id, "apoyo", val)}
-                    >
-                      <SelectTrigger className="bg-white h-9">
-                        <SelectValue placeholder="Sin asignar..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value={null}>Sin asignar</SelectItem>
-                        {empList.map(emp => (
-                          <SelectItem key={emp.id} value={emp.id}>{emp.nombre}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    {ROLES.map(role => (
+                      <div key={role.key} className="space-y-1">
+                        <Label className="text-xs text-slate-500 uppercase font-bold tracking-wider">{role.label}</Label>
+                        <Select
+                          value={getAssignment(shift.key, area.id, role.key)}
+                          onValueChange={val => setAssignment(shift.key, area.id, role.key, val)}
+                        >
+                          <SelectTrigger className="bg-white h-9">
+                            <SelectValue placeholder="Sin asignar..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value={null}>Sin asignar</SelectItem>
+                            {empList.map(emp => (
+                              <SelectItem key={emp.id} value={emp.id}>{emp.nombre}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    ))}
                   </div>
 
                   {/* Resumen de asignaciones */}
                   <div className="pt-1 flex flex-wrap gap-1">
-                    {["principal", "apoyo"].map(slot => {
-                      const empId = getAssignment(shift.key, area.id, slot);
+                    {ROLES.map(role => {
+                      const empId = getAssignment(shift.key, area.id, role.key);
                       if (!empId) return null;
+                      const prefix = { jefe_turno: "JT", tecnico_principal: "TP", apoyo_1: "A1", apoyo_2: "A2" }[role.key];
                       return (
-                        <Badge key={slot} variant="outline" className="text-xs bg-orange-50 border-orange-200 text-orange-700">
-                          {slot === "principal" ? "P" : "A"}: {getEmployeeName(empId)}
+                        <Badge key={role.key} variant="outline" className="text-xs bg-orange-50 border-orange-200 text-orange-700">
+                          {prefix}: {getEmployeeName(empId)}
                         </Badge>
                       );
                     })}
