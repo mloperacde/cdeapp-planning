@@ -54,15 +54,18 @@ function getEmpTurno(emp, teamShiftMap) {
 }
 
 // Componente para una sección de turno
-function TurnoSection({ turnoNombre, empleados, icon: Icon, color }) {
+function TurnoSection({ turnoNombre, empleados, icon: Icon, color, teamShiftMap = {} }) {
   const presentes    = empleados.filter(e => getPresenceStatus(e) === 'presente');
   const retrasos     = empleados.filter(e => getPresenceStatus(e) === 'retraso');
   const potAusentes  = empleados.filter(e => getPresenceStatus(e) === 'pot_ausente');
   const ausentesAuto = empleados.filter(e => getPresenceStatus(e) === 'ausente_auto');
   const ausentesConf = empleados.filter(e => getPresenceStatus(e) === 'ausente');
-  const noAplica     = empleados.filter(e => getPresenceStatus(e) === 'no_aplica');
   const totalActivos = empleados.filter(e => getPresenceStatus(e) !== 'no_aplica').length;
   const pct = totalActivos > 0 ? ((presentes.length / totalActivos) * 100).toFixed(0) : '—';
+
+  // Desglose: rotativos vs fijos
+  const rotativos = empleados.filter(e => e.tipo_turno === 'Rotativo');
+  const fijos     = empleados.filter(e => e.tipo_turno !== 'Rotativo');
 
   return (
     <Card className="overflow-hidden">
@@ -72,6 +75,14 @@ function TurnoSection({ turnoNombre, empleados, icon: Icon, color }) {
           Turno {turnoNombre}
           <span className="ml-auto text-xs font-normal opacity-90">{empleados.length} empleados · {pct}% presentes</span>
         </CardTitle>
+        <div className="flex gap-2 mt-1">
+          <span className="text-[10px] text-white/70 bg-white/10 rounded px-1.5 py-0.5">
+            🔄 Rotativos: {rotativos.length}
+          </span>
+          <span className="text-[10px] text-white/70 bg-white/10 rounded px-1.5 py-0.5">
+            📌 Fijos: {fijos.length}
+          </span>
+        </div>
       </CardHeader>
       <CardContent className="p-3">
         {/* Barra de progreso */}
@@ -201,7 +212,18 @@ export default function RealTimeAvailabilityPanel() {
     setAuditLogs(prev => prev.map(l => ({ ...l, leido_por_rrhh: true })));
   };
 
-  // Filtrar empleados
+  const departamentos = [...new Set(employees.map(e => e.departamento).filter(Boolean))].sort();
+
+  // Empleados que pertenecen al turno de mañana en el día actual:
+  // - Rotativos cuyo equipo tiene asignado "Mañana" esta semana
+  // - Fijo Mañana siempre
+  const mañanaEmps = employees.filter(e => getEmpTurno(e, teamShiftMap) === 'Mañana');
+  // Empleados que pertenecen al turno de tarde:
+  // - Rotativos cuyo equipo tiene asignado "Tarde" esta semana
+  // - Fijo Tarde siempre
+  const tardeEmps  = employees.filter(e => getEmpTurno(e, teamShiftMap) === 'Tarde');
+
+  // Filtrar empleados respetando turno (usa la lógica combinada arriba)
   const filtered = employees.filter(e => {
     if (filterDept && e.departamento !== filterDept) return false;
     if (filterTurno) {
@@ -211,18 +233,19 @@ export default function RealTimeAvailabilityPanel() {
     return true;
   });
 
-  const departamentos = [...new Set(employees.map(e => e.departamento).filter(Boolean))].sort();
+  // Métricas globales — solo empleados con turno activo (mañana + tarde)
+  // Si hay filtro de turno, solo ese turno; si no, todos los que tienen turno asignado hoy
+  const empConTurno = filterTurno
+    ? filtered
+    : employees.filter(e => {
+        if (filterDept && e.departamento !== filterDept) return false;
+        return getEmpTurno(e, teamShiftMap) !== null;
+      });
 
-  // Empleados por turno
-  const mañanaEmps = employees.filter(e => getEmpTurno(e, teamShiftMap) === 'Mañana');
-  const tardeEmps  = employees.filter(e => getEmpTurno(e, teamShiftMap) === 'Tarde');
-  const sinTurno   = employees.filter(e => !getEmpTurno(e, teamShiftMap));
-
-  // Métricas globales
-  const totalActivos   = filtered.filter(e => getPresenceStatus(e) !== 'no_aplica').length;
-  const presentes      = filtered.filter(e => getPresenceStatus(e) === 'presente').length;
-  const retrasos       = filtered.filter(e => ['retraso', 'pot_ausente'].includes(getPresenceStatus(e))).length;
-  const ausentes       = filtered.filter(e => ['ausente_auto', 'ausente'].includes(getPresenceStatus(e))).length;
+  const totalActivos   = empConTurno.filter(e => getPresenceStatus(e) !== 'no_aplica').length;
+  const presentes      = empConTurno.filter(e => getPresenceStatus(e) === 'presente').length;
+  const retrasos       = empConTurno.filter(e => ['retraso', 'pot_ausente'].includes(getPresenceStatus(e))).length;
+  const ausentes       = empConTurno.filter(e => ['ausente_auto', 'ausente'].includes(getPresenceStatus(e))).length;
   const pct = totalActivos > 0 ? ((presentes / totalActivos) * 100).toFixed(1) : '0';
 
   // Logs de hoy
@@ -363,12 +386,14 @@ export default function RealTimeAvailabilityPanel() {
             empleados={filterDept ? mañanaEmps.filter(e => e.departamento === filterDept) : mañanaEmps}
             icon={Sun}
             color="bg-gradient-to-r from-orange-500 to-amber-500"
+            teamShiftMap={teamShiftMap}
           />
           <TurnoSection
             turnoNombre="Tarde"
             empleados={filterDept ? tardeEmps.filter(e => e.departamento === filterDept) : tardeEmps}
             icon={Sunset}
             color="bg-gradient-to-r from-indigo-500 to-purple-600"
+            teamShiftMap={teamShiftMap}
           />
         </div>
       )}
