@@ -1,0 +1,121 @@
+{
+  "name": "MaintenancePlan",
+  "type": "object",
+  "properties": {
+    "machine_id": {
+      "type": "string",
+      "description": "ID de la m\u00e1quina"
+    },
+    "machine_name": {
+      "type": "string",
+      "description": "Nombre de la m\u00e1quina (desnormalizado)"
+    },
+    "nombre_plan": {
+      "type": "string",
+      "description": "Nombre del plan de mantenimiento"
+    },
+    "descripcion": {
+      "type": "string",
+      "description": "Descripci\u00f3n del plan"
+    },
+    "tipo": {
+      "type": "string",
+      "enum": [
+        "Preventivo",
+        "Correctivo",
+        "Predictivo",
+        "Mixto"
+      ],
+      "default": "Preventivo",
+      "description": "Tipo de mantenimiento"
+    },
+    "periodicidad": {
+      "type": "string",
+      "enum": [
+        "Diaria",
+        "Semanal",
+        "Quincenal",
+        "Mensual",
+        "Trimestral",
+        "Semestral",
+        "Anual"
+      ],
+      "description": "Frecuencia del mantenimiento"
+    },
+    "dias_intervalo": {
+      "type": "number",
+      "description": "Intervalo en d\u00edas entre mantenimientos"
+    },
+    "tareas": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "titulo": {
+            "type": "string",
+            "description": "Nombre de la tarea"
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "duracion_minutos": {
+            "type": "number"
+          },
+          "subtareas": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "titulo": {
+                  "type": "string"
+                },
+                "descripcion": {
+                  "type": "string"
+                },
+                "herraminetas_requeridas": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "materiales_requeridos": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "description": "Lista de tareas con subtareas"
+    },
+    "proxima_fecha": {
+      "type": "string",
+      "format": "date",
+      "description": "Pr\u00f3xima fecha de mantenimiento"
+    },
+    "ultima_ejecucion": {
+      "type": "string",
+      "format": "date-time",
+      "description": "\u00daltima vez que se ejecut\u00f3 el plan"
+    },
+    "activo": {
+      "type": "boolean",
+      "default": true,
+      "description": "Si el plan est\u00e1 activo"
+    }
+  },
+  "required": [
+    "machine_id",
+    "nombre_plan",
+    "periodicidad"
+  ]
+}

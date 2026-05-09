@@ -1,7 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -25,11 +25,15 @@ import MaintenanceWorkOrder from "../components/maintenance/MaintenanceWorkOrder
 import PredictiveMaintenance from "../components/maintenance/PredictiveMaintenance";
 import KanbanView from "../components/maintenance/KanbanView";
 import AdvancedSearch from "../components/common/AdvancedSearch";
+import MachineInventory from "../components/maintenance/MachineInventory";
+import MaintenancePlanManager from "../components/maintenance/MaintenancePlanManager";
+import MaintenanceSchedulingCalendar from "../components/maintenance/MaintenanceSchedulingCalendar";
 
 const EMPTY_ARRAY = [];
 
 export default function MaintenanceTrackingPage() {
-  const [currentTab, setCurrentTab] = useState('kanban');
+  const [currentTab, setCurrentTab] = useState('gmao');
+  const [selectedMachine, setSelectedMachine] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [editingMaintenance, setEditingMaintenance] = useState(null);
   const [filters, setFilters] = useState({});
@@ -352,7 +356,8 @@ export default function MaintenanceTrackingPage() {
         </div>
 
         <Tabs value={currentTab} onValueChange={setCurrentTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-7">
+            <TabsTrigger value="gmao">GMAO</TabsTrigger>
             <TabsTrigger value="kanban">
               <Columns className="w-4 h-4 mr-2" />
               Kanban
@@ -366,6 +371,37 @@ export default function MaintenanceTrackingPage() {
               Predictivo
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="gmao">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-[calc(100vh-400px)]">
+              {/* Inventario de máquinas */}
+              <Card className="lg:col-span-1 flex flex-col shadow-lg border-0 bg-white/80 dark:bg-card/80 backdrop-blur-sm">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm">Inventario de Máquinas</CardTitle>
+                </CardHeader>
+                <CardContent className="flex-1 p-4 overflow-hidden">
+                  <MachineInventory 
+                    onSelectMachine={setSelectedMachine}
+                    selectedMachineId={selectedMachine?.id}
+                  />
+                </CardContent>
+              </Card>
+
+              {/* Planes de mantenimiento */}
+              <Card className="lg:col-span-2 flex flex-col shadow-lg border-0 bg-white/80 dark:bg-card/80 backdrop-blur-sm">
+                <CardContent className="flex-1 p-6 overflow-hidden">
+                  <MaintenancePlanManager machine={selectedMachine} />
+                </CardContent>
+              </Card>
+
+              {/* Calendario y planificación */}
+              <Card className="lg:col-span-1 flex flex-col shadow-lg border-0 bg-white/80 dark:bg-card/80 backdrop-blur-sm">
+                <CardContent className="flex-1 p-4 overflow-hidden">
+                  <MaintenanceSchedulingCalendar machine={selectedMachine} />
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
 
           <TabsContent value="kanban">
             <KanbanView
