@@ -348,7 +348,7 @@ export default function MaintenanceTypeManager({ open, onOpenChange, machines })
         {showAIGenerator && (
           <div className="mt-4 pt-4 border-t">
             <MaintenancePlanTemplateAIGenerator 
-              onTemplateCreated={() => {
+              onTemplateGenerated={() => {
                 setShowAIGenerator(false);
                 queryClient.invalidateQueries({ queryKey: ['maintenanceTypes'] });
               }}
