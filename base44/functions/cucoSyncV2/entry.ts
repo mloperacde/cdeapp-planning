@@ -118,7 +118,7 @@ function minutesToTime(minutes) {
 
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-async function retryOp(fn, retries = 4, baseDelay = 2000) {
+async function retryOp(fn, retries = 3, baseDelay = 1000) {
   for (let i = 0; i < retries; i++) {
     try {
       return await fn();
@@ -135,6 +135,30 @@ async function retryOp(fn, retries = 4, baseDelay = 2000) {
   }
 }
 
+/**
+ * Elimina todos los registros de un día de forma rápida usando deletes paralelos.
+ */
+async function fastDeleteByDate(serviceClient, dateStr) {
+  let totalDeleted = 0;
+  const MAX_LOOPS = 10;
+  for (let loop = 0; loop < MAX_LOOPS; loop++) {
+    const page = await retryOp(() =>
+      serviceClient.entities.AttendanceRecord.filter({ record_date: dateStr }, "id", 500)
+    );
+    if (!page || page.length === 0) break;
+    // Parallel delete in chunks of 25
+    const CHUNK = 25;
+    for (let i = 0; i < page.length; i += CHUNK) {
+      const chunk = page.slice(i, i + CHUNK);
+      await Promise.allSettled(chunk.map(r => serviceClient.entities.AttendanceRecord.delete(r.id)));
+      totalDeleted += chunk.length;
+    }
+    if (page.length < 500) break;
+    await sleep(200);
+  }
+  return totalDeleted;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Handler principal
 // ─────────────────────────────────────────────────────────────────────────────
@@ -145,7 +169,7 @@ Deno.serve(async (req) => {
     const serviceClient = base44.asServiceRole;
 
     const body = await req.json().catch(() => ({}));
-    const { date, start_date, end_date, force, debug_mode } = body;
+    const { date, start_date, end_date, force, debug_mode, skip_analysis } = body;
 
     if (debug_mode) {
       const nowMin = getNowSpainMinutes();
@@ -268,42 +292,23 @@ Deno.serve(async (req) => {
     console.log(`[cucoSyncV2] Limpiando ${uniqueDates.length} días...`);
 
     for (const d of uniqueDates) {
-      let page = await retryOp(() =>
-        serviceClient.entities.AttendanceRecord.filter({ record_date: d }, "id", 500)
-      );
-      let totalDeleted = 0;
-      while (page && page.length > 0) {
-        for (let i = 0; i < page.length; i += 10) {
-          const batch = page.slice(i, i + 10);
-          await Promise.allSettled(
-            batch.map(r => retryOp(() => serviceClient.entities.AttendanceRecord.delete(r.id), 3, 1500))
-          );
-          totalDeleted += batch.length;
-          await sleep(800);
-        }
-        page = await retryOp(() =>
-          serviceClient.entities.AttendanceRecord.filter({ record_date: d }, "id", 500)
-        );
-      }
-      console.log(`[cucoSyncV2] Día ${d}: ${totalDeleted} registros eliminados`);
-      await sleep(500);
+      const deleted = await fastDeleteByDate(serviceClient, d);
+      console.log(`[cucoSyncV2] Día ${d}: ${deleted} registros eliminados`);
     }
 
-    if (uniqueDates.length > 0) await sleep(2000);
-
     // ── 5. Insertar nuevos registros en chunks ────────────────────────────
-    const BULK = 30;
+    const BULK = 100;
     let inserted = 0;
     for (let i = 0; i < recordsToCreate.length; i += BULK) {
       const chunk = recordsToCreate.slice(i, i + BULK);
       await retryOp(() => serviceClient.entities.AttendanceRecord.bulkCreate(chunk));
       inserted += chunk.length;
-      console.log(`[cucoSyncV2] Insertados ${inserted}/${recordsToCreate.length}`);
-      await sleep(800);
+      if (i % 300 === 0) console.log(`[cucoSyncV2] Insertados ${inserted}/${recordsToCreate.length}`);
+      await sleep(200);
     }
 
-    // ── 6. Análisis de presencia (solo para sincronización de un único día) ─
-    if (from === to) {
+    // ── 6. Análisis de presencia (solo si no se omite explícitamente) ─
+    if (from === to && !skip_analysis) {
       const syncDate = from;
       const nowSpain = getNowSpain();
       const nowMinutes = getNowSpainMinutes();
