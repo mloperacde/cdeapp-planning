@@ -20,7 +20,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Plus, Edit, Trash2, Cog, Brain, Loader } from "lucide-react";
+import { Plus, Edit, Trash2, Cog, Brain, Loader, Zap } from "lucide-react";
+import { toast } from "@/components/ui/toaster";
 import { getMachineAlias } from "@/utils/machineAlias";
 import MaintenancePlanTemplatesLibrary from "./MaintenancePlanTemplatesLibrary";
 import MaintenancePlanTemplateAIGenerator from "./MaintenancePlanTemplateAIGenerator";
@@ -31,6 +32,24 @@ export default function MaintenanceTypeManager({ open, onOpenChange, machines })
   const [showTemplatesLibrary, setShowTemplatesLibrary] = useState(false);
   const [showAIGenerator, setShowAIGenerator] = useState(false);
   const queryClient = useQueryClient();
+
+  const syncMutation = useMutation({
+    mutationFn: () => base44.functions.invoke('syncMaintenancePlansWithMachines', {}),
+    onSuccess: (data) => {
+      toast({
+        title: "Sincronización completada",
+        description: `Se sincronizaron ${data.syncedCount} planes de ${data.totalPlans} planes activos`,
+      });
+      queryClient.invalidateQueries({ queryKey: ['maintenanceTypes'] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error en sincronización",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
 
   const createEmptySubtask = () => ({
     titulo: "",
@@ -359,6 +378,16 @@ export default function MaintenanceTypeManager({ open, onOpenChange, machines })
           <DialogTitle className="flex items-center justify-between">
             <span>Tipos de Mantenimiento</span>
             <div className="flex gap-2">
+              <Button 
+                onClick={() => syncMutation.mutate()}
+                size="sm"
+                variant="outline"
+                className="gap-2"
+                disabled={syncMutation.isPending}
+              >
+                <Zap className="w-4 h-4" />
+                {syncMutation.isPending ? "Sincronizando..." : "Sincronizar"}
+              </Button>
               <Button 
                 onClick={() => setShowAIGenerator(true)} 
                 size="sm"

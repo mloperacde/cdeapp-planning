@@ -114,6 +114,12 @@ export default function MaintenancePlanManager({ machine }) {
                       <p className="text-slate-500">Tareas</p>
                       <p className="font-medium">{plan.tareas?.length || 0}</p>
                     </div>
+                    {plan.ultima_ejecucion && (
+                      <div>
+                        <p className="text-slate-500">Último mantenimiento</p>
+                        <p className="font-medium">{new Date(plan.ultima_ejecucion).toLocaleDateString('es-ES')}</p>
+                      </div>
+                    )}
                     {plan.proxima_fecha && (
                       <div>
                         <p className="text-slate-500">Próxima fecha</p>
@@ -199,6 +205,8 @@ function MaintenancePlanForm({ plan, machine, onClose }) {
     descripcion: '',
     tipo: 'Preventivo',
     periodicidad: 'Mensual',
+    dias_intervalo: 30,
+    ultima_ejecucion: null,
     tareas: [],
   });
 
@@ -247,10 +255,13 @@ function MaintenancePlanForm({ plan, machine, onClose }) {
       'Anual': 365,
     };
 
+    const baseDate = formData.ultima_ejecucion ? new Date(formData.ultima_ejecucion) : new Date();
+    const proxima = new Date(baseDate.getTime() + periodicidadDays[formData.periodicidad] * 24 * 60 * 60 * 1000);
+    
     const submitData = {
       ...formData,
       dias_intervalo: periodicidadDays[formData.periodicidad],
-      proxima_fecha: new Date(Date.now() + periodicidadDays[formData.periodicidad] * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      proxima_fecha: proxima.toISOString().split('T')[0],
     };
 
     mutation.mutate(submitData);
@@ -319,6 +330,15 @@ function MaintenancePlanForm({ plan, machine, onClose }) {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium">Última ejecución</label>
+              <Input
+                type="date"
+                value={formData.ultima_ejecucion ? formData.ultima_ejecucion.split('T')[0] : ''}
+                onChange={(e) => setFormData({ ...formData, ultima_ejecucion: e.target.value ? new Date(e.target.value).toISOString() : null })}
+              />
             </div>
 
             <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
