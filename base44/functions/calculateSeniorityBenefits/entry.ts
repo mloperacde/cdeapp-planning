@@ -1,13 +1,8 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-
-    if (!user || user.role !== 'admin') {
-      return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
-    }
 
     // Obtener empleados activos
     const employees = await base44.asServiceRole.entities.EmployeeMasterDatabase.filter({
@@ -108,8 +103,8 @@ Deno.serve(async (req) => {
                 new_value: `Plus Antigüedad: ${benefit.value}€`,
                 change_amount: benefit.value,
                 change_reason: `Aplicación automática de beneficio por antigüedad: ${applicableBand.name}`,
-                changed_by: user.id,
-                changed_by_name: user.full_name || 'Sistema Automático',
+                changed_by: 'sistema',
+                changed_by_name: 'Sistema Automático',
                 change_date: new Date().toISOString()
               });
 

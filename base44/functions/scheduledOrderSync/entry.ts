@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
 const CDE_BASE_URL = 'https://cdeapp.es';
 
@@ -18,7 +18,6 @@ async function cdeApiFetch(endpoint, apiKey, params = {}) {
   return response.json();
 }
 
-// Fetch ALL productions paginating until exhausted
 async function fetchAllProductions(apiKey) {
   const LIMIT = 500;
   const allOrders = [];
@@ -27,10 +26,9 @@ async function fetchAllProductions(apiKey) {
     const data = await cdeApiFetch('sync-productions', apiKey, { limit: LIMIT, skip });
     const page = Array.isArray(data) ? data : (data?.data || data?.results || []);
     allOrders.push(...page);
-    console.log(`[scheduledOrderSync] Página skip=${skip}: ${page.length} registros. Total acumulado: ${allOrders.length}`);
-    if (page.length < LIMIT) break; // última página
+    if (page.length < LIMIT) break;
     skip += LIMIT;
-    await sleep(500);
+    await sleep(300);
   }
   return allOrders;
 }
@@ -38,10 +36,8 @@ async function fetchAllProductions(apiKey) {
 function parseMachineCode(machineName) {
   if (!machineName) return null;
   const s = String(machineName).trim();
-  // Formato: "001A 119 - Nombre" → capturar '119'
   const match = s.match(/^\S+\s+(\d+[A-Z]?)\s*-/i);
   if (match) return match[1];
-  // Formato: "119 - Nombre" → capturar '119'
   const match2 = s.match(/^(\d+[A-Z]?)\s*-/i);
   if (match2) return match2[1];
   return null;
@@ -49,40 +45,20 @@ function parseMachineCode(machineName) {
 
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-async function retry(fn, retries = 4, baseDelay = 2000) {
+async function retry(fn, retries = 4, baseDelay = 1000) {
   for (let i = 0; i < retries; i++) {
     try {
       return await fn();
     } catch (e) {
       const isRate = e?.message?.includes('Rate limit') || e?.message?.includes('429');
       if (isRate && i < retries - 1) {
-        const delay = baseDelay * Math.pow(2, i); // exponential backoff
-        console.log(`[scheduledOrderSync] Rate limit, reintentando en ${delay}ms...`);
+        const delay = baseDelay * Math.pow(2, i);
         await sleep(delay);
         continue;
       }
       throw e;
     }
   }
-}
-
-// Fetch ALL existing WorkOrder IDs paginating through entire dataset
-async function fetchAllWorkOrderIds(base44) {
-  const PAGE = 500;
-  const ids = [];
-  let skip = 0;
-  while (true) {
-    const page = await retry(() =>
-      base44.asServiceRole.entities.WorkOrder.list('-created_date', PAGE, skip)
-    );
-    const items = Array.isArray(page) ? page : (page?.items || []);
-    for (const o of items) ids.push(o.id);
-    console.log(`[scheduledOrderSync] Paginación delete: obtenidos ${ids.length} IDs (página skip=${skip}, size=${items.length})`);
-    if (items.length < PAGE) break;
-    skip += PAGE;
-    await sleep(500);
-  }
-  return ids;
 }
 
 Deno.serve(async (req) => {
@@ -95,9 +71,8 @@ Deno.serve(async (req) => {
 
     console.log(`[scheduledOrderSync] Iniciando - ${new Date().toISOString()}`);
 
-    // 1. Fetch ALL productions from CDEApp (paginated)
+    // 1. Fetch ALL productions from CDEApp
     const rawOrders = await fetchAllProductions(apiKey);
-
     console.log(`[scheduledOrderSync] ${rawOrders.length} órdenes recibidas de CDEApp`);
 
     if (rawOrders.length === 0) {
@@ -114,12 +89,13 @@ Deno.serve(async (req) => {
     }
     const unassignedMachine = machinesAll.find(m => m.codigo_maquina === 'ZZ-UNASSIGNED');
 
-    // 3. Map orders (deduplicate strictly by order_number — keep last occurrence)
-    // Also validate: within the same machine, priorities must be unique
-    const orderMap = new Map();
+    // 3. Map & deduplicate incoming orders by order_number
+    const newOrders = [];
+    const seen = new Set();
     for (const raw of rawOrders) {
       const orderNumber = String(raw['Orden'] || raw['orden'] || '').trim();
-      if (!orderNumber || orderNumber === '0') continue;
+      if (!orderNumber || orderNumber === '0' || seen.has(orderNumber)) continue;
+      seen.add(orderNumber);
 
       const machineName = String(raw['Sala / Máquina'] || '').trim();
       const parsedCode = parseMachineCode(machineName);
@@ -129,7 +105,7 @@ Deno.serve(async (req) => {
       const quantity = parseFloat(raw['Cantidad'] || 0) || 0;
       const cadence = parseFloat(raw['Cadencia'] || 0) || 0;
 
-      orderMap.set(orderNumber, {
+      newOrders.push({
         order_number: orderNumber,
         machine_id: machineId,
         product_article_code: String(raw['Artículo'] || '').trim(),
@@ -137,9 +113,7 @@ Deno.serve(async (req) => {
         client_name: String(raw['Cliente'] || '').trim(),
         quantity,
         production_cadence: cadence,
-        estimated_duration: (cadence > 0 && quantity > 0)
-          ? Math.round((quantity / cadence) * 100) / 100
-          : null,
+        estimated_duration: (cadence > 0 && quantity > 0) ? Math.round((quantity / cadence) * 100) / 100 : null,
         priority: (raw['Prioridad'] !== undefined && raw['Prioridad'] !== null && raw['Prioridad'] !== '') ? (parseFloat(raw['Prioridad']) || 0) : 0,
         start_date: raw['Fecha Inicio Limite'] || null,
         committed_delivery_date: raw['Nueva Fecha Entrega'] || raw['Fecha Entrega'] || null,
@@ -154,81 +128,57 @@ Deno.serve(async (req) => {
         notes: raw['Observación'] || '',
       });
     }
-    const newOrders = Array.from(orderMap.values());
-    console.log(`[scheduledOrderSync] ${newOrders.length} órdenes únicas mapeadas`);
+    console.log(`[scheduledOrderSync] ${newOrders.length} órdenes únicas a importar`);
 
-    // Validate: detect duplicate priorities per machine (log only, source data issue)
-    const machinePriorityMap = new Map();
-    let priorityConflicts = 0;
-    for (const o of newOrders) {
-      if (!o.machine_id || !o.priority || o.priority === 0) continue;
-      const key = `${o.machine_id}::${o.priority}`;
-      if (machinePriorityMap.has(key)) {
-        priorityConflicts++;
-        console.warn(`[scheduledOrderSync] CONFLICTO prioridad ${o.priority} en máquina ${o.machine_id}: orden ${o.order_number} vs ${machinePriorityMap.get(key)}`);
-      } else {
-        machinePriorityMap.set(key, o.order_number);
-      }
-    }
-    if (priorityConflicts > 0) {
-      console.warn(`[scheduledOrderSync] Total conflictos de prioridad detectados: ${priorityConflicts} (datos de origen CDEApp)`);
-    }
-
-    // 4. Delete ALL existing records (paginated to ensure completeness)
-    const allIds = await fetchAllWorkOrderIds(base44);
-    console.log(`[scheduledOrderSync] Eliminando ${allIds.length} registros existentes...`);
-
-    const DEL_BATCH = 50;
+    // 4. Delete ALL existing records using bulkDelete by order_number batches
+    // Fetch all existing IDs first (light query — only need IDs)
     let deleted = 0;
-    for (let i = 0; i < allIds.length; i += DEL_BATCH) {
-      const chunk = allIds.slice(i, i + DEL_BATCH);
+    let skipDel = 0;
+    const allExistingIds = [];
+    while (true) {
+      const page = await retry(() =>
+        base44.asServiceRole.entities.WorkOrder.list('-created_date', 500, skipDel)
+      );
+      const items = Array.isArray(page) ? page : (page?.items || []);
+      for (const o of items) allExistingIds.push(o.id);
+      if (items.length < 500) break;
+      skipDel += 500;
+      await sleep(200);
+    }
+    console.log(`[scheduledOrderSync] ${allExistingIds.length} registros a eliminar`);
+
+    // Delete in parallel batches of 50 with 800ms between batches
+    const DEL_BATCH = 50;
+    for (let i = 0; i < allExistingIds.length; i += DEL_BATCH) {
+      const chunk = allExistingIds.slice(i, i + DEL_BATCH);
       await Promise.allSettled(
-        chunk.map(id => retry(() => base44.asServiceRole.entities.WorkOrder.delete(id), 3, 500))
+        chunk.map(id => retry(() => base44.asServiceRole.entities.WorkOrder.delete(id), 3, 800))
       );
       deleted += chunk.length;
-      if (deleted % 200 === 0) {
-        console.log(`[scheduledOrderSync] Eliminados ${deleted}/${allIds.length}`);
-      }
-      await sleep(300);
+      await sleep(800);
     }
-    if (deleted > 0) await sleep(1000);
-    console.log(`[scheduledOrderSync] ${deleted} registros eliminados. Creando nuevos...`);
+    console.log(`[scheduledOrderSync] ${deleted} eliminados. Iniciando creación...`);
+    if (deleted > 0) await sleep(500);
 
-    // 5. BulkCreate all new orders in batches
-    const BULK_CHUNK = 100;
-    let created = 0;
-    let errors = 0;
+    // 5. BulkCreate all new orders in chunks of 200
+    let created = 0, errors = 0;
+    const BULK_CHUNK = 200;
     for (let i = 0; i < newOrders.length; i += BULK_CHUNK) {
       const chunk = newOrders.slice(i, i + BULK_CHUNK);
       try {
-        await retry(() => base44.asServiceRole.entities.WorkOrder.bulkCreate(chunk), 5, 1500);
+        await retry(() => base44.asServiceRole.entities.WorkOrder.bulkCreate(chunk), 5, 1000);
         created += chunk.length;
         console.log(`[scheduledOrderSync] Creadas ${created}/${newOrders.length}`);
       } catch (e) {
-        console.error(`[scheduledOrderSync] Error bulkCreate chunk ${i}:`, e.message);
-        for (const order of chunk) {
-          try {
-            await retry(() => base44.asServiceRole.entities.WorkOrder.create(order), 3, 1000);
-            created++;
-            await sleep(100);
-          } catch (e2) {
-            console.error(`[scheduledOrderSync] Error individual ${order.order_number}:`, e2.message);
-            errors++;
-          }
-        }
+        console.error(`[scheduledOrderSync] Error bulkCreate:`, e.message);
+        errors += chunk.length;
       }
-      await sleep(500);
+      await sleep(300);
     }
+
     const summary = `Sync completado: ${deleted} eliminadas, ${created} creadas, ${errors} errores`;
     console.log(`[scheduledOrderSync] ${summary}`);
-    return Response.json({
-      success: true,
-      message: summary,
-      deleted,
-      created,
-      errors,
-      total: newOrders.length
-    });
+    return Response.json({ success: true, message: summary, deleted, created, errors, total: newOrders.length });
 
   } catch (error) {
     console.error('[scheduledOrderSync] Error crítico:', error.message);
