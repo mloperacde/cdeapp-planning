@@ -5,16 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Search, ChevronRight, AlertCircle, Plus, Zap } from 'lucide-react';
+import { Search, ChevronRight, AlertCircle, Plus } from 'lucide-react';
 import { getMachineAlias } from '@/utils/machineAlias';
 import NewMachineDialog from './NewMachineDialog';
-import MaintenancePlanTemplatesLibrary from './MaintenancePlanTemplatesLibrary';
 
 export default function MachineInventory({ machines = [], onSelectMachine, selectedMachineId }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [showNewMachineDialog, setShowNewMachineDialog] = useState(false);
-  const [showTemplatesLibrary, setShowTemplatesLibrary] = useState(false);
-  const [selectedMachineForPlan, setSelectedMachineForPlan] = useState(null);
   const queryClient = useQueryClient();
 
   // Filtrar máquinas excluidas retiradas
@@ -49,29 +46,7 @@ export default function MachineInventory({ machines = [], onSelectMachine, selec
     return { status: 'activo', color: 'bg-green-100 text-green-700' };
   };
 
-  const handleCreatePlanFromTemplate = (template) => {
-    if (!selectedMachineForPlan) return;
-    
-    // Crear nuevo plan basado en plantilla
-    const newPlan = {
-      machine_id: selectedMachineForPlan.id,
-      machine_name: getMachineAlias(selectedMachineForPlan),
-      nombre_plan: template.nombre,
-      descripcion: template.descripcion,
-      tipo: template.tipo,
-      periodicidad: template.periodicidad,
-      dias_intervalo: template.dias_intervalo,
-      tareas: template.tareas || [],
-      proxima_fecha: new Date().toISOString().split('T')[0],
-      activo: true
-    };
 
-    base44.entities.MaintenancePlan.create(newPlan).then(() => {
-      queryClient.invalidateQueries({ queryKey: ['maintenance-plans'] });
-      setShowTemplatesLibrary(false);
-      setSelectedMachineForPlan(null);
-    });
-  };
 
   return (
     <div className="flex flex-col gap-4 h-full">
@@ -138,20 +113,7 @@ export default function MachineInventory({ machines = [], onSelectMachine, selec
                         </Badge>
                       )}
                     </div>
-                    {status === 'sin-plan' && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="mt-2 w-full h-7 text-xs gap-1 text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20"
-                        onClick={() => {
-                          setSelectedMachineForPlan(machine);
-                          setShowTemplatesLibrary(true);
-                        }}
-                      >
-                        <Zap className="w-3 h-3" />
-                        Crear Plan
-                      </Button>
-                    )}
+
                   </div>
                   <ChevronRight className="w-4 h-4 text-slate-400 flex-shrink-0" />
                 </div>
@@ -171,13 +133,7 @@ export default function MachineInventory({ machines = [], onSelectMachine, selec
         />
       )}
 
-      {showTemplatesLibrary && (
-        <MaintenancePlanTemplatesLibrary
-          open={showTemplatesLibrary}
-          onOpenChange={setShowTemplatesLibrary}
-          onSelectTemplate={handleCreatePlanFromTemplate}
-        />
-      )}
+
     </div>
   );
 }

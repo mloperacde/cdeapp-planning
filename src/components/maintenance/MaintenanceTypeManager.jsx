@@ -20,12 +20,16 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Plus, Edit, Trash2, Cog } from "lucide-react";
+import { Plus, Edit, Trash2, Cog, Brain, Loader } from "lucide-react";
 import { getMachineAlias } from "@/utils/machineAlias";
+import MaintenancePlanTemplatesLibrary from "./MaintenancePlanTemplatesLibrary";
+import MaintenancePlanTemplateAIGenerator from "./MaintenancePlanTemplateAIGenerator";
 
 export default function MaintenanceTypeManager({ open, onOpenChange, machines }) {
   const [showForm, setShowForm] = useState(false);
   const [editingType, setEditingType] = useState(null);
+  const [showTemplatesLibrary, setShowTemplatesLibrary] = useState(false);
+  const [showAIGenerator, setShowAIGenerator] = useState(false);
   const queryClient = useQueryClient();
 
   const [formData, setFormData] = useState({
@@ -246,10 +250,21 @@ export default function MaintenanceTypeManager({ open, onOpenChange, machines })
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             <span>Tipos de Mantenimiento</span>
-            <Button onClick={() => setShowForm(true)} size="sm">
-              <Plus className="w-4 h-4 mr-2" />
-              Nuevo Tipo
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                onClick={() => setShowAIGenerator(true)} 
+                size="sm"
+                variant="outline"
+                className="gap-2"
+              >
+                <Brain className="w-4 h-4" />
+                Generar con IA
+              </Button>
+              <Button onClick={() => setShowForm(true)} size="sm">
+                <Plus className="w-4 h-4 mr-2" />
+                Nuevo Tipo
+              </Button>
+            </div>
           </DialogTitle>
         </DialogHeader>
 
@@ -329,6 +344,17 @@ export default function MaintenanceTypeManager({ open, onOpenChange, machines })
             ))
           )}
         </div>
+
+        {showAIGenerator && (
+          <div className="mt-4 pt-4 border-t">
+            <MaintenancePlanTemplateAIGenerator 
+              onTemplateCreated={() => {
+                setShowAIGenerator(false);
+                queryClient.invalidateQueries({ queryKey: ['maintenanceTypes'] });
+              }}
+            />
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
