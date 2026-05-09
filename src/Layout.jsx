@@ -127,31 +127,32 @@ export default function Layout({ children, currentPageName }) {
       )}
       
       {/* Sidebar */}
-      <div className={`${menuOpen ? 'w-64' : 'w-0'} md:w-64 bg-slate-900 dark:bg-card text-white transition-all duration-300 overflow-visible overflow-x-hidden fixed md:fixed z-40 h-screen flex-shrink-0 flex flex-col border-r border-slate-800 dark:border-border`}>
+      <div className={`${menuOpen ? 'w-64' : 'w-0'} md:w-64 bg-slate-900 dark:bg-slate-950 text-white transition-all duration-300 overflow-visible overflow-x-hidden fixed md:fixed z-40 h-screen flex-shrink-0 flex flex-col border-r border-slate-800 dark:border-slate-800`}>
         {/* Logo y título */}
-        <div className="p-4 border-b border-slate-800 dark:border-border flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        <div className="p-4 border-b border-slate-800 dark:border-slate-800 flex items-center justify-between">
+          <div className="flex items-center gap-3 flex-1 min-w-0">
             {branding?.logo_url ? (
               <img 
                 src={branding.logo_url} 
                 alt="Logo" 
-                className="w-10 h-10 object-contain rounded-lg bg-white p-1"
+                className="w-9 h-9 object-contain rounded-md bg-white/10 p-0.5 flex-shrink-0"
               />
             ) : (
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-700 rounded-lg flex items-center justify-center shadow-lg">
-                <Cog className="w-6 h-6 text-white" />
+              <div className="w-9 h-9 bg-blue-600 rounded-md flex items-center justify-center flex-shrink-0">
+                <Cog className="w-5 h-5 text-white" />
               </div>
             )}
-            <div className="overflow-hidden">
-              <h1 className="font-bold text-lg text-white leading-tight">{branding?.app_name || 'CDE PlanApp'}</h1>
-              <p className="text-xs text-slate-400 leading-snug">{branding?.app_subtitle || 'Sistema de Gestión'}</p>
+            <div className="overflow-hidden min-w-0">
+              <h1 className="font-bold text-sm text-white leading-tight truncate">{branding?.app_name || 'CDE PlanApp'}</h1>
+              <p className="text-xs text-slate-400 leading-snug truncate">{branding?.app_subtitle || 'Sistema de Gestión'}</p>
             </div>
             </div>
           <button 
             onClick={() => setMenuOpen(!menuOpen)}
-            className="md:hidden text-white"
+            className="md:hidden text-white flex-shrink-0 ml-2"
+            aria-label="Cerrar menú"
           >
-            <X size={24} />
+            <X size={20} />
           </button>
         </div>
 
@@ -205,12 +206,12 @@ export default function Layout({ children, currentPageName }) {
             </div>
 
         {/* Navegación por categorías */}
-        <nav className="mt-4 flex-1 px-2 pb-4 overflow-y-auto overflow-x-hidden">
+        <nav className="mt-4 flex-1 px-2 pb-4 overflow-y-auto overflow-x-hidden space-y-1">
           {Object.entries(groupedMenu).map(([category, items]) => (
-            <div key={category} className="mb-2">
+            <div key={category} className="mb-1">
               <button
                 onClick={() => toggleCategory(category)}
-                className="w-full flex items-center justify-between px-3 py-2 text-sm font-semibold text-slate-300 hover:text-white hover:bg-slate-800 dark:hover:bg-accent/10 rounded-lg transition-colors"
+                className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-slate-400 hover:text-slate-200 rounded-lg transition-colors duration-150"
               >
                 <span>{category}</span>
                 {expandedCategories[category] ? (
@@ -221,7 +222,7 @@ export default function Layout({ children, currentPageName }) {
               </button>
               
               {expandedCategories[category] && (
-                <div className="mt-1 space-y-1 ml-2">
+                <div className="mt-1 space-y-0.5 ml-1">
                   {items.map((item) => {
                     const Icon = item.icon;
                     const isActive = currentPageName === item.name;
@@ -230,14 +231,14 @@ export default function Layout({ children, currentPageName }) {
                         key={item.name}
                         to={item.path}
                         onClick={() => setMenuOpen(false)}
-                        className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-all text-sm ${
+                        className={`flex items-center gap-2 px-3 py-2 rounded-md text-xs transition-all duration-150 ${
                           isActive 
-                            ? 'bg-blue-600 text-white shadow-lg' 
-                            : 'text-slate-300 hover:bg-slate-800 dark:hover:bg-accent/10 hover:text-white'
+                            ? 'bg-blue-600 text-white' 
+                            : 'text-slate-300 hover:bg-slate-800/60 hover:text-white'
                         }`}
                       >
-                        <Icon size={16} className="flex-shrink-0" />
-                        <span className="text-xs">{item.name}</span>
+                        <Icon size={15} className="flex-shrink-0" />
+                        <span className="truncate">{item.name}</span>
                       </Link>
                     );
                   })}
@@ -260,33 +261,33 @@ export default function Layout({ children, currentPageName }) {
       {/* Contenido principal */}
       <div className="flex-1 min-w-0 bg-slate-50 dark:bg-background overflow-visible md:ml-64 pb-safe-bottom" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 56px)' }}>
         {/* Header móvil */}
-        <div className="md:hidden p-3 bg-white dark:bg-card border-b border-slate-200 dark:border-border flex items-center gap-2 min-h-[52px]">
+        <div className="md:hidden p-3 bg-white dark:bg-card border-b border-slate-200 dark:border-border flex items-center gap-3 min-h-[56px]">
           {!isRoot && (
             <button
               onClick={() => navigate(-1)}
-              className="min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-900 dark:text-foreground rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 -ml-1"
+              className="min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-900 dark:text-foreground rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
               aria-label="Volver"
             >
               <ChevronLeft size={24} />
             </button>
           )}
+          <h2 className="flex-1 text-base font-semibold text-slate-900 dark:text-foreground truncate">
+            {currentPageName}
+          </h2>
           <button 
             onClick={() => setMenuOpen(true)}
-            className="min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-900 dark:text-foreground rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+            className="min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-900 dark:text-foreground rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
             aria-label="Menú"
           >
             <Menu size={24} />
           </button>
-          <h2 className="flex-1 text-base font-semibold text-slate-900 dark:text-foreground truncate">
-            {currentPageName}
-          </h2>
         </div>
         
         {/* Contenido de la página */}
           {hasAccess ? (
             <PullToRefresh onRefresh={handleGlobalRefresh} className="h-full" id="main-content">
             <div className="h-full flex flex-col">
-              <div className="px-2 pt-2 pb-0">
+              <div className="hidden lg:block px-4 pt-4 pb-2">
                  <Breadcrumbs auto={true} />
               </div>
               <div key={pageKey} className="flex-1 min-h-0 page-enter">
