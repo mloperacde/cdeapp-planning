@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Link } from 'react-router-dom';
-import { Search, Plus, Eye, Copy, Trash2 } from 'lucide-react';
+import { Search, Plus, Eye, Copy, Trash2, FileText } from 'lucide-react';
 import { LoadingState, EmptyState } from '@/components/ui/loading-state';
 import { cn } from '@/lib/utils';
 
@@ -21,7 +21,7 @@ export default function QuotesList() {
   const [statusFilter, setStatusFilter] = useState('todos');
   const [typeFilter, setTypeFilter] = useState('todos');
 
-  const { data: quotes = [], isLoading, refetch } = useQuery({
+  const { data: quotes = [], isLoading } = useQuery({
     queryKey: ['quotes', search, statusFilter, typeFilter],
     queryFn: async () => {
       let result = await base44.entities.QuoteTemplate.list('-updated_date', 500);
@@ -48,61 +48,62 @@ export default function QuotesList() {
 
   const getStatusColor = (status) => {
     const colors = {
-      'borrador': 'bg-slate-100 text-slate-800',
-      'enviado': 'bg-blue-100 text-blue-800',
-      'aprobado': 'bg-green-100 text-green-800',
-      'rechazado': 'bg-red-100 text-red-800',
-      'cancelado': 'bg-gray-100 text-gray-800'
+      'borrador': 'bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-200',
+      'enviado': 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300',
+      'aprobado': 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300',
+      'rechazado': 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300',
+      'cancelado': 'bg-gray-100 dark:bg-gray-900/30 text-gray-800 dark:text-gray-300'
     };
     return colors[status] || colors['borrador'];
-  };
-
-  const getTypeColor = (type) => {
-    return type === 'ENVASADO_SOLO'
-      ? 'bg-blue-50 border-blue-200'
-      : 'bg-green-50 border-green-200';
   };
 
   if (isLoading) return <LoadingState message="Cargando presupuestos..." />;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4 md:p-8">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900 mb-2">Presupuestos</h1>
-            <p className="text-slate-600">Gestión completa de cotizaciones</p>
-          </div>
+    <div className="h-full flex flex-col p-3 md:p-6 gap-4 md:gap-6 bg-slate-50 dark:bg-slate-950 overflow-y-auto">
+      {/* Header */}
+      <header className="flex items-center gap-3 shrink-0 bg-white dark:bg-slate-900 p-2 px-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
+        <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+          <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+        </div>
+        <div>
+          <h1 className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-tight">Presupuestos</h1>
+          <p className="text-[10px] text-slate-500 dark:text-slate-400 hidden sm:block">
+            Gestión completa de cotizaciones
+          </p>
+        </div>
+        <div className="ml-auto">
           <Link to="/QuoteGenerator">
-            <Button className="bg-blue-600 hover:bg-blue-700 text-white gap-2">
-              <Plus className="w-5 h-5" />
-              Nuevo Presupuesto
+            <Button className="bg-blue-600 hover:bg-blue-700 text-white gap-2 h-9 text-xs md:text-sm">
+              <Plus className="w-4 h-4" />
+              <span className="hidden sm:inline">Nuevo</span>
             </Button>
           </Link>
         </div>
+      </header>
 
+      <div className="flex flex-col gap-4 md:gap-6">
         {/* Filters */}
-        <Card className="mb-6">
+        <Card className="shrink-0">
           <CardContent className="p-4">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
-                <label className="text-xs font-semibold text-slate-600 mb-2 block">Buscar</label>
+                <label className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-2 block">Buscar</label>
                 <div className="relative">
                   <Search className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
                   <Input
-                    placeholder="Número, cliente, empresa..."
+                    placeholder="Número, cliente..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    className="pl-9"
+                    className="pl-9 text-xs"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-slate-600 mb-2 block">Estado</label>
+                <label className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-2 block">Estado</label>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger>
+                  <SelectTrigger className="text-xs">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -116,9 +117,9 @@ export default function QuotesList() {
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-slate-600 mb-2 block">Tipo</label>
+                <label className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-2 block">Tipo</label>
                 <Select value={typeFilter} onValueChange={setTypeFilter}>
-                  <SelectTrigger>
+                  <SelectTrigger className="text-xs">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -137,7 +138,7 @@ export default function QuotesList() {
                     setStatusFilter('todos');
                     setTypeFilter('todos');
                   }}
-                  className="w-full"
+                  className="w-full text-xs h-9"
                 >
                   Limpiar
                 </Button>
@@ -153,53 +154,53 @@ export default function QuotesList() {
             description="Crea tu primer presupuesto para comenzar"
           />
         ) : (
-          <div className="grid gap-4">
+          <div className="flex flex-col gap-3">
             {quotes.map((quote) => (
-              <Card key={quote.id} className={cn('hover:shadow-lg transition-shadow', getTypeColor(quote.quote_type))}>
-                <CardContent className="p-6">
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+              <Card key={quote.id} className="hover:shadow-lg transition-all duration-300 border-0 bg-white dark:bg-slate-800">
+                <CardContent className="p-4 md:p-6">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                     <div>
-                      <p className="text-xs text-slate-600 mb-1">Presupuesto</p>
-                      <p className="font-mono font-semibold text-blue-600">{quote.quote_number}</p>
+                      <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">Presupuesto</p>
+                      <p className="font-mono font-semibold text-blue-600 dark:text-blue-400 text-sm">{quote.quote_number}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-slate-600 mb-1">Cliente</p>
-                      <p className="font-semibold">{quote.client_name}</p>
+                      <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">Cliente</p>
+                      <p className="font-semibold text-slate-900 dark:text-slate-100 text-sm">{quote.client_name}</p>
+                    </div>
+                    <div className="hidden md:block">
+                      <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">Producto</p>
+                      <p className="capitalize text-slate-900 dark:text-slate-100 text-sm">{quote.product_type}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-slate-600 mb-1">Producto</p>
-                      <p className="capitalize">{quote.product_type}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-slate-600 mb-1">Total</p>
-                      <p className="font-semibold">€{quote.price_breakdown?.total?.toFixed(2) || '0.00'}</p>
+                      <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">Total</p>
+                      <p className="font-semibold text-slate-900 dark:text-slate-100 text-sm">€{quote.price_breakdown?.total?.toFixed(2) || '0.00'}</p>
                     </div>
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2 mb-4">
-                    <span className="text-xs px-2 py-1 bg-slate-100 rounded">
+                    <span className="text-xs px-2 py-1 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded">
                       {quote.quote_type === 'ENVASADO_SOLO' ? 'Envasado Solo' : 'Servicio 360'}
                     </span>
                     <span className={cn('text-xs px-2 py-1 rounded font-medium', getStatusColor(quote.status))}>
                       {quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}
                     </span>
-                    <span className="text-xs px-2 py-1 bg-slate-100 rounded">
+                    <span className="text-xs px-2 py-1 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded">
                       {quote.volume?.toLocaleString()} un.
                     </span>
                   </div>
 
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-wrap">
                     <Link to={`/QuoteDetail/${quote.id}`}>
-                      <Button size="sm" variant="outline" className="gap-2">
+                      <Button size="sm" variant="outline" className="gap-2 text-xs h-8">
                         <Eye className="w-4 h-4" />
                         Ver
                       </Button>
                     </Link>
-                    <Button size="sm" variant="outline" className="gap-2">
+                    <Button size="sm" variant="outline" className="gap-2 text-xs h-8">
                       <Copy className="w-4 h-4" />
                       Duplicar
                     </Button>
-                    <Button size="sm" variant="outline" className="gap-2 text-red-600 hover:text-red-700">
+                    <Button size="sm" variant="outline" className="gap-2 text-xs h-8 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300">
                       <Trash2 className="w-4 h-4" />
                       Eliminar
                     </Button>

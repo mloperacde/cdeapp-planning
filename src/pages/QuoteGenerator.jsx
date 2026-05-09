@@ -16,7 +16,7 @@ import {
 import { QuoteFormPackaging } from '@/components/commercial/QuoteFormPackaging';
 import { QuoteFormMaterials } from '@/components/commercial/QuoteFormMaterials';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CheckCircle2, AlertCircle } from 'lucide-react';
+import { CheckCircle2, AlertCircle, FileText } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export default function QuoteGenerator() {
@@ -74,25 +74,32 @@ export default function QuoteGenerator() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4 md:p-8">
-      <div className="max-w-3xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">Generador de Presupuestos</h1>
-          <p className="text-slate-600">Paso {step} de 4</p>
-          
-          {/* Progress Bar */}
-          <div className="mt-4 h-2 bg-slate-200 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-blue-600 transition-all"
-              style={{ width: `${(step / 4) * 100}%` }}
-            />
-          </div>
+    <div className="h-full flex flex-col p-3 md:p-6 gap-4 md:gap-6 bg-slate-50 dark:bg-slate-950 overflow-y-auto">
+      {/* Header */}
+      <header className="flex items-center gap-3 shrink-0 bg-white dark:bg-slate-900 p-2 px-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
+        <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+          <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+        </div>
+        <div>
+          <h1 className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-tight">Generador de Presupuestos</h1>
+          <p className="text-[10px] text-slate-500 dark:text-slate-400 hidden sm:block">
+            Paso {step} de 4
+          </p>
+        </div>
+      </header>
+
+      <div className="flex flex-col gap-4 md:gap-6 max-w-3xl mx-auto w-full">
+        {/* Progress Bar */}
+        <div className="h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-blue-600 transition-all"
+            style={{ width: `${(step / 4) * 100}%` }}
+          />
         </div>
 
         {/* Step 1: Client & Quote Type */}
         {step === 1 && (
-          <div className="space-y-6">
+          <div className="space-y-4 md:space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle>Datos del Cliente</CardTitle>

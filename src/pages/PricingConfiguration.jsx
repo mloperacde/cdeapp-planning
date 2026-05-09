@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LoadingState } from '@/components/ui/loading-state';
-import { Plus, Save, Edit2 } from 'lucide-react';
+import { Plus, Save, Edit2, Settings } from 'lucide-react';
 
 export default function PricingConfiguration() {
   const queryClient = useQueryClient();
@@ -80,21 +80,29 @@ export default function PricingConfiguration() {
   if (isLoading) return <LoadingState message="Cargando configuraciones..." />;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4 md:p-8">
-      <div className="max-w-5xl mx-auto">
-        {/* Header */}
-        <div className="flex justify-between items-start gap-4 mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900">Configuración de Precios</h1>
-            <p className="text-slate-600 mt-1">Gestiona tarifas y márgenes por producto</p>
-          </div>
-          {!showNewForm && (
-            <Button onClick={() => setShowNewForm(true)} className="gap-2 bg-green-600 hover:bg-green-700">
-              <Plus className="w-5 h-5" />
-              Nueva Configuración
-            </Button>
-          )}
+    <div className="h-full flex flex-col p-3 md:p-6 gap-4 md:gap-6 bg-slate-50 dark:bg-slate-950 overflow-y-auto">
+      {/* Header */}
+      <header className="flex items-center gap-3 shrink-0 bg-white dark:bg-slate-900 p-2 px-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
+        <div className="p-1.5 bg-green-100 dark:bg-green-900/30 rounded-lg">
+          <Settings className="w-4 h-4 text-green-600 dark:text-green-400" />
         </div>
+        <div>
+          <h1 className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-tight">Configuración de Precios</h1>
+          <p className="text-[10px] text-slate-500 dark:text-slate-400 hidden sm:block">
+            Tarifas y márgenes por producto
+          </p>
+        </div>
+        {!showNewForm && (
+          <div className="ml-auto">
+            <Button onClick={() => setShowNewForm(true)} className="gap-2 bg-green-600 hover:bg-green-700 h-9 text-xs md:text-sm">
+              <Plus className="w-4 h-4" />
+              <span className="hidden sm:inline">Nueva</span>
+            </Button>
+          </div>
+        )}
+      </header>
+
+      <div className="flex flex-col gap-4 md:gap-6 max-w-5xl mx-auto w-full">
 
         {/* Form */}
         {showNewForm && (
