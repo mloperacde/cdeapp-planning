@@ -75,6 +75,7 @@ import InterventionConfigPage from "./InterventionConfigPage";
 import ManufacturingKiosk from "./ManufacturingKiosk";
 import ManufacturingKioskList from "./ManufacturingKioskList";
 import AuditLog from "./AuditLog";
+import NightlyTasksDashboard from "./NightlyTasksDashboard";
 
 import { BrowserRouter, HashRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -315,6 +316,7 @@ function PagesContent() {
                 <Route path="/ManufacturingKiosk" element={<ManufacturingKiosk />} />
                 <Route path="/ManufacturingKioskList" element={<ManufacturingKioskList />} />
                 <Route path="/AuditLog" element={<AuditLog />} />
+                <Route path="/NightlyTasksDashboard" element={<NightlyTasksDashboard />} />
                 {/* Rutas faltantes - redirecciones */}
                 <Route path="/Employees" element={<MasterEmployeeDatabase />} />
                 <Route path="/AdvancedConfiguration" element={<Configuration />} />

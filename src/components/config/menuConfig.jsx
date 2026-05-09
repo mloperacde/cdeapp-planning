@@ -103,6 +103,7 @@ export const MENU_STRUCTURE = [
 
   // Configuración
   { name: 'Auditoría y Logs', path: '/AuditLog', icon: Activity, category: 'Configuración' },
+  { name: 'Tareas Programadas', path: '/NightlyTasksDashboard', icon: Activity, category: 'Configuración' },
   { name: 'Configuración', path: '/Configuration', icon: Settings, category: 'Configuración' },
   { name: 'EmailNotifications', path: '/EmailNotifications', icon: Bell, category: 'Configuración' },
   { name: 'EmployeeAbsenceInfo', path: '/EmployeeAbsenceInfo', icon: FileText, category: 'Configuración' },

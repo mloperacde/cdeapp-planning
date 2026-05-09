@@ -1,0 +1,105 @@
+{
+  "name": "ConsolidationLog",
+  "type": "object",
+  "properties": {
+    "task_name": {
+      "type": "string",
+      "description": "Nombre de la tarea ejecutada"
+    },
+    "triggered_by": {
+      "type": "string",
+      "enum": [
+        "scheduled",
+        "manual"
+      ],
+      "default": "scheduled",
+      "description": "C\u00f3mo fue disparada la tarea"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "success",
+        "warning",
+        "error",
+        "running"
+      ],
+      "default": "running",
+      "description": "Estado de la ejecuci\u00f3n"
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp de inicio"
+    },
+    "completed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp de finalizaci\u00f3n"
+    },
+    "duration_seconds": {
+      "type": "number",
+      "description": "Duraci\u00f3n en segundos"
+    },
+    "summary": {
+      "type": "object",
+      "description": "Resumen de resultados de la ejecuci\u00f3n"
+    },
+    "steps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "step": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "msg": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Pasos de la ejecuci\u00f3n con detalle"
+    },
+    "anomalies": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Anomal\u00edas detectadas durante la ejecuci\u00f3n"
+    },
+    "errors": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      },
+      "description": "Errores producidos durante la ejecuci\u00f3n"
+    },
+    "notification_sent": {
+      "type": "boolean",
+      "default": false,
+      "description": "Si se envi\u00f3 notificaci\u00f3n de anomal\u00edas"
+    },
+    "notification_email": {
+      "type": "string",
+      "description": "Email al que se envi\u00f3 la notificaci\u00f3n"
+    }
+  },
+  "required": [
+    "task_name",
+    "status",
+    "started_at"
+  ]
+}
