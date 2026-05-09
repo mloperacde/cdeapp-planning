@@ -56,7 +56,35 @@ export default function MaintenancePlanTemplateAIGenerator({ onTemplateGenerated
             tipo: { type: 'string' },
             periodicidad: { type: 'string' },
             dias_intervalo: { type: 'number' },
-            tareas: { type: 'array' }
+            tareas: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  titulo: { type: 'string' },
+                  descripcion: { type: 'string' },
+                  duracion_minutos: { type: 'number' },
+                  subtareas: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        titulo: { type: 'string' },
+                        descripcion: { type: 'string' },
+                        herraminetas_requeridas: {
+                          type: 'array',
+                          items: { type: 'string' }
+                        },
+                        materiales_requeridos: {
+                          type: 'array',
+                          items: { type: 'string' }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       });
