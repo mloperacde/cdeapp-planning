@@ -22,7 +22,7 @@ export default function MachineInventory({ onSelectMachine, selectedMachineId })
     queryFn: async () => {
       const data = await base44.entities.MachineMasterDatabase.list(undefined, 500);
       return (Array.isArray(data) ? data : [])
-        .filter(m => m.estado_operativo === 'Operativa')
+        .filter(m => m.estado_operativo !== 'Retirada')
         .sort((a, b) => (a.orden_visualizacion || 999) - (b.orden_visualizacion || 999));
     },
     staleTime: 10 * 60 * 1000,
