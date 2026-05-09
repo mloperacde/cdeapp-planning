@@ -1,6 +1,7 @@
 import {
   Home,
   Users,
+  Activity,
   Calendar,
   Settings,
   BarChart3,
@@ -101,6 +102,7 @@ export const MENU_STRUCTURE = [
   { name: 'Análisis Predictivo', path: '/MLInsights', icon: TrendingUp, category: 'Análisis' },
 
   // Configuración
+  { name: 'Auditoría y Logs', path: '/AuditLog', icon: Activity, category: 'Configuración' },
   { name: 'Configuración', path: '/Configuration', icon: Settings, category: 'Configuración' },
   { name: 'EmailNotifications', path: '/EmailNotifications', icon: Bell, category: 'Configuración' },
   { name: 'EmployeeAbsenceInfo', path: '/EmployeeAbsenceInfo', icon: FileText, category: 'Configuración' },

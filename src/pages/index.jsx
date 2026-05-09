@@ -74,6 +74,7 @@ import ProductionPlannerChat from "./ProductionPlannerChat";
 import InterventionConfigPage from "./InterventionConfigPage";
 import ManufacturingKiosk from "./ManufacturingKiosk";
 import ManufacturingKioskList from "./ManufacturingKioskList";
+import AuditLog from "./AuditLog";
 
 import { BrowserRouter, HashRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -313,6 +314,7 @@ function PagesContent() {
                 <Route path="/InterventionConfig" element={<InterventionConfigPage />} />
                 <Route path="/ManufacturingKiosk" element={<ManufacturingKiosk />} />
                 <Route path="/ManufacturingKioskList" element={<ManufacturingKioskList />} />
+                <Route path="/AuditLog" element={<AuditLog />} />
                 {/* Rutas faltantes - redirecciones */}
                 <Route path="/Employees" element={<MasterEmployeeDatabase />} />
                 <Route path="/AdvancedConfiguration" element={<Configuration />} />
