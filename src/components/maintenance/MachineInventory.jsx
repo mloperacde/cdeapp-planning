@@ -44,7 +44,7 @@ export default function MachineInventory({ machines = [], onSelectMachine, selec
 
   const getMachineStatus = (machineId) => {
     const activePlans = plans.filter(p => p.machine_id === machineId && p.activo);
-    if (!activePlans || activePlans.length === 0) return { status: 'sin-plan', color: 'bg-slate-100 text-slate-700', show: true };
+    if (!activePlans || activePlans.length === 0) return { status: 'sin-plan', show: false };
     
     const overduePlan = activePlans.some(p => p.proxima_fecha && new Date(p.proxima_fecha) < new Date());
     if (overduePlan) return { status: 'vencido', color: 'bg-red-100 text-red-700', show: true };

@@ -16,7 +16,7 @@ import { es } from "date-fns/locale";
 import { toast } from "sonner";
 import { getMachineAlias } from "@/utils/machineAlias";
 import MachineProcessesTab from "./MachineProcessesTab";
-import MachinePlanManagementTab from "@/components/maintenance/MachinePlanManagementTab";
+import GmaoMaintenancePlans from "@/components/maintenance/GmaoMaintenancePlans";
 
 export default function MachineDetailCard({ machine, onClose, initialEditMode = false, isNew = false, canEdit = true }) {
   const [editMode, setEditMode] = useState(canEdit ? !!initialEditMode : false);
@@ -528,7 +528,7 @@ export default function MachineDetailCard({ machine, onClose, initialEditMode = 
           </TabsContent>
 
           <TabsContent value="plans">
-            <MachinePlanManagementTab machine={machine} />
+            <GmaoMaintenancePlans machine={machine} />
           </TabsContent>
 
           <TabsContent value="processes">
