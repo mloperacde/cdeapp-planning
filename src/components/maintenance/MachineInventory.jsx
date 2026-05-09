@@ -36,6 +36,12 @@ export default function MachineInventory({ machines = [], onSelectMachine, selec
     m.area_name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const { data: maintenanceTypes = [] } = useQuery({
+    queryKey: ['maintenance-types'],
+    queryFn: () => base44.entities.MaintenanceType.list(),
+    staleTime: 10 * 60 * 1000,
+  });
+
   const getMachineStatus = (machineId) => {
     const activePlans = plans.filter(p => p.machine_id === machineId && p.activo);
     if (!activePlans || activePlans.length === 0) return { status: 'sin-plan', color: 'bg-slate-100 text-slate-700' };
@@ -44,6 +50,10 @@ export default function MachineInventory({ machines = [], onSelectMachine, selec
     if (overduePlan) return { status: 'vencido', color: 'bg-red-100 text-red-700' };
     
     return { status: 'activo', color: 'bg-green-100 text-green-700' };
+  };
+
+  const getAssignedTypes = (machineId) => {
+    return maintenanceTypes.filter(mt => mt.machine_ids && mt.machine_ids.includes(machineId));
   };
 
 
@@ -102,17 +112,22 @@ export default function MachineInventory({ machines = [], onSelectMachine, selec
                       {machine.area_name} • {machine.tipo || 'General'}
                     </p>
                     <div className="flex gap-1 mt-2 flex-wrap">
-                      <Badge className={color + ' text-xs'}>
-                        {status === 'sin-plan' && 'Sin Plan'}
-                        {status === 'vencido' && 'Vencido'}
-                        {status === 'activo' && 'Activo'}
-                      </Badge>
-                      {machineActivePlans.length > 0 && (
-                        <Badge variant="outline" className="text-xs">
-                          {machineActivePlans.length} plan(es)
-                        </Badge>
-                      )}
-                    </div>
+                       <Badge className={color + ' text-xs'}>
+                         {status === 'sin-plan' && 'Sin Plan'}
+                         {status === 'vencido' && 'Vencido'}
+                         {status === 'activo' && 'Activo'}
+                       </Badge>
+                       {machineActivePlans.length > 0 && (
+                         <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700">
+                           {machineActivePlans.length} plan(es) activo(s)
+                         </Badge>
+                       )}
+                       {getAssignedTypes(machine.id).length > 0 && (
+                         <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700">
+                           {getAssignedTypes(machine.id).length} tipo(s) asignado(s)
+                         </Badge>
+                       )}
+                     </div>
 
                   </div>
                   <ChevronRight className="w-4 h-4 text-slate-400 flex-shrink-0" />

@@ -16,6 +16,7 @@ import { es } from "date-fns/locale";
 import { toast } from "sonner";
 import { getMachineAlias } from "@/utils/machineAlias";
 import MachineProcessesTab from "./MachineProcessesTab";
+import MachinePlanManagementTab from "@/components/maintenance/MachinePlanManagementTab";
 
 export default function MachineDetailCard({ machine, onClose, initialEditMode = false, isNew = false, canEdit = true }) {
   const [editMode, setEditMode] = useState(canEdit ? !!initialEditMode : false);
@@ -276,8 +277,9 @@ export default function MachineDetailCard({ machine, onClose, initialEditMode = 
         </DialogHeader>
 
         <Tabs defaultValue="info" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="info">Información</TabsTrigger>
+            <TabsTrigger value="plans">Planes</TabsTrigger>
             <TabsTrigger value="processes">Procesos</TabsTrigger>
             <TabsTrigger value="files">Archivos</TabsTrigger>
             <TabsTrigger value="maintenance">Mantenimiento</TabsTrigger>
@@ -523,6 +525,10 @@ export default function MachineDetailCard({ machine, onClose, initialEditMode = 
           </Card>
 
 
+          </TabsContent>
+
+          <TabsContent value="plans">
+            <MachinePlanManagementTab machine={machine} />
           </TabsContent>
 
           <TabsContent value="processes">
