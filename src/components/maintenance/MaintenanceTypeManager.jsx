@@ -73,7 +73,13 @@ export default function MaintenanceTypeManager({ open, onOpenChange, machines })
 
   const handleEdit = (type) => {
     setEditingType(type);
-    setFormData(type);
+    const safeData = { ...type };
+    for (let i = 1; i <= 6; i++) {
+      if (!safeData[`tarea_${i}`]) {
+        safeData[`tarea_${i}`] = { nombre: "", subtarea_1: "", subtarea_2: "", subtarea_3: "", subtarea_4: "", subtarea_5: "", subtarea_6: "", subtarea_7: "", subtarea_8: "" };
+      }
+    }
+    setFormData(safeData);
     setShowForm(true);
   };
 
@@ -118,7 +124,7 @@ export default function MaintenanceTypeManager({ open, onOpenChange, machines })
     setFormData(prev => ({
       ...prev,
       [`tarea_${taskNum}`]: {
-        ...prev[`tarea_${taskNum}`],
+        ...(prev[`tarea_${taskNum}`] || { nombre: "", subtarea_1: "", subtarea_2: "", subtarea_3: "", subtarea_4: "", subtarea_5: "", subtarea_6: "", subtarea_7: "", subtarea_8: "" }),
         [field]: value
       }
     }));
