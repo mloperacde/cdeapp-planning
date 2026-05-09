@@ -1,0 +1,57 @@
+// Performance monitoring
+export const performanceMonitor = {
+  mark: (name) => {
+    if (typeof window !== 'undefined' && window.performance?.mark) {
+      window.performance.mark(name);
+    }
+  },
+
+  measure: (name, startMark, endMark) => {
+    if (typeof window !== 'undefined' && window.performance?.measure) {
+      try {
+        window.performance.measure(name, startMark, endMark);
+        const measure = window.performance.getEntriesByName(name)[0];
+        return measure?.duration || 0;
+      } catch (e) {
+        console.warn('Performance measurement failed:', e);
+        return 0;
+      }
+    }
+  },
+
+  getMetrics: () => {
+    if (typeof window === 'undefined' || !window.performance?.getEntriesByType) {
+      return null;
+    }
+
+    const navigationTiming = window.performance.getEntriesByType('navigation')[0];
+    if (!navigationTiming) return null;
+
+    return {
+      dns: navigationTiming.domainLookupEnd - navigationTiming.domainLookupStart,
+      tcp: navigationTiming.connectEnd - navigationTiming.connectStart,
+      ttfb: navigationTiming.responseStart - navigationTiming.requestStart,
+      download: navigationTiming.responseEnd - navigationTiming.responseStart,
+      domInteractive: navigationTiming.domInteractive - navigationTiming.navigationStart,
+      domComplete: navigationTiming.domComplete - navigationTiming.navigationStart,
+      loadComplete: navigationTiming.loadEventEnd - navigationTiming.navigationStart
+    };
+  }
+};
+
+// Code splitting helper
+export function importComponent(path) {
+  return import(/* webpackChunkName: "[request]" */ path);
+}
+
+// Bundle size analyzer
+export const bundleAnalyzer = {
+  getChunks: () => {
+    if (typeof window === 'undefined') return [];
+    const scripts = document.querySelectorAll('script[src]');
+    return Array.from(scripts).map((s) => ({
+      src: s.src,
+      size: s.size || 'unknown'
+    }));
+  }
+};
