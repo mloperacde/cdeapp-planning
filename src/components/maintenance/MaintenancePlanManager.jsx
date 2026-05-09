@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from '@/components/ui/toaster';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -8,12 +9,13 @@ import { Input } from '@/components/ui/input';
 import { 
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue 
 } from '@/components/ui/select';
-import { Plus, Edit2, Trash2, CheckCircle2, X } from 'lucide-react';
+import { Plus, Edit2, Trash2, CheckCircle2, X, Play } from 'lucide-react';
 import { getMachineAlias } from '@/utils/machineAlias';
 
 export default function MaintenancePlanManager({ machine }) {
   const [showForm, setShowForm] = useState(false);
   const [editingPlan, setEditingPlan] = useState(null);
+  const [executingPlanId, setExecutingPlanId] = useState(null);
   const queryClient = useQueryClient();
 
   const { data: plans = [] } = useQuery({
@@ -29,10 +31,23 @@ export default function MaintenancePlanManager({ machine }) {
     },
   });
 
+  const executePlanMutation = useMutation({
+    mutationFn: (plan_id) => base44.functions.invoke('triggerMaintenanceExecution', { plan_id }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['machine-plans', machine?.id] });
+      setExecutingPlanId(null);
+    },
+  });
+
   const handleDelete = (id) => {
     if (window.confirm('¿Eliminar este plan de mantenimiento?')) {
       deleteMutation.mutate(id);
     }
+  };
+
+  const handleExecutePlan = (planId) => {
+    setExecutingPlanId(planId);
+    executePlanMutation.mutate(planId);
   };
 
   const handleEdit = (plan) => {
@@ -127,6 +142,16 @@ export default function MaintenancePlanManager({ machine }) {
                   )}
 
                   <div className="flex gap-2 pt-2">
+                    <Button
+                      onClick={() => handleExecutePlan(plan.id)}
+                      size="sm"
+                      variant="outline"
+                      className="flex-1 gap-2 h-8 text-green-600 border-green-300 hover:bg-green-50"
+                      disabled={executingPlanId === plan.id}
+                    >
+                      <Play className="w-3 h-3" />
+                      {executingPlanId === plan.id ? 'Ejecutando...' : 'Ejecutar'}
+                    </Button>
                     <Button
                       onClick={() => handleEdit(plan)}
                       size="sm"

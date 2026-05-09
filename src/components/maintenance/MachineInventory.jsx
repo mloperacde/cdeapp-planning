@@ -1,15 +1,21 @@
 import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Search, ChevronRight, AlertCircle } from 'lucide-react';
+import { Search, ChevronRight, AlertCircle, Plus, Zap } from 'lucide-react';
 import { getMachineAlias } from '@/utils/machineAlias';
+import NewMachineDialog from './NewMachineDialog';
+import MaintenancePlanTemplatesLibrary from './MaintenancePlanTemplatesLibrary';
 
 export default function MachineInventory({ onSelectMachine, selectedMachineId }) {
   const [searchTerm, setSearchTerm] = useState('');
+  const [showNewMachineDialog, setShowNewMachineDialog] = useState(false);
+  const [showTemplatesLibrary, setShowTemplatesLibrary] = useState(false);
+  const [selectedMachineForPlan, setSelectedMachineForPlan] = useState(null);
+  const queryClient = useQueryClient();
 
   const { data: machines = [] } = useQuery({
     queryKey: ['machines-inventory'],
@@ -20,6 +26,14 @@ export default function MachineInventory({ onSelectMachine, selectedMachineId })
         .sort((a, b) => (a.orden_visualizacion || 999) - (b.orden_visualizacion || 999));
     },
     staleTime: 10 * 60 * 1000,
+  });
+
+  const createMachineMutation = useMutation({
+    mutationFn: (data) => base44.entities.MachineMasterDatabase.create(data),
+    onSuccess: (newMachine) => {
+      queryClient.invalidateQueries({ queryKey: ['machines-inventory'] });
+      onSelectMachine(newMachine);
+    }
   });
 
   const { data: plans = [] } = useQuery({
@@ -43,6 +57,30 @@ export default function MachineInventory({ onSelectMachine, selectedMachineId })
     return { status: 'activo', color: 'bg-green-100 text-green-700' };
   };
 
+  const handleCreatePlanFromTemplate = (template) => {
+    if (!selectedMachineForPlan) return;
+    
+    // Crear nuevo plan basado en plantilla
+    const newPlan = {
+      machine_id: selectedMachineForPlan.id,
+      machine_name: getMachineAlias(selectedMachineForPlan),
+      nombre_plan: template.nombre,
+      descripcion: template.descripcion,
+      tipo: template.tipo,
+      periodicidad: template.periodicidad,
+      dias_intervalo: template.dias_intervalo,
+      tareas: template.tareas || [],
+      proxima_fecha: new Date().toISOString().split('T')[0],
+      activo: true
+    };
+
+    base44.entities.MaintenancePlan.create(newPlan).then(() => {
+      queryClient.invalidateQueries({ queryKey: ['maintenance-plans'] });
+      setShowTemplatesLibrary(false);
+      setSelectedMachineForPlan(null);
+    });
+  };
+
   return (
     <div className="flex flex-col gap-4 h-full">
       <div className="flex items-center gap-2 bg-white dark:bg-slate-900 p-3 rounded-lg border border-slate-200 dark:border-slate-800">
@@ -53,6 +91,18 @@ export default function MachineInventory({ onSelectMachine, selectedMachineId })
           onChange={(e) => setSearchTerm(e.target.value)}
           className="border-0 focus-visible:ring-0 p-0 h-auto"
         />
+      </div>
+
+      <div className="flex gap-2">
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => setShowNewMachineDialog(true)}
+          className="flex-1 h-8 gap-1 text-xs"
+        >
+          <Plus className="w-3 h-3" />
+          Nueva Máquina
+        </Button>
       </div>
 
       <div className="flex-1 overflow-y-auto space-y-2 pr-2">
@@ -84,7 +134,7 @@ export default function MachineInventory({ onSelectMachine, selectedMachineId })
                     <p className="text-xs text-slate-500 dark:text-slate-400">
                       {machine.area_name} • {machine.tipo || 'General'}
                     </p>
-                    <div className="flex gap-1 mt-2">
+                    <div className="flex gap-1 mt-2 flex-wrap">
                       <Badge className={color + ' text-xs'}>
                         {status === 'sin-plan' && 'Sin Plan'}
                         {status === 'vencido' && 'Vencido'}
@@ -96,6 +146,20 @@ export default function MachineInventory({ onSelectMachine, selectedMachineId })
                         </Badge>
                       )}
                     </div>
+                    {status === 'sin-plan' && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="mt-2 w-full h-7 text-xs gap-1 text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                        onClick={() => {
+                          setSelectedMachineForPlan(machine);
+                          setShowTemplatesLibrary(true);
+                        }}
+                      >
+                        <Zap className="w-3 h-3" />
+                        Crear Plan
+                      </Button>
+                    )}
                   </div>
                   <ChevronRight className="w-4 h-4 text-slate-400 flex-shrink-0" />
                 </div>
@@ -104,6 +168,24 @@ export default function MachineInventory({ onSelectMachine, selectedMachineId })
           })
         )}
       </div>
+
+      {showNewMachineDialog && (
+        <NewMachineDialog
+          open={showNewMachineDialog}
+          onOpenChange={setShowNewMachineDialog}
+          onMachineCreated={(machine) => {
+            createMachineMutation.mutate(machine);
+          }}
+        />
+      )}
+
+      {showTemplatesLibrary && (
+        <MaintenancePlanTemplatesLibrary
+          open={showTemplatesLibrary}
+          onOpenChange={setShowTemplatesLibrary}
+          onSelectTemplate={handleCreatePlanFromTemplate}
+        />
+      )}
     </div>
   );
 }

@@ -1,0 +1,105 @@
+{
+  "name": "MaintenancePlanTemplate",
+  "type": "object",
+  "properties": {
+    "nombre": {
+      "type": "string",
+      "description": "Nombre de la plantilla de mantenimiento"
+    },
+    "descripcion": {
+      "type": "string",
+      "description": "Descripci\u00f3n detallada de la plantilla"
+    },
+    "tipologia_maquina": {
+      "type": "string",
+      "description": "Tipolog\u00eda de m\u00e1quina a la que aplica (Ej: Envasadora, Etiquetadora)"
+    },
+    "tipo": {
+      "type": "string",
+      "enum": [
+        "Preventivo",
+        "Correctivo",
+        "Predictivo"
+      ],
+      "default": "Preventivo",
+      "description": "Tipo de mantenimiento"
+    },
+    "periodicidad": {
+      "type": "string",
+      "enum": [
+        "Diaria",
+        "Semanal",
+        "Quincenal",
+        "Mensual",
+        "Trimestral",
+        "Semestral",
+        "Anual"
+      ],
+      "description": "Frecuencia recomendada del mantenimiento"
+    },
+    "dias_intervalo": {
+      "type": "number",
+      "description": "Intervalo en d\u00edas entre mantenimientos"
+    },
+    "tareas": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "titulo": {
+            "type": "string",
+            "description": "Nombre de la tarea"
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "duracion_minutos": {
+            "type": "number"
+          },
+          "subtareas": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "titulo": {
+                  "type": "string"
+                },
+                "descripcion": {
+                  "type": "string"
+                },
+                "herraminetas_requeridas": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "materiales_requeridos": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "description": "Lista de tareas con subtareas"
+    },
+    "activo": {
+      "type": "boolean",
+      "default": true,
+      "description": "Si la plantilla est\u00e1 activa"
+    }
+  },
+  "required": [
+    "nombre",
+    "periodicidad"
+  ]
+}
