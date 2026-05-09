@@ -1067,13 +1067,9 @@ export default function MasterEmployeeDatabasePage() {
                     {visibleColumns.incluir_en_planning && (
                       <TableCell className="py-0.5 px-3 text-[10px] text-slate-600 dark:text-slate-400 text-center">
                         {emp.incluir_en_planning === false ? (
-                          <Badge variant="outline" className="h-4 text-[9px] px-1 border-red-200 text-red-600 bg-red-50 dark:border-red-800 dark:text-red-300 dark:bg-red-900/20 rounded-sm">
-                            No
-                          </Badge>
+                          <Badge variant="outline" className="h-4 text-[9px] px-1 border-red-200 text-red-600 bg-red-50 dark:border-red-800 dark:text-red-300 dark:bg-red-900/20 rounded-sm">No</Badge>
                         ) : (
-                          <Badge variant="outline" className="h-4 text-[9px] px-1 border-emerald-200 text-emerald-700 bg-emerald-50 dark:border-emerald-800 dark:text-emerald-300 dark:bg-emerald-900/20 rounded-sm">
-                            Sí
-                          </Badge>
+                          <Badge variant="outline" className="h-4 text-[9px] px-1 border-emerald-200 text-emerald-700 bg-emerald-50 dark:border-emerald-800 dark:text-emerald-300 dark:bg-emerald-900/20 rounded-sm">Sí</Badge>
                         )}
                       </TableCell>
                     )}
@@ -1116,9 +1112,7 @@ export default function MasterEmployeeDatabasePage() {
                     {visibleColumns.disponibilidad && (
                       <TableCell className="py-0.5 px-3 text-[10px]">
                         {emp.disponibilidad === 'Ausente' ? (
-                          <Badge variant="outline" className="h-4 text-[9px] px-1 border-red-200 text-red-600 bg-red-50 dark:border-red-800 dark:text-red-300 dark:bg-red-900/20 rounded-sm">
-                            Ausente
-                          </Badge>
+                          <Badge variant="outline" className="h-4 text-[9px] px-1 border-red-200 text-red-600 bg-red-50 dark:border-red-800 dark:text-red-300 dark:bg-red-900/20 rounded-sm">Ausente</Badge>
                         ) : (
                           <span className="text-slate-600 dark:text-slate-400">{emp.disponibilidad || '-'}</span>
                         )}
@@ -1149,28 +1143,12 @@ export default function MasterEmployeeDatabasePage() {
                     {visibleColumns.acciones && (
                       <TableCell className="py-0.5 px-3 text-right bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm sticky right-0 shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.1)]">
                         <div className="flex items-center justify-end gap-1">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => {
-                              setEmployeeToEdit(emp);
-                              setEditDialogOpen(true);
-                            }}
-                            className="h-6 w-6 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20"
-                            title="Editar"
-                          >
+                          <Button size="sm" variant="ghost" onClick={() => { setEmployeeToEdit(emp); setEditDialogOpen(true); }}
+                            className="h-6 w-6 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20" title="Editar">
                             <User className="w-3.5 h-3.5" />
                           </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => {
-                              setEmployeeToDelete(emp);
-                              setDeleteConfirmOpen(true);
-                            }}
-                            className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
-                            title="Eliminar"
-                          >
+                          <Button size="sm" variant="ghost" onClick={() => { setEmployeeToDelete(emp); setDeleteConfirmOpen(true); }}
+                            className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20" title="Eliminar">
                             <Trash2 className="w-3.5 h-3.5" />
                           </Button>
                         </div>
