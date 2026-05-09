@@ -97,6 +97,12 @@ export const MENU_STRUCTURE = [
   { name: 'Planning Calidad', path: '/QualityPlanningPage', icon: ClipboardCheck, category: 'Calidad' },
   { name: 'Calidad - Habilidades', path: '/CalidadSkills', icon: BarChart3, category: 'Calidad' },
 
+  // Comercial
+  { name: 'Dashboard Comercial', path: '/CommercialDashboard', icon: Briefcase, category: 'Comercial' },
+  { name: 'Generador de Presupuestos', path: '/QuoteGenerator', icon: FileText, category: 'Comercial' },
+  { name: 'Presupuestos', path: '/QuotesList', icon: FileText, category: 'Comercial' },
+  { name: 'Configuración de Precios', path: '/PricingConfiguration', icon: TrendingUp, category: 'Comercial' },
+
   // Análisis
   { name: 'Informes', path: '/Reports', icon: FileText, category: 'Análisis' },
   { name: 'Análisis Predictivo', path: '/MLInsights', icon: TrendingUp, category: 'Análisis' },

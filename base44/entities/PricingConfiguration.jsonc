@@ -1,0 +1,125 @@
+{
+  "name": "PricingConfiguration",
+  "type": "object",
+  "properties": {
+    "config_name": {
+      "type": "string",
+      "description": "Nombre de la configuraci\u00f3n de precios"
+    },
+    "product_type": {
+      "type": "string",
+      "enum": [
+        "cosmetico",
+        "perfumeria",
+        "sanitario",
+        "alimenticio",
+        "general"
+      ],
+      "description": "Tipo de producto al que aplica"
+    },
+    "labor_cost_per_unit": {
+      "type": "number",
+      "description": "Costo de mano de obra por unidad"
+    },
+    "hourly_rate": {
+      "type": "number",
+      "description": "Tarifa por hora de m\u00e1quina"
+    },
+    "filling_system_multiplier": {
+      "type": "object",
+      "properties": {
+        "bomba_peristaltica": {
+          "type": "number"
+        },
+        "piston": {
+          "type": "number"
+        },
+        "masa": {
+          "type": "number"
+        },
+        "volumetrica": {
+          "type": "number"
+        }
+      },
+      "description": "Multiplicadores de costo por sistema de llenado"
+    },
+    "container_type_cost": {
+      "type": "object",
+      "properties": {
+        "frasco": {
+          "type": "number"
+        },
+        "bote": {
+          "type": "number"
+        },
+        "blister": {
+          "type": "number"
+        },
+        "carton": {
+          "type": "number"
+        },
+        "bolsa": {
+          "type": "number"
+        }
+      },
+      "description": "Costo adicional por tipo de envase"
+    },
+    "labeling_multiplier": {
+      "type": "object",
+      "properties": {
+        "manual": {
+          "type": "number"
+        },
+        "semiautomatico": {
+          "type": "number"
+        },
+        "automatico": {
+          "type": "number"
+        }
+      },
+      "description": "Multiplicadores por sistema de etiquetado"
+    },
+    "margin_percentage": {
+      "type": "number",
+      "default": 35,
+      "description": "Margen de ganancia en porcentaje"
+    },
+    "tax_percentage": {
+      "type": "number",
+      "default": 21,
+      "description": "Porcentaje de IVA/impuestos"
+    },
+    "minimum_order_volume": {
+      "type": "number",
+      "description": "Volumen m\u00ednimo de orden"
+    },
+    "volume_discounts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "min_volume": {
+            "type": "number"
+          },
+          "max_volume": {
+            "type": "number"
+          },
+          "discount_percentage": {
+            "type": "number"
+          }
+        }
+      },
+      "description": "Descuentos por volumen"
+    },
+    "active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Si la configuraci\u00f3n est\u00e1 activa"
+    }
+  },
+  "required": [
+    "config_name",
+    "labor_cost_per_unit",
+    "hourly_rate"
+  ]
+}

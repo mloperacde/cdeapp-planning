@@ -76,6 +76,12 @@ import ManufacturingKiosk from "./ManufacturingKiosk";
 import ManufacturingKioskList from "./ManufacturingKioskList";
 import AuditLog from "./AuditLog";
 import NightlyTasksDashboard from "./NightlyTasksDashboard";
+import CommercialDashboard from "./CommercialDashboard";
+import QuoteGenerator from "./QuoteGenerator";
+import QuotesList from "./QuotesList";
+import QuoteDetail from "./QuoteDetail";
+import PricingConfiguration from "./PricingConfiguration";
+import ReportingAnalytics from "./ReportingAnalytics";
 
 import { BrowserRouter, HashRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -317,6 +323,15 @@ function PagesContent() {
                 <Route path="/ManufacturingKioskList" element={<ManufacturingKioskList />} />
                 <Route path="/AuditLog" element={<AuditLog />} />
                 <Route path="/NightlyTasksDashboard" element={<NightlyTasksDashboard />} />
+
+                {/* Módulo Comercial */}
+                <Route path="/CommercialDashboard" element={<CommercialDashboard />} />
+                <Route path="/QuoteGenerator" element={<QuoteGenerator />} />
+                <Route path="/QuotesList" element={<QuotesList />} />
+                <Route path="/QuoteDetail/:id" element={<QuoteDetail />} />
+                <Route path="/PricingConfiguration" element={<PricingConfiguration />} />
+                <Route path="/ReportingAnalytics" element={<ReportingAnalytics />} />
+
                 {/* Rutas faltantes - redirecciones */}
                 <Route path="/Employees" element={<MasterEmployeeDatabase />} />
                 <Route path="/AdvancedConfiguration" element={<Configuration />} />
