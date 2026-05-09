@@ -10,23 +10,15 @@ import { getMachineAlias } from '@/utils/machineAlias';
 import NewMachineDialog from './NewMachineDialog';
 import MaintenancePlanTemplatesLibrary from './MaintenancePlanTemplatesLibrary';
 
-export default function MachineInventory({ onSelectMachine, selectedMachineId }) {
+export default function MachineInventory({ machines = [], onSelectMachine, selectedMachineId }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [showNewMachineDialog, setShowNewMachineDialog] = useState(false);
   const [showTemplatesLibrary, setShowTemplatesLibrary] = useState(false);
   const [selectedMachineForPlan, setSelectedMachineForPlan] = useState(null);
   const queryClient = useQueryClient();
 
-  const { data: machines = [] } = useQuery({
-    queryKey: ['machines-inventory'],
-    queryFn: async () => {
-      const data = await base44.entities.MachineMasterDatabase.list(undefined, 500);
-      return (Array.isArray(data) ? data : [])
-        .filter(m => m.estado_operativo !== 'Retirada')
-        .sort((a, b) => (a.orden_visualizacion || 999) - (b.orden_visualizacion || 999));
-    },
-    staleTime: 10 * 60 * 1000,
-  });
+  // Filtrar máquinas excluidas retiradas
+  const filteredOperativeMachines = machines.filter(m => m.estado_operativo !== 'Retirada');
 
   const createMachineMutation = useMutation({
     mutationFn: (data) => base44.entities.MachineMasterDatabase.create(data),
@@ -42,7 +34,7 @@ export default function MachineInventory({ onSelectMachine, selectedMachineId })
     staleTime: 10 * 60 * 1000,
   });
 
-  const filteredMachines = machines.filter(m => 
+  const filteredMachines = filteredOperativeMachines.filter(m => 
     getMachineAlias(m).toLowerCase().includes(searchTerm.toLowerCase()) ||
     m.area_name?.toLowerCase().includes(searchTerm.toLowerCase())
   );

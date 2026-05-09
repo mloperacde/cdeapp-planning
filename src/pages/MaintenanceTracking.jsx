@@ -381,6 +381,7 @@ export default function MaintenanceTrackingPage() {
                 </CardHeader>
                 <CardContent className="flex-1 p-4 overflow-hidden">
                   <MachineInventory 
+                    machines={machines}
                     onSelectMachine={setSelectedMachine}
                     selectedMachineId={selectedMachine?.id}
                   />
