@@ -373,9 +373,9 @@ export default function MaintenanceTrackingPage() {
           </TabsList>
 
           <TabsContent value="gmao">
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-[calc(100vh-400px)]">
+            <div className="grid grid-cols-4 gap-6 h-full min-h-[600px]">
               {/* Inventario de máquinas */}
-              <Card className="lg:col-span-1 flex flex-col shadow-lg border-0 bg-white/80 dark:bg-card/80 backdrop-blur-sm">
+              <Card className="col-span-1 flex flex-col shadow-lg border-0 bg-white/80 dark:bg-card/80 backdrop-blur-sm">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm">Inventario de Máquinas</CardTitle>
                 </CardHeader>
@@ -389,14 +389,20 @@ export default function MaintenanceTrackingPage() {
               </Card>
 
               {/* Planes de mantenimiento */}
-              <Card className="lg:col-span-2 flex flex-col shadow-lg border-0 bg-white/80 dark:bg-card/80 backdrop-blur-sm">
+              <Card className="col-span-2 flex flex-col shadow-lg border-0 bg-white/80 dark:bg-card/80 backdrop-blur-sm">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm">Planes de Mantenimiento</CardTitle>
+                </CardHeader>
                 <CardContent className="flex-1 p-6 overflow-hidden">
                   <MaintenancePlanManager machine={selectedMachine} />
                 </CardContent>
               </Card>
 
               {/* Calendario y planificación */}
-              <Card className="lg:col-span-1 flex flex-col shadow-lg border-0 bg-white/80 dark:bg-card/80 backdrop-blur-sm">
+              <Card className="col-span-1 flex flex-col shadow-lg border-0 bg-white/80 dark:bg-card/80 backdrop-blur-sm">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm">Calendario</CardTitle>
+                </CardHeader>
                 <CardContent className="flex-1 p-4 overflow-hidden">
                   <MaintenanceSchedulingCalendar machine={selectedMachine} />
                 </CardContent>

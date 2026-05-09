@@ -20,7 +20,10 @@ export default function MaintenancePlanManager({ machine }) {
 
   const { data: plans = [] } = useQuery({
     queryKey: ['machine-plans', machine?.id],
-    queryFn: () => base44.entities.MaintenancePlan.filter({ machine_id: machine.id }),
+    queryFn: async () => {
+      const allPlans = await base44.entities.MaintenancePlan.list();
+      return allPlans.filter(p => p.machine_id === machine.id);
+    },
     enabled: !!machine,
   });
 
