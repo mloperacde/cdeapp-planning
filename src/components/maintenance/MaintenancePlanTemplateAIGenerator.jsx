@@ -26,6 +26,7 @@ const PERIODICITIES = [
 
 export default function MaintenancePlanTemplateAIGenerator({ onTemplateGenerated, machines = [] }) {
   const [machineDescription, setMachineDescription] = useState('');
+  const [manualContent, setManualContent] = useState('');
   const [periodicidad, setPeriodicidad] = useState('Mensual');
   const [selectedMachineIds, setSelectedMachineIds] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -43,7 +44,14 @@ export default function MaintenancePlanTemplateAIGenerator({ onTemplateGenerated
     try {
       const periodicityData = PERIODICITIES.find(p => p.value === periodicidad);
       
-      const prompt = `Crea un plan de mantenimiento PREVENTIVO detallado y profesional para: "${machineDescription}"
+      const manualSection = manualContent.trim() ? `
+
+**RECOMENDACIONES DEL FABRICANTE (Manual de la Máquina):**
+${manualContent}
+
+Basándote en estas recomendaciones específicas del fabricante, generador un plan de mantenimiento que respete exactamente las instrucciones del manual.` : '';
+
+      const prompt = `Crea un plan de mantenimiento PREVENTIVO detallado y profesional para: "${machineDescription}"${manualSection}
 
 **IMPORTANTE - Instrucciones de respuesta JSON:**
 Debes responder ÚNICAMENTE con un objeto JSON válido, sin explicaciones previas ni posteriores.
@@ -52,34 +60,34 @@ La estructura EXACTA debe ser:
 {
   "nombre": "Nombre descriptivo del plan",
   "descripcion": "Descripción breve del plan de mantenimiento",
-  "periodicidad": "${periodicidad}",
-  "dias_intervalo": ${periodicityData.days},
   "tareas": [
     {
       "id": "tarea_1",
       "titulo": "Nombre de la tarea (máximo 50 caracteres)",
-      "descripcion": "Descripción detallada de qué se debe hacer",
       "duracion_minutos": número_entero,
+      "observaciones": "Observaciones o notas especiales del fabricante",
       "subtareas": [
         {
           "id": "subtarea_1_1",
           "titulo": "Nombre de subtarea",
-          "descripcion": "Detalles específicos",
-          "herraminetas_requeridas": ["herramienta1", "herramienta2"],
-          "materiales_requeridos": ["material1", "material2"]
+          "duracion_minutos": número_entero,
+          "herramientas": "Lista de herramientas específicas requeridas",
+          "observaciones": "Recomendaciones especiales o precauciones del manual del fabricante"
         }
       ]
     }
   ]
 }
 
-**Requisitos:**
+**Requisitos CRÍTICOS:**
 1. Crea entre 3 y 6 tareas principales
 2. Cada tarea debe tener 2-4 subtareas
-3. Incluye duración_minutos realista para cada tarea (10-120 minutos)
-4. Para materiales y herramientas, usa solo items homologados y seguros según el tipo de máquina
-5. Sé específico: si es máquina de sanitarios, usa lubricantes alimentarios homologados
-6. Las tareas deben ser progresivas: inspección, limpieza, lubricación, ajustes, pruebas`;
+3. CADA TAREA y CADA SUBTAREA debe incluir duracion_minutos (10-120 minutos realistas)
+4. CADA SUBTAREA debe listar herramientas específicas necesarias
+5. CADA SUBTAREA debe incluir observaciones con recomendaciones del fabricante o precauciones
+6. Si hay manual del fabricante, cita exactamente sus recomendaciones de mantenimiento
+7. Las tareas deben ser progresivas: inspección, limpieza, lubricación, ajustes, pruebas
+8. Incluye solo herramientas y lubricantes homologados y seguros para el tipo de máquina`;
 
       const response = await base44.integrations.Core.InvokeLLM({
         prompt,
@@ -88,8 +96,6 @@ La estructura EXACTA debe ser:
           properties: {
             nombre: { type: 'string' },
             descripcion: { type: 'string' },
-            periodicidad: { type: 'string' },
-            dias_intervalo: { type: 'number' },
             tareas: {
               type: 'array',
               items: {
@@ -97,8 +103,8 @@ La estructura EXACTA debe ser:
                 properties: {
                   id: { type: 'string' },
                   titulo: { type: 'string' },
-                  descripcion: { type: 'string' },
                   duracion_minutos: { type: 'number' },
+                  observaciones: { type: 'string' },
                   subtareas: {
                     type: 'array',
                     items: {
@@ -106,15 +112,9 @@ La estructura EXACTA debe ser:
                       properties: {
                         id: { type: 'string' },
                         titulo: { type: 'string' },
-                        descripcion: { type: 'string' },
-                        herraminetas_requeridas: {
-                          type: 'array',
-                          items: { type: 'string' }
-                        },
-                        materiales_requeridos: {
-                          type: 'array',
-                          items: { type: 'string' }
-                        }
+                        duracion_minutos: { type: 'number' },
+                        herramientas: { type: 'string' },
+                        observaciones: { type: 'string' }
                       }
                     }
                   }
@@ -138,18 +138,40 @@ La estructura EXACTA debe ser:
       // Mapear tareas generadas al formato tarea_N
       if (template.tareas && Array.isArray(template.tareas)) {
         template.tareas.forEach((tarea, index) => {
-          if (index < 6) { // MaxSoloMaxSolo 6 tareas
+          if (index < 6) { // Max 6 tareas
             const taskKey = `tarea_${index + 1}`;
             maintenanceTypeData[taskKey] = {
               nombre: tarea.titulo || '',
-              subtarea_1: tarea.subtareas?.[0]?.titulo || '',
-              subtarea_2: tarea.subtareas?.[1]?.titulo || '',
-              subtarea_3: tarea.subtareas?.[2]?.titulo || '',
-              subtarea_4: tarea.subtareas?.[3]?.titulo || '',
-              subtarea_5: '',
-              subtarea_6: '',
-              subtarea_7: '',
-              subtarea_8: ''
+              duracion_minutos: tarea.duracion_minutos || 0,
+              observaciones: tarea.observaciones || '',
+              subtarea_1: tarea.subtareas?.[0] ? {
+                titulo: tarea.subtareas[0].titulo || '',
+                duracion_minutos: tarea.subtareas[0].duracion_minutos || 0,
+                herramientas: tarea.subtareas[0].herramientas || '',
+                observaciones: tarea.subtareas[0].observaciones || ''
+              } : { titulo: '', duracion_minutos: 0, herramientas: '', observaciones: '' },
+              subtarea_2: tarea.subtareas?.[1] ? {
+                titulo: tarea.subtareas[1].titulo || '',
+                duracion_minutos: tarea.subtareas[1].duracion_minutos || 0,
+                herramientas: tarea.subtareas[1].herramientas || '',
+                observaciones: tarea.subtareas[1].observaciones || ''
+              } : { titulo: '', duracion_minutos: 0, herramientas: '', observaciones: '' },
+              subtarea_3: tarea.subtareas?.[2] ? {
+                titulo: tarea.subtareas[2].titulo || '',
+                duracion_minutos: tarea.subtareas[2].duracion_minutos || 0,
+                herramientas: tarea.subtareas[2].herramientas || '',
+                observaciones: tarea.subtareas[2].observaciones || ''
+              } : { titulo: '', duracion_minutos: 0, herramientas: '', observaciones: '' },
+              subtarea_4: tarea.subtareas?.[3] ? {
+                titulo: tarea.subtareas[3].titulo || '',
+                duracion_minutos: tarea.subtareas[3].duracion_minutos || 0,
+                herramientas: tarea.subtareas[3].herramientas || '',
+                observaciones: tarea.subtareas[3].observaciones || ''
+              } : { titulo: '', duracion_minutos: 0, herramientas: '', observaciones: '' },
+              subtarea_5: { titulo: '', duracion_minutos: 0, herramientas: '', observaciones: '' },
+              subtarea_6: { titulo: '', duracion_minutos: 0, herramientas: '', observaciones: '' },
+              subtarea_7: { titulo: '', duracion_minutos: 0, herramientas: '', observaciones: '' },
+              subtarea_8: { titulo: '', duracion_minutos: 0, herramientas: '', observaciones: '' }
             };
           }
         });
@@ -160,6 +182,7 @@ La estructura EXACTA debe ser:
 
       onTemplateGenerated(created);
       setMachineDescription('');
+      setManualContent('');
       setSelectedMachineIds([]);
     } catch (err) {
       setError(`Error al generar: ${err.message}`);
@@ -210,6 +233,22 @@ La estructura EXACTA debe ser:
             </Select>
           </div>
 
+          <div className="space-y-2">
+            <Label htmlFor="manual">Recomendaciones del Manual del Fabricante (Opcional)</Label>
+            <Textarea
+              id="manual"
+              placeholder="Pega aquí las recomendaciones de mantenimiento del manual del fabricante, especificaciones técnicas, lubricantes recomendados, frecuencias, etc."
+              value={manualContent}
+              onChange={(e) => setManualContent(e.target.value)}
+              disabled={loading}
+              className="min-h-20 border-blue-200"
+              rows={3}
+            />
+            <p className="text-xs text-slate-500">
+              La IA usará estas recomendaciones para generar un plan alineado con las instrucciones del fabricante
+            </p>
+          </div>
+
           {error && (
             <div className="p-3 bg-red-100 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded text-sm text-red-700 dark:text-red-300">
               {error}
@@ -235,8 +274,14 @@ La estructura EXACTA debe ser:
           </Button>
 
           <p className="text-xs text-slate-500 bg-slate-50 dark:bg-slate-900/20 p-3 rounded">
-            ✨ La IA generará tareas completas con subtareas, materiales, herramientas y tiempos de ejecución según la máquina descrita.
-          </p>
+             ✨ La IA generará un plan detallado con:
+             <ul className="list-disc list-inside mt-2 space-y-1">
+               <li>Tareas y subtareas específicas</li>
+               <li>Tiempos de ejecución realistas para cada paso</li>
+               <li>Herramientas necesarias exactas</li>
+               <li>Observaciones y recomendaciones del fabricante</li>
+             </ul>
+           </p>
         </CardContent>
       </Card>
     </div>

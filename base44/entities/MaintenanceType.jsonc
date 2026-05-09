@@ -1,0 +1,929 @@
+{
+  "name": "MaintenanceType",
+  "type": "object",
+  "properties": {
+    "nombre": {
+      "type": "string",
+      "description": "Nombre del tipo de mantenimiento"
+    },
+    "descripcion": {
+      "type": "string",
+      "description": "Descripci\u00f3n general"
+    },
+    "machine_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "IDs de las m\u00e1quinas a las que aplica"
+    },
+    "tarea_1": {
+      "type": "object",
+      "properties": {
+        "nombre": {
+          "type": "string"
+        },
+        "duracion_minutos": {
+          "type": "number"
+        },
+        "observaciones": {
+          "type": "string"
+        },
+        "subtarea_1": {
+          "type": "object",
+          "properties": {
+            "titulo": {
+              "type": "string"
+            },
+            "duracion_minutos": {
+              "type": "number"
+            },
+            "herramientas": {
+              "type": "string"
+            },
+            "observaciones": {
+              "type": "string"
+            }
+          }
+        },
+        "subtarea_2": {
+          "type": "object",
+          "properties": {
+            "titulo": {
+              "type": "string"
+            },
+            "duracion_minutos": {
+              "type": "number"
+            },
+            "herramientas": {
+              "type": "string"
+            },
+            "observaciones": {
+              "type": "string"
+            }
+          }
+        },
+        "subtarea_3": {
+          "type": "object",
+          "properties": {
+            "titulo": {
+              "type": "string"
+            },
+            "duracion_minutos": {
+              "type": "number"
+            },
+            "herramientas": {
+              "type": "string"
+            },
+            "observaciones": {
+              "type": "string"
+            }
+          }
+        },
+        "subtarea_4": {
+          "type": "object",
+          "properties": {
+            "titulo": {
+              "type": "string"
+            },
+            "duracion_minutos": {
+              "type": "number"
+            },
+            "herramientas": {
+              "type": "string"
+            },
+            "observaciones": {
+              "type": "string"
+            }
+          }
+        },
+        "subtarea_5": {
+          "type": "object",
+          "properties": {
+            "titulo": {
+              "type": "string"
+            },
+            "duracion_minutos": {
+              "type": "number"
+            },
+            "herramientas": {
+              "type": "string"
+            },
+            "observaciones": {
+              "type": "string"
+            }
+          }
+        },
+        "subtarea_6": {
+          "type": "object",
+          "properties": {
+            "titulo": {
+              "type": "string"
+            },
+            "duracion_minutos": {
+              "type": "number"
+            },
+            "herramientas": {
+              "type": "string"
+            },
+            "observaciones": {
+              "type": "string"
+            }
+          }
+        },
+        "subtarea_7": {
+          "type": "object",
+          "properties": {
+            "titulo": {
+              "type": "string"
+            },
+            "duracion_minutos": {
+              "type": "number"
+            },
+            "herramientas": {
+              "type": "string"
+            },
+            "observaciones": {
+              "type": "string"
+            }
+          }
+        },
+        "subtarea_8": {
+          "type": "object",
+          "properties": {
+            "titulo": {
+              "type": "string"
+            },
+            "duracion_minutos": {
+              "type": "number"
+            },
+            "herramientas": {
+              "type": "string"
+            },
+            "observaciones": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "tarea_2": {
+      "type": "object",
+      "properties": {
+        "nombre": {
+          "type": "string"
+        },
+        "duracion_minutos": {
+          "type": "number"
+        },
+        "observaciones": {
+          "type": "string"
+        },
+        "subtarea_1": {
+          "type": "object",
+          "properties": {
+            "titulo": {
+              "type": "string"
+            },
+            "duracion_minutos": {
+              "type": "number"
+            },
+            "herramientas": {
+              "type": "string"
+            },
+            "observaciones": {
+              "type": "string"
+            }
+          }
+        },
+        "subtarea_2": {
+          "type": "object",
+          "properties": {
+            "titulo": {
+              "type": "string"
+            },
+            "duracion_minutos": {
+              "type": "number"
+            },
+            "herramientas": {
+              "type": "string"
+            },
+            "observaciones": {
+              "type": "string"
+            }
+          }
+        },
+        "subtarea_3": {
+          "type": "object",
+          "properties": {
+            "titulo": {
+              "type": "string"
+            },
+            "duracion_minutos": {
+              "type": "number"
+            },
+            "herramientas": {
+              "type": "string"
+            },
+            "observaciones": {
+              "type": "string"
+            }
+          }
+        },
+        "subtarea_4": {
+          "type": "object",
+          "properties": {
+            "titulo": {
+              "type": "string"
+            },
+            "duracion_minutos": {
+              "type": "number"
+            },
+            "herramientas": {
+              "type": "string"
+            },
+            "observaciones": {
+              "type": "string"
+            }
+          }
+        },
+        "subtarea_5": {
+          "type": "object",
+          "properties": {
+            "titulo": {
+              "type": "string"
+            },
+            "duracion_minutos": {
+              "type": "number"
+            },
+            "herramientas": {
+              "type": "string"
+            },
+            "observaciones": {
+              "type": "string"
+            }
+          }
+        },
+        "subtarea_6": {
+          "type": "object",
+          "properties": {
+            "titulo": {
+              "type": "string"
+            },
+            "duracion_minutos": {
+              "type": "number"
+            },
+            "herramientas": {
+              "type": "string"
+            },
+            "observaciones": {
+              "type": "string"
+            }
+          }
+        },
+        "subtarea_7": {
+          "type": "object",
+          "properties": {
+            "titulo": {
+              "type": "string"
+            },
+            "duracion_minutos": {
+              "type": "number"
+            },
+            "herramientas": {
+              "type": "string"
+            },
+            "observaciones": {
+              "type": "string"
+            }
+          }
+        },
+        "subtarea_8": {
+          "type": "object",
+          "properties": {
+            "titulo": {
+              "type": "string"
+            },
+            "duracion_minutos": {
+              "type": "number"
+            },
+            "herramientas": {
+              "type": "string"
+            },
+            "observaciones": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "tarea_3": {
+      "type": "object",
+      "properties": {
+        "nombre": {
+          "type": "string"
+        },
+        "duracion_minutos": {
+          "type": "number"
+        },
+        "observaciones": {
+          "type": "string"
+        },
+        "subtarea_1": {
+          "type": "object",
+          "properties": {
+            "titulo": {
+              "type": "string"
+            },
+            "duracion_minutos": {
+              "type": "number"
+            },
+            "herramientas": {
+              "type": "string"
+            },
+            "observaciones": {
+              "type": "string"
+            }
+          }
+        },
+        "subtarea_2": {
+          "type": "object",
+          "properties": {
+            "titulo": {
+              "type": "string"
+            },
+            "duracion_minutos": {
+              "type": "number"
+            },
+            "herramientas": {
+              "type": "string"
+            },
+            "observaciones": {
+              "type": "string"
+            }
+          }
+        },
+        "subtarea_3": {
+          "type": "object",
+          "properties": {
+            "titulo": {
+              "type": "string"
+            },
+            "duracion_minutos": {
+              "type": "number"
+            },
+            "herramientas": {
+              "type": "string"
+            },
+            "observaciones": {
+              "type": "string"
+            }
+          }
+        },
+        "subtarea_4": {
+          "type": "object",
+          "properties": {
+            "titulo": {
+              "type": "string"
+            },
+            "duracion_minutos": {
+              "type": "number"
+            },
+            "herramientas": {
+              "type": "string"
+            },
+            "observaciones": {
+              "type": "string"
+            }
+          }
+        },
+        "subtarea_5": {
+          "type": "object",
+          "properties": {
+            "titulo": {
+              "type": "string"
+            },
+            "duracion_minutos": {
+              "type": "number"
+            },
+            "herramientas": {
+              "type": "string"
+            },
+            "observaciones": {
+              "type": "string"
+            }
+          }
+        },
+        "subtarea_6": {
+          "type": "object",
+          "properties": {
+            "titulo": {
+              "type": "string"
+            },
+            "duracion_minutos": {
+              "type": "number"
+            },
+            "herramientas": {
+              "type": "string"
+            },
+            "observaciones": {
+              "type": "string"
+            }
+          }
+        },
+        "subtarea_7": {
+          "type": "object",
+          "properties": {
+            "titulo": {
+              "type": "string"
+            },
+            "duracion_minutos": {
+              "type": "number"
+            },
+            "herramientas": {
+              "type": "string"
+            },
+            "observaciones": {
+              "type": "string"
+            }
+          }
+        },
+        "subtarea_8": {
+          "type": "object",
+          "properties": {
+            "titulo": {
+              "type": "string"
+            },
+            "duracion_minutos": {
+              "type": "number"
+            },
+            "herramientas": {
+              "type": "string"
+            },
+            "observaciones": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "tarea_4": {
+      "type": "object",
+      "properties": {
+        "nombre": {
+          "type": "string"
+        },
+        "duracion_minutos": {
+          "type": "number"
+        },
+        "observaciones": {
+          "type": "string"
+        },
+        "subtarea_1": {
+          "type": "object",
+          "properties": {
+            "titulo": {
+              "type": "string"
+            },
+            "duracion_minutos": {
+              "type": "number"
+            },
+            "herramientas": {
+              "type": "string"
+            },
+            "observaciones": {
+              "type": "string"
+            }
+          }
+        },
+        "subtarea_2": {
+          "type": "object",
+          "properties": {
+            "titulo": {
+              "type": "string"
+            },
+            "duracion_minutos": {
+              "type": "number"
+            },
+            "herramientas": {
+              "type": "string"
+            },
+            "observaciones": {
+              "type": "string"
+            }
+          }
+        },
+        "subtarea_3": {
+          "type": "object",
+          "properties": {
+            "titulo": {
+              "type": "string"
+            },
+            "duracion_minutos": {
+              "type": "number"
+            },
+            "herramientas": {
+              "type": "string"
+            },
+            "observaciones": {
+              "type": "string"
+            }
+          }
+        },
+        "subtarea_4": {
+          "type": "object",
+          "properties": {
+            "titulo": {
+              "type": "string"
+            },
+            "duracion_minutos": {
+              "type": "number"
+            },
+            "herramientas": {
+              "type": "string"
+            },
+            "observaciones": {
+              "type": "string"
+            }
+          }
+        },
+        "subtarea_5": {
+          "type": "object",
+          "properties": {
+            "titulo": {
+              "type": "string"
+            },
+            "duracion_minutos": {
+              "type": "number"
+            },
+            "herramientas": {
+              "type": "string"
+            },
+            "observaciones": {
+              "type": "string"
+            }
+          }
+        },
+        "subtarea_6": {
+          "type": "object",
+          "properties": {
+            "titulo": {
+              "type": "string"
+            },
+            "duracion_minutos": {
+              "type": "number"
+            },
+            "herramientas": {
+              "type": "string"
+            },
+            "observaciones": {
+              "type": "string"
+            }
+          }
+        },
+        "subtarea_7": {
+          "type": "object",
+          "properties": {
+            "titulo": {
+              "type": "string"
+            },
+            "duracion_minutos": {
+              "type": "number"
+            },
+            "herramientas": {
+              "type": "string"
+            },
+            "observaciones": {
+              "type": "string"
+            }
+          }
+        },
+        "subtarea_8": {
+          "type": "object",
+          "properties": {
+            "titulo": {
+              "type": "string"
+            },
+            "duracion_minutos": {
+              "type": "number"
+            },
+            "herramientas": {
+              "type": "string"
+            },
+            "observaciones": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "tarea_5": {
+      "type": "object",
+      "properties": {
+        "nombre": {
+          "type": "string"
+        },
+        "duracion_minutos": {
+          "type": "number"
+        },
+        "observaciones": {
+          "type": "string"
+        },
+        "subtarea_1": {
+          "type": "object",
+          "properties": {
+            "titulo": {
+              "type": "string"
+            },
+            "duracion_minutos": {
+              "type": "number"
+            },
+            "herramientas": {
+              "type": "string"
+            },
+            "observaciones": {
+              "type": "string"
+            }
+          }
+        },
+        "subtarea_2": {
+          "type": "object",
+          "properties": {
+            "titulo": {
+              "type": "string"
+            },
+            "duracion_minutos": {
+              "type": "number"
+            },
+            "herramientas": {
+              "type": "string"
+            },
+            "observaciones": {
+              "type": "string"
+            }
+          }
+        },
+        "subtarea_3": {
+          "type": "object",
+          "properties": {
+            "titulo": {
+              "type": "string"
+            },
+            "duracion_minutos": {
+              "type": "number"
+            },
+            "herramientas": {
+              "type": "string"
+            },
+            "observaciones": {
+              "type": "string"
+            }
+          }
+        },
+        "subtarea_4": {
+          "type": "object",
+          "properties": {
+            "titulo": {
+              "type": "string"
+            },
+            "duracion_minutos": {
+              "type": "number"
+            },
+            "herramientas": {
+              "type": "string"
+            },
+            "observaciones": {
+              "type": "string"
+            }
+          }
+        },
+        "subtarea_5": {
+          "type": "object",
+          "properties": {
+            "titulo": {
+              "type": "string"
+            },
+            "duracion_minutos": {
+              "type": "number"
+            },
+            "herramientas": {
+              "type": "string"
+            },
+            "observaciones": {
+              "type": "string"
+            }
+          }
+        },
+        "subtarea_6": {
+          "type": "object",
+          "properties": {
+            "titulo": {
+              "type": "string"
+            },
+            "duracion_minutos": {
+              "type": "number"
+            },
+            "herramientas": {
+              "type": "string"
+            },
+            "observaciones": {
+              "type": "string"
+            }
+          }
+        },
+        "subtarea_7": {
+          "type": "object",
+          "properties": {
+            "titulo": {
+              "type": "string"
+            },
+            "duracion_minutos": {
+              "type": "number"
+            },
+            "herramientas": {
+              "type": "string"
+            },
+            "observaciones": {
+              "type": "string"
+            }
+          }
+        },
+        "subtarea_8": {
+          "type": "object",
+          "properties": {
+            "titulo": {
+              "type": "string"
+            },
+            "duracion_minutos": {
+              "type": "number"
+            },
+            "herramientas": {
+              "type": "string"
+            },
+            "observaciones": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "tarea_6": {
+      "type": "object",
+      "properties": {
+        "nombre": {
+          "type": "string"
+        },
+        "duracion_minutos": {
+          "type": "number"
+        },
+        "observaciones": {
+          "type": "string"
+        },
+        "subtarea_1": {
+          "type": "object",
+          "properties": {
+            "titulo": {
+              "type": "string"
+            },
+            "duracion_minutos": {
+              "type": "number"
+            },
+            "herramientas": {
+              "type": "string"
+            },
+            "observaciones": {
+              "type": "string"
+            }
+          }
+        },
+        "subtarea_2": {
+          "type": "object",
+          "properties": {
+            "titulo": {
+              "type": "string"
+            },
+            "duracion_minutos": {
+              "type": "number"
+            },
+            "herramientas": {
+              "type": "string"
+            },
+            "observaciones": {
+              "type": "string"
+            }
+          }
+        },
+        "subtarea_3": {
+          "type": "object",
+          "properties": {
+            "titulo": {
+              "type": "string"
+            },
+            "duracion_minutos": {
+              "type": "number"
+            },
+            "herramientas": {
+              "type": "string"
+            },
+            "observaciones": {
+              "type": "string"
+            }
+          }
+        },
+        "subtarea_4": {
+          "type": "object",
+          "properties": {
+            "titulo": {
+              "type": "string"
+            },
+            "duracion_minutos": {
+              "type": "number"
+            },
+            "herramientas": {
+              "type": "string"
+            },
+            "observaciones": {
+              "type": "string"
+            }
+          }
+        },
+        "subtarea_5": {
+          "type": "object",
+          "properties": {
+            "titulo": {
+              "type": "string"
+            },
+            "duracion_minutos": {
+              "type": "number"
+            },
+            "herramientas": {
+              "type": "string"
+            },
+            "observaciones": {
+              "type": "string"
+            }
+          }
+        },
+        "subtarea_6": {
+          "type": "object",
+          "properties": {
+            "titulo": {
+              "type": "string"
+            },
+            "duracion_minutos": {
+              "type": "number"
+            },
+            "herramientas": {
+              "type": "string"
+            },
+            "observaciones": {
+              "type": "string"
+            }
+          }
+        },
+        "subtarea_7": {
+          "type": "object",
+          "properties": {
+            "titulo": {
+              "type": "string"
+            },
+            "duracion_minutos": {
+              "type": "number"
+            },
+            "herramientas": {
+              "type": "string"
+            },
+            "observaciones": {
+              "type": "string"
+            }
+          }
+        },
+        "subtarea_8": {
+          "type": "object",
+          "properties": {
+            "titulo": {
+              "type": "string"
+            },
+            "duracion_minutos": {
+              "type": "number"
+            },
+            "herramientas": {
+              "type": "string"
+            },
+            "observaciones": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "activo": {
+      "type": "boolean",
+      "default": true,
+      "description": "Si el tipo est\u00e1 activo"
+    }
+  },
+  "required": [
+    "nombre"
+  ]
+}

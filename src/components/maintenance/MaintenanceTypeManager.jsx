@@ -32,17 +32,38 @@ export default function MaintenanceTypeManager({ open, onOpenChange, machines })
   const [showAIGenerator, setShowAIGenerator] = useState(false);
   const queryClient = useQueryClient();
 
+  const createEmptySubtask = () => ({
+    titulo: "",
+    duracion_minutos: 0,
+    herramientas: "",
+    observaciones: ""
+  });
+
+  const createEmptyTask = () => ({
+    nombre: "",
+    duracion_minutos: 0,
+    observaciones: "",
+    subtarea_1: createEmptySubtask(),
+    subtarea_2: createEmptySubtask(),
+    subtarea_3: createEmptySubtask(),
+    subtarea_4: createEmptySubtask(),
+    subtarea_5: createEmptySubtask(),
+    subtarea_6: createEmptySubtask(),
+    subtarea_7: createEmptySubtask(),
+    subtarea_8: createEmptySubtask(),
+  });
+
   const [formData, setFormData] = useState({
     nombre: "",
     descripcion: "",
     machine_ids: [],
     activo: true,
-    tarea_1: { nombre: "", subtarea_1: "", subtarea_2: "", subtarea_3: "", subtarea_4: "", subtarea_5: "", subtarea_6: "", subtarea_7: "", subtarea_8: "" },
-    tarea_2: { nombre: "", subtarea_1: "", subtarea_2: "", subtarea_3: "", subtarea_4: "", subtarea_5: "", subtarea_6: "", subtarea_7: "", subtarea_8: "" },
-    tarea_3: { nombre: "", subtarea_1: "", subtarea_2: "", subtarea_3: "", subtarea_4: "", subtarea_5: "", subtarea_6: "", subtarea_7: "", subtarea_8: "" },
-    tarea_4: { nombre: "", subtarea_1: "", subtarea_2: "", subtarea_3: "", subtarea_4: "", subtarea_5: "", subtarea_6: "", subtarea_7: "", subtarea_8: "" },
-    tarea_5: { nombre: "", subtarea_1: "", subtarea_2: "", subtarea_3: "", subtarea_4: "", subtarea_5: "", subtarea_6: "", subtarea_7: "", subtarea_8: "" },
-    tarea_6: { nombre: "", subtarea_1: "", subtarea_2: "", subtarea_3: "", subtarea_4: "", subtarea_5: "", subtarea_6: "", subtarea_7: "", subtarea_8: "" },
+    tarea_1: createEmptyTask(),
+    tarea_2: createEmptyTask(),
+    tarea_3: createEmptyTask(),
+    tarea_4: createEmptyTask(),
+    tarea_5: createEmptyTask(),
+    tarea_6: createEmptyTask(),
   });
 
   const { data: maintenanceTypes } = useQuery({
@@ -76,7 +97,12 @@ export default function MaintenanceTypeManager({ open, onOpenChange, machines })
     const safeData = { ...type };
     for (let i = 1; i <= 6; i++) {
       if (!safeData[`tarea_${i}`]) {
-        safeData[`tarea_${i}`] = { nombre: "", subtarea_1: "", subtarea_2: "", subtarea_3: "", subtarea_4: "", subtarea_5: "", subtarea_6: "", subtarea_7: "", subtarea_8: "" };
+        safeData[`tarea_${i}`] = createEmptyTask();
+      } else if (typeof safeData[`tarea_${i}`].subtarea_1 === 'string') {
+        // Migrar desde formato viejo al nuevo
+        const oldTask = safeData[`tarea_${i}`];
+        safeData[`tarea_${i}`] = createEmptyTask();
+        safeData[`tarea_${i}`].nombre = oldTask.nombre || "";
       }
     }
     setFormData(safeData);
@@ -97,12 +123,12 @@ export default function MaintenanceTypeManager({ open, onOpenChange, machines })
       descripcion: "",
       machine_ids: [],
       activo: true,
-      tarea_1: { nombre: "", subtarea_1: "", subtarea_2: "", subtarea_3: "", subtarea_4: "", subtarea_5: "", subtarea_6: "", subtarea_7: "", subtarea_8: "" },
-      tarea_2: { nombre: "", subtarea_1: "", subtarea_2: "", subtarea_3: "", subtarea_4: "", subtarea_5: "", subtarea_6: "", subtarea_7: "", subtarea_8: "" },
-      tarea_3: { nombre: "", subtarea_1: "", subtarea_2: "", subtarea_3: "", subtarea_4: "", subtarea_5: "", subtarea_6: "", subtarea_7: "", subtarea_8: "" },
-      tarea_4: { nombre: "", subtarea_1: "", subtarea_2: "", subtarea_3: "", subtarea_4: "", subtarea_5: "", subtarea_6: "", subtarea_7: "", subtarea_8: "" },
-      tarea_5: { nombre: "", subtarea_1: "", subtarea_2: "", subtarea_3: "", subtarea_4: "", subtarea_5: "", subtarea_6: "", subtarea_7: "", subtarea_8: "" },
-      tarea_6: { nombre: "", subtarea_1: "", subtarea_2: "", subtarea_3: "", subtarea_4: "", subtarea_5: "", subtarea_6: "", subtarea_7: "", subtarea_8: "" },
+      tarea_1: createEmptyTask(),
+      tarea_2: createEmptyTask(),
+      tarea_3: createEmptyTask(),
+      tarea_4: createEmptyTask(),
+      tarea_5: createEmptyTask(),
+      tarea_6: createEmptyTask(),
     });
   };
 
@@ -124,8 +150,21 @@ export default function MaintenanceTypeManager({ open, onOpenChange, machines })
     setFormData(prev => ({
       ...prev,
       [`tarea_${taskNum}`]: {
-        ...(prev[`tarea_${taskNum}`] || { nombre: "", subtarea_1: "", subtarea_2: "", subtarea_3: "", subtarea_4: "", subtarea_5: "", subtarea_6: "", subtarea_7: "", subtarea_8: "" }),
+        ...(prev[`tarea_${taskNum}`] || createEmptyTask()),
         [field]: value
+      }
+    }));
+  };
+
+  const updateSubtask = (taskNum, subNum, field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      [`tarea_${taskNum}`]: {
+        ...prev[`tarea_${taskNum}`],
+        [`subtarea_${subNum}`]: {
+          ...(prev[`tarea_${taskNum}`][`subtarea_${subNum}`] || createEmptySubtask()),
+          [field]: value
+        }
       }
     }));
   };
@@ -199,27 +238,90 @@ export default function MaintenanceTypeManager({ open, onOpenChange, machines })
               </TabsList>
 
               {[1, 2, 3, 4, 5, 6].map((taskNum) => (
-                <TabsContent key={taskNum} value={`tarea_${taskNum}`} className="space-y-4 mt-4">
-                  <div className="space-y-2">
-                    <Label>Nombre de la Tarea {taskNum}</Label>
-                    <Input
-                      value={formData[`tarea_${taskNum}`].nombre}
-                      onChange={(e) => updateTask(taskNum, 'nombre', e.target.value)}
-                      placeholder={`ej. Inspección de componentes`}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {[1, 2, 3, 4, 5, 6, 7, 8].map((subNum) => (
-                      <div key={subNum} className="space-y-2">
-                        <Label>Subtarea {subNum}</Label>
+                <TabsContent key={taskNum} value={`tarea_${taskNum}`} className="space-y-6 mt-4">
+                  <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg space-y-3 border border-blue-200 dark:border-blue-800">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Nombre de la Tarea {taskNum} *</Label>
                         <Input
-                          value={formData[`tarea_${taskNum}`][`subtarea_${subNum}`]}
-                          onChange={(e) => updateTask(taskNum, `subtarea_${subNum}`, e.target.value)}
-                          placeholder={`Descripción subtarea ${subNum}`}
+                          value={formData[`tarea_${taskNum}`].nombre}
+                          onChange={(e) => updateTask(taskNum, 'nombre', e.target.value)}
+                          placeholder={`ej. Inspección de componentes`}
                         />
                       </div>
-                    ))}
+                      <div className="space-y-2">
+                        <Label>Duración Total (minutos)</Label>
+                        <Input
+                          type="number"
+                          min="0"
+                          value={formData[`tarea_${taskNum}`].duracion_minutos}
+                          onChange={(e) => updateTask(taskNum, 'duracion_minutos', parseInt(e.target.value) || 0)}
+                          placeholder="ej. 45"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Observaciones de la Tarea</Label>
+                      <Textarea
+                        value={formData[`tarea_${taskNum}`].observaciones}
+                        onChange={(e) => updateTask(taskNum, 'observaciones', e.target.value)}
+                        placeholder="Notas especiales o recomendaciones del fabricante"
+                        rows={2}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <h4 className="font-semibold text-slate-900 dark:text-white">Subtareas</h4>
+                    {[1, 2, 3, 4, 5, 6, 7, 8].map((subNum) => {
+                      const subtask = formData[`tarea_${taskNum}`][`subtarea_${subNum}`];
+                      if (!subtask?.titulo) return null;
+                      return (
+                        <div key={subNum} className="border rounded-lg p-4 bg-slate-50 dark:bg-slate-900/30 space-y-3">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label>Subtarea {subNum}: Título</Label>
+                              <Input
+                                value={subtask.titulo}
+                                onChange={(e) => updateSubtask(taskNum, subNum, 'titulo', e.target.value)}
+                                placeholder={`Título de subtarea ${subNum}`}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Duración (minutos)</Label>
+                              <Input
+                                type="number"
+                                min="0"
+                                value={subtask.duracion_minutos}
+                                onChange={(e) => updateSubtask(taskNum, subNum, 'duracion_minutos', parseInt(e.target.value) || 0)}
+                                placeholder="ej. 15"
+                              />
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Herramientas Requeridas</Label>
+                            <Input
+                              value={subtask.herramientas}
+                              onChange={(e) => updateSubtask(taskNum, subNum, 'herramientas', e.target.value)}
+                              placeholder="ej. Llave inglesa, destornillador Phillips"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Observaciones</Label>
+                            <Textarea
+                              value={subtask.observaciones}
+                              onChange={(e) => updateSubtask(taskNum, subNum, 'observaciones', e.target.value)}
+                              placeholder="Recomendaciones especiales o precauciones"
+                              rows={2}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                    
+                    {!formData[`tarea_${taskNum}`].subtarea_1?.titulo && (
+                      <p className="text-sm text-slate-500 italic">Sin subtareas configuradas para esta tarea</p>
+                    )}
                   </div>
                 </TabsContent>
               ))}
