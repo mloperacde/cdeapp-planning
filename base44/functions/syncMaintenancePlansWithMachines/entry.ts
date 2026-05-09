@@ -5,8 +5,8 @@ Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
 
-    if (!user || user.role !== 'admin') {
-      return Response.json({ error: 'Solo administradores pueden sincronizar planes de mantenimiento' }, { status: 403 });
+    if (!user) {
+      return Response.json({ error: 'Usuario no autenticado' }, { status: 401 });
     }
 
     // Obtener todas las máquinas del inventario
