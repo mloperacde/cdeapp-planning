@@ -127,17 +127,36 @@ La estructura EXACTA debe ser:
 
       const template = response.data || response;
       
-      // Crear la plantilla en la BD
-      const created = await base44.entities.MaintenancePlanTemplate.create({
+      // Transformar las tareas a formato MaintenanceType
+      const maintenanceTypeData = {
         nombre: template.nombre,
         descripcion: template.descripcion,
-        tipologia_maquina: machineDescription,
-        tipo: 'Preventivo',
-        periodicidad: template.periodicidad,
-        dias_intervalo: template.dias_intervalo,
-        tareas: template.tareas || [],
+        machine_ids: selectedMachineIds,
         activo: true
-      });
+      };
+
+      // Mapear tareas generadas al formato tarea_N
+      if (template.tareas && Array.isArray(template.tareas)) {
+        template.tareas.forEach((tarea, index) => {
+          if (index < 6) { // MaxSoloMaxSolo 6 tareas
+            const taskKey = `tarea_${index + 1}`;
+            maintenanceTypeData[taskKey] = {
+              nombre: tarea.titulo || '',
+              subtarea_1: tarea.subtareas?.[0]?.titulo || '',
+              subtarea_2: tarea.subtareas?.[1]?.titulo || '',
+              subtarea_3: tarea.subtareas?.[2]?.titulo || '',
+              subtarea_4: tarea.subtareas?.[3]?.titulo || '',
+              subtarea_5: '',
+              subtarea_6: '',
+              subtarea_7: '',
+              subtarea_8: ''
+            };
+          }
+        });
+      }
+
+      // Crear el MaintenanceType
+      const created = await base44.entities.MaintenanceType.create(maintenanceTypeData);
 
       onTemplateGenerated(created);
       setMachineDescription('');
