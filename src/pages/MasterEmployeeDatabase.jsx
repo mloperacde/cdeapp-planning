@@ -122,6 +122,8 @@ export default function MasterEmployeeDatabasePage() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [employeeToDelete, setEmployeeToDelete] = useState(null);
   const [showFilters, setShowFilters] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 50;
   // Bulk actions state
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [bulkEditDialogOpen, setBulkEditDialogOpen] = useState(false);
@@ -581,10 +583,11 @@ export default function MasterEmployeeDatabasePage() {
 
   const handleSelectAll = (checked) => {
     if (checked) {
-      const allIds = filteredEmployees.map(e => e.id);
-      setSelectedIds(new Set(allIds));
+      const pageIds = paginatedEmployees.map(e => e.id);
+      setSelectedIds(prev => new Set([...prev, ...pageIds]));
     } else {
-      setSelectedIds(new Set());
+      const pageIds = new Set(paginatedEmployees.map(e => e.id));
+      setSelectedIds(prev => new Set([...prev].filter(id => !pageIds.has(id))));
     }
   };
 
@@ -643,7 +646,12 @@ export default function MasterEmployeeDatabasePage() {
       ...prev,
       ...rest,
     }));
+    setCurrentPage(1);
   };
+
+  // Reset page when filters change
+  const totalPages = Math.ceil(filteredEmployees.length / PAGE_SIZE);
+  const paginatedEmployees = filteredEmployees.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   if (!isHrModuleAllowed) {
     return (
@@ -760,7 +768,7 @@ export default function MasterEmployeeDatabasePage() {
             placeholder="Buscar empleado por nombre, código, puesto..."
             className="pl-9 pr-8 h-9 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
             value={filters.searchTerm || ""}
-            onChange={(e) => setFilters(prev => ({ ...prev, searchTerm: e.target.value }))}
+            onChange={(e) => { setFilters(prev => ({ ...prev, searchTerm: e.target.value })); setCurrentPage(1); }}
           />
           {filters.searchTerm && (
             <button
@@ -937,7 +945,7 @@ export default function MasterEmployeeDatabasePage() {
                 <TableRow className="hover:bg-transparent border-b-slate-200 dark:border-b-slate-800 h-8">
                   <TableHead className="w-[40px] px-3 bg-slate-50 dark:bg-slate-950">
                     <Checkbox 
-                      checked={filteredEmployees.length > 0 && selectedIds.size === filteredEmployees.length}
+                      checked={paginatedEmployees.length > 0 && paginatedEmployees.every(e => selectedIds.has(e.id))}
                       onCheckedChange={handleSelectAll}
                       aria-label="Select all"
                       className="translate-y-[2px]"
@@ -956,7 +964,7 @@ export default function MasterEmployeeDatabasePage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredEmployees.map((emp) => (
+                {paginatedEmployees.map((emp) => (
                   <TableRow 
                     key={emp.id} 
                     className={`
@@ -1160,6 +1168,53 @@ export default function MasterEmployeeDatabasePage() {
             </Table>
           )}
         </div>
+        {/* Pagination footer */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-4 py-2 border-t border-slate-100 dark:border-slate-800 shrink-0 bg-white dark:bg-slate-900">
+            <span className="text-xs text-slate-500">
+              {filteredEmployees.length} registros · página {currentPage} de {totalPages}
+            </span>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline" size="sm"
+                className="h-7 px-2 text-xs"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(1)}
+              >«</Button>
+              <Button
+                variant="outline" size="sm"
+                className="h-7 px-2 text-xs"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(p => p - 1)}
+              >‹</Button>
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                const start = Math.max(1, Math.min(currentPage - 2, totalPages - 4));
+                const page = start + i;
+                return (
+                  <Button
+                    key={page}
+                    variant={page === currentPage ? "default" : "outline"}
+                    size="sm"
+                    className="h-7 w-7 p-0 text-xs"
+                    onClick={() => setCurrentPage(page)}
+                  >{page}</Button>
+                );
+              })}
+              <Button
+                variant="outline" size="sm"
+                className="h-7 px-2 text-xs"
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(p => p + 1)}
+              >›</Button>
+              <Button
+                variant="outline" size="sm"
+                className="h-7 px-2 text-xs"
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(totalPages)}
+              >»</Button>
+            </div>
+          </div>
+        )}
       </Card>
 
       {editDialogOpen && (
