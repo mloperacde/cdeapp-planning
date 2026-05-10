@@ -1,0 +1,128 @@
+{
+  "name": "DailyWarehousePlanning",
+  "type": "object",
+  "properties": {
+    "fecha": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha de la planificaci\u00f3n"
+    },
+    "team_key": {
+      "type": "string",
+      "enum": [
+        "team_1",
+        "team_2"
+      ],
+      "description": "Equipo planificado"
+    },
+    "turno": {
+      "type": "string",
+      "enum": [
+        "Ma\u00f1ana",
+        "Tarde"
+      ],
+      "description": "Turno planificado"
+    },
+    "employee_id": {
+      "type": "string",
+      "description": "ID del empleado de almac\u00e9n"
+    },
+    "funcion_asignada": {
+      "type": "string",
+      "description": "Funci\u00f3n o tarea asignada"
+    },
+    "zona_almacen": {
+      "type": "string",
+      "description": "Zona del almac\u00e9n asignada"
+    },
+    "tipo_tarea": {
+      "type": "string",
+      "enum": [
+        "Recepci\u00f3n",
+        "Expedici\u00f3n",
+        "Inventario",
+        "Picking",
+        "Organizaci\u00f3n",
+        "Otro"
+      ],
+      "description": "Tipo de tarea"
+    },
+    "prioridad": {
+      "type": "string",
+      "enum": [
+        "Baja",
+        "Media",
+        "Alta",
+        "Urgente"
+      ],
+      "default": "Media",
+      "description": "Prioridad de la funci\u00f3n"
+    },
+    "notas": {
+      "type": "string",
+      "description": "Notas adicionales"
+    },
+    "estado": {
+      "type": "string",
+      "enum": [
+        "Planificado",
+        "En Curso",
+        "Completado",
+        "Cancelado"
+      ],
+      "default": "Planificado",
+      "description": "Estado de la planificaci\u00f3n"
+    },
+    "hora_inicio": {
+      "type": "string",
+      "description": "Hora de inicio estimada"
+    },
+    "hora_fin": {
+      "type": "string",
+      "description": "Hora de fin estimada"
+    }
+  },
+  "required": [
+    "fecha",
+    "team_key",
+    "turno",
+    "employee_id",
+    "funcion_asignada"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    },
+    "read": {
+      "$or": [
+        {
+          "data.employee_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.employee_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    }
+  }
+}
