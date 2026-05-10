@@ -1,0 +1,223 @@
+{
+  "name": "Document",
+  "type": "object",
+  "properties": {
+    "titulo": {
+      "type": "string",
+      "description": "T\u00edtulo del documento"
+    },
+    "descripcion": {
+      "type": "string",
+      "description": "Descripci\u00f3n del documento"
+    },
+    "categoria": {
+      "type": "string",
+      "enum": [
+        "Manual de M\u00e1quina",
+        "Pol\u00edtica PRL",
+        "Procedimiento de Ausencia",
+        "Pol\u00edtica RRHH",
+        "Certificado",
+        "Contrato",
+        "Formaci\u00f3n",
+        "Calidad",
+        "Otro"
+      ],
+      "description": "Categor\u00eda del documento"
+    },
+    "tipo_entidad_asociada": {
+      "type": "string",
+      "enum": [
+        "Machine",
+        "Employee",
+        "Process",
+        "AbsenceType",
+        "Skill",
+        "TrainingModule",
+        "General"
+      ],
+      "description": "Tipo de entidad a la que est\u00e1 asociado"
+    },
+    "entidad_asociada_id": {
+      "type": "string",
+      "description": "ID de la entidad asociada"
+    },
+    "archivo_url": {
+      "type": "string",
+      "description": "URL del archivo"
+    },
+    "tipo_archivo": {
+      "type": "string",
+      "description": "Tipo de archivo (pdf, docx, xlsx, etc.)"
+    },
+    "tamano_bytes": {
+      "type": "number",
+      "description": "Tama\u00f1o del archivo en bytes"
+    },
+    "version": {
+      "type": "string",
+      "default": "1.0",
+      "description": "Versi\u00f3n del documento"
+    },
+    "estado": {
+      "type": "string",
+      "enum": [
+        "Borrador",
+        "Vigente",
+        "Obsoleto",
+        "Archivado"
+      ],
+      "default": "Vigente",
+      "description": "Estado del documento"
+    },
+    "fecha_creacion": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Fecha de creaci\u00f3n del documento"
+    },
+    "fecha_vigencia": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha desde la que es vigente"
+    },
+    "fecha_caducidad": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha de caducidad"
+    },
+    "roles_acceso": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "IDs de roles que pueden acceder al documento"
+    },
+    "departamentos_acceso": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Departamentos que pueden acceder (vac\u00edo = todos)"
+    },
+    "es_publico": {
+      "type": "boolean",
+      "default": false,
+      "description": "Si es visible para todos los usuarios"
+    },
+    "historial_versiones": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "string"
+          },
+          "fecha": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "archivo_url": {
+            "type": "string"
+          },
+          "cambios": {
+            "type": "string"
+          },
+          "subido_por": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Historial de versiones anteriores"
+    },
+    "etiquetas": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Etiquetas para clasificaci\u00f3n"
+    },
+    "contenido_indexado": {
+      "type": "string",
+      "description": "Contenido extra\u00eddo del documento para b\u00fasqueda de texto completo"
+    },
+    "subido_por": {
+      "type": "string",
+      "description": "ID del usuario que subi\u00f3 el documento"
+    },
+    "ultima_modificacion": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Fecha de \u00faltima modificaci\u00f3n"
+    },
+    "modificado_por": {
+      "type": "string",
+      "description": "ID del usuario que modific\u00f3"
+    },
+    "contador_descargas": {
+      "type": "number",
+      "default": 0,
+      "description": "N\u00famero de veces descargado"
+    },
+    "ultima_descarga": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Fecha de \u00faltima descarga"
+    },
+    "cambios_recientes": {
+      "type": "string",
+      "description": "Descripci\u00f3n de los \u00faltimos cambios realizados"
+    }
+  },
+  "required": [
+    "titulo",
+    "categoria",
+    "archivo_url"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "data.es_publico": true
+        },
+        {
+          "data.roles_acceso": "{{user.role}}"
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        }
+      ]
+    }
+  }
+}
