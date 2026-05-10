@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { base44 } from '@/api/base44Client';
-import { useQuery } from '@tanstack/react-query';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -11,39 +11,67 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Link } from 'react-router-dom';
-import { Search, Plus, Eye, Copy, Trash2, FileText } from 'lucide-react';
+import { Search, Plus, Eye, Copy, Trash2, FileText, FileDown } from 'lucide-react';
 import { LoadingState, EmptyState } from '@/components/ui/loading-state';
 import { cn } from '@/lib/utils';
+import { downloadQuotePDF } from '@/components/commercial/QuotePDFGenerator';
 
 export default function QuotesList() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('todos');
   const [typeFilter, setTypeFilter] = useState('todos');
+  const [deleteId, setDeleteId] = useState(null);
+  const queryClient = useQueryClient();
 
   const { data: quotes = [], isLoading } = useQuery({
     queryKey: ['quotes', search, statusFilter, typeFilter],
     queryFn: async () => {
       let result = await base44.entities.QuoteTemplate.list('-updated_date', 500);
-      
       if (search) {
         result = result.filter(q =>
-          q.quote_number.toLowerCase().includes(search.toLowerCase()) ||
-          q.client_name.toLowerCase().includes(search.toLowerCase()) ||
+          q.quote_number?.toLowerCase().includes(search.toLowerCase()) ||
+          q.client_name?.toLowerCase().includes(search.toLowerCase()) ||
           q.client_company?.toLowerCase().includes(search.toLowerCase())
         );
       }
-      
-      if (statusFilter !== 'todos') {
-        result = result.filter(q => q.status === statusFilter);
-      }
-      
-      if (typeFilter !== 'todos') {
-        result = result.filter(q => q.quote_type === typeFilter);
-      }
-      
+      if (statusFilter !== 'todos') result = result.filter(q => q.status === statusFilter);
+      if (typeFilter !== 'todos') result = result.filter(q => q.quote_type === typeFilter);
       return result;
     }
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id) => base44.entities.QuoteTemplate.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['quotes'] });
+      setDeleteId(null);
+    },
+  });
+
+  const duplicateMutation = useMutation({
+    mutationFn: async (quote) => {
+      const { id, created_date, updated_date, created_by, ...rest } = quote;
+      const quoteNumber = `QUOTE-${new Date().getFullYear()}-${String(Date.now()).slice(-4)}`;
+      return base44.entities.QuoteTemplate.create({
+        ...rest,
+        quote_number: quoteNumber,
+        status: 'borrador',
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['quotes'] });
+    },
   });
 
   const getStatusColor = (status) => {
@@ -58,6 +86,8 @@ export default function QuotesList() {
   };
 
   if (isLoading) return <LoadingState message="Cargando presupuestos..." />;
+
+  const quoteToDelete = quotes.find(q => q.id === deleteId);
 
   return (
     <div className="h-full flex flex-col p-3 md:p-6 gap-4 md:gap-6 bg-slate-50 dark:bg-slate-950 overflow-y-auto">
@@ -99,13 +129,10 @@ export default function QuotesList() {
                   />
                 </div>
               </div>
-
               <div>
                 <label className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-2 block">Estado</label>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
+                  <SelectTrigger className="text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="todos">Todos</SelectItem>
                     <SelectItem value="borrador">Borrador</SelectItem>
@@ -115,13 +142,10 @@ export default function QuotesList() {
                   </SelectContent>
                 </Select>
               </div>
-
               <div>
                 <label className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-2 block">Tipo</label>
                 <Select value={typeFilter} onValueChange={setTypeFilter}>
-                  <SelectTrigger className="text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
+                  <SelectTrigger className="text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="todos">Todos</SelectItem>
                     <SelectItem value="ENVASADO_SOLO">Solo Envasado</SelectItem>
@@ -129,15 +153,10 @@ export default function QuotesList() {
                   </SelectContent>
                 </Select>
               </div>
-
               <div className="flex items-end">
                 <Button
                   variant="outline"
-                  onClick={() => {
-                    setSearch('');
-                    setStatusFilter('todos');
-                    setTypeFilter('todos');
-                  }}
+                  onClick={() => { setSearch(''); setStatusFilter('todos'); setTypeFilter('todos'); }}
                   className="w-full text-xs h-9"
                 >
                   Limpiar
@@ -149,10 +168,7 @@ export default function QuotesList() {
 
         {/* Results */}
         {quotes.length === 0 ? (
-          <EmptyState
-            title="No hay presupuestos"
-            description="Crea tu primer presupuesto para comenzar"
-          />
+          <EmptyState title="No hay presupuestos" description="Crea tu primer presupuesto para comenzar" />
         ) : (
           <div className="flex flex-col gap-3">
             {quotes.map((quote) => (
@@ -169,11 +185,11 @@ export default function QuotesList() {
                     </div>
                     <div className="hidden md:block">
                       <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">Producto</p>
-                      <p className="capitalize text-slate-900 dark:text-slate-100 text-sm">{quote.product_type}</p>
+                      <p className="capitalize text-slate-900 dark:text-slate-100 text-sm">{quote.product_type || '-'}</p>
                     </div>
                     <div>
                       <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">Total</p>
-                      <p className="font-semibold text-slate-900 dark:text-slate-100 text-sm">€{quote.price_breakdown?.total?.toFixed(2) || '0.00'}</p>
+                      <p className="font-semibold text-slate-900 dark:text-slate-100 text-sm">€{(quote.price_breakdown?.total || 0).toFixed(2)}</p>
                     </div>
                   </div>
 
@@ -182,26 +198,48 @@ export default function QuotesList() {
                       {quote.quote_type === 'ENVASADO_SOLO' ? 'Envasado Solo' : 'Servicio 360'}
                     </span>
                     <span className={cn('text-xs px-2 py-1 rounded font-medium', getStatusColor(quote.status))}>
-                      {quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}
+                      {quote.status?.charAt(0).toUpperCase() + quote.status?.slice(1)}
                     </span>
-                    <span className="text-xs px-2 py-1 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded">
-                      {quote.volume?.toLocaleString()} un.
-                    </span>
+                    {quote.volume && (
+                      <span className="text-xs px-2 py-1 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded">
+                        {quote.volume?.toLocaleString()} un.
+                      </span>
+                    )}
                   </div>
 
                   <div className="flex gap-2 flex-wrap">
                     <Link to={`/QuoteDetail/${quote.id}`}>
                       <Button size="sm" variant="outline" className="gap-2 text-xs h-8">
-                        <Eye className="w-4 h-4" />
+                        <Eye className="w-3 h-3" />
                         Ver
                       </Button>
                     </Link>
-                    <Button size="sm" variant="outline" className="gap-2 text-xs h-8">
-                      <Copy className="w-4 h-4" />
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-2 text-xs h-8"
+                      onClick={() => downloadQuotePDF(quote)}
+                    >
+                      <FileDown className="w-3 h-3" />
+                      PDF
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-2 text-xs h-8"
+                      disabled={duplicateMutation.isPending}
+                      onClick={() => duplicateMutation.mutate(quote)}
+                    >
+                      <Copy className="w-3 h-3" />
                       Duplicar
                     </Button>
-                    <Button size="sm" variant="outline" className="gap-2 text-xs h-8 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300">
-                      <Trash2 className="w-4 h-4" />
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-2 text-xs h-8 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
+                      onClick={() => setDeleteId(quote.id)}
+                    >
+                      <Trash2 className="w-3 h-3" />
                       Eliminar
                     </Button>
                   </div>
@@ -211,6 +249,27 @@ export default function QuotesList() {
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar presupuesto?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se eliminará el presupuesto <strong>{quoteToDelete?.quote_number}</strong> de <strong>{quoteToDelete?.client_name}</strong>. Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              onClick={() => deleteMutation.mutate(deleteId)}
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
