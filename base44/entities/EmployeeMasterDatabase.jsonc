@@ -402,7 +402,7 @@
     "read": {
       "$or": [
         {
-          "id": "{{user.id}}"
+          "id": "{{user.employee_id}}"
         },
         {
           "user_condition": {
@@ -415,16 +415,35 @@
           }
         },
         {
-          "user_condition": {
-            "role": "supervisor"
-          }
+          "$and": [
+            {
+              "user_condition": {
+                "role": "manager"
+              }
+            },
+            {
+              "data.department_id": "{{user.data.managed_department_id}}"
+            }
+          ]
+        },
+        {
+          "$and": [
+            {
+              "user_condition": {
+                "role": "supervisor"
+              }
+            },
+            {
+              "data.team_key": "{{user.data.supervised_team_key}}"
+            }
+          ]
         }
       ]
     },
     "update": {
       "$or": [
         {
-          "id": "{{user.id}}"
+          "id": "{{user.employee_id}}"
         },
         {
           "user_condition": {
@@ -435,6 +454,18 @@
           "user_condition": {
             "role": "rrhh"
           }
+        },
+        {
+          "$and": [
+            {
+              "user_condition": {
+                "role": "manager"
+              }
+            },
+            {
+              "data.department_id": "{{user.data.managed_department_id}}"
+            }
+          ]
         }
       ]
     },
