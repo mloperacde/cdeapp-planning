@@ -1,0 +1,79 @@
+{
+  "name": "SalaryCategory",
+  "type": "object",
+  "row_level_security": [
+    {
+      "operation": "read",
+      "allow": "{{user.role == 'admin' or user.role == 'rrhh'}}"
+    },
+    {
+      "operation": "create",
+      "allow": "{{user.role == 'admin'}}"
+    },
+    {
+      "operation": "update",
+      "allow": "{{user.role == 'admin'}}"
+    },
+    {
+      "operation": "delete",
+      "allow": "{{user.role == 'admin'}}"
+    }
+  ],
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "code": {
+      "type": "string"
+    },
+    "level": {
+      "type": "number"
+    },
+    "description": {
+      "type": "string"
+    },
+    "salary_range": {
+      "type": "object"
+    },
+    "required_experience_years": {
+      "type": "number"
+    },
+    "responsibilities": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "applicable_departments": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "applicable_positions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "benefits": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "order": {
+      "type": "number",
+      "default": 0
+    }
+  },
+  "required": [
+    "name",
+    "code",
+    "level"
+  ]
+}

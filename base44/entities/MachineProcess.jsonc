@@ -1,0 +1,52 @@
+{
+  "name": "MachineProcess",
+  "type": "object",
+  "row_level_security": [
+    {
+      "operation": "read",
+      "allow": "{{true}}"
+    },
+    {
+      "operation": "create",
+      "allow": "{{user.role == 'admin'}}"
+    },
+    {
+      "operation": "update",
+      "allow": "{{user.role == 'admin'}}"
+    },
+    {
+      "operation": "delete",
+      "allow": "{{user.role == 'admin'}}"
+    }
+  ],
+  "properties": {
+    "machine_id": {
+      "type": "string",
+      "description": "ID de la m\u00e1quina"
+    },
+    "process_id": {
+      "type": "string",
+      "description": "ID del proceso"
+    },
+    "operadores_requeridos": {
+      "type": "number",
+      "default": 1,
+      "description": "N\u00famero de operadores requeridos para este proceso en esta m\u00e1quina"
+    },
+    "orden": {
+      "type": "number",
+      "default": 0,
+      "description": "Orden de visualizaci\u00f3n del proceso en la m\u00e1quina"
+    },
+    "activo": {
+      "type": "boolean",
+      "default": true,
+      "description": "Si esta configuraci\u00f3n est\u00e1 activa"
+    }
+  },
+  "required": [
+    "machine_id",
+    "process_id",
+    "operadores_requeridos"
+  ]
+}

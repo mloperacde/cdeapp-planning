@@ -1,5 +1,5 @@
 {
-  "name": "MaintenanceType",
+  "name": "ProcessSkillRequirement",
   "type": "object",
   "row_level_security": [
     {
@@ -20,42 +20,34 @@
     }
   ],
   "properties": {
-    "nombre": {
+    "process_id": {
       "type": "string"
     },
-    "descripcion": {
+    "skill_id": {
       "type": "string"
     },
-    "machine_ids": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
+    "nivel_minimo_requerido": {
+      "type": "string",
+      "enum": [
+        "B\u00e1sico",
+        "Intermedio",
+        "Avanzado",
+        "Experto"
+      ],
+      "default": "B\u00e1sico"
     },
-    "tarea_1": {
-      "type": "object"
-    },
-    "tarea_2": {
-      "type": "object"
-    },
-    "tarea_3": {
-      "type": "object"
-    },
-    "tarea_4": {
-      "type": "object"
-    },
-    "tarea_5": {
-      "type": "object"
-    },
-    "tarea_6": {
-      "type": "object"
-    },
-    "activo": {
+    "obligatorio": {
       "type": "boolean",
       "default": true
+    },
+    "prioridad": {
+      "type": "number",
+      "default": 1
     }
   },
   "required": [
-    "nombre"
+    "process_id",
+    "skill_id",
+    "nivel_minimo_requerido"
   ]
 }

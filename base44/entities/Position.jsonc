@@ -1,10 +1,10 @@
 {
-  "name": "SMSNotificationLog",
+  "name": "Position",
   "type": "object",
   "row_level_security": [
     {
       "operation": "read",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{true}}"
     },
     {
       "operation": "create",
@@ -20,45 +20,48 @@
     }
   ],
   "properties": {
-    "telefono": {
+    "name": {
       "type": "string"
     },
-    "mensaje": {
+    "department_id": {
       "type": "string"
     },
-    "tipo_evento": {
+    "department_name": {
       "type": "string"
     },
-    "absence_id": {
+    "description": {
       "type": "string"
     },
-    "employee_id": {
+    "max_headcount": {
+      "type": "number",
+      "default": 1
+    },
+    "requirements": {
       "type": "string"
     },
-    "estado": {
+    "level": {
       "type": "string",
       "enum": [
-        "Pendiente",
-        "Enviado",
-        "Error",
-        "Entregado"
+        "Junior",
+        "Mid",
+        "Senior",
+        "Lead",
+        "Manager",
+        "Director",
+        "Executive"
       ],
-      "default": "Pendiente"
+      "default": "Mid"
     },
-    "fecha_envio": {
-      "type": "string",
-      "format": "date-time"
-    },
-    "error_mensaje": {
+    "reports_to_position_id": {
       "type": "string"
     },
-    "proveedor": {
-      "type": "string"
+    "orden": {
+      "type": "number",
+      "default": 0
     }
   },
   "required": [
-    "telefono",
-    "mensaje",
-    "tipo_evento"
+    "name",
+    "department_id"
   ]
 }

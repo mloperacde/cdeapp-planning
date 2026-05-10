@@ -1,6 +1,24 @@
 {
   "name": "MaintenanceIntervention",
   "type": "object",
+  "row_level_security": [
+    {
+      "operation": "read",
+      "allow": "{{user.role == 'admin' or user.role == 'T\u00e9cnico' or user.role == 'supervisor'}}"
+    },
+    {
+      "operation": "create",
+      "allow": "{{user.role == 'admin' or user.role == 'T\u00e9cnico'}}"
+    },
+    {
+      "operation": "update",
+      "allow": "{{user.role == 'admin' or user.role == 'T\u00e9cnico'}}"
+    },
+    {
+      "operation": "delete",
+      "allow": "{{user.role == 'admin'}}"
+    }
+  ],
   "properties": {
     "titulo": {
       "type": "string",
@@ -17,8 +35,7 @@
         "Mejora de M\u00e1quina",
         "Otro"
       ],
-      "default": "Acci\u00f3n",
-      "description": "Tipo de intervenci\u00f3n"
+      "default": "Acci\u00f3n"
     },
     "descripcion": {
       "type": "string",
@@ -33,8 +50,7 @@
         "Completada",
         "Cancelada"
       ],
-      "default": "Pendiente",
-      "description": "Estado actual de la intervenci\u00f3n"
+      "default": "Pendiente"
     },
     "prioridad": {
       "type": "string",
@@ -44,20 +60,16 @@
         "Alta",
         "Cr\u00edtica"
       ],
-      "default": "Media",
-      "description": "Nivel de prioridad"
+      "default": "Media"
     },
     "solicitante_nombre": {
-      "type": "string",
-      "description": "Nombre del solicitante"
+      "type": "string"
     },
     "solicitante_email": {
-      "type": "string",
-      "description": "Email del solicitante"
+      "type": "string"
     },
     "solicitante_departamento": {
-      "type": "string",
-      "description": "Departamento del solicitante"
+      "type": "string"
     },
     "destinatarios": {
       "type": "array",
@@ -74,8 +86,7 @@
             "type": "string"
           }
         }
-      },
-      "description": "Personas destinatarias de la intervenci\u00f3n"
+      }
     },
     "objetivo_tipo": {
       "type": "string",
@@ -88,28 +99,22 @@
         "Instalaci\u00f3n",
         "Personalizado"
       ],
-      "default": "Personalizado",
-      "description": "Tipo de objetivo"
+      "default": "Personalizado"
     },
     "objetivo_maquina_id": {
-      "type": "string",
-      "description": "ID de la m\u00e1quina objetivo"
+      "type": "string"
     },
     "objetivo_maquina_nombre": {
-      "type": "string",
-      "description": "Nombre de la m\u00e1quina objetivo"
+      "type": "string"
     },
     "objetivo_area": {
-      "type": "string",
-      "description": "\u00c1rea objetivo"
+      "type": "string"
     },
     "objetivo_sala": {
-      "type": "string",
-      "description": "Sala objetivo"
+      "type": "string"
     },
     "objetivo_descripcion_manual": {
-      "type": "string",
-      "description": "Descripci\u00f3n manual del objetivo"
+      "type": "string"
     },
     "necesidades": {
       "type": "array",
@@ -138,28 +143,23 @@
             "default": false
           }
         }
-      },
-      "description": "Recursos y necesidades para ejecutar la intervenci\u00f3n"
+      }
     },
     "fecha_solicitud": {
       "type": "string",
-      "format": "date-time",
-      "description": "Fecha de solicitud"
+      "format": "date-time"
     },
     "fecha_inicio_prevista": {
       "type": "string",
-      "format": "date",
-      "description": "Fecha prevista de inicio"
+      "format": "date"
     },
     "fecha_fin_prevista": {
       "type": "string",
-      "format": "date",
-      "description": "Fecha prevista de finalizaci\u00f3n"
+      "format": "date"
     },
     "fecha_completada": {
       "type": "string",
-      "format": "date-time",
-      "description": "Fecha real de finalizaci\u00f3n"
+      "format": "date-time"
     },
     "imagenes_adjuntas": {
       "type": "array",
@@ -176,8 +176,7 @@
             "type": "string"
           }
         }
-      },
-      "description": "Im\u00e1genes adjuntas descriptivas del problema"
+      }
     },
     "progreso": {
       "type": "array",
@@ -204,8 +203,7 @@
             "type": "string"
           }
         }
-      },
-      "description": "Historial de progreso de la intervenci\u00f3n"
+      }
     },
     "resolucion": {
       "type": "object",
@@ -226,16 +224,13 @@
         "satisfactorio": {
           "type": "boolean"
         }
-      },
-      "description": "Detalles de resoluci\u00f3n y cierre"
+      }
     },
     "numero_orden": {
-      "type": "string",
-      "description": "N\u00famero de orden de trabajo generado"
+      "type": "string"
     },
     "notas_adicionales": {
-      "type": "string",
-      "description": "Notas adicionales"
+      "type": "string"
     }
   },
   "required": [
@@ -244,60 +239,5 @@
     "descripcion",
     "estado",
     "prioridad"
-  ],
-  "rls": {
-    "create": {
-      "created_by": "{{user.email}}"
-    },
-    "read": {
-      "$or": [
-        {
-          "created_by": "{{user.email}}"
-        },
-        {
-          "data.destinatarios.email": "{{user.email}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "manager"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "T\u00e9cnico"
-          }
-        }
-      ]
-    },
-    "update": {
-      "$or": [
-        {
-          "created_by": "{{user.email}}"
-        },
-        {
-          "data.destinatarios.email": "{{user.email}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "T\u00e9cnico"
-          }
-        }
-      ]
-    },
-    "delete": {
-      "user_condition": {
-        "role": "admin"
-      }
-    }
-  }
+  ]
 }

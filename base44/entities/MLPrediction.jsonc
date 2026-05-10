@@ -1,6 +1,24 @@
 {
   "name": "MLPrediction",
   "type": "object",
+  "row_level_security": [
+    {
+      "operation": "read",
+      "allow": "{{user.role == 'admin' or user.role == 'rrhh' or user.role == 'supervisor'}}"
+    },
+    {
+      "operation": "create",
+      "allow": "{{user.role == 'admin'}}"
+    },
+    {
+      "operation": "update",
+      "allow": "{{user.role == 'admin'}}"
+    },
+    {
+      "operation": "delete",
+      "allow": "{{user.role == 'admin'}}"
+    }
+  ],
   "properties": {
     "tipo_prediccion": {
       "type": "string",
@@ -8,27 +26,22 @@
         "Rotaci\u00f3n Empleado",
         "Optimizaci\u00f3n Turnos",
         "Cuello Botella M\u00e1quina"
-      ],
-      "description": "Tipo de predicci\u00f3n"
+      ]
     },
     "employee_id": {
-      "type": "string",
-      "description": "ID del empleado (para predicci\u00f3n de rotaci\u00f3n)"
+      "type": "string"
     },
     "machine_id": {
-      "type": "string",
-      "description": "ID de la m\u00e1quina (para cuellos de botella)"
+      "type": "string"
     },
     "fecha_prediccion": {
       "type": "string",
-      "format": "date-time",
-      "description": "Fecha de la predicci\u00f3n"
+      "format": "date-time"
     },
     "probabilidad": {
       "type": "number",
       "minimum": 0,
-      "maximum": 100,
-      "description": "Probabilidad del evento (%)"
+      "maximum": 100
     },
     "nivel_riesgo": {
       "type": "string",
@@ -37,95 +50,32 @@
         "Medio",
         "Alto",
         "Cr\u00edtico"
-      ],
-      "description": "Nivel de riesgo"
+      ]
     },
     "factores_contribuyentes": {
       "type": "array",
       "items": {
-        "type": "object",
-        "properties": {
-          "factor": {
-            "type": "string"
-          },
-          "impacto": {
-            "type": "number"
-          }
-        }
-      },
-      "description": "Factores que contribuyen a la predicci\u00f3n"
+        "type": "object"
+      }
     },
     "datos_analisis": {
-      "type": "object",
-      "description": "Datos utilizados para el an\u00e1lisis",
-      "properties": {
-        "antiguedad_meses": {
-          "type": "number"
-        },
-        "rendimiento_promedio": {
-          "type": "number"
-        },
-        "cambios_turno_ultimo_mes": {
-          "type": "number"
-        },
-        "ausencias_ultimo_trimestre": {
-          "type": "number"
-        },
-        "horas_extra_mes": {
-          "type": "number"
-        },
-        "evaluaciones_positivas": {
-          "type": "number"
-        }
-      }
+      "type": "object"
     },
     "recomendaciones": {
       "type": "array",
       "items": {
         "type": "string"
-      },
-      "description": "Recomendaciones basadas en la predicci\u00f3n"
+      }
     },
     "optimizacion_turnos": {
-      "type": "object",
-      "description": "Datos de optimizaci\u00f3n de turnos",
-      "properties": {
-        "horas_extra_predichas": {
-          "type": "number"
-        },
-        "cobertura_optima": {
-          "type": "number"
-        },
-        "empleados_necesarios": {
-          "type": "number"
-        },
-        "ahorro_estimado": {
-          "type": "number"
-        }
-      }
+      "type": "object"
     },
     "cuello_botella": {
-      "type": "object",
-      "description": "Datos de cuello de botella",
-      "properties": {
-        "tiempo_inactividad_promedio": {
-          "type": "number"
-        },
-        "eficiencia_actual": {
-          "type": "number"
-        },
-        "eficiencia_potencial": {
-          "type": "number"
-        },
-        "causa_principal": {
-          "type": "string"
-        }
-      }
+      "type": "object"
     },
     "activo": {
       "type": "boolean",
-      "default": true,
-      "description": "Si la predicci\u00f3n est\u00e1 activa"
+      "default": true
     }
   },
   "required": [
@@ -133,44 +83,5 @@
     "fecha_prediccion",
     "probabilidad",
     "nivel_riesgo"
-  ],
-  "rls": {
-    "create": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "read": {
-      "$or": [
-        {
-          "data.employee_id": "{{user.employee_id}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "rrhh"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "manager"
-          }
-        }
-      ]
-    },
-    "update": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "delete": {
-      "user_condition": {
-        "role": "admin"
-      }
-    }
-  }
+  ]
 }

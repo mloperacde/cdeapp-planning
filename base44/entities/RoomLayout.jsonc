@@ -1,10 +1,10 @@
 {
-  "name": "SMSNotificationLog",
+  "name": "RoomLayout",
   "type": "object",
   "row_level_security": [
     {
       "operation": "read",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{true}}"
     },
     {
       "operation": "create",
@@ -20,45 +20,44 @@
     }
   ],
   "properties": {
-    "telefono": {
+    "name": {
       "type": "string"
     },
-    "mensaje": {
+    "description": {
       "type": "string"
     },
-    "tipo_evento": {
+    "room_name": {
       "type": "string"
     },
-    "absence_id": {
+    "canvas_width": {
+      "type": "number",
+      "default": 1200
+    },
+    "canvas_height": {
+      "type": "number",
+      "default": 800
+    },
+    "layout_elements": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "background_image_url": {
       "type": "string"
     },
-    "employee_id": {
-      "type": "string"
-    },
-    "estado": {
+    "status": {
       "type": "string",
       "enum": [
-        "Pendiente",
-        "Enviado",
-        "Error",
-        "Entregado"
+        "Borrador",
+        "Aprobado",
+        "Archivado"
       ],
-      "default": "Pendiente"
-    },
-    "fecha_envio": {
-      "type": "string",
-      "format": "date-time"
-    },
-    "error_mensaje": {
-      "type": "string"
-    },
-    "proveedor": {
-      "type": "string"
+      "default": "Borrador"
     }
   },
   "required": [
-    "telefono",
-    "mensaje",
-    "tipo_evento"
+    "name",
+    "room_name"
   ]
 }

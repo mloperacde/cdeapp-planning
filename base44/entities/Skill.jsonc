@@ -1,5 +1,5 @@
 {
-  "name": "MaintenanceType",
+  "name": "Skill",
   "type": "object",
   "row_level_security": [
     {
@@ -23,39 +23,39 @@
     "nombre": {
       "type": "string"
     },
-    "descripcion": {
+    "codigo": {
       "type": "string"
     },
-    "machine_ids": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
+    "categoria": {
+      "type": "string",
+      "enum": [
+        "T\u00e9cnica",
+        "Seguridad",
+        "Calidad",
+        "Maquinaria",
+        "Proceso",
+        "Software",
+        "Idiomas",
+        "Otra"
+      ],
+      "default": "T\u00e9cnica"
     },
-    "tarea_1": {
-      "type": "object"
-    },
-    "tarea_2": {
-      "type": "object"
-    },
-    "tarea_3": {
-      "type": "object"
-    },
-    "tarea_4": {
-      "type": "object"
-    },
-    "tarea_5": {
-      "type": "object"
-    },
-    "tarea_6": {
-      "type": "object"
+    "descripcion": {
+      "type": "string"
     },
     "activo": {
       "type": "boolean",
       "default": true
+    },
+    "departamentos_aplicables": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
     }
   },
   "required": [
-    "nombre"
+    "nombre",
+    "codigo"
   ]
 }

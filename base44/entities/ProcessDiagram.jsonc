@@ -1,10 +1,10 @@
 {
-  "name": "RiskAssessment",
+  "name": "ProcessDiagram",
   "type": "object",
   "row_level_security": [
     {
       "operation": "read",
-      "allow": "{{user.role == 'admin' or user.role == 'rrhh'}}"
+      "allow": "{{true}}"
     },
     {
       "operation": "create",
@@ -20,59 +20,64 @@
     }
   ],
   "properties": {
-    "codigo": {
+    "name": {
       "type": "string"
     },
-    "titulo": {
+    "description": {
       "type": "string"
     },
-    "departamento": {
+    "room_layout_id": {
       "type": "string"
     },
-    "puesto": {
+    "room_layout_name": {
       "type": "string"
     },
-    "area": {
+    "process_id": {
       "type": "string"
     },
-    "fecha_evaluacion": {
-      "type": "string",
-      "format": "date"
-    },
-    "fecha_revision": {
-      "type": "string",
-      "format": "date"
-    },
-    "evaluador_id": {
+    "process_name": {
       "type": "string"
     },
-    "riesgos_identificados": {
+    "operator_assignments": {
       "type": "array",
       "items": {
         "type": "object"
       }
     },
-    "plan_accion": {
-      "type": "string"
+    "flow_connections": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
     },
-    "estado_general": {
+    "version": {
+      "type": "number",
+      "default": 1
+    },
+    "status": {
       "type": "string",
       "enum": [
-        "En Proceso",
-        "Completada",
-        "Revisi\u00f3n Pendiente"
+        "Borrador",
+        "En Revisi\u00f3n",
+        "Aprobado",
+        "Obsoleto"
       ],
-      "default": "En Proceso"
+      "default": "Borrador"
     },
-    "documento_url": {
+    "approved_by": {
       "type": "string"
     },
-    "notas": {
+    "approval_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "notes": {
       "type": "string"
     }
   },
   "required": [
-    "titulo",
-    "fecha_evaluacion"
+    "name",
+    "room_layout_id",
+    "process_id"
   ]
 }

@@ -1,0 +1,84 @@
+{
+  "name": "IncentivePlan",
+  "type": "object",
+  "row_level_security": [
+    {
+      "operation": "read",
+      "allow": "{{user.role == 'admin' or user.role == 'rrhh'}}"
+    },
+    {
+      "operation": "create",
+      "allow": "{{user.role == 'admin' or user.role == 'rrhh'}}"
+    },
+    {
+      "operation": "update",
+      "allow": "{{user.role == 'admin' or user.role == 'rrhh'}}"
+    },
+    {
+      "operation": "delete",
+      "allow": "{{user.role == 'admin'}}"
+    }
+  ],
+  "properties": {
+    "nombre": {
+      "type": "string",
+      "description": "Nombre del plan de incentivos"
+    },
+    "anio": {
+      "type": "number",
+      "description": "A\u00f1o del plan"
+    },
+    "periodo": {
+      "type": "string",
+      "enum": [
+        "Mensual",
+        "Trimestral",
+        "Semestral",
+        "Anual"
+      ],
+      "description": "Periodicidad de evaluaci\u00f3n"
+    },
+    "fecha_inicio": {
+      "type": "string",
+      "format": "date"
+    },
+    "fecha_fin": {
+      "type": "string",
+      "format": "date"
+    },
+    "descripcion": {
+      "type": "string"
+    },
+    "parametros_disponibles": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string"
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "unidad_medida": {
+            "type": "string"
+          },
+          "importable_excel": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "activo": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "nombre",
+    "anio",
+    "periodo",
+    "fecha_inicio",
+    "fecha_fin"
+  ]
+}

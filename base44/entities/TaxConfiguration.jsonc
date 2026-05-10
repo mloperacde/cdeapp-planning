@@ -1,0 +1,74 @@
+{
+  "name": "TaxConfiguration",
+  "type": "object",
+  "row_level_security": [
+    {
+      "operation": "read",
+      "allow": "{{user.role == 'admin' or user.role == 'rrhh'}}"
+    },
+    {
+      "operation": "create",
+      "allow": "{{user.role == 'admin'}}"
+    },
+    {
+      "operation": "update",
+      "allow": "{{user.role == 'admin'}}"
+    },
+    {
+      "operation": "delete",
+      "allow": "{{user.role == 'admin'}}"
+    }
+  ],
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "year": {
+      "type": "number"
+    },
+    "country": {
+      "type": "string",
+      "default": "Espa\u00f1a"
+    },
+    "tax_type": {
+      "type": "string",
+      "enum": [
+        "IRPF",
+        "Seguridad Social",
+        "Otros"
+      ]
+    },
+    "irpf_brackets": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "social_security_rates": {
+      "type": "object"
+    },
+    "deductions": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "valid_from": {
+      "type": "string",
+      "format": "date"
+    },
+    "valid_to": {
+      "type": "string",
+      "format": "date"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "name",
+    "year",
+    "valid_from"
+  ]
+}

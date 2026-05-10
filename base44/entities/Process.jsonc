@@ -1,5 +1,5 @@
 {
-  "name": "MaintenanceType",
+  "name": "Process",
   "type": "object",
   "row_level_security": [
     {
@@ -23,32 +23,15 @@
     "nombre": {
       "type": "string"
     },
+    "codigo": {
+      "type": "string"
+    },
     "descripcion": {
       "type": "string"
     },
-    "machine_ids": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
-    },
-    "tarea_1": {
-      "type": "object"
-    },
-    "tarea_2": {
-      "type": "object"
-    },
-    "tarea_3": {
-      "type": "object"
-    },
-    "tarea_4": {
-      "type": "object"
-    },
-    "tarea_5": {
-      "type": "object"
-    },
-    "tarea_6": {
-      "type": "object"
+    "operadores_requeridos": {
+      "type": "number",
+      "default": 1
     },
     "activo": {
       "type": "boolean",
@@ -56,6 +39,7 @@
     }
   },
   "required": [
-    "nombre"
+    "nombre",
+    "codigo"
   ]
 }

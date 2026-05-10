@@ -1,6 +1,24 @@
 {
   "name": "Machine",
   "type": "object",
+  "row_level_security": [
+    {
+      "operation": "read",
+      "allow": "{{true}}"
+    },
+    {
+      "operation": "create",
+      "allow": "{{user.role == 'admin'}}"
+    },
+    {
+      "operation": "update",
+      "allow": "{{user.role == 'admin'}}"
+    },
+    {
+      "operation": "delete",
+      "allow": "{{user.role == 'admin'}}"
+    }
+  ],
   "properties": {
     "nombre": {
       "type": "string",
@@ -11,113 +29,90 @@
       "description": "C\u00f3digo identificador de la m\u00e1quina"
     },
     "marca": {
-      "type": "string",
-      "description": "Marca de la m\u00e1quina"
+      "type": "string"
     },
     "modelo": {
-      "type": "string",
-      "description": "Modelo de la m\u00e1quina"
+      "type": "string"
     },
     "numero_serie": {
-      "type": "string",
-      "description": "N\u00famero de serie"
+      "type": "string"
     },
     "fecha_compra": {
       "type": "string",
-      "format": "date",
-      "description": "Fecha de compra"
+      "format": "date"
     },
     "tipo": {
-      "type": "string",
-      "description": "Tipo de m\u00e1quina (Sobres, Frascos, etc.)"
+      "type": "string"
     },
     "ubicacion": {
-      "type": "string",
-      "description": "Ubicaci\u00f3n f\u00edsica de la m\u00e1quina"
+      "type": "string"
     },
     "descripcion": {
-      "type": "string",
-      "description": "Descripci\u00f3n adicional"
+      "type": "string"
     },
     "orden": {
-      "type": "number",
-      "description": "Orden de visualizaci\u00f3n"
+      "type": "number"
     },
     "programa_mantenimiento": {
-      "type": "string",
-      "description": "Programa de mantenimiento que aplica"
+      "type": "string"
     },
     "procesos_ids": {
       "type": "array",
       "items": {
         "type": "string"
-      },
-      "description": "IDs de procesos que puede realizar esta m\u00e1quina"
+      }
     },
     "articulos_ids": {
       "type": "array",
       "items": {
         "type": "string"
-      },
-      "description": "IDs de art\u00edculos que puede fabricar esta m\u00e1quina"
+      }
     },
     "parametros_sobres": {
       "type": "object",
       "properties": {
         "ancho_paso_minimo": {
-          "type": "number",
-          "description": "Ancho de paso m\u00ednimo (mm)"
+          "type": "number"
         },
         "ancho_paso_maximo": {
-          "type": "number",
-          "description": "Ancho de paso m\u00e1ximo (mm)"
+          "type": "number"
         },
         "dosis_minima": {
-          "type": "number",
-          "description": "Dosis m\u00ednima"
+          "type": "number"
         },
         "dosis_maxima": {
-          "type": "number",
-          "description": "Dosis m\u00e1xima"
+          "type": "number"
         },
         "cargador": {
           "type": "boolean",
-          "default": false,
-          "description": "\u00bfTiene cargador?"
+          "default": false
         }
-      },
-      "description": "Par\u00e1metros espec\u00edficos para m\u00e1quinas de sobres"
+      }
     },
     "parametros_frascos": {
       "type": "object",
       "properties": {
         "dosis_minima": {
-          "type": "number",
-          "description": "Dosis m\u00ednima"
+          "type": "number"
         },
         "dosis_maxima": {
-          "type": "number",
-          "description": "Dosis m\u00e1xima"
+          "type": "number"
         },
         "roscado": {
           "type": "boolean",
-          "default": false,
-          "description": "\u00bfTiene roscado?"
+          "default": false
         },
         "grafado": {
           "type": "boolean",
-          "default": false,
-          "description": "\u00bfTiene grafado?"
+          "default": false
         }
-      },
-      "description": "Par\u00e1metros espec\u00edficos para m\u00e1quinas de frascos"
+      }
     },
     "imagenes": {
       "type": "array",
       "items": {
         "type": "string"
-      },
-      "description": "URLs de im\u00e1genes de la m\u00e1quina"
+      }
     },
     "archivos_adjuntos": {
       "type": "array",
@@ -138,8 +133,7 @@
             "format": "date-time"
           }
         }
-      },
-      "description": "Archivos adjuntos (manuales, certificados, etc.)"
+      }
     },
     "historico_articulos": {
       "type": "array",
@@ -157,30 +151,11 @@
             "type": "number"
           }
         }
-      },
-      "description": "Hist\u00f3rico de art\u00edculos fabricados"
+      }
     }
   },
   "required": [
     "nombre",
     "codigo"
-  ],
-  "rls": {
-    "create": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "read": {},
-    "update": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "delete": {
-      "user_condition": {
-        "role": "admin"
-      }
-    }
-  }
+  ]
 }

@@ -1,15 +1,31 @@
 {
   "name": "ShiftAssignment",
   "type": "object",
+  "row_level_security": [
+    {
+      "operation": "read",
+      "allow": "{{true}}"
+    },
+    {
+      "operation": "create",
+      "allow": "{{user.role == 'admin' or user.role == 'jefe_turno'}}"
+    },
+    {
+      "operation": "update",
+      "allow": "{{user.role == 'admin' or user.role == 'jefe_turno' or (user.employee_id == employee_id and estado == 'Programado')}}"
+    },
+    {
+      "operation": "delete",
+      "allow": "{{user.role == 'admin' or user.role == 'jefe_turno'}}"
+    }
+  ],
   "properties": {
     "employee_id": {
-      "type": "string",
-      "description": "ID del registro del empleado en EmployeeMasterDatabase (llave for\u00e1nea \u2192 EmployeeMasterDatabase.id)"
+      "type": "string"
     },
     "fecha": {
       "type": "string",
-      "format": "date",
-      "description": "Fecha del turno"
+      "format": "date"
     },
     "turno": {
       "type": "string",
@@ -17,23 +33,19 @@
         "Ma\u00f1ana",
         "Tarde",
         "Noche"
-      ],
-      "description": "Turno asignado"
+      ]
     },
     "hora_inicio": {
-      "type": "string",
-      "description": "Hora de inicio del turno (HH:mm)"
+      "type": "string"
     },
     "hora_fin": {
-      "type": "string",
-      "description": "Hora de fin del turno (HH:mm)"
+      "type": "string"
     },
     "maquinas_asignadas": {
       "type": "array",
       "items": {
         "type": "string"
-      },
-      "description": "IDs de m\u00e1quinas asignadas (llave for\u00e1nea \u2192 MachineMasterDatabase.id)"
+      }
     },
     "estado": {
       "type": "string",
@@ -44,20 +56,16 @@
         "Completado",
         "Cancelado"
       ],
-      "default": "Programado",
-      "description": "Estado del turno"
+      "default": "Programado"
     },
     "notas": {
-      "type": "string",
-      "description": "Notas del turno"
+      "type": "string"
     },
     "creado_por": {
-      "type": "string",
-      "description": "ID del usuario que cre\u00f3 el turno (llave for\u00e1nea \u2192 User.id)"
+      "type": "string"
     },
     "modificado_por": {
-      "type": "string",
-      "description": "ID del usuario que modific\u00f3 el turno (llave for\u00e1nea \u2192 User.id)"
+      "type": "string"
     }
   },
   "required": [
@@ -66,72 +74,5 @@
     "turno",
     "hora_inicio",
     "hora_fin"
-  ],
-  "rls": {
-    "create": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "manager"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "Jefe Turno Produccion"
-          }
-        }
-      ]
-    },
-    "read": {
-      "$or": [
-        {
-          "data.employee_id": "{{user.employee_id}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "manager"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "Jefe Turno Produccion"
-          }
-        }
-      ]
-    },
-    "update": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "manager"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "Jefe Turno Produccion"
-          }
-        }
-      ]
-    },
-    "delete": {
-      "user_condition": {
-        "role": "admin"
-      }
-    }
-  }
+  ]
 }

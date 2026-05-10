@@ -1,0 +1,121 @@
+{
+  "name": "SalaryComponent",
+  "type": "object",
+  "row_level_security": [
+    {
+      "operation": "read",
+      "allow": "{{user.role == 'admin' or user.role == 'rrhh'}}"
+    },
+    {
+      "operation": "create",
+      "allow": "{{user.role == 'admin'}}"
+    },
+    {
+      "operation": "update",
+      "allow": "{{user.role == 'admin'}}"
+    },
+    {
+      "operation": "delete",
+      "allow": "{{user.role == 'admin'}}"
+    }
+  ],
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "code": {
+      "type": "string"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "Fijo",
+        "Variable",
+        "Deducci\u00f3n",
+        "Beneficio",
+        "Plus",
+        "Complemento"
+      ],
+      "default": "Fijo"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "Salario Base",
+        "Complementos Salariales",
+        "Pluses",
+        "Deducciones",
+        "Beneficios Sociales",
+        "Otros"
+      ]
+    },
+    "is_taxable": {
+      "type": "boolean",
+      "default": true
+    },
+    "is_social_security_contributory": {
+      "type": "boolean",
+      "default": true
+    },
+    "calculation_method": {
+      "type": "string",
+      "enum": [
+        "Fijo",
+        "Porcentaje Salario Base",
+        "F\u00f3rmula Personalizada",
+        "Por Horas",
+        "Por D\u00edas"
+      ],
+      "default": "Fijo"
+    },
+    "default_value": {
+      "type": "number"
+    },
+    "formula": {
+      "type": "string"
+    },
+    "applies_to_all": {
+      "type": "boolean",
+      "default": false
+    },
+    "applicable_departments": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "applicable_positions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "periodicity": {
+      "type": "string",
+      "enum": [
+        "Mensual",
+        "Trimestral",
+        "Semestral",
+        "Anual",
+        "\u00danica"
+      ],
+      "default": "Mensual"
+    },
+    "description": {
+      "type": "string"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "order": {
+      "type": "number",
+      "default": 0
+    }
+  },
+  "required": [
+    "name",
+    "code",
+    "type"
+  ]
+}

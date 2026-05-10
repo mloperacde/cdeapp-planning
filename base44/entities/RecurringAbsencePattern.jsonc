@@ -1,14 +1,30 @@
 {
   "name": "RecurringAbsencePattern",
   "type": "object",
+  "row_level_security": [
+    {
+      "operation": "read",
+      "allow": "{{user.role == 'admin' or user.role == 'rrhh' or user.role == 'supervisor'}}"
+    },
+    {
+      "operation": "create",
+      "allow": "{{user.role == 'admin' or user.role == 'rrhh'}}"
+    },
+    {
+      "operation": "update",
+      "allow": "{{user.role == 'admin' or user.role == 'rrhh'}}"
+    },
+    {
+      "operation": "delete",
+      "allow": "{{user.role == 'admin'}}"
+    }
+  ],
   "properties": {
     "employee_id": {
-      "type": "string",
-      "description": "ID del empleado"
+      "type": "string"
     },
     "tipo_ausencia": {
-      "type": "string",
-      "description": "Tipo de ausencia recurrente"
+      "type": "string"
     },
     "patron_detectado": {
       "type": "string",
@@ -19,33 +35,27 @@
         "D\u00edas espec\u00edficos",
         "Mensual",
         "Otro"
-      ],
-      "description": "Patr\u00f3n detectado"
+      ]
     },
     "numero_repeticiones": {
-      "type": "number",
-      "description": "N\u00famero de veces que se repite"
+      "type": "number"
     },
     "periodo_analisis": {
-      "type": "string",
-      "description": "Per\u00edodo analizado (ej. \u00daltimos 3 meses)"
+      "type": "string"
     },
     "fecha_inicio_periodo": {
       "type": "string",
-      "format": "date",
-      "description": "Inicio del per\u00edodo de an\u00e1lisis"
+      "format": "date"
     },
     "fecha_fin_periodo": {
       "type": "string",
-      "format": "date",
-      "description": "Fin del per\u00edodo de an\u00e1lisis"
+      "format": "date"
     },
     "ausencias_ids": {
       "type": "array",
       "items": {
         "type": "string"
-      },
-      "description": "IDs de las ausencias que conforman el patr\u00f3n"
+      }
     },
     "nivel_alerta": {
       "type": "string",
@@ -53,17 +63,14 @@
         "Bajo",
         "Medio",
         "Alto"
-      ],
-      "description": "Nivel de alerta del patr\u00f3n"
+      ]
     },
     "requiere_revision": {
       "type": "boolean",
-      "default": false,
-      "description": "Si requiere revisi\u00f3n por RRHH"
+      "default": false
     },
     "revisado_por": {
-      "type": "string",
-      "description": "ID de quien revis\u00f3"
+      "type": "string"
     },
     "fecha_revision": {
       "type": "string",
@@ -81,39 +88,5 @@
     "employee_id",
     "tipo_ausencia",
     "numero_repeticiones"
-  ],
-  "rls": {
-    "create": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "read": {
-      "$or": [
-        {
-          "data.employee_id": "{{user.employee_id}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "rrhh"
-          }
-        }
-      ]
-    },
-    "update": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "delete": {
-      "user_condition": {
-        "role": "admin"
-      }
-    }
-  }
+  ]
 }

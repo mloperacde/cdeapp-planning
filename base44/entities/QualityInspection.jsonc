@@ -1,31 +1,43 @@
 {
   "name": "QualityInspection",
   "type": "object",
+  "row_level_security": [
+    {
+      "operation": "read",
+      "allow": "{{user.role == 'admin' or user.role == 'T\u00e9cnico' or user.role == 'supervisor'}}"
+    },
+    {
+      "operation": "create",
+      "allow": "{{user.role == 'admin' or user.role == 'T\u00e9cnico'}}"
+    },
+    {
+      "operation": "update",
+      "allow": "{{user.role == 'admin' or user.role == 'T\u00e9cnico'}}"
+    },
+    {
+      "operation": "delete",
+      "allow": "{{user.role == 'admin'}}"
+    }
+  ],
   "properties": {
     "work_order_id": {
-      "type": "string",
-      "description": "ID de la orden de trabajo inspeccionada"
+      "type": "string"
     },
     "product_article_code": {
-      "type": "string",
-      "description": "C\u00f3digo del art\u00edculo inspeccionado"
+      "type": "string"
     },
     "product_name": {
-      "type": "string",
-      "description": "Nombre del producto inspeccionado"
+      "type": "string"
     },
     "inspection_date": {
       "type": "string",
-      "format": "date-time",
-      "description": "Fecha y hora de la inspecci\u00f3n"
+      "format": "date-time"
     },
     "inspector_id": {
-      "type": "string",
-      "description": "ID del inspector (empleado)"
+      "type": "string"
     },
     "inspector_name": {
-      "type": "string",
-      "description": "Nombre del inspector"
+      "type": "string"
     },
     "result": {
       "type": "string",
@@ -33,100 +45,73 @@
         "Aprobado",
         "Rechazado",
         "Aprobado con Observaciones"
-      ],
-      "description": "Resultado de la inspecci\u00f3n"
+      ]
     },
     "defects_found": {
       "type": "array",
       "items": {
         "type": "string"
-      },
-      "description": "Lista de defectos encontrados"
+      }
     },
     "quantity_inspected": {
-      "type": "number",
-      "description": "Cantidad inspeccionada"
+      "type": "number"
     },
     "quantity_approved": {
-      "type": "number",
-      "description": "Cantidad aprobada"
+      "type": "number"
     },
     "quantity_rejected": {
-      "type": "number",
-      "description": "Cantidad rechazada"
+      "type": "number"
     },
     "comments": {
-      "type": "string",
-      "description": "Comentarios y observaciones"
+      "type": "string"
     },
     "rework_required": {
       "type": "boolean",
-      "default": false,
-      "description": "Si requiere retrabajo"
+      "default": false
     },
     "rework_assigned_to": {
-      "type": "string",
-      "description": "ID del empleado asignado al retrabajo"
+      "type": "string"
     },
     "rework_completed": {
       "type": "boolean",
-      "default": false,
-      "description": "Si el retrabajo est\u00e1 completado"
+      "default": false
     },
     "rework_completion_date": {
       "type": "string",
-      "format": "date-time",
-      "description": "Fecha de finalizaci\u00f3n del retrabajo"
+      "format": "date-time"
     },
     "images": {
       "type": "array",
       "items": {
         "type": "string"
-      },
-      "description": "URLs de im\u00e1genes de la inspecci\u00f3n"
+      }
     },
     "machine_id": {
-      "type": "string",
-      "description": "ID de la m\u00e1quina donde se produjo"
+      "type": "string"
     },
     "machine_name": {
-      "type": "string",
-      "description": "Nombre de la m\u00e1quina"
+      "type": "string"
     },
     "team_key": {
-      "type": "string",
-      "description": "Equipo al que pertenece"
+      "type": "string"
     },
     "responsable_linea": {
-      "type": "string",
-      "description": "ID del responsable de l\u00ednea"
+      "type": "string"
     },
     "responsable_linea_name": {
-      "type": "string",
-      "description": "Nombre del responsable"
+      "type": "string"
     },
     "segunda_linea": {
-      "type": "string",
-      "description": "ID de la segunda de l\u00ednea"
+      "type": "string"
     },
     "segunda_linea_name": {
-      "type": "string",
-      "description": "Nombre de la segunda"
+      "type": "string"
     },
     "operarios": {
       "type": "array",
       "items": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          }
-        }
-      },
-      "description": "Lista de operarios en la l\u00ednea"
+        "type": "object"
+      }
     },
     "severity": {
       "type": "string",
@@ -136,62 +121,12 @@
         "Alta",
         "Cr\u00edtica"
       ],
-      "default": "Media",
-      "description": "Severidad del problema (si rechazado)"
+      "default": "Media"
     }
   },
   "required": [
     "inspection_date",
     "inspector_id",
     "result"
-  ],
-  "rls": {
-    "create": {
-      "data.inspector_id": "{{user.employee_id}}"
-    },
-    "read": {
-      "$or": [
-        {
-          "data.inspector_id": "{{user.employee_id}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "manager"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "Calidad"
-          }
-        }
-      ]
-    },
-    "update": {
-      "$or": [
-        {
-          "data.inspector_id": "{{user.employee_id}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "Calidad"
-          }
-        }
-      ]
-    },
-    "delete": {
-      "user_condition": {
-        "role": "admin"
-      }
-    }
-  }
+  ]
 }

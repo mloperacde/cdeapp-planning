@@ -1,23 +1,37 @@
 {
   "name": "ShiftSwapRequest",
   "type": "object",
+  "row_level_security": [
+    {
+      "operation": "read",
+      "allow": "{{user.role == 'admin' or user.role == 'supervisor' or user.employee_id == solicitante_id or user.employee_id == receptor_id}}"
+    },
+    {
+      "operation": "create",
+      "allow": "{{user.employee_id == solicitante_id or user.role == 'admin'}}"
+    },
+    {
+      "operation": "update",
+      "allow": "{{user.role == 'admin' or user.role == 'supervisor' or user.employee_id == solicitante_id or user.employee_id == receptor_id}}"
+    },
+    {
+      "operation": "delete",
+      "allow": "{{user.role == 'admin'}}"
+    }
+  ],
   "properties": {
     "solicitante_id": {
-      "type": "string",
-      "description": "ID del empleado que solicita el intercambio"
+      "type": "string"
     },
     "nombre_solicitante": {
-      "type": "string",
-      "description": "Nombre del empleado solicitante"
+      "type": "string"
     },
     "equipo_solicitante": {
-      "type": "string",
-      "description": "Equipo del empleado solicitante"
+      "type": "string"
     },
     "fecha_cambio": {
       "type": "string",
-      "format": "date",
-      "description": "Fecha para la que se solicita el cambio"
+      "format": "date"
     },
     "turno_actual": {
       "type": "string",
@@ -25,8 +39,7 @@
         "Ma\u00f1ana",
         "Tarde",
         "Noche"
-      ],
-      "description": "Turno actual del solicitante"
+      ]
     },
     "turno_deseado": {
       "type": "string",
@@ -34,42 +47,22 @@
         "Ma\u00f1ana",
         "Tarde",
         "Noche"
-      ],
-      "description": "Turno al que quiere cambiar"
+      ]
     },
     "interesados": {
       "type": "array",
-      "description": "Lista de empleados interesados en el cambio",
       "items": {
-        "type": "object",
-        "properties": {
-          "employee_id": {
-            "type": "string"
-          },
-          "nombre": {
-            "type": "string"
-          },
-          "equipo": {
-            "type": "string"
-          },
-          "fecha_interes": {
-            "type": "string",
-            "format": "date-time"
-          }
-        }
+        "type": "object"
       }
     },
     "receptor_id": {
-      "type": "string",
-      "description": "ID del empleado aceptado definitivamente"
+      "type": "string"
     },
     "nombre_receptor": {
-      "type": "string",
-      "description": "Nombre del empleado aceptado"
+      "type": "string"
     },
     "motivo": {
-      "type": "string",
-      "description": "Motivo del intercambio"
+      "type": "string"
     },
     "estado": {
       "type": "string",
@@ -80,13 +73,11 @@
         "Rechazada",
         "Cancelada"
       ],
-      "default": "Publicado",
-      "description": "Estado de la solicitud"
+      "default": "Publicado"
     },
     "fecha_solicitud": {
       "type": "string",
-      "format": "date-time",
-      "description": "Fecha de publicaci\u00f3n"
+      "format": "date-time"
     },
     "fecha_respuesta_supervisor": {
       "type": "string",
@@ -104,55 +95,5 @@
     "fecha_cambio",
     "turno_actual",
     "turno_deseado"
-  ],
-  "rls": {
-    "create": {
-      "data.solicitante_id": "{{user.id}}"
-    },
-    "read": {
-      "$or": [
-        {
-          "data.solicitante_id": "{{user.id}}"
-        },
-        {
-          "data.receptor_id": "{{user.id}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "supervisor"
-          }
-        }
-      ]
-    },
-    "update": {
-      "$or": [
-        {
-          "data.solicitante_id": "{{user.id}}"
-        },
-        {
-          "data.receptor_id": "{{user.id}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "supervisor"
-          }
-        }
-      ]
-    },
-    "delete": {
-      "user_condition": {
-        "role": "admin"
-      }
-    }
-  }
+  ]
 }

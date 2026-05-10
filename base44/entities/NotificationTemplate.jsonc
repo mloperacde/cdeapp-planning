@@ -1,0 +1,92 @@
+{
+  "name": "NotificationTemplate",
+  "type": "object",
+  "row_level_security": [
+    {
+      "operation": "read",
+      "allow": "{{user.role == 'admin' or user.role == 'rrhh'}}"
+    },
+    {
+      "operation": "create",
+      "allow": "{{user.role == 'admin'}}"
+    },
+    {
+      "operation": "update",
+      "allow": "{{user.role == 'admin'}}"
+    },
+    {
+      "operation": "delete",
+      "allow": "{{user.role == 'admin'}}"
+    }
+  ],
+  "properties": {
+    "tipo_evento": {
+      "type": "string",
+      "enum": [
+        "Solicitud",
+        "Aprobaci\u00f3n",
+        "Rechazo",
+        "Finalizaci\u00f3n",
+        "Recordatorio",
+        "Cancelaci\u00f3n"
+      ]
+    },
+    "absence_type_id": {
+      "type": "string"
+    },
+    "canal": {
+      "type": "string",
+      "enum": [
+        "Email",
+        "InApp",
+        "SMS"
+      ]
+    },
+    "destinatarios_tipo": {
+      "type": "string",
+      "enum": [
+        "Empleado",
+        "Supervisor",
+        "RRHH",
+        "Admin"
+      ]
+    },
+    "asunto": {
+      "type": "string"
+    },
+    "plantilla_texto": {
+      "type": "string"
+    },
+    "plantilla_html": {
+      "type": "string"
+    },
+    "variables_disponibles": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "enviar_automaticamente": {
+      "type": "boolean",
+      "default": true
+    },
+    "es_critica": {
+      "type": "boolean",
+      "default": false
+    },
+    "delay_minutos": {
+      "type": "number",
+      "default": 0
+    },
+    "activo": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "tipo_evento",
+    "canal",
+    "destinatarios_tipo",
+    "plantilla_texto"
+  ]
+}

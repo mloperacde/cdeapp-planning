@@ -1,171 +1,36 @@
 {
   "name": "NotificationPreference",
   "type": "object",
+  "row_level_security": [
+    {
+      "operation": "read",
+      "allow": "{{user.email == user_email or user.role == 'admin'}}"
+    },
+    {
+      "operation": "update",
+      "allow": "{{user.email == user_email or user.role == 'admin'}}"
+    },
+    {
+      "operation": "create",
+      "allow": "{{user.role == 'admin'}}"
+    },
+    {
+      "operation": "delete",
+      "allow": "{{user.role == 'admin'}}"
+    }
+  ],
   "properties": {
     "user_email": {
-      "type": "string",
-      "description": "Email del usuario"
+      "type": "string"
     },
     "notification_types": {
-      "type": "object",
-      "properties": {
-        "absences": {
-          "type": "object",
-          "properties": {
-            "enabled": {
-              "type": "boolean",
-              "default": true
-            },
-            "push": {
-              "type": "boolean",
-              "default": true
-            },
-            "email": {
-              "type": "boolean",
-              "default": false
-            }
-          }
-        },
-        "planning": {
-          "type": "object",
-          "properties": {
-            "enabled": {
-              "type": "boolean",
-              "default": true
-            },
-            "push": {
-              "type": "boolean",
-              "default": true
-            },
-            "email": {
-              "type": "boolean",
-              "default": false
-            }
-          }
-        },
-        "maintenance": {
-          "type": "object",
-          "properties": {
-            "enabled": {
-              "type": "boolean",
-              "default": true
-            },
-            "push": {
-              "type": "boolean",
-              "default": true
-            },
-            "email": {
-              "type": "boolean",
-              "default": false
-            }
-          }
-        },
-        "machines": {
-          "type": "object",
-          "properties": {
-            "enabled": {
-              "type": "boolean",
-              "default": true
-            },
-            "push": {
-              "type": "boolean",
-              "default": true
-            },
-            "email": {
-              "type": "boolean",
-              "default": false
-            }
-          }
-        },
-        "employees": {
-          "type": "object",
-          "properties": {
-            "enabled": {
-              "type": "boolean",
-              "default": true
-            },
-            "push": {
-              "type": "boolean",
-              "default": false
-            },
-            "email": {
-              "type": "boolean",
-              "default": false
-            }
-          }
-        },
-        "system": {
-          "type": "object",
-          "properties": {
-            "enabled": {
-              "type": "boolean",
-              "default": true
-            },
-            "push": {
-              "type": "boolean",
-              "default": true
-            },
-            "email": {
-              "type": "boolean",
-              "default": true
-            }
-          }
-        }
-      }
+      "type": "object"
     },
     "quiet_hours": {
-      "type": "object",
-      "properties": {
-        "enabled": {
-          "type": "boolean",
-          "default": false
-        },
-        "start": {
-          "type": "string",
-          "description": "Hora de inicio (HH:mm)"
-        },
-        "end": {
-          "type": "string",
-          "description": "Hora de fin (HH:mm)"
-        }
-      }
+      "type": "object"
     }
   },
   "required": [
     "user_email"
-  ],
-  "rls": {
-    "create": {
-      "data.user_email": "{{user.email}}"
-    },
-    "read": {
-      "$or": [
-        {
-          "data.user_email": "{{user.email}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        }
-      ]
-    },
-    "update": {
-      "$or": [
-        {
-          "data.user_email": "{{user.email}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        }
-      ]
-    },
-    "delete": {
-      "user_condition": {
-        "role": "admin"
-      }
-    }
-  }
+  ]
 }

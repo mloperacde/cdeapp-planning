@@ -1,0 +1,87 @@
+{
+  "name": "TrainingModule",
+  "type": "object",
+  "row_level_security": [
+    {
+      "operation": "read",
+      "allow": "{{true}}"
+    },
+    {
+      "operation": "create",
+      "allow": "{{user.role == 'admin' or user.role == 'rrhh'}}"
+    },
+    {
+      "operation": "update",
+      "allow": "{{user.role == 'admin' or user.role == 'rrhh'}}"
+    },
+    {
+      "operation": "delete",
+      "allow": "{{user.role == 'admin'}}"
+    }
+  ],
+  "properties": {
+    "titulo": {
+      "type": "string"
+    },
+    "descripcion": {
+      "type": "string"
+    },
+    "tipo": {
+      "type": "string",
+      "enum": [
+        "Video",
+        "Documento",
+        "Cuestionario",
+        "Enlace Externo",
+        "Presentaci\u00f3n"
+      ]
+    },
+    "categoria": {
+      "type": "string",
+      "enum": [
+        "PRL",
+        "Normativa Interna",
+        "Procedimientos",
+        "Sistemas",
+        "Cultura Empresarial",
+        "T\u00e9cnico",
+        "Otro"
+      ],
+      "default": "Otro"
+    },
+    "contenido_url": {
+      "type": "string"
+    },
+    "duracion_minutos": {
+      "type": "number"
+    },
+    "obligatorio": {
+      "type": "boolean",
+      "default": false
+    },
+    "tiene_cuestionario": {
+      "type": "boolean",
+      "default": false
+    },
+    "cuestionario": {
+      "type": "object"
+    },
+    "orden": {
+      "type": "number"
+    },
+    "activo": {
+      "type": "boolean",
+      "default": true
+    },
+    "departamentos_aplicables": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "titulo",
+    "tipo"
+  ]
+}

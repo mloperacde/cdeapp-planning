@@ -1,10 +1,27 @@
 {
   "name": "TechnicalReport",
   "type": "object",
+  "row_level_security": [
+    {
+      "operation": "read",
+      "allow": "{{user.role == 'admin' or user.role == 'T\u00e9cnico' or user.role == 'supervisor'}}"
+    },
+    {
+      "operation": "create",
+      "allow": "{{user.role == 'admin' or user.role == 'T\u00e9cnico'}}"
+    },
+    {
+      "operation": "update",
+      "allow": "{{user.role == 'admin' or user.role == 'T\u00e9cnico'}}"
+    },
+    {
+      "operation": "delete",
+      "allow": "{{user.role == 'admin'}}"
+    }
+  ],
   "properties": {
     "tituloInforme": {
-      "type": "string",
-      "description": "T\u00edtulo del informe t\u00e9cnico"
+      "type": "string"
     },
     "estadoInforme": {
       "type": "string",
@@ -15,8 +32,7 @@
         "Validado",
         "Rechazado"
       ],
-      "default": "Borrador",
-      "description": "Estado actual del informe"
+      "default": "Borrador"
     },
     "tipoInforme": {
       "type": "string",
@@ -28,179 +44,84 @@
         "Validaci\u00f3n de Limpieza",
         "Validaci\u00f3n de M\u00e9todo Anal\u00edtico",
         "Otro"
-      ],
-      "description": "Tipo de informe CQV"
+      ]
     },
     "articulo": {
-      "type": "string",
-      "description": "Art\u00edculo o producto al que se refiere el informe"
+      "type": "string"
     },
     "productId": {
-      "type": "string",
-      "description": "ID o c\u00f3digo del producto/equipo"
+      "type": "string"
     },
     "sala": {
-      "type": "string",
-      "description": "Sala o \u00e1rea donde se realiz\u00f3 la validaci\u00f3n"
+      "type": "string"
     },
     "linea": {
-      "type": "string",
-      "description": "L\u00ednea de producci\u00f3n involucrada"
+      "type": "string"
     },
     "lote": {
-      "type": "string",
-      "description": "N\u00famero de lote de la prueba"
+      "type": "string"
     },
     "fecha": {
       "type": "string",
-      "format": "date",
-      "description": "Fecha del informe"
+      "format": "date"
     },
     "fechaInicio": {
       "type": "string",
-      "format": "date",
-      "description": "Fecha de inicio de la actividad"
+      "format": "date"
     },
     "fechaFin": {
       "type": "string",
-      "format": "date",
-      "description": "Fecha de fin de la actividad"
+      "format": "date"
     },
     "autor": {
-      "type": "string",
-      "description": "Nombre del autor o responsable del informe"
+      "type": "string"
     },
     "departamento": {
-      "type": "string",
-      "description": "Departamento responsable"
+      "type": "string"
     },
     "aprobadorQA": {
-      "type": "string",
-      "description": "Nombre del aprobador de Control de Calidad"
+      "type": "string"
     },
     "objetivo": {
-      "type": "string",
-      "description": "Objetivo del informe"
+      "type": "string"
     },
     "alcance": {
-      "type": "string",
-      "description": "Alcance del informe"
+      "type": "string"
     },
     "resumenEjecutivo": {
-      "type": "string",
-      "description": "Resumen ejecutivo del informe"
+      "type": "string"
     },
     "metodologia": {
-      "type": "string",
-      "description": "Descripci\u00f3n de la metodolog\u00eda empleada"
+      "type": "string"
     },
     "hallazgos": {
       "type": "array",
       "items": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "title": {
-            "type": "string"
-          },
-          "description": {
-            "type": "string"
-          },
-          "severity": {
-            "type": "string",
-            "enum": [
-              "Baja",
-              "Media",
-              "Alta",
-              "Cr\u00edtica"
-            ]
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "Pendiente",
-              "En Progreso",
-              "Resuelto",
-              "Verificado"
-            ]
-          },
-          "category": {
-            "type": "string",
-            "enum": [
-              "Mec\u00e1nico",
-              "El\u00e9ctrico",
-              "Software",
-              "Proceso",
-              "Seguridad",
-              "Documentaci\u00f3n"
-            ]
-          },
-          "accionCorrectiva": {
-            "type": "string"
-          },
-          "responsable": {
-            "type": "string"
-          },
-          "fechaLimite": {
-            "type": "string",
-            "format": "date"
-          }
-        }
-      },
-      "description": "Lista de hallazgos t\u00e9cnicos"
+        "type": "object"
+      }
     },
     "evidencias": {
       "type": "array",
       "items": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "type": {
-            "type": "string",
-            "enum": [
-              "image",
-              "video",
-              "document"
-            ]
-          },
-          "url": {
-            "type": "string"
-          },
-          "caption": {
-            "type": "string"
-          },
-          "timestamp": {
-            "type": "string"
-          }
-        }
-      },
-      "description": "Lista de evidencias multimedia"
+        "type": "object"
+      }
     },
     "conclusiones": {
-      "type": "string",
-      "description": "Conclusiones finales del informe"
+      "type": "string"
     },
     "recomendaciones": {
-      "type": "string",
-      "description": "Recomendaciones para mejora"
+      "type": "string"
     },
     "firmaAutor": {
       "type": "boolean",
-      "default": false,
-      "description": "El autor ha firmado el informe"
+      "default": false
     },
     "firmaQA": {
       "type": "boolean",
-      "default": false,
-      "description": "El responsable QA ha firmado el informe"
+      "default": false
     },
     "numeroInforme": {
-      "type": "string",
-      "description": "N\u00famero \u00fanico de referencia del informe (ej: IQ-2024-001)"
+      "type": "string"
     }
   },
   "required": [
@@ -208,49 +129,5 @@
     "estadoInforme",
     "autor",
     "fecha"
-  ],
-  "rls": {
-    "create": {
-      "created_by": "{{user.email}}"
-    },
-    "read": {
-      "$or": [
-        {
-          "created_by": "{{user.email}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "Calidad"
-          }
-        }
-      ]
-    },
-    "update": {
-      "$or": [
-        {
-          "created_by": "{{user.email}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "Calidad"
-          }
-        }
-      ]
-    },
-    "delete": {
-      "user_condition": {
-        "role": "admin"
-      }
-    }
-  }
+  ]
 }

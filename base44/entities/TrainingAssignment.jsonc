@@ -1,50 +1,58 @@
 {
   "name": "TrainingAssignment",
   "type": "object",
+  "row_level_security": [
+    {
+      "operation": "read",
+      "allow": "{{user.role == 'admin' or user.role == 'rrhh' or user.employee_id == employeeId}}"
+    },
+    {
+      "operation": "create",
+      "allow": "{{user.role == 'admin' or user.role == 'rrhh'}}"
+    },
+    {
+      "operation": "update",
+      "allow": "{{user.role == 'admin' or user.role == 'rrhh'}}"
+    },
+    {
+      "operation": "delete",
+      "allow": "{{user.role == 'admin'}}"
+    }
+  ],
   "properties": {
     "employeeId": {
-      "type": "string",
-      "description": "ID del empleado en EmployeeMasterDatabase"
+      "type": "string"
     },
     "employeeName": {
-      "type": "string",
-      "description": "Nombre del empleado (desnormalizado)"
+      "type": "string"
     },
     "employeeDepartamento": {
-      "type": "string",
-      "description": "Departamento del empleado (desnormalizado)"
+      "type": "string"
     },
     "employeePuesto": {
-      "type": "string",
-      "description": "Puesto del empleado (desnormalizado)"
+      "type": "string"
     },
     "trainingModuleId": {
-      "type": "string",
-      "description": "ID del m\u00f3dulo de formaci\u00f3n (TrainingProgram.id)"
+      "type": "string"
     },
     "trainingModuleTitulo": {
-      "type": "string",
-      "description": "T\u00edtulo del m\u00f3dulo (desnormalizado)"
+      "type": "string"
     },
     "fechaAsignacion": {
       "type": "string",
-      "format": "date",
-      "description": "Fecha de asignaci\u00f3n del m\u00f3dulo"
+      "format": "date"
     },
     "fechaLimite": {
       "type": "string",
-      "format": "date",
-      "description": "Fecha l\u00edmite para completar el m\u00f3dulo"
+      "format": "date"
     },
     "fechaInicio": {
       "type": "string",
-      "format": "date",
-      "description": "Fecha en que el empleado inici\u00f3 la formaci\u00f3n"
+      "format": "date"
     },
     "fechaCompletado": {
       "type": "string",
-      "format": "date",
-      "description": "Fecha en que el empleado complet\u00f3 el m\u00f3dulo"
+      "format": "date"
     },
     "estado": {
       "type": "string",
@@ -55,29 +63,23 @@
         "Vencido",
         "Cancelado"
       ],
-      "default": "Asignado",
-      "description": "Estado del seguimiento"
+      "default": "Asignado"
     },
     "puntuacion": {
-      "type": "number",
-      "description": "Puntuaci\u00f3n obtenida en la evaluaci\u00f3n (0-100)"
+      "type": "number"
     },
     "superado": {
-      "type": "boolean",
-      "description": "Si el empleado ha superado el m\u00f3dulo"
+      "type": "boolean"
     },
     "notasFormador": {
-      "type": "string",
-      "description": "Notas del formador sobre el progreso del empleado"
+      "type": "string"
     },
     "firmaEmpleado": {
       "type": "boolean",
-      "default": false,
-      "description": "El empleado ha firmado/confirmado haber recibido la formaci\u00f3n"
+      "default": false
     },
     "asignadoPor": {
-      "type": "string",
-      "description": "Nombre de quien asign\u00f3 la formaci\u00f3n"
+      "type": "string"
     }
   },
   "required": [
@@ -85,51 +87,5 @@
     "trainingModuleId",
     "fechaAsignacion",
     "estado"
-  ],
-  "rls": {
-    "create": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "read": {
-      "$or": [
-        {
-          "data.employeeId": "{{user.employee_id}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "rrhh"
-          }
-        }
-      ]
-    },
-    "update": {
-      "$or": [
-        {
-          "data.employeeId": "{{user.employee_id}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "rrhh"
-          }
-        }
-      ]
-    },
-    "delete": {
-      "user_condition": {
-        "role": "admin"
-      }
-    }
-  }
+  ]
 }

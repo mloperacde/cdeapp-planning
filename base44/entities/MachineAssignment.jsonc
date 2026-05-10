@@ -1,6 +1,24 @@
 {
   "name": "MachineAssignment",
   "type": "object",
+  "row_level_security": [
+    {
+      "operation": "read",
+      "allow": "{{true}}"
+    },
+    {
+      "operation": "create",
+      "allow": "{{user.role == 'admin' or user.role == 'jefe_turno'}}"
+    },
+    {
+      "operation": "update",
+      "allow": "{{user.role == 'admin' or user.role == 'jefe_turno'}}"
+    },
+    {
+      "operation": "delete",
+      "allow": "{{user.role == 'admin'}}"
+    }
+  ],
   "properties": {
     "machine_id": {
       "type": "string",
@@ -14,114 +32,41 @@
       "type": "array",
       "items": {
         "type": "string"
-      },
-      "description": "IDs de responsables de l\u00ednea"
+      }
     },
     "segunda_linea": {
       "type": "array",
       "items": {
         "type": "string"
-      },
-      "description": "IDs de segundas de l\u00ednea"
+      }
     },
     "operador_1": {
-      "type": "string",
-      "description": "ID operador 1"
+      "type": "string"
     },
     "operador_2": {
-      "type": "string",
-      "description": "ID operador 2"
+      "type": "string"
     },
     "operador_3": {
-      "type": "string",
-      "description": "ID operador 3"
+      "type": "string"
     },
     "operador_4": {
-      "type": "string",
-      "description": "ID operador 4"
+      "type": "string"
     },
     "operador_5": {
-      "type": "string",
-      "description": "ID operador 5"
+      "type": "string"
     },
     "operador_6": {
-      "type": "string",
-      "description": "ID operador 6"
+      "type": "string"
     },
     "operador_7": {
-      "type": "string",
-      "description": "ID operador 7"
+      "type": "string"
     },
     "operador_8": {
-      "type": "string",
-      "description": "ID operador 8"
+      "type": "string"
     }
   },
   "required": [
     "machine_id",
     "team_key"
-  ],
-  "rls": {
-    "create": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "production_manager"
-          }
-        }
-      ]
-    },
-    "read": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "production_manager"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "supervisor"
-          }
-        }
-      ]
-    },
-    "update": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "production_manager"
-          }
-        }
-      ]
-    },
-    "delete": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "production_manager"
-          }
-        }
-      ]
-    }
-  }
+  ]
 }

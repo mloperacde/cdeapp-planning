@@ -1,5 +1,5 @@
 {
-  "name": "MaintenanceType",
+  "name": "TeamConfig",
   "type": "object",
   "row_level_security": [
     {
@@ -20,42 +20,29 @@
     }
   ],
   "properties": {
-    "nombre": {
+    "team_key": {
+      "type": "string",
+      "enum": [
+        "team_1",
+        "team_2"
+      ]
+    },
+    "team_name": {
       "type": "string"
     },
     "descripcion": {
       "type": "string"
     },
-    "machine_ids": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
-    },
-    "tarea_1": {
-      "type": "object"
-    },
-    "tarea_2": {
-      "type": "object"
-    },
-    "tarea_3": {
-      "type": "object"
-    },
-    "tarea_4": {
-      "type": "object"
-    },
-    "tarea_5": {
-      "type": "object"
-    },
-    "tarea_6": {
-      "type": "object"
-    },
     "activo": {
       "type": "boolean",
       "default": true
+    },
+    "color": {
+      "type": "string"
     }
   },
   "required": [
-    "nombre"
+    "team_key",
+    "team_name"
   ]
 }

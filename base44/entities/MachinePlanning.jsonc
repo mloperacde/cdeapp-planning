@@ -1,5 +1,5 @@
 {
-  "name": "RecurringPlanning",
+  "name": "MachinePlanning",
   "type": "object",
   "row_level_security": [
     {
@@ -21,56 +21,44 @@
   ],
   "properties": {
     "machine_id": {
-      "type": "string"
+      "type": "string",
+      "description": "ID de la m\u00e1quina"
     },
     "process_id": {
-      "type": "string"
+      "type": "string",
+      "description": "ID del proceso seleccionado"
     },
     "team_key": {
       "type": "string",
       "enum": [
         "team_1",
         "team_2"
-      ]
+      ],
+      "description": "Equipo para el que se planifica"
     },
-    "fecha_inicio": {
+    "fecha_planificacion": {
       "type": "string",
-      "format": "date"
+      "format": "date",
+      "description": "Fecha de la planificaci\u00f3n"
     },
-    "fecha_fin": {
-      "type": "string",
-      "format": "date"
-    },
-    "tipo_recurrencia": {
-      "type": "string",
-      "enum": [
-        "Diaria",
-        "Semanal",
-        "Mensual"
-      ]
-    },
-    "intervalo": {
-      "type": "number",
-      "default": 1
-    },
-    "dias_semana": {
-      "type": "array",
-      "items": {
-        "type": "number"
-      }
-    },
-    "activa": {
+    "activa_planning": {
       "type": "boolean",
-      "default": true
+      "default": false,
+      "description": "Si la m\u00e1quina est\u00e1 activa en el planning"
     },
     "operadores_necesarios": {
-      "type": "number"
+      "type": "number",
+      "description": "N\u00famero de operadores necesarios para este proceso"
+    },
+    "fecha_actualizacion": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Fecha de \u00faltima actualizaci\u00f3n"
     }
   },
   "required": [
     "machine_id",
     "team_key",
-    "fecha_inicio",
-    "tipo_recurrencia"
+    "fecha_planificacion"
   ]
 }

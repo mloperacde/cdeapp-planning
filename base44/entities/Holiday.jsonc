@@ -1,0 +1,41 @@
+{
+  "name": "Holiday",
+  "type": "object",
+  "row_level_security": [
+    {
+      "operation": "read",
+      "allow": "{{true}}"
+    },
+    {
+      "operation": "create",
+      "allow": "{{user.role == 'admin'}}"
+    },
+    {
+      "operation": "update",
+      "allow": "{{user.role == 'admin'}}"
+    },
+    {
+      "operation": "delete",
+      "allow": "{{user.role == 'admin'}}"
+    }
+  ],
+  "properties": {
+    "date": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha del d\u00eda festivo"
+    },
+    "name": {
+      "type": "string",
+      "description": "Nombre del d\u00eda festivo"
+    },
+    "description": {
+      "type": "string",
+      "description": "Descripci\u00f3n opcional del festivo"
+    }
+  },
+  "required": [
+    "date",
+    "name"
+  ]
+}

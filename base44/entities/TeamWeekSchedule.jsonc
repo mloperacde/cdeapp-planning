@@ -1,10 +1,10 @@
 {
-  "name": "ShiftHandover",
+  "name": "TeamWeekSchedule",
   "type": "object",
   "row_level_security": [
     {
       "operation": "read",
-      "allow": "{{user.role == 'admin' or user.role == 'jefe_turno'}}"
+      "allow": "{{true}}"
     },
     {
       "operation": "create",
@@ -20,42 +20,31 @@
     }
   ],
   "properties": {
-    "fecha": {
+    "team_key": {
+      "type": "string",
+      "enum": [
+        "team_1",
+        "team_2"
+      ]
+    },
+    "fecha_inicio_semana": {
       "type": "string",
       "format": "date"
     },
-    "turno_saliente": {
+    "turno": {
       "type": "string",
       "enum": [
         "Ma\u00f1ana",
-        "Tarde",
-        "Noche"
+        "Tarde"
       ]
     },
-    "turno_entrante": {
-      "type": "string",
-      "enum": [
-        "Ma\u00f1ana",
-        "Tarde",
-        "Noche"
-      ]
-    },
-    "jefe_turno_saliente": {
-      "type": "string"
-    },
-    "jefe_turno_entrante": {
-      "type": "string"
-    },
-    "observaciones_maquinas": {
-      "type": "object"
-    },
-    "otras_indicaciones": {
+    "notas": {
       "type": "string"
     }
   },
   "required": [
-    "fecha",
-    "turno_saliente",
-    "turno_entrante"
+    "team_key",
+    "fecha_inicio_semana",
+    "turno"
   ]
 }
