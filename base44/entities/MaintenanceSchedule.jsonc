@@ -1,0 +1,208 @@
+{
+  "name": "MaintenanceSchedule",
+  "type": "object",
+  "properties": {
+    "machine_id": {
+      "type": "string",
+      "description": "ID de la m\u00e1quina"
+    },
+    "maintenance_type_id": {
+      "type": "string",
+      "description": "ID del tipo de mantenimiento configurado"
+    },
+    "tipo": {
+      "type": "string",
+      "enum": [
+        "Mantenimiento Planificado",
+        "Reparaci\u00f3n No Planificada",
+        "Inspecci\u00f3n",
+        "Calibraci\u00f3n",
+        "Limpieza",
+        "Predictivo"
+      ],
+      "default": "Mantenimiento Planificado",
+      "description": "Tipo de mantenimiento"
+    },
+    "prioridad": {
+      "type": "string",
+      "enum": [
+        "Baja",
+        "Media",
+        "Alta",
+        "Urgente"
+      ],
+      "default": "Media",
+      "description": "Prioridad del mantenimiento"
+    },
+    "estado": {
+      "type": "string",
+      "enum": [
+        "Pendiente",
+        "Programado",
+        "En Proceso",
+        "Completado",
+        "Cancelado"
+      ],
+      "default": "Pendiente",
+      "description": "Estado del mantenimiento"
+    },
+    "fecha_programada": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Fecha programada para el mantenimiento"
+    },
+    "fecha_inicio": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Fecha y hora de inicio real"
+    },
+    "fecha_finalizacion": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Fecha y hora de finalizaci\u00f3n real"
+    },
+    "duracion_estimada": {
+      "type": "number",
+      "description": "Duraci\u00f3n estimada en horas"
+    },
+    "duracion_real": {
+      "type": "number",
+      "description": "Duraci\u00f3n real en horas"
+    },
+    "tecnico_asignado": {
+      "type": "string",
+      "description": "ID del t\u00e9cnico asignado (departamento Mantenimiento)"
+    },
+    "creado_por": {
+      "type": "string",
+      "description": "ID del usuario que cre\u00f3 el mantenimiento"
+    },
+    "revisado_por": {
+      "type": "string",
+      "description": "ID del supervisor que revisa"
+    },
+    "verificado_por": {
+      "type": "string",
+      "description": "ID de quien verifica el mantenimiento"
+    },
+    "descripcion": {
+      "type": "string",
+      "description": "Descripci\u00f3n del mantenimiento"
+    },
+    "notas": {
+      "type": "string",
+      "description": "Notas adicionales"
+    },
+    "tareas": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "titulo": {
+            "type": "string"
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "completada": {
+            "type": "boolean",
+            "default": false
+          },
+          "subtareas": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "titulo": {
+                  "type": "string"
+                },
+                "completada": {
+                  "type": "boolean",
+                  "default": false
+                }
+              }
+            }
+          }
+        }
+      },
+      "description": "Lista de tareas a realizar"
+    },
+    "firma_tecnico": {
+      "type": "string",
+      "description": "Firma digital del t\u00e9cnico (base64)"
+    },
+    "firma_revisado": {
+      "type": "string",
+      "description": "Firma digital del supervisor (base64)"
+    },
+    "firma_verificado": {
+      "type": "string",
+      "description": "Firma digital del verificador (base64)"
+    },
+    "orden_trabajo_pdf": {
+      "type": "string",
+      "description": "URL del PDF de la orden de trabajo"
+    },
+    "alerta_activa": {
+      "type": "boolean",
+      "default": true,
+      "description": "Si debe generar alerta"
+    },
+    "dias_anticipacion_alerta": {
+      "type": "number",
+      "default": 7,
+      "description": "D\u00edas de anticipaci\u00f3n para la alerta"
+    }
+  },
+  "required": [
+    "machine_id",
+    "tipo",
+    "fecha_programada"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    },
+    "read": {
+      "$or": [
+        {
+          "data.tecnico_asignado": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "T\u00e9cnico"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.tecnico_asignado": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "T\u00e9cnico"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    }
+  }
+}
