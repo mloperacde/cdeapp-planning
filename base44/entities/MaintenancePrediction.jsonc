@@ -1,0 +1,114 @@
+{
+  "name": "MaintenancePrediction",
+  "type": "object",
+  "properties": {
+    "machine_id": {
+      "type": "string",
+      "description": "ID de la m\u00e1quina"
+    },
+    "fecha_prediccion": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Fecha de la predicci\u00f3n"
+    },
+    "fecha_fallo_estimada": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Fecha estimada de fallo"
+    },
+    "probabilidad_fallo": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Probabilidad de fallo (%)"
+    },
+    "nivel_riesgo": {
+      "type": "string",
+      "enum": [
+        "Bajo",
+        "Medio",
+        "Alto",
+        "Cr\u00edtico"
+      ],
+      "description": "Nivel de riesgo"
+    },
+    "componentes_afectados": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Componentes que podr\u00edan fallar"
+    },
+    "datos_sensores": {
+      "type": "object",
+      "description": "Datos de sensores usados para la predicci\u00f3n",
+      "properties": {
+        "temperatura": {
+          "type": "number"
+        },
+        "vibracion": {
+          "type": "number"
+        },
+        "presion": {
+          "type": "number"
+        },
+        "horas_operacion": {
+          "type": "number"
+        },
+        "eficiencia": {
+          "type": "number"
+        }
+      }
+    },
+    "recomendaciones": {
+      "type": "string",
+      "description": "Recomendaciones de mantenimiento"
+    },
+    "mantenimiento_creado": {
+      "type": "boolean",
+      "default": false,
+      "description": "Si ya se cre\u00f3 una orden de mantenimiento"
+    },
+    "maintenance_schedule_id": {
+      "type": "string",
+      "description": "ID del mantenimiento programado creado"
+    }
+  },
+  "required": [
+    "machine_id",
+    "fecha_prediccion",
+    "probabilidad_fallo",
+    "nivel_riesgo"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "T\u00e9cnico"
+          }
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    }
+  }
+}
