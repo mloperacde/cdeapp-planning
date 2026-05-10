@@ -83,6 +83,9 @@
     "create": {
       "$or": [
         {
+          "data.employee_id": "{{user.employee_id}}"
+        },
+        {
           "data.user_email": "{{user.email}}"
         },
         {
@@ -93,13 +96,39 @@
       ]
     },
     "read": {
-      "data.user_email": "{{user.email}}"
+      "$or": [
+        {
+          "data.employee_id": "{{user.employee_id}}"
+        },
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
     },
     "update": {
-      "data.user_email": "{{user.email}}"
+      "$or": [
+        {
+          "data.employee_id": "{{user.employee_id}}"
+        },
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
     },
     "delete": {
-      "data.user_email": "{{user.email}}"
+      "user_condition": {
+        "role": "admin"
+      }
     }
   }
 }
