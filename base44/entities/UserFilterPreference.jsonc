@@ -1,0 +1,73 @@
+{
+  "name": "UserFilterPreference",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email del usuario propietario del filtro"
+    },
+    "page_id": {
+      "type": "string",
+      "description": "Identificador \u00fanico de la p\u00e1gina o contexto (ej: 'employees', 'machines')"
+    },
+    "filters": {
+      "type": "object",
+      "description": "Objeto JSON con la configuraci\u00f3n de filtros, b\u00fasqueda y ordenamiento"
+    },
+    "name": {
+      "type": "string",
+      "description": "Nombre del filtro guardado (opcional, para 'Vista Predeterminada')"
+    },
+    "is_default": {
+      "type": "boolean",
+      "default": true,
+      "description": "Si es la vista por defecto para este usuario en esta p\u00e1gina"
+    }
+  },
+  "required": [
+    "user_email",
+    "page_id",
+    "filters"
+  ],
+  "rls": {
+    "create": {
+      "data.user_email": "{{user.email}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        }
+      ]
+    }
+  }
+}
