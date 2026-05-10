@@ -1,0 +1,108 @@
+{
+  "name": "VacationPendingBalance",
+  "type": "object",
+  "properties": {
+    "employee_id": {
+      "type": "string",
+      "description": "ID del empleado"
+    },
+    "anio": {
+      "type": "number",
+      "description": "A\u00f1o del balance"
+    },
+    "dias_pendientes": {
+      "type": "number",
+      "default": 0,
+      "description": "D\u00edas de vacaciones no consumidos por estar ausente"
+    },
+    "detalle_ausencias": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "absence_id": {
+            "type": "string"
+          },
+          "tipo_ausencia": {
+            "type": "string"
+          },
+          "fecha_inicio": {
+            "type": "string",
+            "format": "date"
+          },
+          "fecha_fin": {
+            "type": "string",
+            "format": "date"
+          },
+          "dias_coincidentes": {
+            "type": "number"
+          },
+          "periodos_vacaciones": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "vacation_id": {
+                  "type": "string"
+                },
+                "nombre": {
+                  "type": "string"
+                },
+                "dias": {
+                  "type": "number"
+                }
+              }
+            }
+          }
+        }
+      },
+      "description": "Detalle de ausencias que generaron d\u00edas pendientes"
+    },
+    "dias_consumidos": {
+      "type": "number",
+      "default": 0,
+      "description": "D\u00edas pendientes ya consumidos"
+    },
+    "dias_disponibles": {
+      "type": "number",
+      "description": "D\u00edas pendientes disponibles (calculado: pendientes - consumidos)"
+    },
+    "observaciones": {
+      "type": "string",
+      "description": "Observaciones adicionales"
+    }
+  },
+  "required": [
+    "employee_id",
+    "anio"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    },
+    "read": {
+      "$or": [
+        {
+          "data.employee_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    }
+  }
+}
