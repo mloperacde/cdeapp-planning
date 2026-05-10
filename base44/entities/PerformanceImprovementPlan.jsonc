@@ -108,28 +108,12 @@
   ],
   "rls": {
     "create": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "rrhh"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "supervisor"
-          }
-        }
-      ]
+      "created_by": "{{user.email}}"
     },
     "read": {
       "$or": [
         {
-          "data.employee_id": "{{user.employee_id}}"
+          "data.employee_id": "{{user.id}}"
         },
         {
           "user_condition": {
@@ -151,10 +135,7 @@
     "update": {
       "$or": [
         {
-          "data.employee_id": "{{user.employee_id}}",
-          "data.estado": {
-            "$ne": "Completado"
-          }
+          "created_by": "{{user.email}}"
         },
         {
           "user_condition": {
@@ -164,39 +145,14 @@
         {
           "user_condition": {
             "role": "rrhh"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "supervisor"
           }
         }
       ]
     },
     "delete": {
-      "$or": [
-        {
-          "data.employee_id": "{{user.employee_id}}",
-          "data.estado": {
-            "$ne": "Completado"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "rrhh"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "supervisor"
-          }
-        }
-      ]
+      "user_condition": {
+        "role": "admin"
+      }
     }
   }
 }
