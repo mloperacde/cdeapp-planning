@@ -101,5 +101,27 @@
     "action_type",
     "sync_date",
     "origen"
-  ]
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    }
+  }
 }
