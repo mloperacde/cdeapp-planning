@@ -1,0 +1,110 @@
+{
+  "name": "EmployeeSkill",
+  "type": "object",
+  "properties": {
+    "employee_id": {
+      "type": "string",
+      "description": "ID del empleado"
+    },
+    "skill_id": {
+      "type": "string",
+      "description": "ID de la habilidad"
+    },
+    "machine_id": {
+      "type": "string",
+      "description": "ID de la m\u00e1quina (opcional, para habilidades espec\u00edficas de m\u00e1quina)"
+    },
+    "nivel_competencia": {
+      "type": "string",
+      "enum": [
+        "B\u00e1sico",
+        "Intermedio",
+        "Avanzado",
+        "Experto"
+      ],
+      "default": "B\u00e1sico",
+      "description": "Nivel de competencia del empleado en esta habilidad"
+    },
+    "experiencia_meses": {
+      "type": "number",
+      "description": "Meses de experiencia en esta habilidad/m\u00e1quina"
+    },
+    "fecha_adquisicion": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha en que se adquiri\u00f3 la habilidad"
+    },
+    "fecha_ultima_evaluacion": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha de la \u00faltima evaluaci\u00f3n"
+    },
+    "certificado": {
+      "type": "boolean",
+      "default": false,
+      "description": "Si tiene certificaci\u00f3n oficial"
+    },
+    "certificado_url": {
+      "type": "string",
+      "description": "URL del documento de certificaci\u00f3n"
+    },
+    "fecha_expiracion_certificado": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha de expiraci\u00f3n del certificado"
+    },
+    "requiere_renovacion": {
+      "type": "boolean",
+      "default": false,
+      "description": "Si requiere renovaci\u00f3n peri\u00f3dica"
+    },
+    "notas": {
+      "type": "string",
+      "description": "Notas adicionales sobre la habilidad"
+    },
+    "evaluador_id": {
+      "type": "string",
+      "description": "ID del empleado que evalu\u00f3 la habilidad"
+    },
+    "puntuacion_evaluacion": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Puntuaci\u00f3n de la evaluaci\u00f3n (0-100)"
+    }
+  },
+  "required": [
+    "employee_id",
+    "skill_id",
+    "nivel_competencia"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    },
+    "read": {
+      "$or": [
+        {
+          "data.employee_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    }
+  }
+}
