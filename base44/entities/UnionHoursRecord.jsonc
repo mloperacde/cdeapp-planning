@@ -1,0 +1,87 @@
+{
+  "name": "UnionHoursRecord",
+  "type": "object",
+  "properties": {
+    "committee_member_id": {
+      "type": "string",
+      "description": "ID del miembro del comit\u00e9"
+    },
+    "employee_id": {
+      "type": "string",
+      "description": "ID del empleado"
+    },
+    "fecha": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha del uso de horas"
+    },
+    "horas_utilizadas": {
+      "type": "number",
+      "description": "Horas sindicales utilizadas"
+    },
+    "motivo": {
+      "type": "string",
+      "description": "Motivo del uso de horas"
+    },
+    "actividad": {
+      "type": "string",
+      "enum": [
+        "Reuni\u00f3n Comit\u00e9",
+        "Negociaci\u00f3n Colectiva",
+        "Asesoramiento Trabajadores",
+        "Formaci\u00f3n Sindical",
+        "Otro"
+      ],
+      "description": "Tipo de actividad realizada"
+    },
+    "aprobado_por": {
+      "type": "string",
+      "description": "ID de quien aprob\u00f3 el uso de horas"
+    },
+    "notas": {
+      "type": "string",
+      "description": "Notas adicionales"
+    }
+  },
+  "required": [
+    "committee_member_id",
+    "employee_id",
+    "fecha",
+    "horas_utilizadas",
+    "motivo"
+  ],
+  "rls": {
+    "create": {
+      "data.employee_id": "{{user.id}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "data.employee_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.employee_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    }
+  }
+}
