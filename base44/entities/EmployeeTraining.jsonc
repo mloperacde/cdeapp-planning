@@ -88,9 +88,7 @@
   ],
   "rls": {
     "create": {
-      "user_condition": {
-        "role": "Admin"
-      }
+      "created_by": "{{user.email}}"
     },
     "read": {
       "$or": [
@@ -99,7 +97,12 @@
         },
         {
           "user_condition": {
-            "role": "Admin"
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "rrhh"
           }
         }
       ]
@@ -107,18 +110,23 @@
     "update": {
       "$or": [
         {
-          "data.employee_id": "{{user.id}}"
+          "created_by": "{{user.email}}"
         },
         {
           "user_condition": {
-            "role": "Admin"
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "rrhh"
           }
         }
       ]
     },
     "delete": {
       "user_condition": {
-        "role": "Admin"
+        "role": "admin"
       }
     }
   }
