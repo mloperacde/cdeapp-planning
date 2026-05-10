@@ -1,0 +1,177 @@
+{
+  "name": "DailyMachineStaffing",
+  "type": "object",
+  "properties": {
+    "date": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha de la planificaci\u00f3n"
+    },
+    "shift": {
+      "type": "string",
+      "enum": [
+        "Ma\u00f1ana",
+        "Tarde",
+        "Noche"
+      ],
+      "description": "Turno de trabajo"
+    },
+    "machine_id": {
+      "type": "string",
+      "description": "ID de la m\u00e1quina"
+    },
+    "responsable_linea": {
+      "type": "string",
+      "description": "ID del responsable de l\u00ednea asignado"
+    },
+    "segunda_linea": {
+      "type": "string",
+      "description": "ID de la segunda de l\u00ednea asignada"
+    },
+    "operador_1": {
+      "type": "string",
+      "description": "ID operador 1"
+    },
+    "operador_2": {
+      "type": "string",
+      "description": "ID operador 2"
+    },
+    "operador_3": {
+      "type": "string",
+      "description": "ID operador 3"
+    },
+    "operador_4": {
+      "type": "string",
+      "description": "ID operador 4"
+    },
+    "operador_5": {
+      "type": "string",
+      "description": "ID operador 5"
+    },
+    "operador_6": {
+      "type": "string",
+      "description": "ID operador 6"
+    },
+    "operador_7": {
+      "type": "string",
+      "description": "ID operador 7"
+    },
+    "operador_8": {
+      "type": "string",
+      "description": "ID operador 8"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Borrador",
+        "Confirmado"
+      ],
+      "default": "Borrador",
+      "description": "Estado de la asignaci\u00f3n"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Notas sobre la asignaci\u00f3n"
+    }
+  },
+  "required": [
+    "date",
+    "shift",
+    "machine_id"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "manager"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "data.responsable_linea": "{{user.id}}"
+        },
+        {
+          "data.segunda_linea": "{{user.id}}"
+        },
+        {
+          "data.operador_1": "{{user.id}}"
+        },
+        {
+          "data.operador_2": "{{user.id}}"
+        },
+        {
+          "data.operador_3": "{{user.id}}"
+        },
+        {
+          "data.operador_4": "{{user.id}}"
+        },
+        {
+          "data.operador_5": "{{user.id}}"
+        },
+        {
+          "data.operador_6": "{{user.id}}"
+        },
+        {
+          "data.operador_7": "{{user.id}}"
+        },
+        {
+          "data.operador_8": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "manager"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "Jefe Turno Produccion"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.responsable_linea": "{{user.id}}"
+        },
+        {
+          "data.segunda_linea": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "manager"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "Jefe Turno Produccion"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
