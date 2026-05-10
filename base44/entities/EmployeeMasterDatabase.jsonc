@@ -396,7 +396,7 @@
   "rls": {
     "create": {
       "user_condition": {
-        "role": "Admin"
+        "role": "admin"
       }
     },
     "read": {
@@ -405,8 +405,19 @@
           "id": "{{user.employee_id}}"
         },
         {
+          "data.departamento": "{{user.data.departamento}}",
           "user_condition": {
-            "role": "Admin"
+            "role": "supervisor"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "rrhh"
           }
         }
       ]
@@ -418,14 +429,19 @@
         },
         {
           "user_condition": {
-            "role": "Admin"
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "rrhh"
           }
         }
       ]
     },
     "delete": {
       "user_condition": {
-        "role": "Admin"
+        "role": "admin"
       }
     }
   }
