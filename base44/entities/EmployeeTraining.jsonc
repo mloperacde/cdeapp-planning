@@ -1,0 +1,125 @@
+{
+  "name": "EmployeeTraining",
+  "type": "object",
+  "properties": {
+    "employee_id": {
+      "type": "string",
+      "description": "ID del empleado"
+    },
+    "training_module_id": {
+      "type": "string",
+      "description": "ID del m\u00f3dulo de formaci\u00f3n"
+    },
+    "onboarding_id": {
+      "type": "string",
+      "description": "ID del proceso de onboarding (si aplica)"
+    },
+    "estado": {
+      "type": "string",
+      "enum": [
+        "Pendiente",
+        "En Curso",
+        "Completado",
+        "Aprobado",
+        "No Aprobado"
+      ],
+      "default": "Pendiente",
+      "description": "Estado de la formaci\u00f3n"
+    },
+    "fecha_asignacion": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Fecha de asignaci\u00f3n"
+    },
+    "fecha_inicio": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Fecha de inicio"
+    },
+    "fecha_completado": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Fecha de finalizaci\u00f3n"
+    },
+    "progreso": {
+      "type": "number",
+      "default": 0,
+      "description": "Porcentaje de progreso (0-100)"
+    },
+    "tiempo_empleado_minutos": {
+      "type": "number",
+      "description": "Tiempo empleado en minutos"
+    },
+    "intentos_cuestionario": {
+      "type": "number",
+      "default": 0,
+      "description": "N\u00famero de intentos del cuestionario"
+    },
+    "respuestas_cuestionario": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "pregunta_index": {
+            "type": "number"
+          },
+          "respuesta_seleccionada": {
+            "type": "number"
+          },
+          "correcta": {
+            "type": "boolean"
+          }
+        }
+      },
+      "description": "Respuestas del \u00faltimo intento"
+    },
+    "nota_cuestionario": {
+      "type": "number",
+      "description": "Nota obtenida (0-100)"
+    },
+    "notas": {
+      "type": "string",
+      "description": "Notas o comentarios"
+    }
+  },
+  "required": [
+    "employee_id",
+    "training_module_id"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    },
+    "read": {
+      "$or": [
+        {
+          "data.employee_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.employee_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    }
+  }
+}
