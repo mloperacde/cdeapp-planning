@@ -1,0 +1,92 @@
+{
+  "name": "EmployeeCategory",
+  "type": "object",
+  "properties": {
+    "employee_id": {
+      "type": "string",
+      "description": "ID del empleado"
+    },
+    "employee_name": {
+      "type": "string",
+      "description": "Nombre del empleado"
+    },
+    "category_id": {
+      "type": "string",
+      "description": "ID de la categor\u00eda salarial"
+    },
+    "category_name": {
+      "type": "string",
+      "description": "Nombre de la categor\u00eda"
+    },
+    "category_level": {
+      "type": "number",
+      "description": "Nivel de la categor\u00eda"
+    },
+    "assigned_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha de asignaci\u00f3n"
+    },
+    "effective_from": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha efectiva de inicio"
+    },
+    "effective_to": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha de fin (para hist\u00f3rico)"
+    },
+    "is_current": {
+      "type": "boolean",
+      "default": true,
+      "description": "Si es la categor\u00eda actual"
+    },
+    "reason": {
+      "type": "string",
+      "description": "Motivo de la asignaci\u00f3n o cambio"
+    },
+    "approved_by": {
+      "type": "string",
+      "description": "Usuario que aprob\u00f3"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Notas adicionales"
+    }
+  },
+  "required": [
+    "employee_id",
+    "category_id",
+    "assigned_date"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    },
+    "read": {
+      "$or": [
+        {
+          "data.employee_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    }
+  }
+}
