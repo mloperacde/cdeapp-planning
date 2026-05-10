@@ -1,0 +1,155 @@
+{
+  "name": "WorkOrder",
+  "type": "object",
+  "properties": {
+    "order_number": {
+      "type": "string",
+      "description": "N\u00famero de referencia \u00fanico para la orden de trabajo (Orden)"
+    },
+    "machine_id": {
+      "type": "string",
+      "description": "Referencia al ID de la entidad Machine"
+    },
+    "process_id": {
+      "type": "string",
+      "description": "Referencia al ID de la entidad Process (Tipo)"
+    },
+    "priority": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "Prioridad (Pry)"
+    },
+    "start_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha de inicio planificada"
+    },
+    "committed_delivery_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha de entrega comprometida (Fecha Entrega / Nueva Fecha Entrega)"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Pendiente",
+        "En Progreso",
+        "Completada",
+        "Retrasada",
+        "Cancelada"
+      ],
+      "default": "Pendiente",
+      "description": "Estado actual de la orden (Estado)"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Notas adicionales (Observaci\u00f3n)"
+    },
+    "customer_order_reference": {
+      "type": "string",
+      "description": "Referencia del pedido del cliente (Su Pedido)"
+    },
+    "external_order_reference": {
+      "type": "string",
+      "description": "Referencia de pedido externo (Pedido)"
+    },
+    "product_article_code": {
+      "type": "string",
+      "description": "C\u00f3digo del art\u00edculo (Art\u00edculo)"
+    },
+    "product_name": {
+      "type": "string",
+      "description": "Nombre del producto (Nombre)"
+    },
+    "client_name": {
+      "type": "string",
+      "description": "Nombre del cliente (Cliente)"
+    },
+    "quantity": {
+      "type": "number",
+      "description": "Cantidad a producir (Cantidad)"
+    },
+    "material_type": {
+      "type": "string",
+      "description": "Tipo de material (Material)"
+    },
+    "product_category": {
+      "type": "string",
+      "description": "Categor\u00eda de producto (Producto)"
+    },
+    "missing_components_flag": {
+      "type": "boolean",
+      "default": false,
+      "description": "Indicador de faltas de material (Faltas)"
+    },
+    "production_cadence": {
+      "type": "number",
+      "description": "Cadencia de producci\u00f3n (Cadencia)"
+    },
+    "has_customer_delay_note": {
+      "type": "boolean",
+      "default": false,
+      "description": "Indicador de retraso por cliente (Retraso Cliente)"
+    },
+    "machine_location": {
+      "type": "string",
+      "description": "Ubicaci\u00f3n o Sala (Sala)"
+    },
+    "estimated_duration": {
+      "type": "number",
+      "description": "Duraci\u00f3n estimada en horas (Calculado: Cantidad / Cadencia)"
+    },
+    "planned_end_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha fin planificada expl\u00edcitamente"
+    }
+  },
+  "required": [
+    "order_number",
+    "machine_id",
+    "priority",
+    "status"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "Jefe Turno Produccion"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "Jefe Turno Produccion"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    }
+  }
+}
