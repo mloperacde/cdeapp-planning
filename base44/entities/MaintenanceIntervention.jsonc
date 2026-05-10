@@ -1,0 +1,304 @@
+{
+  "name": "MaintenanceIntervention",
+  "type": "object",
+  "properties": {
+    "titulo": {
+      "type": "string",
+      "description": "T\u00edtulo breve de la intervenci\u00f3n"
+    },
+    "tipo": {
+      "type": "string",
+      "enum": [
+        "Acci\u00f3n",
+        "Modificaci\u00f3n",
+        "Mejora",
+        "Resoluci\u00f3n de Incidencia",
+        "Mejora de Instalaci\u00f3n",
+        "Mejora de M\u00e1quina",
+        "Otro"
+      ],
+      "default": "Acci\u00f3n",
+      "description": "Tipo de intervenci\u00f3n"
+    },
+    "descripcion": {
+      "type": "string",
+      "description": "Descripci\u00f3n detallada de la intervenci\u00f3n o problema a resolver"
+    },
+    "estado": {
+      "type": "string",
+      "enum": [
+        "Pendiente",
+        "En Progreso",
+        "En Revisi\u00f3n",
+        "Completada",
+        "Cancelada"
+      ],
+      "default": "Pendiente",
+      "description": "Estado actual de la intervenci\u00f3n"
+    },
+    "prioridad": {
+      "type": "string",
+      "enum": [
+        "Baja",
+        "Media",
+        "Alta",
+        "Cr\u00edtica"
+      ],
+      "default": "Media",
+      "description": "Nivel de prioridad"
+    },
+    "solicitante_nombre": {
+      "type": "string",
+      "description": "Nombre del solicitante"
+    },
+    "solicitante_email": {
+      "type": "string",
+      "description": "Email del solicitante"
+    },
+    "solicitante_departamento": {
+      "type": "string",
+      "description": "Departamento del solicitante"
+    },
+    "destinatarios": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "rol": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Personas destinatarias de la intervenci\u00f3n"
+    },
+    "objetivo_tipo": {
+      "type": "string",
+      "enum": [
+        "Global",
+        "\u00c1rea",
+        "Sala",
+        "M\u00e1quina",
+        "Sala-M\u00e1quina",
+        "Instalaci\u00f3n",
+        "Personalizado"
+      ],
+      "default": "Personalizado",
+      "description": "Tipo de objetivo"
+    },
+    "objetivo_maquina_id": {
+      "type": "string",
+      "description": "ID de la m\u00e1quina objetivo"
+    },
+    "objetivo_maquina_nombre": {
+      "type": "string",
+      "description": "Nombre de la m\u00e1quina objetivo"
+    },
+    "objetivo_area": {
+      "type": "string",
+      "description": "\u00c1rea objetivo"
+    },
+    "objetivo_sala": {
+      "type": "string",
+      "description": "Sala objetivo"
+    },
+    "objetivo_descripcion_manual": {
+      "type": "string",
+      "description": "Descripci\u00f3n manual del objetivo"
+    },
+    "necesidades": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "Herramienta",
+              "Material",
+              "Personal",
+              "Tiempo",
+              "Permiso",
+              "Otro"
+            ]
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "cantidad": {
+            "type": "string"
+          },
+          "disponible": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "description": "Recursos y necesidades para ejecutar la intervenci\u00f3n"
+    },
+    "fecha_solicitud": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Fecha de solicitud"
+    },
+    "fecha_inicio_prevista": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha prevista de inicio"
+    },
+    "fecha_fin_prevista": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha prevista de finalizaci\u00f3n"
+    },
+    "fecha_completada": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Fecha real de finalizaci\u00f3n"
+    },
+    "imagenes_adjuntas": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "descripcion": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Im\u00e1genes adjuntas descriptivas del problema"
+    },
+    "progreso": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "fecha": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "estado": {
+            "type": "string"
+          },
+          "porcentaje": {
+            "type": "number"
+          },
+          "registrado_por": {
+            "type": "string"
+          },
+          "registrado_por_nombre": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Historial de progreso de la intervenci\u00f3n"
+    },
+    "resolucion": {
+      "type": "object",
+      "properties": {
+        "descripcion": {
+          "type": "string"
+        },
+        "fecha": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "firmado_por": {
+          "type": "string"
+        },
+        "firmado_por_nombre": {
+          "type": "string"
+        },
+        "satisfactorio": {
+          "type": "boolean"
+        }
+      },
+      "description": "Detalles de resoluci\u00f3n y cierre"
+    },
+    "numero_orden": {
+      "type": "string",
+      "description": "N\u00famero de orden de trabajo generado"
+    },
+    "notas_adicionales": {
+      "type": "string",
+      "description": "Notas adicionales"
+    }
+  },
+  "required": [
+    "titulo",
+    "tipo",
+    "descripcion",
+    "estado",
+    "prioridad"
+  ],
+  "rls": {
+    "create": {
+      "data.solicitante_email": "{{user.email}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "data.solicitante_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "T\u00e9cnico"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.solicitante_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "T\u00e9cnico"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.solicitante_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "T\u00e9cnico"
+          }
+        }
+      ]
+    }
+  }
+}
