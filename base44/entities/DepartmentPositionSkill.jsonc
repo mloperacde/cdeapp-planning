@@ -1,0 +1,88 @@
+{
+  "name": "DepartmentPositionSkill",
+  "type": "object",
+  "row_level_security": [
+    {
+      "operation": "read",
+      "allow": "{{true}}"
+    },
+    {
+      "operation": "create",
+      "allow": "{{user.role == 'admin'}}"
+    },
+    {
+      "operation": "update",
+      "allow": "{{user.role == 'admin'}}"
+    },
+    {
+      "operation": "delete",
+      "allow": "{{user.role == 'admin'}}"
+    }
+  ],
+  "properties": {
+    "departamento": {
+      "type": "string",
+      "description": "Departamento al que aplica"
+    },
+    "puesto": {
+      "type": "string",
+      "description": "Puesto espec\u00edfico dentro del departamento"
+    },
+    "skill_id": {
+      "type": "string",
+      "description": "ID de la habilidad"
+    },
+    "importancia": {
+      "type": "string",
+      "enum": [
+        "Media",
+        "Requerida",
+        "Cr\u00edtica"
+      ],
+      "default": "Media",
+      "description": "Nivel de importancia de la habilidad"
+    },
+    "nivel_minimo_requerido": {
+      "type": "string",
+      "enum": [
+        "B\u00e1sico",
+        "Intermedio",
+        "Avanzado",
+        "Experto"
+      ],
+      "default": "B\u00e1sico",
+      "description": "Nivel m\u00ednimo requerido"
+    },
+    "nivel_deseable": {
+      "type": "string",
+      "enum": [
+        "B\u00e1sico",
+        "Intermedio",
+        "Avanzado",
+        "Experto"
+      ],
+      "description": "Nivel deseable (opcional, superior al m\u00ednimo)"
+    },
+    "obligatorio": {
+      "type": "boolean",
+      "default": true,
+      "description": "Si es obligatorio tener esta habilidad"
+    },
+    "descripcion": {
+      "type": "string",
+      "description": "Descripci\u00f3n o justificaci\u00f3n del requisito"
+    },
+    "activo": {
+      "type": "boolean",
+      "default": true,
+      "description": "Si el requisito est\u00e1 activo"
+    }
+  },
+  "required": [
+    "departamento",
+    "puesto",
+    "skill_id",
+    "importancia",
+    "nivel_minimo_requerido"
+  ]
+}

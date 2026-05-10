@@ -1,6 +1,24 @@
 {
   "name": "Absence",
   "type": "object",
+  "row_level_security": [
+    {
+      "operation": "create",
+      "allow": "{{user.role == 'admin' or user.role == 'rrhh' or user.role == 'supervisor' or user.employee_id == employee_id}}"
+    },
+    {
+      "operation": "read",
+      "allow": "{{user.role == 'admin' or user.role == 'rrhh' or user.role == 'supervisor' or user.employee_id == employee_id}}"
+    },
+    {
+      "operation": "update",
+      "allow": "{{(user.role == 'admin' or user.role == 'rrhh' or user.role == 'supervisor') or (user.employee_id == employee_id and estado_aprobacion == 'Pendiente')}}"
+    },
+    {
+      "operation": "delete",
+      "allow": "{{user.role == 'admin'}}"
+    }
+  ],
   "properties": {
     "employee_id": {
       "type": "string",
@@ -122,75 +140,5 @@
     "employee_id",
     "fecha_inicio",
     "motivo"
-  ],
-  "rls": {
-    "create": {
-      "created_by": "{{user.email}}"
-    },
-    "read": {
-      "$or": [
-        {
-          "created_by": "{{user.email}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "supervisor"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "rrhh"
-          }
-        }
-      ]
-    },
-    "update": {
-      "$or": [
-        {
-          "$and": [
-            {
-              "created_by": "{{user.email}}"
-            },
-            {
-              "data.estado_aprobacion": "Pendiente"
-            }
-          ]
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "supervisor"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "rrhh"
-          }
-        }
-      ]
-    },
-    "delete": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "rrhh"
-          }
-        }
-      ]
-    }
-  }
+  ]
 }

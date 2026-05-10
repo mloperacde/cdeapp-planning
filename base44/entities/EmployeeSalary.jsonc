@@ -1,14 +1,32 @@
 {
   "name": "EmployeeSalary",
   "type": "object",
+  "row_level_security": [
+    {
+      "operation": "read",
+      "allow": "{{user.role == 'admin' or user.role == 'rrhh' or user.employee_id == employee_id}}"
+    },
+    {
+      "operation": "update",
+      "allow": "{{user.role == 'admin' or user.role == 'rrhh'}}"
+    },
+    {
+      "operation": "create",
+      "allow": "{{user.role == 'admin' or user.role == 'rrhh'}}"
+    },
+    {
+      "operation": "delete",
+      "allow": "{{user.role == 'admin'}}"
+    }
+  ],
   "properties": {
     "employee_id": {
       "type": "string",
-      "description": "ID del empleado (EmployeeMasterDatabase)"
+      "description": "ID del empleado"
     },
     "employee_name": {
       "type": "string",
-      "description": "Nombre del empleado (para facilitar consultas)"
+      "description": "Nombre del empleado"
     },
     "employee_code": {
       "type": "string",
@@ -20,7 +38,7 @@
     },
     "component_name": {
       "type": "string",
-      "description": "Nombre del componente (para facilitar consultas)"
+      "description": "Nombre del componente"
     },
     "component_code": {
       "type": "string",
@@ -36,49 +54,39 @@
     },
     "start_date": {
       "type": "string",
-      "format": "date",
-      "description": "Fecha de inicio de vigencia"
+      "format": "date"
     },
     "end_date": {
       "type": "string",
-      "format": "date",
-      "description": "Fecha de fin de vigencia (para hist\u00f3rico)"
+      "format": "date"
     },
     "is_current": {
       "type": "boolean",
-      "default": true,
-      "description": "Si es el registro actual vigente"
+      "default": true
     },
     "notes": {
-      "type": "string",
-      "description": "Notas o comentarios sobre la asignaci\u00f3n"
+      "type": "string"
     },
     "approved_by": {
-      "type": "string",
-      "description": "Usuario que aprob\u00f3 el cambio"
+      "type": "string"
     },
     "approval_date": {
       "type": "string",
-      "format": "date-time",
-      "description": "Fecha de aprobaci\u00f3n"
+      "format": "date-time"
     },
     "requires_approval": {
       "type": "boolean",
-      "default": false,
-      "description": "Si requiere aprobaci\u00f3n"
+      "default": false
     },
     "change_request_id": {
-      "type": "string",
-      "description": "ID de la solicitud de cambio asociada"
+      "type": "string"
     },
     "previous_version_id": {
-      "type": "string",
-      "description": "ID de la versi\u00f3n anterior (para historial)"
+      "type": "string"
     },
     "version": {
       "type": "number",
-      "default": 1,
-      "description": "N\u00famero de versi\u00f3n"
+      "default": 1
     }
   },
   "required": [
@@ -86,39 +94,5 @@
     "component_id",
     "amount",
     "start_date"
-  ],
-  "rls": {
-    "create": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "read": {
-      "$or": [
-        {
-          "data.employee_id": "{{user.employee_id}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "rrhh"
-          }
-        }
-      ]
-    },
-    "update": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "delete": {
-      "user_condition": {
-        "role": "admin"
-      }
-    }
-  }
+  ]
 }

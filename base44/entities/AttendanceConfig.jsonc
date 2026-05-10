@@ -1,0 +1,117 @@
+{
+  "name": "AttendanceConfig",
+  "type": "object",
+  "row_level_security": [
+    {
+      "operation": "read",
+      "allow": "{{user.role == 'admin'}}"
+    },
+    {
+      "operation": "create",
+      "allow": "{{user.role == 'admin'}}"
+    },
+    {
+      "operation": "update",
+      "allow": "{{user.role == 'admin'}}"
+    },
+    {
+      "operation": "delete",
+      "allow": "{{user.role == 'admin'}}"
+    }
+  ],
+  "properties": {
+    "nombre_configuracion": {
+      "type": "string",
+      "default": "Configuraci\u00f3n General",
+      "description": "Nombre de la configuraci\u00f3n"
+    },
+    "tolerancia_entrada_minutos": {
+      "type": "number",
+      "default": 10,
+      "description": "Minutos de tolerancia en entrada antes de marcar retraso"
+    },
+    "tolerancia_salida_minutos": {
+      "type": "number",
+      "default": 10,
+      "description": "Minutos de tolerancia en salida anticipada"
+    },
+    "marcar_ausente_despues_de_minutos": {
+      "type": "number",
+      "default": 60,
+      "description": "Marcar como ausente si no ficha despu\u00e9s de X minutos"
+    },
+    "auto_actualizar_disponibilidad": {
+      "type": "boolean",
+      "default": true,
+      "description": "Actualizar autom\u00e1ticamente campo disponibilidad del empleado"
+    },
+    "crear_ausencia_automatica": {
+      "type": "boolean",
+      "default": true,
+      "description": "Crear registro de ausencia autom\u00e1ticamente si no ficha"
+    },
+    "notificar_ausencias": {
+      "type": "boolean",
+      "default": true,
+      "description": "Enviar notificaciones por ausencias"
+    },
+    "notificar_retrasos": {
+      "type": "boolean",
+      "default": true,
+      "description": "Enviar notificaciones por retrasos"
+    },
+    "notificar_retrasos_solo_si_mas_de_minutos": {
+      "type": "number",
+      "default": 15,
+      "description": "Notificar retrasos solo si superan X minutos"
+    },
+    "destinatarios_notificaciones": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "rol": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Lista de destinatarios para notificaciones"
+    },
+    "departamentos_estrictos": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Departamentos con tolerancia reducida"
+    },
+    "tolerancia_reducida_minutos": {
+      "type": "number",
+      "default": 5,
+      "description": "Tolerancia para departamentos estrictos"
+    },
+    "activar_predicciones_ml": {
+      "type": "boolean",
+      "default": true,
+      "description": "Activar predicciones ML de ausencias"
+    },
+    "umbral_alertas_patron_retrasos": {
+      "type": "number",
+      "default": 3,
+      "description": "Alertar si X retrasos en \u00faltimo mes"
+    },
+    "activo": {
+      "type": "boolean",
+      "default": true,
+      "description": "Si la configuraci\u00f3n est\u00e1 activa"
+    }
+  },
+  "required": [
+    "nombre_configuracion"
+  ]
+}

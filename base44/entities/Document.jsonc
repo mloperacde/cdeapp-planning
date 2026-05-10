@@ -1,6 +1,24 @@
 {
   "name": "Document",
   "type": "object",
+  "row_level_security": [
+    {
+      "operation": "read",
+      "allow": "{{es_publico or user.role == 'admin' or user.role in roles_acceso or (departamentos_acceso is empty or user.department_id in departamentos_acceso)}}"
+    },
+    {
+      "operation": "create",
+      "allow": "{{user.role == 'admin'}}"
+    },
+    {
+      "operation": "update",
+      "allow": "{{user.role == 'admin'}}"
+    },
+    {
+      "operation": "delete",
+      "allow": "{{user.role == 'admin'}}"
+    }
+  ],
   "properties": {
     "titulo": {
       "type": "string",
@@ -172,68 +190,5 @@
     "titulo",
     "categoria",
     "archivo_url"
-  ],
-  "rls": {
-    "create": {
-      "created_by": "{{user.email}}"
-    },
-    "read": {
-      "$or": [
-        {
-          "data.es_publico": true
-        },
-        {
-          "created_by": "{{user.email}}"
-        },
-        {
-          "data.roles_acceso": {
-            "$in": [
-              "{{user.role}}"
-            ]
-          }
-        },
-        {
-          "data.departamentos_acceso": {
-            "$in": [
-              "{{user.data.department}}"
-            ]
-          }
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "rrhh"
-          }
-        }
-      ]
-    },
-    "update": {
-      "$or": [
-        {
-          "created_by": "{{user.email}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        }
-      ]
-    },
-    "delete": {
-      "$or": [
-        {
-          "created_by": "{{user.email}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        }
-      ]
-    }
-  }
+  ]
 }

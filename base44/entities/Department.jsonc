@@ -1,0 +1,75 @@
+{
+  "name": "Department",
+  "type": "object",
+  "row_level_security": [
+    {
+      "operation": "read",
+      "allow": "{{true}}"
+    },
+    {
+      "operation": "create",
+      "allow": "{{user.role == 'admin'}}"
+    },
+    {
+      "operation": "update",
+      "allow": "{{user.role == 'admin'}}"
+    },
+    {
+      "operation": "delete",
+      "allow": "{{user.role == 'admin'}}"
+    }
+  ],
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Nombre del departamento"
+    },
+    "code": {
+      "type": "string",
+      "description": "C\u00f3digo identificador (ej: FAB, OFI)"
+    },
+    "description": {
+      "type": "string",
+      "description": "Descripci\u00f3n del departamento"
+    },
+    "parent_id": {
+      "type": "string",
+      "description": "ID del departamento padre (para jerarqu\u00eda)"
+    },
+    "parent_name": {
+      "type": "string",
+      "description": "Nombre del departamento padre (para f\u00e1cil referencia)"
+    },
+    "manager_id": {
+      "type": "string",
+      "description": "ID del empleado responsable del departamento"
+    },
+    "manager_id_2": {
+      "type": "string",
+      "description": "ID del segundo responsable (para departamentos grandes)"
+    },
+    "manager_id_3": {
+      "type": "string",
+      "description": "ID del tercer responsable (opcional)"
+    },
+    "manager_id_4": {
+      "type": "string",
+      "description": "ID del cuarto responsable (opcional)"
+    },
+    "color": {
+      "type": "string",
+      "description": "Color identificativo"
+    },
+    "total_employee_count": {
+      "type": "number",
+      "description": "Suma total de empleados en este departamento y sus sub-departamentos"
+    },
+    "orden": {
+      "type": "number",
+      "description": "Orden de visualizaci\u00f3n"
+    }
+  },
+  "required": [
+    "name"
+  ]
+}

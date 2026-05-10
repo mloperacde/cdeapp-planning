@@ -1,0 +1,61 @@
+{
+  "name": "BreakShift",
+  "type": "object",
+  "row_level_security": [
+    {
+      "operation": "read",
+      "allow": "{{true}}"
+    },
+    {
+      "operation": "create",
+      "allow": "{{user.role == 'admin' or user.role == 'jefe_turno'}}"
+    },
+    {
+      "operation": "update",
+      "allow": "{{user.role == 'admin' or user.role == 'jefe_turno'}}"
+    },
+    {
+      "operation": "delete",
+      "allow": "{{user.role == 'admin'}}"
+    }
+  ],
+  "properties": {
+    "nombre": {
+      "type": "string",
+      "description": "Nombre del turno de descanso"
+    },
+    "hora_inicio": {
+      "type": "string",
+      "description": "Hora de inicio del descanso (HH:mm)"
+    },
+    "duracion_minutos": {
+      "type": "number",
+      "default": 20,
+      "description": "Duraci\u00f3n del descanso en minutos"
+    },
+    "personas_por_turno": {
+      "type": "number",
+      "description": "N\u00famero de personas por turno de descanso"
+    },
+    "aplica_turno_manana": {
+      "type": "boolean",
+      "default": true,
+      "description": "Aplica para turno de ma\u00f1ana"
+    },
+    "aplica_turno_tarde": {
+      "type": "boolean",
+      "default": true,
+      "description": "Aplica para turno de tarde"
+    },
+    "activo": {
+      "type": "boolean",
+      "default": true,
+      "description": "Si el turno de descanso est\u00e1 activo"
+    }
+  },
+  "required": [
+    "nombre",
+    "hora_inicio",
+    "personas_por_turno"
+  ]
+}

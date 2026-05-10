@@ -1,0 +1,94 @@
+{
+  "name": "DepartmentIncentiveConfig",
+  "type": "object",
+  "row_level_security": [
+    {
+      "operation": "read",
+      "allow": "{{user.role == 'admin' or user.role == 'rrhh'}}"
+    },
+    {
+      "operation": "create",
+      "allow": "{{user.role == 'admin' or user.role == 'rrhh'}}"
+    },
+    {
+      "operation": "update",
+      "allow": "{{user.role == 'admin' or user.role == 'rrhh'}}"
+    },
+    {
+      "operation": "delete",
+      "allow": "{{user.role == 'admin'}}"
+    }
+  ],
+  "properties": {
+    "incentive_plan_id": {
+      "type": "string",
+      "description": "ID del plan de incentivos"
+    },
+    "departamento": {
+      "type": "string",
+      "description": "Nombre del departamento"
+    },
+    "puesto": {
+      "type": "string",
+      "description": "Puesto espec\u00edfico (opcional, si vac\u00edo aplica a todo el departamento)"
+    },
+    "empleados_aplicables": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "IDs de empleados a los que aplica este plan (vac\u00edo = todos del puesto/departamento)"
+    },
+    "objetivos": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "parametro": {
+            "type": "string",
+            "description": "Nombre del par\u00e1metro a medir"
+          },
+          "peso_porcentaje": {
+            "type": "number",
+            "description": "Peso del objetivo en porcentaje (0-100)"
+          },
+          "meta_objetivo": {
+            "type": "number",
+            "description": "Meta u objetivo a alcanzar"
+          },
+          "umbral_minimo": {
+            "type": "number",
+            "description": "Umbral m\u00ednimo para considerar cumplimiento"
+          },
+          "descripcion": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Objetivos configurados (m\u00e1ximo 6)"
+    },
+    "incentivo_base": {
+      "type": "number",
+      "description": "Monto base del incentivo"
+    },
+    "formula_calculo": {
+      "type": "string",
+      "enum": [
+        "Promedio Ponderado",
+        "Cumplimiento Total",
+        "M\u00ednimo Requerido"
+      ],
+      "default": "Promedio Ponderado",
+      "description": "F\u00f3rmula para calcular el incentivo"
+    },
+    "activo": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "incentive_plan_id",
+    "departamento",
+    "objetivos"
+  ]
+}

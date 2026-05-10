@@ -1,0 +1,85 @@
+{
+  "name": "Article",
+  "type": "object",
+  "row_level_security": [
+    {
+      "operation": "read",
+      "allow": "{{true}}"
+    },
+    {
+      "operation": "create",
+      "allow": "{{user.role == 'admin'}}"
+    },
+    {
+      "operation": "update",
+      "allow": "{{user.role == 'admin'}}"
+    },
+    {
+      "operation": "delete",
+      "allow": "{{user.role == 'admin'}}"
+    }
+  ],
+  "properties": {
+    "codigo": {
+      "type": "string",
+      "description": "C\u00f3digo del art\u00edculo"
+    },
+    "nombre": {
+      "type": "string",
+      "description": "Nombre del art\u00edculo"
+    },
+    "descripcion": {
+      "type": "string",
+      "description": "Descripci\u00f3n del art\u00edculo"
+    },
+    "maquina_1": {
+      "type": "string",
+      "description": "ID de m\u00e1quina que puede fabricar este art\u00edculo"
+    },
+    "maquina_2": {
+      "type": "string",
+      "description": "ID de m\u00e1quina que puede fabricar este art\u00edculo"
+    },
+    "maquina_3": {
+      "type": "string",
+      "description": "ID de m\u00e1quina que puede fabricar este art\u00edculo"
+    },
+    "maquina_4": {
+      "type": "string",
+      "description": "ID de m\u00e1quina que puede fabricar este art\u00edculo"
+    },
+    "maquina_5": {
+      "type": "string",
+      "description": "ID de m\u00e1quina que puede fabricar este art\u00edculo"
+    },
+    "maquina_6": {
+      "type": "string",
+      "description": "ID de m\u00e1quina que puede fabricar este art\u00edculo"
+    },
+    "maquina_7": {
+      "type": "string",
+      "description": "ID de m\u00e1quina que puede fabricar este art\u00edculo"
+    },
+    "maquina_8": {
+      "type": "string",
+      "description": "ID de m\u00e1quina que puede fabricar este art\u00edculo"
+    },
+    "maquina_9": {
+      "type": "string",
+      "description": "ID de m\u00e1quina que puede fabricar este art\u00edculo"
+    },
+    "maquina_10": {
+      "type": "string",
+      "description": "ID de m\u00e1quina que puede fabricar este art\u00edculo"
+    },
+    "activo": {
+      "type": "boolean",
+      "default": true,
+      "description": "Si el art\u00edculo est\u00e1 activo"
+    }
+  },
+  "required": [
+    "codigo",
+    "nombre"
+  ]
+}

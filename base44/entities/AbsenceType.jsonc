@@ -1,0 +1,193 @@
+{
+  "name": "AbsenceType",
+  "type": "object",
+  "row_level_security": [
+    {
+      "operation": "read",
+      "allow": "{{true}}"
+    },
+    {
+      "operation": "create",
+      "allow": "{{user.role == 'admin'}}"
+    },
+    {
+      "operation": "update",
+      "allow": "{{user.role == 'admin'}}"
+    },
+    {
+      "operation": "delete",
+      "allow": "{{user.role == 'admin'}}"
+    }
+  ],
+  "properties": {
+    "nombre": {
+      "type": "string",
+      "description": "Nombre del tipo de ausencia o permiso"
+    },
+    "codigo": {
+      "type": "string",
+      "description": "C\u00f3digo \u00fanico del tipo"
+    },
+    "categoria_principal": {
+      "type": "string",
+      "enum": [
+        "Permiso",
+        "Baja Laboral"
+      ],
+      "description": "Categor\u00eda principal: Permiso o Baja Laboral"
+    },
+    "subcategoria": {
+      "type": "string",
+      "enum": [
+        "Permiso Remunerado",
+        "Permiso No Remunerado",
+        "Baja por Enfermedad Com\u00fan",
+        "Baja por Accidente No Laboral",
+        "Baja por Enfermedad Profesional",
+        "Baja por Accidente Laboral",
+        "Baja por Maternidad",
+        "Baja por Paternidad",
+        "Baja por Riesgo Durante Embarazo",
+        "Baja por Riesgo Durante Lactancia"
+      ],
+      "description": "Subcategor\u00eda espec\u00edfica"
+    },
+    "remunerada": {
+      "type": "boolean",
+      "default": false,
+      "description": "Si la ausencia es remunerada"
+    },
+    "no_consume_vacaciones": {
+      "type": "boolean",
+      "default": true,
+      "description": "Si NO consume vacaciones (genera d\u00edas pendientes si coincide con vacaciones)"
+    },
+    "requiere_aprobacion": {
+      "type": "boolean",
+      "default": true,
+      "description": "Si requiere aprobaci\u00f3n"
+    },
+    "hecho_causante": {
+      "type": "string",
+      "description": "Descripci\u00f3n del hecho causante seg\u00fan Estatuto de los Trabajadores o legislaci\u00f3n"
+    },
+    "duracion_dias": {
+      "type": "number",
+      "description": "Duraci\u00f3n en d\u00edas (si aplica)"
+    },
+    "duracion_semanas": {
+      "type": "number",
+      "description": "Duraci\u00f3n en semanas (para bajas largas)"
+    },
+    "duracion_descripcion": {
+      "type": "string",
+      "description": "Descripci\u00f3n de la duraci\u00f3n"
+    },
+    "ampliacion_desplazamiento": {
+      "type": "boolean",
+      "default": false,
+      "description": "Si se ampl\u00eda por desplazamiento"
+    },
+    "dias_ampliacion": {
+      "type": "number",
+      "description": "D\u00edas adicionales por desplazamiento"
+    },
+    "inicio_disfrute": {
+      "type": "string",
+      "description": "Descripci\u00f3n del inicio y periodo de disfrute"
+    },
+    "consideraciones": {
+      "type": "string",
+      "description": "Consideraciones especiales"
+    },
+    "articulo_referencia": {
+      "type": "string",
+      "description": "Art\u00edculo del Estatuto de los Trabajadores u otra legislaci\u00f3n"
+    },
+    "es_critica": {
+      "type": "boolean",
+      "default": false,
+      "description": "Si es una ausencia cr\u00edtica"
+    },
+    "notificar_admin": {
+      "type": "boolean",
+      "default": false,
+      "description": "Si se debe notificar a administradores"
+    },
+    "dias_aviso_previo": {
+      "type": "number",
+      "default": 0,
+      "description": "D\u00edas de aviso previo requeridos"
+    },
+    "requiere_documentacion": {
+      "type": "boolean",
+      "default": false,
+      "description": "Si requiere documentaci\u00f3n justificativa"
+    },
+    "cotizacion_ss": {
+      "type": "boolean",
+      "default": false,
+      "description": "Si cotiza a la Seguridad Social durante la baja"
+    },
+    "prestacion_ss": {
+      "type": "boolean",
+      "default": false,
+      "description": "Si recibe prestaci\u00f3n de la Seguridad Social"
+    },
+    "porcentaje_prestacion": {
+      "type": "number",
+      "description": "Porcentaje de la base reguladora en prestaci\u00f3n (ej. 60%, 75%, 100%)"
+    },
+    "carencia_dias": {
+      "type": "number",
+      "description": "D\u00edas de carencia antes de recibir prestaci\u00f3n"
+    },
+    "color": {
+      "type": "string",
+      "description": "Color para identificar el tipo (hex)"
+    },
+    "descripcion": {
+      "type": "string",
+      "description": "Descripci\u00f3n breve del tipo"
+    },
+    "activo": {
+      "type": "boolean",
+      "default": true,
+      "description": "Si el tipo est\u00e1 activo"
+    },
+    "orden": {
+      "type": "number",
+      "description": "Orden de visualizaci\u00f3n"
+    },
+    "visible_empleados": {
+      "type": "boolean",
+      "default": true,
+      "description": "Si es visible para empleados en la app m\u00f3vil"
+    },
+    "permite_acumulacion": {
+      "type": "boolean",
+      "default": false,
+      "description": "Si permite acumular d\u00edas no disfrutados"
+    },
+    "dias_maximos_acumulacion": {
+      "type": "number",
+      "description": "D\u00edas m\u00e1ximos que se pueden acumular"
+    },
+    "caducidad_dias_acumulados": {
+      "type": "number",
+      "default": 365,
+      "description": "D\u00edas hasta que caducan los d\u00edas acumulados"
+    },
+    "requiere_aprobacion_acumulacion": {
+      "type": "boolean",
+      "default": false,
+      "description": "Si requiere aprobaci\u00f3n para acumular d\u00edas"
+    }
+  },
+  "required": [
+    "nombre",
+    "codigo",
+    "categoria_principal",
+    "subcategoria"
+  ]
+}

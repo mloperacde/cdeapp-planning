@@ -1,0 +1,140 @@
+{
+  "name": "CompensationPolicy",
+  "type": "object",
+  "row_level_security": [
+    {
+      "operation": "read",
+      "allow": "{{user.role == 'admin' or user.role == 'rrhh'}}"
+    },
+    {
+      "operation": "create",
+      "allow": "{{user.role == 'admin' or user.role == 'rrhh'}}"
+    },
+    {
+      "operation": "update",
+      "allow": "{{user.role == 'admin' or user.role == 'rrhh'}}"
+    },
+    {
+      "operation": "delete",
+      "allow": "{{user.role == 'admin'}}"
+    }
+  ],
+  "properties": {
+    "policy_name": {
+      "type": "string",
+      "description": "Nombre de la pol\u00edtica retributiva"
+    },
+    "code": {
+      "type": "string",
+      "description": "C\u00f3digo \u00fanico de la pol\u00edtica"
+    },
+    "description": {
+      "type": "string",
+      "description": "Descripci\u00f3n de la pol\u00edtica"
+    },
+    "applies_to": {
+      "type": "string",
+      "enum": [
+        "Todos",
+        "Por Departamento",
+        "Por Puesto",
+        "Por Categor\u00eda",
+        "Personalizado"
+      ],
+      "default": "Todos",
+      "description": "\u00c1mbito de aplicaci\u00f3n"
+    },
+    "target_departments": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Departamentos objetivo"
+    },
+    "target_positions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Puestos objetivo"
+    },
+    "target_categories": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Categor\u00edas objetivo"
+    },
+    "salary_components": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "component_id": {
+            "type": "string"
+          },
+          "component_name": {
+            "type": "string"
+          },
+          "is_mandatory": {
+            "type": "boolean"
+          },
+          "default_amount": {
+            "type": "number"
+          },
+          "min_amount": {
+            "type": "number"
+          },
+          "max_amount": {
+            "type": "number"
+          }
+        }
+      },
+      "description": "Componentes salariales incluidos en la pol\u00edtica"
+    },
+    "salary_ranges": {
+      "type": "object",
+      "properties": {
+        "min_salary": {
+          "type": "number"
+        },
+        "max_salary": {
+          "type": "number"
+        },
+        "target_salary": {
+          "type": "number"
+        }
+      },
+      "description": "Rangos salariales de la pol\u00edtica"
+    },
+    "valid_from": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha de inicio de vigencia"
+    },
+    "valid_to": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha de fin de vigencia"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Si la pol\u00edtica est\u00e1 activa"
+    },
+    "auto_apply": {
+      "type": "boolean",
+      "default": false,
+      "description": "Si se aplica autom\u00e1ticamente a nuevos empleados"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Notas adicionales"
+    }
+  },
+  "required": [
+    "policy_name",
+    "code",
+    "valid_from"
+  ]
+}

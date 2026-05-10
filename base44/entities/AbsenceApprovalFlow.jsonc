@@ -1,0 +1,64 @@
+{
+  "name": "AbsenceApprovalFlow",
+  "type": "object",
+  "row_level_security": [
+    {
+      "operation": "read",
+      "allow": "{{user.role == 'admin'}}"
+    },
+    {
+      "operation": "create",
+      "allow": "{{user.role == 'admin'}}"
+    },
+    {
+      "operation": "update",
+      "allow": "{{user.role == 'admin'}}"
+    },
+    {
+      "operation": "delete",
+      "allow": "{{user.role == 'admin'}}"
+    }
+  ],
+  "properties": {
+    "absence_type_id": {
+      "type": "string",
+      "description": "ID del tipo de ausencia"
+    },
+    "niveles": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "nivel": {
+            "type": "number",
+            "description": "Nivel de aprobaci\u00f3n (1, 2, 3...)"
+          },
+          "rol_aprobador": {
+            "type": "string",
+            "enum": [
+              "admin",
+              "supervisor",
+              "jefe_turno",
+              "rrhh"
+            ],
+            "description": "Rol que puede aprobar en este nivel"
+          },
+          "auto_aprobar_si": {
+            "type": "string",
+            "description": "Condici\u00f3n para auto-aprobaci\u00f3n"
+          }
+        }
+      },
+      "description": "Niveles de aprobaci\u00f3n secuenciales"
+    },
+    "activo": {
+      "type": "boolean",
+      "default": true,
+      "description": "Si el flujo est\u00e1 activo"
+    }
+  },
+  "required": [
+    "absence_type_id",
+    "niveles"
+  ]
+}

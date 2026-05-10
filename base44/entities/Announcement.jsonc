@@ -1,0 +1,61 @@
+{
+  "name": "Announcement",
+  "type": "object",
+  "row_level_security": [
+    {
+      "operation": "read",
+      "allow": "{{true}}"
+    },
+    {
+      "operation": "create",
+      "allow": "{{user.role == 'admin'}}"
+    },
+    {
+      "operation": "update",
+      "allow": "{{user.role == 'admin'}}"
+    },
+    {
+      "operation": "delete",
+      "allow": "{{user.role == 'admin'}}"
+    }
+  ],
+  "properties": {
+    "titulo": {
+      "type": "string",
+      "description": "T\u00edtulo del comunicado"
+    },
+    "contenido": {
+      "type": "string",
+      "description": "Contenido del comunicado"
+    },
+    "tipo": {
+      "type": "string",
+      "enum": [
+        "Informativo",
+        "Urgente",
+        "Recordatorio",
+        "Evento"
+      ],
+      "default": "Informativo",
+      "description": "Tipo de comunicado"
+    },
+    "activo": {
+      "type": "boolean",
+      "default": true,
+      "description": "Si el comunicado est\u00e1 visible"
+    },
+    "fecha_expiracion": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha en que deja de mostrarse"
+    },
+    "autor_nombre": {
+      "type": "string",
+      "description": "Nombre del autor"
+    }
+  },
+  "required": [
+    "titulo",
+    "contenido"
+  ]
+}

@@ -1,0 +1,122 @@
+{
+  "name": "EmergencyTeamMember",
+  "type": "object",
+  "row_level_security": [
+    {
+      "operation": "read",
+      "allow": "{{user.role == 'admin' or user.role == 'rrhh' or user.role == 'supervisor' or user.employee_id == employee_id}}"
+    },
+    {
+      "operation": "create",
+      "allow": "{{user.role == 'admin' or user.role == 'rrhh'}}"
+    },
+    {
+      "operation": "update",
+      "allow": "{{user.role == 'admin' or user.role == 'rrhh'}}"
+    },
+    {
+      "operation": "delete",
+      "allow": "{{user.role == 'admin'}}"
+    }
+  ],
+  "properties": {
+    "employee_id": {
+      "type": "string",
+      "description": "ID del empleado"
+    },
+    "rol_emergencia": {
+      "type": "string",
+      "enum": [
+        "Jefe de Emergencias",
+        "Jefe de Intervenci\u00f3n",
+        "Equipo Primera Intervenci\u00f3n (EPI)",
+        "Equipo Segunda Intervenci\u00f3n (ESI)",
+        "Equipo Primeros Auxilios (EPA)",
+        "Equipo Alarma y Evacuaci\u00f3n (EAE)"
+      ],
+      "description": "Rol en el equipo de emergencia"
+    },
+    "es_suplente": {
+      "type": "boolean",
+      "default": false,
+      "description": "Si es suplente del rol"
+    },
+    "fecha_nombramiento": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha de nombramiento"
+    },
+    "fecha_fin": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha de fin del nombramiento"
+    },
+    "activo": {
+      "type": "boolean",
+      "default": true,
+      "description": "Si est\u00e1 activo"
+    },
+    "formacion_recibida": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "nombre_curso": {
+            "type": "string"
+          },
+          "fecha_realizacion": {
+            "type": "string",
+            "format": "date"
+          },
+          "duracion_horas": {
+            "type": "number"
+          },
+          "entidad_formadora": {
+            "type": "string"
+          },
+          "certificado_url": {
+            "type": "string"
+          },
+          "fecha_caducidad": {
+            "type": "string",
+            "format": "date"
+          },
+          "requiere_renovacion": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "description": "Formaci\u00f3n espec\u00edfica recibida para este rol"
+    },
+    "ultima_simulacro": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha del \u00faltimo simulacro en el que particip\u00f3"
+    },
+    "zona_asignada": {
+      "type": "string",
+      "description": "Zona del edificio/planta asignada"
+    },
+    "telefono_emergencia": {
+      "type": "string",
+      "description": "Tel\u00e9fono de contacto para emergencias"
+    },
+    "equipamiento_asignado": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Equipamiento de protecci\u00f3n asignado"
+    },
+    "observaciones": {
+      "type": "string",
+      "description": "Observaciones adicionales"
+    }
+  },
+  "required": [
+    "employee_id",
+    "rol_emergencia",
+    "fecha_nombramiento"
+  ]
+}

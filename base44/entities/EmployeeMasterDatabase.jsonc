@@ -1,10 +1,28 @@
 {
   "name": "EmployeeMasterDatabase",
   "type": "object",
+  "row_level_security": [
+    {
+      "operation": "read",
+      "allow": "{{user.role == 'admin' or user.role == 'rrhh' or (user.role == 'supervisor' and user.department_id == department_id) or user.employee_id == id}}"
+    },
+    {
+      "operation": "update",
+      "allow": "{{user.role == 'admin' or user.role == 'rrhh' or (user.employee_id == id and (field == 'email' or field == 'telefono_movil' or field == 'direccion'))}}"
+    },
+    {
+      "operation": "create",
+      "allow": "{{user.role == 'admin' or user.role == 'rrhh'}}"
+    },
+    {
+      "operation": "delete",
+      "allow": "{{user.role == 'admin'}}"
+    }
+  ],
   "properties": {
     "codigo_empleado": {
       "type": "string",
-      "description": "C\u00f3digo \u00fanico del empleado en el sistema maestro (ej: '476'). Usado para cruzar con fichajes del control de acceso (AttendanceRecord.employee_id)"
+      "description": "C\u00f3digo \u00fanico del empleado"
     },
     "nombre": {
       "type": "string",
@@ -16,54 +34,43 @@
         "Alta",
         "Baja"
       ],
-      "default": "Alta",
-      "description": "Estado del empleado"
+      "default": "Alta"
     },
     "fecha_baja": {
       "type": "string",
-      "format": "date",
-      "description": "Fecha de baja del empleado"
+      "format": "date"
     },
     "motivo_baja": {
-      "type": "string",
-      "description": "Motivo de la baja"
+      "type": "string"
     },
     "sujeto_a_control_horario": {
       "type": "boolean",
-      "default": true,
-      "description": "Indica si el empleado est\u00e1 sujeto a control horario por marcaje de fichaje (Cuco360)."
+      "default": true
     },
     "tasa_absentismo": {
-      "type": "number",
-      "description": "Tasa de absentismo individual (%)"
+      "type": "number"
     },
     "horas_no_trabajadas": {
       "type": "number",
-      "default": 0,
-      "description": "Total horas no trabajadas (ausencias)"
+      "default": 0
     },
     "horas_deberian_trabajarse": {
       "type": "number",
-      "default": 0,
-      "description": "Total horas que deber\u00edan haberse trabajado"
+      "default": 0
     },
     "ultima_actualizacion_absentismo": {
       "type": "string",
-      "format": "date",
-      "description": "Fecha de \u00faltima actualizaci\u00f3n del absentismo"
+      "format": "date"
     },
     "fecha_nacimiento": {
       "type": "string",
-      "format": "date",
-      "description": "Fecha de nacimiento"
+      "format": "date"
     },
     "dni": {
-      "type": "string",
-      "description": "DNI/NIE"
+      "type": "string"
     },
     "nuss": {
-      "type": "string",
-      "description": "N\u00famero de la Seguridad Social"
+      "type": "string"
     },
     "sexo": {
       "type": "string",
@@ -71,69 +78,53 @@
         "Masculino",
         "Femenino",
         "Otro"
-      ],
-      "description": "Sexo"
+      ]
     },
     "nacionalidad": {
-      "type": "string",
-      "description": "Nacionalidad"
+      "type": "string"
     },
     "direccion": {
-      "type": "string",
-      "description": "Direcci\u00f3n completa"
+      "type": "string"
     },
     "formacion": {
-      "type": "string",
-      "description": "Formaci\u00f3n acad\u00e9mica"
+      "type": "string"
     },
     "email": {
       "type": "string",
-      "format": "email",
-      "description": "Email"
+      "format": "email"
     },
     "telefono_movil": {
-      "type": "string",
-      "description": "Tel\u00e9fono m\u00f3vil"
+      "type": "string"
     },
     "contacto_emergencia_nombre": {
-      "type": "string",
-      "description": "Nombre del contacto de emergencia"
+      "type": "string"
     },
     "contacto_emergencia_telefono": {
-      "type": "string",
-      "description": "Tel\u00e9fono del contacto de emergencia"
+      "type": "string"
     },
     "contacto_emergencia_relacion": {
-      "type": "string",
-      "description": "Relaci\u00f3n con el contacto de emergencia"
+      "type": "string"
     },
     "iban": {
-      "type": "string",
-      "description": "IBAN para n\u00f3minas"
+      "type": "string"
     },
     "swift_bic": {
-      "type": "string",
-      "description": "C\u00f3digo SWIFT/BIC del banco"
+      "type": "string"
     },
     "banco_nombre": {
-      "type": "string",
-      "description": "Nombre del banco"
+      "type": "string"
     },
     "departamento": {
-      "type": "string",
-      "description": "Nombre del departamento (desnormalizado)"
+      "type": "string"
     },
     "department_id": {
-      "type": "string",
-      "description": "ID del departamento (llave for\u00e1nea \u2192 Department.id)"
+      "type": "string"
     },
     "puesto": {
-      "type": "string",
-      "description": "Puesto de trabajo"
+      "type": "string"
     },
     "categoria": {
-      "type": "string",
-      "description": "Categor\u00eda profesional"
+      "type": "string"
     },
     "tipo_jornada": {
       "type": "string",
@@ -141,12 +132,10 @@
         "Jornada Completa",
         "Jornada Parcial",
         "Reducci\u00f3n de Jornada"
-      ],
-      "description": "Tipo de jornada laboral"
+      ]
     },
     "num_horas_jornada": {
-      "type": "number",
-      "description": "N\u00famero de horas semanales"
+      "type": "number"
     },
     "tipo_turno": {
       "type": "string",
@@ -155,69 +144,54 @@
         "Fijo Ma\u00f1ana",
         "Fijo Tarde",
         "Turno Partido"
-      ],
-      "description": "Tipo de turno"
+      ]
     },
     "equipo": {
-      "type": "string",
-      "description": "Nombre del equipo al que pertenece (desnormalizado)"
+      "type": "string"
     },
     "team_id": {
-      "type": "string",
-      "description": "ID del registro en TeamConfig (llave for\u00e1nea \u2192 TeamConfig.id)"
+      "type": "string"
     },
     "team_key": {
       "type": "string",
       "enum": [
         "team_1",
         "team_2"
-      ],
-      "description": "Clave del equipo"
+      ]
     },
     "team_fixed": {
       "type": "boolean",
-      "default": false,
-      "description": "Si el empleado tiene equipo fijo (no rota)"
+      "default": false
     },
     "horario_manana_inicio": {
-      "type": "string",
-      "description": "Hora inicio turno ma\u00f1ana (HH:mm)"
+      "type": "string"
     },
     "horario_manana_fin": {
-      "type": "string",
-      "description": "Hora fin turno ma\u00f1ana (HH:mm)"
+      "type": "string"
     },
     "horario_tarde_inicio": {
-      "type": "string",
-      "description": "Hora inicio turno tarde (HH:mm)"
+      "type": "string"
     },
     "horario_tarde_fin": {
-      "type": "string",
-      "description": "Hora fin turno tarde (HH:mm)"
+      "type": "string"
     },
     "turno_partido_entrada1": {
-      "type": "string",
-      "description": "Hora entrada 1 turno partido (HH:mm)"
+      "type": "string"
     },
     "turno_partido_salida1": {
-      "type": "string",
-      "description": "Hora salida 1 turno partido (HH:mm)"
+      "type": "string"
     },
     "turno_partido_entrada2": {
-      "type": "string",
-      "description": "Hora entrada 2 turno partido (HH:mm)"
+      "type": "string"
     },
     "turno_partido_salida2": {
-      "type": "string",
-      "description": "Hora salida 2 turno partido (HH:mm)"
+      "type": "string"
     },
     "taquilla_vestuario": {
-      "type": "string",
-      "description": "Vestuario asignado"
+      "type": "string"
     },
     "taquilla_numero": {
-      "type": "string",
-      "description": "N\u00famero de taquilla"
+      "type": "string"
     },
     "disponibilidad": {
       "type": "string",
@@ -225,8 +199,7 @@
         "Disponible",
         "Ausente"
       ],
-      "default": "Disponible",
-      "description": "Disponibilidad actual"
+      "default": "Disponible"
     },
     "estado_presencia": {
       "type": "string",
@@ -238,62 +211,49 @@
         "Ausente",
         "No Aplica"
       ],
-      "default": "No Aplica",
-      "description": "Estado de presencia en tiempo real. Gestionado autom\u00e1ticamente por el monitor de presencia."
+      "default": "No Aplica"
     },
     "potencialmente_ausente_desde": {
       "type": "string",
-      "format": "date-time",
-      "description": "Timestamp desde el que se detect\u00f3 la posible ausencia. Usado por el monitor para calcular el tiempo hasta auto-crear ausencia."
+      "format": "date-time"
     },
     "ausencia_inicio": {
       "type": "string",
-      "format": "date-time",
-      "description": "Fecha y hora de inicio de ausencia (cach\u00e9)"
+      "format": "date-time"
     },
     "ausencia_fin": {
       "type": "string",
-      "format": "date-time",
-      "description": "Fecha y hora de fin de ausencia (cach\u00e9)"
+      "format": "date-time"
     },
     "ausencia_motivo": {
-      "type": "string",
-      "description": "Motivo de la ausencia (cach\u00e9)"
+      "type": "string"
     },
     "incluir_en_planning": {
       "type": "boolean",
-      "default": true,
-      "description": "Si se incluye en el conteo de operarios para planning"
+      "default": true
     },
     "fecha_alta": {
       "type": "string",
-      "format": "date",
-      "description": "Fecha de alta en la empresa"
+      "format": "date"
     },
     "tipo_contrato": {
-      "type": "string",
-      "description": "Tipo de contrato laboral"
+      "type": "string"
     },
     "codigo_contrato": {
-      "type": "string",
-      "description": "C\u00f3digo del contrato"
+      "type": "string"
     },
     "fecha_fin_contrato": {
       "type": "string",
-      "format": "date",
-      "description": "Fecha de fin del contrato"
+      "format": "date"
     },
     "empresa_ett": {
-      "type": "string",
-      "description": "Empresa de trabajo temporal"
+      "type": "string"
     },
     "salario_anual": {
-      "type": "number",
-      "description": "Salario anual bruto"
+      "type": "number"
     },
     "evaluacion_responsable": {
-      "type": "string",
-      "description": "Evaluaci\u00f3n del responsable"
+      "type": "string"
     },
     "propuesta_cambio_categoria": {
       "type": "string",
@@ -301,75 +261,58 @@
         "1",
         "2",
         "3"
-      ],
-      "description": "Propuesta de cambio de categor\u00eda"
+      ]
     },
     "propuesta_cambio_quien": {
-      "type": "string",
-      "description": "Nombre de quien propone el cambio"
+      "type": "string"
     },
     "horas_causa_mayor_consumidas": {
       "type": "number",
-      "default": 0,
-      "description": "Horas consumidas de permisos por causa mayor"
+      "default": 0
     },
     "horas_causa_mayor_limite": {
-      "type": "number",
-      "description": "L\u00edmite de horas por causa mayor"
+      "type": "number"
     },
     "ultimo_reset_causa_mayor": {
       "type": "string",
-      "format": "date",
-      "description": "Fecha del \u00faltimo reset anual"
+      "format": "date"
     },
     "maquina_1": {
-      "type": "string",
-      "description": "ID m\u00e1quina prioridad 1"
+      "type": "string"
     },
     "maquina_2": {
-      "type": "string",
-      "description": "ID m\u00e1quina prioridad 2"
+      "type": "string"
     },
     "maquina_3": {
-      "type": "string",
-      "description": "ID m\u00e1quina prioridad 3"
+      "type": "string"
     },
     "maquina_4": {
-      "type": "string",
-      "description": "ID m\u00e1quina prioridad 4"
+      "type": "string"
     },
     "maquina_5": {
-      "type": "string",
-      "description": "ID m\u00e1quina prioridad 5"
+      "type": "string"
     },
     "maquina_6": {
-      "type": "string",
-      "description": "ID m\u00e1quina prioridad 6"
+      "type": "string"
     },
     "maquina_7": {
-      "type": "string",
-      "description": "ID m\u00e1quina prioridad 7"
+      "type": "string"
     },
     "maquina_8": {
-      "type": "string",
-      "description": "ID m\u00e1quina prioridad 8"
+      "type": "string"
     },
     "maquina_9": {
-      "type": "string",
-      "description": "ID m\u00e1quina prioridad 9"
+      "type": "string"
     },
     "maquina_10": {
-      "type": "string",
-      "description": "ID m\u00e1quina prioridad 10"
+      "type": "string"
     },
     "legacy_employee_id": {
-      "type": "string",
-      "description": "CAMPO LEGADO - No usar para nuevas relaciones."
+      "type": "string"
     },
     "ultimo_sincronizado": {
       "type": "string",
-      "format": "date-time",
-      "description": "\u00daltima fecha de sincronizaci\u00f3n"
+      "format": "date-time"
     },
     "estado_sincronizacion": {
       "type": "string",
@@ -378,101 +321,16 @@
         "Pendiente",
         "Error"
       ],
-      "default": "Pendiente",
-      "description": "Estado de sincronizaci\u00f3n"
+      "default": "Pendiente"
     },
     "pin": {
-      "type": "integer",
-      "description": "PIN del empleado en Cuco360"
+      "type": "integer"
     },
     "numero_tarjeta": {
-      "type": "string",
-      "description": "N\u00famero de tarjeta del empleado en Cuco360"
+      "type": "string"
     }
   },
   "required": [
     "nombre"
-  ],
-  "rls": {
-    "create": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "read": {
-      "$or": [
-        {
-          "id": "{{user.employee_id}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "rrhh"
-          }
-        },
-        {
-          "$and": [
-            {
-              "user_condition": {
-                "role": "manager"
-              }
-            },
-            {
-              "data.department_id": "{{user.data.managed_department_id}}"
-            }
-          ]
-        },
-        {
-          "$and": [
-            {
-              "user_condition": {
-                "role": "supervisor"
-              }
-            },
-            {
-              "data.team_key": "{{user.data.supervised_team_key}}"
-            }
-          ]
-        }
-      ]
-    },
-    "update": {
-      "$or": [
-        {
-          "id": "{{user.employee_id}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "rrhh"
-          }
-        },
-        {
-          "$and": [
-            {
-              "user_condition": {
-                "role": "manager"
-              }
-            },
-            {
-              "data.department_id": "{{user.data.managed_department_id}}"
-            }
-          ]
-        }
-      ]
-    },
-    "delete": {
-      "user_condition": {
-        "role": "admin"
-      }
-    }
-  }
+  ]
 }

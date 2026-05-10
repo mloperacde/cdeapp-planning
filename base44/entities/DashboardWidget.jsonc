@@ -1,0 +1,64 @@
+{
+  "name": "DashboardWidget",
+  "type": "object",
+  "row_level_security": [
+    {
+      "operation": "read",
+      "allow": "{{user.role == 'admin' or user.role == role}}"
+    },
+    {
+      "operation": "create",
+      "allow": "{{user.role == 'admin'}}"
+    },
+    {
+      "operation": "update",
+      "allow": "{{user.role == 'admin'}}"
+    },
+    {
+      "operation": "delete",
+      "allow": "{{user.role == 'admin'}}"
+    }
+  ],
+  "properties": {
+    "role": {
+      "type": "string",
+      "description": "Rol al que aplica esta configuraci\u00f3n (admin, user, supervisor)"
+    },
+    "widget_id": {
+      "type": "string",
+      "enum": [
+        "absence_kpis",
+        "daily_planning_summary",
+        "machine_status",
+        "upcoming_birthdays",
+        "maintenance_alerts",
+        "team_summary"
+      ],
+      "description": "ID del widget"
+    },
+    "enabled": {
+      "type": "boolean",
+      "default": true,
+      "description": "Si el widget est\u00e1 habilitado para este rol"
+    },
+    "order": {
+      "type": "number",
+      "default": 0,
+      "description": "Orden de visualizaci\u00f3n"
+    },
+    "size": {
+      "type": "string",
+      "enum": [
+        "small",
+        "medium",
+        "large"
+      ],
+      "default": "medium",
+      "description": "Tama\u00f1o del widget"
+    }
+  },
+  "required": [
+    "role",
+    "widget_id"
+  ]
+}

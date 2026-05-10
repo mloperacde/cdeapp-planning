@@ -1,0 +1,127 @@
+{
+  "name": "EmailNotificationConfig",
+  "type": "object",
+  "row_level_security": [
+    {
+      "operation": "read",
+      "allow": "{{user.role == 'admin'}}"
+    },
+    {
+      "operation": "create",
+      "allow": "{{user.role == 'admin'}}"
+    },
+    {
+      "operation": "update",
+      "allow": "{{user.role == 'admin'}}"
+    },
+    {
+      "operation": "delete",
+      "allow": "{{user.role == 'admin'}}"
+    }
+  ],
+  "properties": {
+    "tipo_notificacion": {
+      "type": "string",
+      "enum": [
+        "Operadores Insuficientes",
+        "Mantenimiento Pr\u00f3ximo",
+        "Mantenimiento Vencido",
+        "Tarea Vencida",
+        "Ausencia Solicitada",
+        "Ausencia Aprobada",
+        "Ausencia Rechazada",
+        "Ausencia Finalizada",
+        "Contrato Pr\u00f3ximo Vencer",
+        "M\u00e1quina No Disponible",
+        "Alerta Mantenimiento Predictivo"
+      ],
+      "description": "Tipo de notificaci\u00f3n"
+    },
+    "enviar_email": {
+      "type": "boolean",
+      "default": false,
+      "description": "Si se debe enviar por email"
+    },
+    "enviar_sms": {
+      "type": "boolean",
+      "default": false,
+      "description": "Si se debe enviar por SMS"
+    },
+    "destinatarios": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "Rol",
+              "Usuario",
+              "Email"
+            ],
+            "description": "Tipo de destinatario"
+          },
+          "valor": {
+            "type": "string",
+            "description": "Valor del destinatario (rol, user_id, o email)"
+          }
+        }
+      },
+      "description": "Lista de destinatarios"
+    },
+    "asunto_email": {
+      "type": "string",
+      "description": "Asunto del email"
+    },
+    "plantilla_email": {
+      "type": "string",
+      "description": "Plantilla del cuerpo del email"
+    },
+    "activo": {
+      "type": "boolean",
+      "default": true,
+      "description": "Si la configuraci\u00f3n est\u00e1 activa"
+    },
+    "absence_type_id": {
+      "type": "string",
+      "description": "ID del tipo de ausencia (null = configuraci\u00f3n general)"
+    },
+    "email_en_solicitud": {
+      "type": "boolean",
+      "default": false,
+      "description": "Enviar email al solicitar ausencia"
+    },
+    "email_en_aprobacion": {
+      "type": "boolean",
+      "default": false,
+      "description": "Enviar email al aprobar ausencia"
+    },
+    "email_en_rechazo": {
+      "type": "boolean",
+      "default": false,
+      "description": "Enviar email al rechazar ausencia"
+    },
+    "inapp_en_solicitud": {
+      "type": "boolean",
+      "default": true,
+      "description": "Notificaci\u00f3n in-app al solicitar"
+    },
+    "inapp_en_aprobacion": {
+      "type": "boolean",
+      "default": true,
+      "description": "Notificaci\u00f3n in-app al aprobar"
+    },
+    "inapp_en_rechazo": {
+      "type": "boolean",
+      "default": true,
+      "description": "Notificaci\u00f3n in-app al rechazar"
+    },
+    "destinatarios_rol": {
+      "type": "string",
+      "description": "Rol de destinatarios adicionales (admin, supervisor, rrhh)"
+    }
+  },
+  "required": [
+    "tipo_notificacion"
+  ]
+}

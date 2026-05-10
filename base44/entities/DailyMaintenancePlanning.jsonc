@@ -1,6 +1,24 @@
 {
   "name": "DailyMaintenancePlanning",
   "type": "object",
+  "row_level_security": [
+    {
+      "operation": "read",
+      "allow": "{{true}}"
+    },
+    {
+      "operation": "create",
+      "allow": "{{user.role == 'admin' or user.role == 'T\u00e9cnico'}}"
+    },
+    {
+      "operation": "update",
+      "allow": "{{user.role == 'admin' or user.role == 'T\u00e9cnico'}}"
+    },
+    {
+      "operation": "delete",
+      "allow": "{{user.role == 'admin'}}"
+    }
+  ],
   "properties": {
     "fecha": {
       "type": "string",
@@ -83,65 +101,5 @@
     "turno",
     "employee_id",
     "funcion_asignada"
-  ],
-  "rls": {
-    "create": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "T\u00e9cnico"
-          }
-        }
-      ]
-    },
-    "read": {
-      "$or": [
-        {
-          "data.employee_id": "{{user.id}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "manager"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "T\u00e9cnico"
-          }
-        }
-      ]
-    },
-    "update": {
-      "$or": [
-        {
-          "data.employee_id": "{{user.id}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "T\u00e9cnico"
-          }
-        }
-      ]
-    },
-    "delete": {
-      "user_condition": {
-        "role": "admin"
-      }
-    }
-  }
+  ]
 }

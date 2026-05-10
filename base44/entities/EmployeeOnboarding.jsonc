@@ -1,6 +1,24 @@
 {
   "name": "EmployeeOnboarding",
   "type": "object",
+  "row_level_security": [
+    {
+      "operation": "read",
+      "allow": "{{user.role == 'admin' or user.role == 'rrhh' or user.employee_id == employee_id}}"
+    },
+    {
+      "operation": "create",
+      "allow": "{{user.role == 'admin' or user.role == 'rrhh'}}"
+    },
+    {
+      "operation": "update",
+      "allow": "{{user.role == 'admin' or user.role == 'rrhh'}}"
+    },
+    {
+      "operation": "delete",
+      "allow": "{{user.role == 'admin'}}"
+    }
+  ],
   "properties": {
     "employee_id": {
       "type": "string",
@@ -13,27 +31,22 @@
         "Completado",
         "Pendiente"
       ],
-      "default": "En Proceso",
-      "description": "Estado general del onboarding"
+      "default": "En Proceso"
     },
     "fecha_inicio": {
       "type": "string",
-      "format": "date",
-      "description": "Fecha de inicio del onboarding"
+      "format": "date"
     },
     "fecha_completado": {
       "type": "string",
-      "format": "date",
-      "description": "Fecha de finalizaci\u00f3n del onboarding"
+      "format": "date"
     },
     "paso_actual": {
       "type": "number",
-      "default": 1,
-      "description": "Paso actual en el proceso (1-6)"
+      "default": 1
     },
     "pasos_completados": {
       "type": "object",
-      "description": "Estado de cada paso del proceso",
       "properties": {
         "paso_1_bienvenida": {
           "type": "boolean",
@@ -83,12 +96,10 @@
             "type": "string"
           }
         }
-      },
-      "description": "Lista de documentos a recopilar"
+      }
     },
     "recursos_asignados": {
       "type": "object",
-      "description": "Recursos asignados al empleado",
       "properties": {
         "taquilla_asignada": {
           "type": "boolean",
@@ -124,71 +135,21 @@
             "type": "string"
           }
         }
-      },
-      "description": "Historial de notificaciones enviadas"
+      }
     },
     "responsable_onboarding": {
-      "type": "string",
-      "description": "ID o email del responsable del onboarding"
+      "type": "string"
     },
     "notas": {
-      "type": "string",
-      "description": "Notas adicionales del proceso"
+      "type": "string"
     },
     "porcentaje_completado": {
       "type": "number",
-      "default": 0,
-      "description": "Porcentaje de completado (0-100)"
+      "default": 0
     }
   },
   "required": [
     "employee_id",
     "fecha_inicio"
-  ],
-  "rls": {
-    "create": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "read": {
-      "$or": [
-        {
-          "data.employee_id": "{{user.employee_id}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "rrhh"
-          }
-        }
-      ]
-    },
-    "update": {
-      "$or": [
-        {
-          "data.employee_id": "{{user.employee_id}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "rrhh"
-          }
-        }
-      ]
-    },
-    "delete": {
-      "user_condition": {
-        "role": "admin"
-      }
-    }
-  }
+  ]
 }

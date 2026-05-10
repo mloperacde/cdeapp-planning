@@ -1,19 +1,34 @@
 {
   "name": "EmployeeSyncHistory",
   "type": "object",
+  "row_level_security": [
+    {
+      "operation": "read",
+      "allow": "{{user.role == 'admin'}}"
+    },
+    {
+      "operation": "create",
+      "allow": "{{user.role == 'admin'}}"
+    },
+    {
+      "operation": "update",
+      "allow": "{{user.role == 'admin'}}"
+    },
+    {
+      "operation": "delete",
+      "allow": "{{user.role == 'admin'}}"
+    }
+  ],
   "properties": {
     "master_employee_id": {
-      "type": "string",
-      "description": "ID del registro en EmployeeMasterDatabase"
+      "type": "string"
     },
     "employee_id": {
-      "type": "string",
-      "description": "ID del registro en Employee"
+      "type": "string"
     },
     "sync_date": {
       "type": "string",
-      "format": "date-time",
-      "description": "Fecha de sincronizaci\u00f3n"
+      "format": "date-time"
     },
     "sync_type": {
       "type": "string",
@@ -24,19 +39,16 @@
         "Sincronizaci\u00f3n Parcial",
         "Sincronizaci\u00f3n Autom\u00e1tica",
         "Deshacer Sincronizaci\u00f3n"
-      ],
-      "description": "Tipo de sincronizaci\u00f3n"
+      ]
     },
     "fields_synced": {
       "type": "array",
       "items": {
         "type": "string"
-      },
-      "description": "Campos que fueron sincronizados"
+      }
     },
     "changes_detected": {
-      "type": "object",
-      "description": "Cambios detectados (antes y despu\u00e9s)"
+      "type": "object"
     },
     "status": {
       "type": "string",
@@ -44,47 +56,21 @@
         "Exitoso",
         "Error"
       ],
-      "default": "Exitoso",
-      "description": "Estado de la sincronizaci\u00f3n"
+      "default": "Exitoso"
     },
     "error_message": {
-      "type": "string",
-      "description": "Mensaje de error si fall\u00f3"
+      "type": "string"
     },
     "synced_by": {
-      "type": "string",
-      "description": "Usuario que ejecut\u00f3 la sincronizaci\u00f3n"
+      "type": "string"
     },
     "sync_rule_applied": {
-      "type": "string",
-      "description": "Regla de sincronizaci\u00f3n aplicada (employee_empty, always_master, most_recent, merge_text)"
+      "type": "string"
     }
   },
   "required": [
     "master_employee_id",
     "sync_date",
     "sync_type"
-  ],
-  "rls": {
-    "create": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "read": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "update": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "delete": {
-      "user_condition": {
-        "role": "admin"
-      }
-    }
-  }
+  ]
 }

@@ -1,0 +1,79 @@
+{
+  "name": "ChatChannel",
+  "type": "object",
+  "row_level_security": [
+    {
+      "operation": "read",
+      "allow": "{{user.id in admins or user.employee_id in participantes or user.role == 'admin'}}"
+    },
+    {
+      "operation": "create",
+      "allow": "{{user.role == 'admin'}}"
+    },
+    {
+      "operation": "update",
+      "allow": "{{user.id in admins or user.role == 'admin'}}"
+    },
+    {
+      "operation": "delete",
+      "allow": "{{user.role == 'admin'}}"
+    }
+  ],
+  "properties": {
+    "nombre": {
+      "type": "string",
+      "description": "Nombre del canal"
+    },
+    "descripcion": {
+      "type": "string",
+      "description": "Descripci\u00f3n del canal"
+    },
+    "tipo": {
+      "type": "string",
+      "enum": [
+        "Direct",
+        "Equipo",
+        "Departamento",
+        "General"
+      ],
+      "default": "General",
+      "description": "Tipo de canal"
+    },
+    "equipo": {
+      "type": "string",
+      "description": "Equipo asociado (si tipo = Equipo)"
+    },
+    "departamento": {
+      "type": "string",
+      "description": "Departamento asociado (si tipo = Departamento)"
+    },
+    "participantes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "IDs de empleados participantes"
+    },
+    "admins": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "IDs de administradores del canal"
+    },
+    "activo": {
+      "type": "boolean",
+      "default": true,
+      "description": "Si el canal est\u00e1 activo"
+    },
+    "ultimo_mensaje_fecha": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Fecha del \u00faltimo mensaje"
+    }
+  },
+  "required": [
+    "nombre",
+    "tipo"
+  ]
+}
