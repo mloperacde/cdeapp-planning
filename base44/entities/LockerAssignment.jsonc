@@ -1,0 +1,113 @@
+{
+  "name": "LockerAssignment",
+  "type": "object",
+  "properties": {
+    "employee_id": {
+      "type": "string",
+      "description": "ID del empleado"
+    },
+    "requiere_taquilla": {
+      "type": "boolean",
+      "default": true,
+      "description": "Si el empleado requiere taquilla"
+    },
+    "vestuario": {
+      "type": "string",
+      "enum": [
+        "Vestuario Femenino Planta Baja",
+        "Vestuario Femenino Planta Alta",
+        "Vestuario Masculino Planta Baja"
+      ],
+      "description": "Vestuario asignado"
+    },
+    "numero_taquilla_actual": {
+      "type": "string",
+      "description": "N\u00famero de taquilla actual"
+    },
+    "numero_taquilla_nuevo": {
+      "type": "string",
+      "description": "Nuevo n\u00famero de taquilla (para reasignaci\u00f3n)"
+    },
+    "fecha_asignacion": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Fecha de \u00faltima asignaci\u00f3n"
+    },
+    "historial_cambios": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "fecha": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "vestuario_anterior": {
+            "type": "string"
+          },
+          "taquilla_anterior": {
+            "type": "string"
+          },
+          "vestuario_nuevo": {
+            "type": "string"
+          },
+          "taquilla_nueva": {
+            "type": "string"
+          },
+          "motivo": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Historial de cambios de taquilla"
+    },
+    "notas": {
+      "type": "string",
+      "description": "Notas adicionales"
+    },
+    "notificacion_enviada": {
+      "type": "boolean",
+      "default": false,
+      "description": "Si se envi\u00f3 notificaci\u00f3n de reasignaci\u00f3n"
+    }
+  },
+  "required": [
+    "employee_id"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    },
+    "read": {
+      "$or": [
+        {
+          "data.employee_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.employee_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    }
+  }
+}
