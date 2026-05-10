@@ -4,14 +4,29 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { AlertCircle, Play, CheckCircle, Clock, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { AlertCircle, Play, CheckCircle, Clock, AlertTriangle, ChevronDown, ChevronUp, Settings, Save, X } from 'lucide-react';
 import { getMachineAlias } from '@/utils/machineAlias';
-import { format, differenceInDays, isPast } from 'date-fns';
+import { format, differenceInDays, isPast, addDays } from 'date-fns';
 import { es } from 'date-fns/locale';
+
+const PERIODICIDADES = {
+  'Diaria': 1,
+  'Semanal': 7,
+  'Quincenal': 15,
+  'Mensual': 30,
+  'Trimestral': 90,
+  'Semestral': 180,
+  'Anual': 365,
+};
 
 export default function MaintenancePlanManager({ machine }) {
   const [expandedType, setExpandedType] = useState(null);
   const [executingPlanId, setExecutingPlanId] = useState(null);
+  const [configuringTypeId, setConfiguringTypeId] = useState(null);
+  const [configForm, setConfigForm] = useState({});
   const queryClient = useQueryClient();
 
   const { data: maintenanceTypes = [] } = useQuery({
@@ -34,6 +49,48 @@ export default function MaintenancePlanManager({ machine }) {
       setExecutingPlanId(null);
     },
   });
+
+  const savePlanConfigMutation = useMutation({
+    mutationFn: async ({ type, relatedPlan, form }) => {
+      const diasIntervalo = PERIODICIDADES[form.periodicidad] || parseInt(form.dias_intervalo) || 30;
+      const ultimaEjecucion = form.ultima_ejecucion ? new Date(form.ultima_ejecucion) : new Date();
+      const proximaFecha = addDays(ultimaEjecucion, diasIntervalo);
+      const data = {
+        periodicidad: form.periodicidad,
+        dias_intervalo: diasIntervalo,
+        ultima_ejecucion: ultimaEjecucion.toISOString(),
+        proxima_fecha: proximaFecha.toISOString().split('T')[0],
+      };
+      if (relatedPlan) {
+        return base44.entities.MaintenancePlan.update(relatedPlan.id, data);
+      } else {
+        return base44.entities.MaintenancePlan.create({
+          machine_id: machine.id,
+          machine_name: machine.nombre || getMachineAlias(machine),
+          nombre_plan: type.nombre,
+          tipo: 'Preventivo',
+          activo: true,
+          ...data,
+        });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['maintenance-plans'] });
+      setConfiguringTypeId(null);
+      setConfigForm({});
+    },
+  });
+
+  const openConfig = (type, relatedPlan) => {
+    setConfiguringTypeId(type.id);
+    setConfigForm({
+      periodicidad: relatedPlan?.periodicidad || 'Mensual',
+      dias_intervalo: relatedPlan?.dias_intervalo || 30,
+      ultima_ejecucion: relatedPlan?.ultima_ejecucion
+        ? new Date(relatedPlan.ultima_ejecucion).toISOString().split('T')[0]
+        : new Date().toISOString().split('T')[0],
+    });
+  };
 
   if (!machine) {
     return (
@@ -118,13 +175,79 @@ export default function MaintenancePlanManager({ machine }) {
                           <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{type.descripcion}</p>
                         )}
                       </div>
-                      {planStatus && (
-                        <Badge className={planStatus.color + ' text-xs flex-shrink-0'}>
-                          <StatusIcon className="w-3 h-3 mr-1" />
-                          {planStatus.label}
-                        </Badge>
-                      )}
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        {planStatus && (
+                          <Badge className={planStatus.color + ' text-xs'}>
+                            <StatusIcon className="w-3 h-3 mr-1" />
+                            {planStatus.label}
+                          </Badge>
+                        )}
+                        <button
+                          onClick={() => configuringTypeId === type.id ? setConfiguringTypeId(null) : openConfig(type, relatedPlan)}
+                          className="p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 hover:text-slate-700"
+                          title="Configurar periodicidad"
+                        >
+                          {configuringTypeId === type.id ? <X className="w-3.5 h-3.5" /> : <Settings className="w-3.5 h-3.5" />}
+                        </button>
+                      </div>
                     </div>
+
+                    {/* Panel de configuración */}
+                    {configuringTypeId === type.id && (
+                      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 space-y-3">
+                        <p className="text-xs font-semibold text-blue-700 dark:text-blue-300">Configurar plan de mantenimiento</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="space-y-1">
+                            <Label className="text-xs">Periodicidad</Label>
+                            <Select
+                              value={configForm.periodicidad}
+                              onValueChange={(v) => setConfigForm(f => ({
+                                ...f,
+                                periodicidad: v,
+                                dias_intervalo: PERIODICIDADES[v] || f.dias_intervalo
+                              }))}
+                            >
+                              <SelectTrigger className="h-7 text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {Object.keys(PERIODICIDADES).map(p => (
+                                  <SelectItem key={p} value={p}>{p}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">Intervalo (días)</Label>
+                            <Input
+                              type="number"
+                              min="1"
+                              className="h-7 text-xs"
+                              value={configForm.dias_intervalo}
+                              onChange={(e) => setConfigForm(f => ({ ...f, dias_intervalo: parseInt(e.target.value) || 30 }))}
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">Fecha última intervención</Label>
+                          <Input
+                            type="date"
+                            className="h-7 text-xs"
+                            value={configForm.ultima_ejecucion}
+                            onChange={(e) => setConfigForm(f => ({ ...f, ultima_ejecucion: e.target.value }))}
+                          />
+                        </div>
+                        <Button
+                          size="sm"
+                          className="w-full h-7 text-xs gap-1"
+                          onClick={() => savePlanConfigMutation.mutate({ type, relatedPlan, form: configForm })}
+                          disabled={savePlanConfigMutation.isPending}
+                        >
+                          <Save className="w-3 h-3" />
+                          {savePlanConfigMutation.isPending ? 'Guardando...' : 'Guardar configuración'}
+                        </Button>
+                      </div>
+                    )}
 
                     {/* Info de ejecución si hay plan relacionado */}
                     {relatedPlan && (
