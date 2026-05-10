@@ -76,12 +76,7 @@
         },
         {
           "user_condition": {
-            "role": "rrhh"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "supervisor"
+            "role": "manager"
           }
         }
       ]
@@ -98,12 +93,12 @@
         },
         {
           "user_condition": {
-            "role": "rrhh"
+            "role": "manager"
           }
         },
         {
           "user_condition": {
-            "role": "supervisor"
+            "role": "rrhh"
           }
         }
       ]
@@ -111,40 +106,24 @@
     "update": {
       "$or": [
         {
+          "data.employee_id": "{{user.employee_id}}"
+        },
+        {
           "user_condition": {
             "role": "admin"
           }
         },
         {
           "user_condition": {
-            "role": "rrhh"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "supervisor"
+            "role": "manager"
           }
         }
       ]
     },
     "delete": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "rrhh"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "supervisor"
-          }
-        }
-      ]
+      "user_condition": {
+        "role": "admin"
+      }
     }
   }
 }
