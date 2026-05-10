@@ -2,6 +2,13 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
 Deno.serve(async (req) => {
   try {
+    const { createClientFromRequest } = await import('npm:@base44/sdk@0.8.25');
+    const base44 = createClientFromRequest(req);
+    const user = await base44.auth.me().catch(() => null);
+    if (!user || user.role !== 'admin') {
+      return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
+    }
+
     const apiKey = Deno.env.get("CUCO360_API_KEY");
     const CLIENT_CODE = Deno.env.get("CUCO_CLIENT_CODE") || "380";
     const authHeader = apiKey.replace("Bearer ", "").trim();

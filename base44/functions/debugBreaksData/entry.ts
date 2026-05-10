@@ -12,6 +12,10 @@ Deno.serve(async (req: Request) => {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
 
+    if (!user || user.role !== 'admin') {
+      return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
+    }
+
     // 1. Check Team Config for "Turno 2" or "team_2"
     const teams = await base44.asServiceRole.entities.TeamConfig.list();
     const team2 = teams.find((t: any) => 

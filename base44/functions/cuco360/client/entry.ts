@@ -1,18 +1,7 @@
-// @ts-ignore
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
-
-declare const Deno: {
-  serve: (handler: (req: Request) => Promise<Response> | Response) => void;
-  env: { get: (key: string) => string | undefined };
-};
-
-export const CUCO_BASE_URL = Deno.env.get("CUCO_API_URL") || "https://api.cuco360.com/api/ExtApi"; // Placeholder
+export const CUCO_BASE_URL = Deno.env.get("CUCO_API_URL") || "https://api.cuco360.com/api/ExtApi";
 export const CLIENT_CODE = "380";
 
-// Auth configuration based on user instructions
 export function getAuthHeaders() {
-  // In production, this should come exclusively from Deno.env.get("CUCO360_API_KEY")
-  // For development/preview, we fallback to the provided key if env var is missing.
   const apiKey = Deno.env.get("CUCO360_API_KEY");
   
   if (!apiKey) {
@@ -22,12 +11,12 @@ export function getAuthHeaders() {
   return {
     "Content-Type": "application/json",
     "Accept": "application/json",
-    "APIKey": `Bearer ${apiKey}`, // Specific header requested by user
+    "APIKey": `Bearer ${apiKey}`,
     "cod_cliente": CLIENT_CODE
   };
 }
 
-export async function fetchCuco(endpoint: string, options: RequestInit = {}) {
+export async function fetchCuco(endpoint, options = {}) {
   const url = `${CUCO_BASE_URL}${endpoint}`;
   const headers = { ...getAuthHeaders(), ...options.headers };
   
@@ -40,7 +29,6 @@ export async function fetchCuco(endpoint: string, options: RequestInit = {}) {
 
   const json = await response.json();
   
-  // Handle Legacy format {"response": "ok/ERROR", "data": ...}
   if (json.response && json.response !== "ok" && json.response !== "OK") {
     throw new Error(`CUCO360 API returned error: ${JSON.stringify(json)}`);
   }

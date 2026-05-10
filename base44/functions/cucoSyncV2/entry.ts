@@ -168,6 +168,13 @@ Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
     const serviceClient = base44.asServiceRole;
 
+    // Auth: allow admin users or scheduled calls (no user token)
+    let user = null;
+    try { user = await base44.auth.me(); } catch (_) {}
+    if (user && user.role !== 'admin') {
+      return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
+    }
+
     const body = await req.json().catch(() => ({}));
     const { date, start_date, end_date, force, debug_mode, skip_analysis } = body;
 

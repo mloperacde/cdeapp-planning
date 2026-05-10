@@ -7,6 +7,11 @@ declare const Deno: {
 Deno.serve(async (req: Request) => {
   try {
     const base44 = createClientFromRequest(req);
+
+    const user = await base44.auth.me();
+    if (!user || user.role !== 'admin') {
+      return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
+    }
     
     // 1. Obtener configuración actual de roles
     const configs = await base44.asServiceRole.entities.AppConfig.filter({ config_key: "roles_config" });

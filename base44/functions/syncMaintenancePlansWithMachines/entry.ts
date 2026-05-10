@@ -9,6 +9,10 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Usuario no autenticado' }, { status: 401 });
     }
 
+    if (user.role !== 'admin') {
+      return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
+    }
+
     // Obtener todas las máquinas del inventario
     const machines = await base44.asServiceRole.entities.MachineMasterDatabase.list();
     

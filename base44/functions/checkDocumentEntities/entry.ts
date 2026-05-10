@@ -8,6 +8,11 @@ declare const Deno: {
 Deno.serve(async (req: Request) => {
   try {
     const base44 = createClientFromRequest(req);
+
+    const user = await base44.auth.me();
+    if (!user || user.role !== 'admin') {
+      return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
+    }
     
     // Check if entities exist by trying to list them
     // We expect DocumentFolder and Document to be available

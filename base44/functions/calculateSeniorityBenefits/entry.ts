@@ -8,6 +8,13 @@ Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
 
+    // Auth: allow admin users or scheduled calls (no user token)
+    let user = null;
+    try { user = await base44.auth.me(); } catch (_) {}
+    if (user && user.role !== 'admin') {
+      return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
+    }
+
     // Cargar todo en paralelo (bulk loading para evitar rate limiting)
     const [employees, seniorityBands, allSalaries] = await Promise.all([
       base44.asServiceRole.entities.EmployeeMasterDatabase.filter({ estado_empleado: 'Alta' }, '-created_date', 500),

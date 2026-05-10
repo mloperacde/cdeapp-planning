@@ -450,7 +450,6 @@ export default function AttendanceControl() {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
-          'APIkey': CUCO_API_KEY // Sin Bearer
         }
       });
 
