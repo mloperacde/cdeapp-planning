@@ -1,0 +1,111 @@
+{
+  "name": "SalaryAuditLog",
+  "type": "object",
+  "properties": {
+    "entity_type": {
+      "type": "string",
+      "enum": [
+        "EmployeeSalary",
+        "SalaryComponent",
+        "CompensationPolicy",
+        "SalaryCategory",
+        "PayrollRecord",
+        "TaxConfiguration"
+      ],
+      "description": "Tipo de entidad modificada"
+    },
+    "entity_id": {
+      "type": "string",
+      "description": "ID del registro modificado"
+    },
+    "action": {
+      "type": "string",
+      "enum": [
+        "create",
+        "update",
+        "delete",
+        "approve",
+        "reject"
+      ],
+      "description": "Acci\u00f3n realizada"
+    },
+    "employee_id": {
+      "type": "string",
+      "description": "ID del empleado afectado (si aplica)"
+    },
+    "employee_name": {
+      "type": "string",
+      "description": "Nombre del empleado"
+    },
+    "field_changed": {
+      "type": "string",
+      "description": "Campo espec\u00edfico modificado"
+    },
+    "old_value": {
+      "type": "string",
+      "description": "Valor anterior (JSON string)"
+    },
+    "new_value": {
+      "type": "string",
+      "description": "Valor nuevo (JSON string)"
+    },
+    "change_amount": {
+      "type": "number",
+      "description": "Cantidad del cambio (si aplica)"
+    },
+    "change_reason": {
+      "type": "string",
+      "description": "Motivo del cambio"
+    },
+    "changed_by": {
+      "type": "string",
+      "description": "Usuario que realiz\u00f3 el cambio"
+    },
+    "changed_by_name": {
+      "type": "string",
+      "description": "Nombre del usuario"
+    },
+    "change_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Fecha y hora del cambio"
+    },
+    "ip_address": {
+      "type": "string",
+      "description": "Direcci\u00f3n IP"
+    },
+    "request_id": {
+      "type": "string",
+      "description": "ID de solicitud relacionada (si aplica)"
+    }
+  },
+  "required": [
+    "entity_type",
+    "entity_id",
+    "action",
+    "changed_by",
+    "change_date"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    }
+  }
+}
