@@ -1,0 +1,125 @@
+{
+  "name": "TrainingAssignment",
+  "type": "object",
+  "properties": {
+    "employeeId": {
+      "type": "string",
+      "description": "ID del empleado en EmployeeMasterDatabase"
+    },
+    "employeeName": {
+      "type": "string",
+      "description": "Nombre del empleado (desnormalizado)"
+    },
+    "employeeDepartamento": {
+      "type": "string",
+      "description": "Departamento del empleado (desnormalizado)"
+    },
+    "employeePuesto": {
+      "type": "string",
+      "description": "Puesto del empleado (desnormalizado)"
+    },
+    "trainingModuleId": {
+      "type": "string",
+      "description": "ID del m\u00f3dulo de formaci\u00f3n (TrainingProgram.id)"
+    },
+    "trainingModuleTitulo": {
+      "type": "string",
+      "description": "T\u00edtulo del m\u00f3dulo (desnormalizado)"
+    },
+    "fechaAsignacion": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha de asignaci\u00f3n del m\u00f3dulo"
+    },
+    "fechaLimite": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha l\u00edmite para completar el m\u00f3dulo"
+    },
+    "fechaInicio": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha en que el empleado inici\u00f3 la formaci\u00f3n"
+    },
+    "fechaCompletado": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha en que el empleado complet\u00f3 el m\u00f3dulo"
+    },
+    "estado": {
+      "type": "string",
+      "enum": [
+        "Asignado",
+        "En Progreso",
+        "Completado",
+        "Vencido",
+        "Cancelado"
+      ],
+      "default": "Asignado",
+      "description": "Estado del seguimiento"
+    },
+    "puntuacion": {
+      "type": "number",
+      "description": "Puntuaci\u00f3n obtenida en la evaluaci\u00f3n (0-100)"
+    },
+    "superado": {
+      "type": "boolean",
+      "description": "Si el empleado ha superado el m\u00f3dulo"
+    },
+    "notasFormador": {
+      "type": "string",
+      "description": "Notas del formador sobre el progreso del empleado"
+    },
+    "firmaEmpleado": {
+      "type": "boolean",
+      "default": false,
+      "description": "El empleado ha firmado/confirmado haber recibido la formaci\u00f3n"
+    },
+    "asignadoPor": {
+      "type": "string",
+      "description": "Nombre de quien asign\u00f3 la formaci\u00f3n"
+    }
+  },
+  "required": [
+    "employeeId",
+    "trainingModuleId",
+    "fechaAsignacion",
+    "estado"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    },
+    "read": {
+      "$or": [
+        {
+          "data.employeeId": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.employeeId": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    }
+  }
+}
