@@ -134,15 +134,12 @@
   ],
   "rls": {
     "create": {
-      "data.requested_by": "{{user.email}}"
+      "data.employee_id": "{{user.employee_id}}"
     },
     "read": {
       "$or": [
         {
-          "data.employee_id": "{{user.id}}"
-        },
-        {
-          "data.requested_by": "{{user.email}}"
+          "data.employee_id": "{{user.employee_id}}"
         },
         {
           "user_condition": {
@@ -153,16 +150,13 @@
           "user_condition": {
             "role": "rrhh"
           }
-        },
-        {
-          "data.approval_flow.approver_id": "{{user.id}}"
         }
       ]
     },
     "update": {
       "$or": [
         {
-          "data.requested_by": "{{user.email}}"
+          "data.employee_id": "{{user.employee_id}}"
         },
         {
           "user_condition": {
@@ -173,9 +167,6 @@
           "user_condition": {
             "role": "rrhh"
           }
-        },
-        {
-          "data.approval_flow.approver_id": "{{user.id}}"
         }
       ]
     },
