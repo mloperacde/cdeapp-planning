@@ -1,0 +1,69 @@
+{
+  "name": "EmployeeAuditLog",
+  "type": "object",
+  "properties": {
+    "action_type": {
+      "type": "string",
+      "enum": [
+        "view_sensitive",
+        "create",
+        "update",
+        "delete",
+        "export"
+      ],
+      "description": "Tipo de acci\u00f3n realizada"
+    },
+    "user_email": {
+      "type": "string",
+      "description": "Email del usuario que realiz\u00f3 la acci\u00f3n"
+    },
+    "target_employee_id": {
+      "type": "string",
+      "description": "ID del empleado afectado"
+    },
+    "target_employee_name": {
+      "type": "string",
+      "description": "Nombre del empleado afectado"
+    },
+    "details": {
+      "type": "object",
+      "description": "Detalles de la acci\u00f3n (campos vistos, cambios realizados, etc.)"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Fecha y hora de la acci\u00f3n"
+    },
+    "ip_address": {
+      "type": "string",
+      "description": "Direcci\u00f3n IP (opcional si disponible)"
+    }
+  },
+  "required": [
+    "action_type",
+    "user_email",
+    "timestamp"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    }
+  }
+}
