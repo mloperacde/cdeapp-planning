@@ -1,0 +1,171 @@
+{
+  "name": "NotificationPreference",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email del usuario"
+    },
+    "notification_types": {
+      "type": "object",
+      "properties": {
+        "absences": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true
+            },
+            "push": {
+              "type": "boolean",
+              "default": true
+            },
+            "email": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        },
+        "planning": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true
+            },
+            "push": {
+              "type": "boolean",
+              "default": true
+            },
+            "email": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        },
+        "maintenance": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true
+            },
+            "push": {
+              "type": "boolean",
+              "default": true
+            },
+            "email": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        },
+        "machines": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true
+            },
+            "push": {
+              "type": "boolean",
+              "default": true
+            },
+            "email": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        },
+        "employees": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true
+            },
+            "push": {
+              "type": "boolean",
+              "default": false
+            },
+            "email": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        },
+        "system": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true
+            },
+            "push": {
+              "type": "boolean",
+              "default": true
+            },
+            "email": {
+              "type": "boolean",
+              "default": true
+            }
+          }
+        }
+      }
+    },
+    "quiet_hours": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "start": {
+          "type": "string",
+          "description": "Hora de inicio (HH:mm)"
+        },
+        "end": {
+          "type": "string",
+          "description": "Hora de fin (HH:mm)"
+        }
+      }
+    }
+  },
+  "required": [
+    "user_email"
+  ],
+  "rls": {
+    "create": {
+      "data.user_email": "{{user.email}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    }
+  }
+}
