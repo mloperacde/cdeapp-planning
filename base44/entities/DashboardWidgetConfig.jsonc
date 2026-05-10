@@ -1,0 +1,104 @@
+{
+  "name": "DashboardWidgetConfig",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "description": "ID del usuario (null para configuraci\u00f3n por defecto de rol)"
+    },
+    "role": {
+      "type": "string",
+      "description": "Rol al que aplica (admin, user, rrhh, supervisor)"
+    },
+    "dashboard_name": {
+      "type": "string",
+      "description": "Nombre del dashboard personalizado"
+    },
+    "widgets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "widget_id": {
+            "type": "string",
+            "enum": [
+              "absence_trends",
+              "approval_times",
+              "absence_distribution",
+              "absenteeism_rate",
+              "sync_status",
+              "contract_expiring",
+              "upcoming_absences",
+              "team_availability"
+            ]
+          },
+          "enabled": {
+            "type": "boolean",
+            "default": true
+          },
+          "position": {
+            "type": "number"
+          },
+          "size": {
+            "type": "string",
+            "enum": [
+              "small",
+              "medium",
+              "large",
+              "full"
+            ],
+            "default": "medium"
+          },
+          "config": {
+            "type": "object",
+            "description": "Configuraci\u00f3n espec\u00edfica del widget"
+          }
+        }
+      },
+      "description": "Lista de widgets configurados"
+    },
+    "activo": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "role",
+    "dashboard_name",
+    "widgets"
+  ],
+  "rls": {
+    "create": {
+      "data.user_id": "{{user.id}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "data.user_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.user_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
