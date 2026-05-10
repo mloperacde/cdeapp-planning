@@ -1,0 +1,113 @@
+{
+  "name": "ShiftAssignment",
+  "type": "object",
+  "properties": {
+    "employee_id": {
+      "type": "string",
+      "description": "ID del registro del empleado en EmployeeMasterDatabase (llave for\u00e1nea \u2192 EmployeeMasterDatabase.id)"
+    },
+    "fecha": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha del turno"
+    },
+    "turno": {
+      "type": "string",
+      "enum": [
+        "Ma\u00f1ana",
+        "Tarde",
+        "Noche"
+      ],
+      "description": "Turno asignado"
+    },
+    "hora_inicio": {
+      "type": "string",
+      "description": "Hora de inicio del turno (HH:mm)"
+    },
+    "hora_fin": {
+      "type": "string",
+      "description": "Hora de fin del turno (HH:mm)"
+    },
+    "maquinas_asignadas": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "IDs de m\u00e1quinas asignadas (llave for\u00e1nea \u2192 MachineMasterDatabase.id)"
+    },
+    "estado": {
+      "type": "string",
+      "enum": [
+        "Programado",
+        "Confirmado",
+        "En Curso",
+        "Completado",
+        "Cancelado"
+      ],
+      "default": "Programado",
+      "description": "Estado del turno"
+    },
+    "notas": {
+      "type": "string",
+      "description": "Notas del turno"
+    },
+    "creado_por": {
+      "type": "string",
+      "description": "ID del usuario que cre\u00f3 el turno (llave for\u00e1nea \u2192 User.id)"
+    },
+    "modificado_por": {
+      "type": "string",
+      "description": "ID del usuario que modific\u00f3 el turno (llave for\u00e1nea \u2192 User.id)"
+    }
+  },
+  "required": [
+    "employee_id",
+    "fecha",
+    "turno",
+    "hora_inicio",
+    "hora_fin"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    },
+    "read": {
+      "$or": [
+        {
+          "data.employee_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "Supervisor"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "Supervisor"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    }
+  }
+}
