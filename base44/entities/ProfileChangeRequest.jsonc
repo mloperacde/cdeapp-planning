@@ -69,12 +69,12 @@
   ],
   "rls": {
     "create": {
-      "data.employee_id": "{{user.employee_id}}"
+      "data.employee_id": "{{user.id}}"
     },
     "read": {
       "$or": [
         {
-          "data.employee_id": "{{user.employee_id}}"
+          "data.employee_id": "{{user.id}}"
         },
         {
           "user_condition": {
@@ -89,15 +89,9 @@
       ]
     },
     "update": {
-      "user_condition": {
-        "role": "rrhh"
-      }
-    },
-    "delete": {
       "$or": [
         {
-          "data.employee_id": "{{user.employee_id}}",
-          "data.estado": "Pendiente"
+          "data.employee_id": "{{user.id}}"
         },
         {
           "user_condition": {
@@ -110,6 +104,11 @@
           }
         }
       ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
     }
   }
 }
