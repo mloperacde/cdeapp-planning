@@ -1,0 +1,86 @@
+{
+  "name": "EmployeeDocument",
+  "type": "object",
+  "properties": {
+    "employee_id": {
+      "type": "string",
+      "description": "ID del empleado"
+    },
+    "titulo": {
+      "type": "string",
+      "description": "T\u00edtulo del documento"
+    },
+    "tipo_documento": {
+      "type": "string",
+      "enum": [
+        "Contrato",
+        "Evaluaci\u00f3n",
+        "Certificado",
+        "Formaci\u00f3n",
+        "Plan de Mejora",
+        "Informe Disciplinario",
+        "Otro"
+      ],
+      "description": "Tipo de documento"
+    },
+    "descripcion": {
+      "type": "string",
+      "description": "Descripci\u00f3n del documento"
+    },
+    "file_url": {
+      "type": "string",
+      "description": "URL del archivo adjunto"
+    },
+    "fecha_documento": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha del documento"
+    },
+    "fecha_vencimiento": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha de vencimiento (si aplica)"
+    },
+    "confidencial": {
+      "type": "boolean",
+      "default": false,
+      "description": "Si el documento es confidencial"
+    },
+    "notas": {
+      "type": "string",
+      "description": "Notas adicionales"
+    }
+  },
+  "required": [
+    "employee_id",
+    "titulo",
+    "tipo_documento"
+  ],
+  "rls": {
+    "create": {
+      "data.employee_id": "{{user.id}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "data.employee_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    }
+  }
+}
