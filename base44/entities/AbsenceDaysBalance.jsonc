@@ -1,0 +1,118 @@
+{
+  "name": "AbsenceDaysBalance",
+  "type": "object",
+  "properties": {
+    "employee_id": {
+      "type": "string",
+      "description": "ID del empleado"
+    },
+    "anio": {
+      "type": "number",
+      "description": "A\u00f1o de registro"
+    },
+    "tipo_permiso": {
+      "type": "string",
+      "enum": [
+        "Vacaciones",
+        "Asuntos Propios",
+        "Permiso Matrimonio",
+        "Permiso Paternidad/Maternidad",
+        "Permiso Lactancia",
+        "Permiso M\u00e9dico Familiar",
+        "Permiso Examen",
+        "Permiso Mudanza",
+        "Otro Permiso Remunerado"
+      ],
+      "description": "Tipo de permiso remunerado"
+    },
+    "dias_totales_derecho": {
+      "type": "number",
+      "description": "D\u00edas totales a los que tiene derecho por a\u00f1o"
+    },
+    "dias_disfrutados": {
+      "type": "number",
+      "default": 0,
+      "description": "D\u00edas ya disfrutados"
+    },
+    "dias_pendientes": {
+      "type": "number",
+      "description": "D\u00edas pendientes de disfrutar (calculado)"
+    },
+    "periodos_disfrutados": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "fecha_inicio": {
+            "type": "string",
+            "format": "date"
+          },
+          "fecha_fin": {
+            "type": "string",
+            "format": "date"
+          },
+          "dias_consumidos": {
+            "type": "number"
+          },
+          "absence_id": {
+            "type": "string"
+          },
+          "notas": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Historial de per\u00edodos disfrutados"
+    },
+    "observaciones": {
+      "type": "string",
+      "description": "Observaciones sobre el balance"
+    }
+  },
+  "required": [
+    "employee_id",
+    "anio",
+    "tipo_permiso"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "data.employee_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "data.employee_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "Supervisor"
+          }
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    }
+  }
+}
