@@ -1,0 +1,190 @@
+{
+  "name": "PerformanceReview",
+  "type": "object",
+  "properties": {
+    "employee_id": {
+      "type": "string",
+      "description": "ID del registro del empleado en EmployeeMasterDatabase (llave for\u00e1nea \u2192 EmployeeMasterDatabase.id)"
+    },
+    "periodo": {
+      "type": "string",
+      "description": "Per\u00edodo de evaluaci\u00f3n (ej: Q1 2024, Anual 2024)"
+    },
+    "fecha_revision": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha de la revisi\u00f3n"
+    },
+    "evaluador": {
+      "type": "string",
+      "description": "Nombre del evaluador"
+    },
+    "puntuacion_general": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Puntuaci\u00f3n general (0-100)"
+    },
+    "objetivos": {
+      "type": "object",
+      "description": "Sistema de objetivos y evaluaci\u00f3n",
+      "properties": {
+        "objetivo_1": {
+          "type": "object",
+          "properties": {
+            "descripcion": {
+              "type": "string"
+            },
+            "peso": {
+              "type": "number"
+            },
+            "resultado": {
+              "type": "number"
+            }
+          }
+        },
+        "objetivo_2": {
+          "type": "object",
+          "properties": {
+            "descripcion": {
+              "type": "string"
+            },
+            "peso": {
+              "type": "number"
+            },
+            "resultado": {
+              "type": "number"
+            }
+          }
+        },
+        "objetivo_3": {
+          "type": "object",
+          "properties": {
+            "descripcion": {
+              "type": "string"
+            },
+            "peso": {
+              "type": "number"
+            },
+            "resultado": {
+              "type": "number"
+            }
+          }
+        },
+        "objetivo_4": {
+          "type": "object",
+          "properties": {
+            "descripcion": {
+              "type": "string"
+            },
+            "peso": {
+              "type": "number"
+            },
+            "resultado": {
+              "type": "number"
+            }
+          }
+        },
+        "objetivo_5": {
+          "type": "object",
+          "properties": {
+            "descripcion": {
+              "type": "string"
+            },
+            "peso": {
+              "type": "number"
+            },
+            "resultado": {
+              "type": "number"
+            }
+          }
+        },
+        "objetivo_6": {
+          "type": "object",
+          "properties": {
+            "descripcion": {
+              "type": "string"
+            },
+            "peso": {
+              "type": "number"
+            },
+            "resultado": {
+              "type": "number"
+            }
+          }
+        }
+      }
+    },
+    "fortalezas": {
+      "type": "string",
+      "description": "Fortalezas identificadas"
+    },
+    "areas_mejora": {
+      "type": "string",
+      "description": "\u00c1reas de mejora"
+    },
+    "comentarios_evaluador": {
+      "type": "string",
+      "description": "Comentarios del evaluador"
+    },
+    "comentarios_empleado": {
+      "type": "string",
+      "description": "Comentarios del empleado"
+    },
+    "plan_desarrollo": {
+      "type": "string",
+      "description": "Plan de desarrollo acordado"
+    },
+    "estado": {
+      "type": "string",
+      "enum": [
+        "Borrador",
+        "Completada",
+        "Firmada"
+      ],
+      "default": "Borrador",
+      "description": "Estado de la revisi\u00f3n"
+    }
+  },
+  "required": [
+    "employee_id",
+    "periodo",
+    "fecha_revision"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    },
+    "read": {
+      "$or": [
+        {
+          "data.employee_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.employee_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    }
+  }
+}
