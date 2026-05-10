@@ -1,0 +1,126 @@
+{
+  "name": "DailyProductionPlanning",
+  "type": "object",
+  "properties": {
+    "fecha": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha de la planificaci\u00f3n"
+    },
+    "team_key": {
+      "type": "string",
+      "enum": [
+        "team_1",
+        "team_2"
+      ],
+      "description": "Equipo planificado"
+    },
+    "turno": {
+      "type": "string",
+      "enum": [
+        "Ma\u00f1ana",
+        "Tarde"
+      ],
+      "description": "Turno planificado"
+    },
+    "machine_id": {
+      "type": "string",
+      "description": "ID de la m\u00e1quina"
+    },
+    "process_id": {
+      "type": "string",
+      "description": "ID del proceso"
+    },
+    "operadores_asignados": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "IDs de operadores asignados"
+    },
+    "responsable_linea_id": {
+      "type": "string",
+      "description": "ID del responsable de l\u00ednea"
+    },
+    "segunda_linea_id": {
+      "type": "string",
+      "description": "ID de la segunda de l\u00ednea"
+    },
+    "articulo": {
+      "type": "string",
+      "description": "Art\u00edculo a producir"
+    },
+    "cantidad_objetivo": {
+      "type": "number",
+      "description": "Cantidad objetivo de producci\u00f3n"
+    },
+    "cantidad_real": {
+      "type": "number",
+      "description": "Cantidad real producida"
+    },
+    "notas": {
+      "type": "string",
+      "description": "Notas adicionales"
+    },
+    "estado": {
+      "type": "string",
+      "enum": [
+        "Planificado",
+        "En Curso",
+        "Completado",
+        "Cancelado"
+      ],
+      "default": "Planificado",
+      "description": "Estado de la planificaci\u00f3n"
+    }
+  },
+  "required": [
+    "fecha",
+    "team_key",
+    "turno",
+    "machine_id"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    },
+    "read": {
+      "$or": [
+        {
+          "data.operadores_asignados": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "Jefe Turno Produccion"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "Jefe Turno Produccion"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    }
+  }
+}
