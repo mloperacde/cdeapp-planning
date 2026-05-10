@@ -7,10 +7,11 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { AlertCircle, Play, CheckCircle, Clock, AlertTriangle, ChevronDown, ChevronUp, Settings, Save, X } from 'lucide-react';
+import { AlertCircle, Play, CheckCircle, Clock, AlertTriangle, ChevronDown, ChevronUp, Settings, Save, X, CalendarPlus } from 'lucide-react';
 import { getMachineAlias } from '@/utils/machineAlias';
 import { format, differenceInDays, isPast, addDays } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { toast } from 'sonner';
 
 const PERIODICIDADES = {
   'Diaria': 1,
@@ -42,12 +43,37 @@ export default function MaintenancePlanManager({ machine }) {
     staleTime: 5 * 60 * 1000,
   });
 
+  // Invalida todos los queries relevantes para sincronizar todas las pestañas
+  const invalidateAll = () => {
+    queryClient.invalidateQueries({ queryKey: ['maintenance-plans'] });
+    queryClient.invalidateQueries({ queryKey: ['maintenance-types'] });
+    queryClient.invalidateQueries({ queryKey: ['maintenances'] });
+    queryClient.invalidateQueries({ queryKey: ['machine-plans-calendar'] });
+    queryClient.invalidateQueries({ queryKey: ['maintenance-schedules'] });
+  };
+
+  // Ejecución INMEDIATA → crea orden "En Proceso"
   const executePlanMutation = useMutation({
-    mutationFn: (plan_id) => base44.functions.invoke('triggerMaintenanceExecution', { plan_id }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['maintenance-plans'] });
+    mutationFn: (plan_id) => base44.functions.invoke('triggerMaintenanceExecution', { plan_id, immediate: true }),
+    onSuccess: (res) => {
+      invalidateAll();
       setExecutingPlanId(null);
+      toast.success('Mantenimiento iniciado', { description: 'Orden de trabajo creada con estado "En Proceso"' });
     },
+    onError: (err) => {
+      setExecutingPlanId(null);
+      toast.error('Error al ejecutar mantenimiento');
+    },
+  });
+
+  // Programación FUTURA → crea orden "Programado" usando la proxima_fecha
+  const schedulePlanMutation = useMutation({
+    mutationFn: (plan_id) => base44.functions.invoke('triggerMaintenanceExecution', { plan_id, immediate: false }),
+    onSuccess: () => {
+      invalidateAll();
+      toast.success('Orden programada', { description: 'Se ha generado una orden de trabajo pendiente' });
+    },
+    onError: () => toast.error('Error al programar orden'),
   });
 
   const savePlanConfigMutation = useMutation({
@@ -75,10 +101,12 @@ export default function MaintenancePlanManager({ machine }) {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['maintenance-plans'] });
+      invalidateAll();
       setConfiguringTypeId(null);
       setConfigForm({});
+      toast.success('Configuración guardada', { description: 'El calendario y todas las secciones han sido actualizados' });
     },
+    onError: () => toast.error('Error al guardar configuración'),
   });
 
   const openConfig = (type, relatedPlan) => {
@@ -333,21 +361,35 @@ export default function MaintenancePlanManager({ machine }) {
                       </div>
                     )}
 
-                    {/* Ejecutar si hay plan */}
+                    {/* Acciones si hay plan */}
                     {relatedPlan && (
-                      <Button
-                        onClick={() => {
-                          setExecutingPlanId(relatedPlan.id);
-                          executePlanMutation.mutate(relatedPlan.id);
-                        }}
-                        size="sm"
-                        variant="outline"
-                        className="w-full gap-2 h-8 text-green-600 border-green-300 hover:bg-green-50"
-                        disabled={executingPlanId === relatedPlan.id}
-                      >
-                        <Play className="w-3 h-3" />
-                        {executingPlanId === relatedPlan.id ? 'Ejecutando...' : 'Ejecutar Mantenimiento'}
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => {
+                            setExecutingPlanId(relatedPlan.id);
+                            executePlanMutation.mutate(relatedPlan.id);
+                          }}
+                          size="sm"
+                          variant="outline"
+                          className="flex-1 gap-1.5 h-8 text-xs text-green-700 border-green-300 hover:bg-green-50"
+                          disabled={executingPlanId === relatedPlan.id || executePlanMutation.isPending}
+                          title="Ejecutar ahora: crea orden de trabajo inmediata"
+                        >
+                          <Play className="w-3 h-3" />
+                          {executingPlanId === relatedPlan.id ? 'Ejecutando...' : 'Ejecutar ahora'}
+                        </Button>
+                        <Button
+                          onClick={() => schedulePlanMutation.mutate(relatedPlan.id)}
+                          size="sm"
+                          variant="outline"
+                          className="flex-1 gap-1.5 h-8 text-xs text-blue-700 border-blue-300 hover:bg-blue-50"
+                          disabled={schedulePlanMutation.isPending}
+                          title="Programar: crea orden pendiente para la fecha prevista"
+                        >
+                          <CalendarPlus className="w-3 h-3" />
+                          {schedulePlanMutation.isPending ? 'Programando...' : 'Programar'}
+                        </Button>
+                      </div>
                     )}
                   </div>
                 </CardContent>

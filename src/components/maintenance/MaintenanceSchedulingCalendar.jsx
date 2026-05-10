@@ -12,14 +12,16 @@ export default function MaintenanceSchedulingCalendar({ machine }) {
 
   const { data: plans = [] } = useQuery({
     queryKey: ['machine-plans-calendar', machine?.id],
-    queryFn: () => base44.entities.MaintenancePlan.filter({ machine_id: machine?.id, activo: true }),
+    queryFn: () => base44.entities.MaintenancePlan.filter({ machine_id: machine?.id }),
     enabled: !!machine,
+    staleTime: 0,
   });
 
   const { data: schedules = [] } = useQuery({
     queryKey: ['maintenance-schedules', machine?.id],
     queryFn: () => base44.entities.MaintenanceSchedule.filter({ machine_id: machine?.id }),
     enabled: !!machine,
+    staleTime: 0,
   });
 
   if (!machine) {
@@ -48,6 +50,14 @@ export default function MaintenanceSchedulingCalendar({ machine }) {
       if (!p.proxima_fecha) return false;
       const planDate = new Date(p.proxima_fecha);
       return planDate.toDateString() === date.toDateString();
+    });
+  };
+
+  const getLastExecutionForDate = (date) => {
+    return plans.filter(p => {
+      if (!p.ultima_ejecucion) return false;
+      const execDate = new Date(p.ultima_ejecucion);
+      return execDate.toDateString() === date.toDateString();
     });
   };
 
@@ -108,7 +118,8 @@ export default function MaintenanceSchedulingCalendar({ machine }) {
           {days.map((date, idx) => {
             const daySchedules = getSchedulesForDate(date);
             const dayPlans = getPlansForDate(date);
-            const hasMaintenance = daySchedules.length > 0 || dayPlans.length > 0;
+            const dayLastExec = getLastExecutionForDate(date);
+            const hasMaintenance = daySchedules.length > 0 || dayPlans.length > 0 || dayLastExec.length > 0;
 
             return (
               <div
@@ -127,22 +138,37 @@ export default function MaintenanceSchedulingCalendar({ machine }) {
                   {format(date, 'd')}
                 </div>
                 <div className="space-y-0.5">
+                  {/* Último mantenimiento realizado (verde oscuro) */}
+                  {dayLastExec.map(p => (
+                    <div
+                      key={`last-${p.id}`}
+                      className="truncate px-1 py-0.5 rounded text-xs bg-green-600 text-white font-medium"
+                      title={`Último: ${p.nombre_plan}`}
+                    >
+                      ✓ Realizado
+                    </div>
+                  ))}
+                  {/* Órdenes programadas */}
                   {daySchedules.map(s => (
                     <div
                       key={s.id}
                       className={`truncate px-1 py-0.5 rounded text-xs text-white font-medium ${
-                        s.estado === 'Completado' ? 'bg-green-500' : 'bg-orange-500'
+                        s.estado === 'Completado' ? 'bg-green-500' :
+                        s.estado === 'En Proceso' ? 'bg-orange-500' : 'bg-yellow-500'
                       }`}
+                      title={s.estado}
                     >
-                      Programado
+                      {s.estado === 'Completado' ? '✓' : s.estado === 'En Proceso' ? '⚙' : '⏰'} {s.tipo || 'Mant.'}
                     </div>
                   ))}
+                  {/* Próximo mantenimiento planificado (azul) */}
                   {dayPlans.map(p => (
                     <div
                       key={p.id}
                       className="truncate px-1 py-0.5 rounded text-xs bg-blue-500 text-white font-medium"
+                      title={`Próximo: ${p.nombre_plan}`}
                     >
-                      Plan
+                      📅 {p.periodicidad || 'Plan'}
                     </div>
                   ))}
                 </div>
@@ -150,6 +176,14 @@ export default function MaintenanceSchedulingCalendar({ machine }) {
             );
           })}
         </div>
+      </div>
+
+      {/* Leyenda */}
+      <div className="flex flex-wrap gap-2 text-xs">
+        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-green-600 inline-block"></span>Realizado</span>
+        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-blue-500 inline-block"></span>Próximo</span>
+        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-yellow-500 inline-block"></span>Programado</span>
+        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-orange-500 inline-block"></span>En proceso</span>
       </div>
 
       {/* Próximos mantenimientos */}
@@ -165,23 +199,37 @@ export default function MaintenanceSchedulingCalendar({ machine }) {
             <p className="text-sm text-slate-500">Sin mantenimientos programados</p>
           ) : (
             plans.map(plan => {
-              const daysUntil = Math.ceil((new Date(plan.proxima_fecha) - new Date()) / (1000 * 60 * 60 * 24));
-              const isUrgent = daysUntil <= 7;
+              const daysUntil = plan.proxima_fecha
+                ? Math.ceil((new Date(plan.proxima_fecha) - new Date()) / (1000 * 60 * 60 * 24))
+                : null;
+              const isUrgent = daysUntil !== null && daysUntil <= 7;
+              const isOverdue = daysUntil !== null && daysUntil < 0;
 
               return (
                 <div key={plan.id} className={`p-2 rounded border text-sm ${
-                  isUrgent ? 'bg-red-50 dark:bg-red-900/20 border-red-300' : 'bg-slate-50 dark:bg-slate-900/50'
+                  isOverdue ? 'bg-red-50 dark:bg-red-900/20 border-red-400' :
+                  isUrgent ? 'bg-orange-50 dark:bg-orange-900/20 border-orange-300' :
+                  'bg-slate-50 dark:bg-slate-900/50'
                 }`}>
                   <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1">
-                      <p className="font-medium">{plan.nombre_plan}</p>
-                      <p className="text-xs text-slate-600 dark:text-slate-400">
-                        {format(new Date(plan.proxima_fecha), 'dd MMM yyyy', { locale: es })}
-                      </p>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-xs truncate">{plan.nombre_plan}</p>
+                      {plan.ultima_ejecucion && (
+                        <p className="text-xs text-green-600">
+                          ✓ {format(new Date(plan.ultima_ejecucion), 'dd/MM/yy', { locale: es })}
+                        </p>
+                      )}
+                      {plan.proxima_fecha && (
+                        <p className={`text-xs ${isOverdue ? 'text-red-600 font-semibold' : 'text-slate-500'}`}>
+                          📅 {format(new Date(plan.proxima_fecha), 'dd MMM yyyy', { locale: es })}
+                        </p>
+                      )}
                     </div>
-                    <Badge className={isUrgent ? 'bg-red-600' : 'bg-blue-600'}>
-                      {daysUntil} días
-                    </Badge>
+                    {daysUntil !== null && (
+                      <Badge className={`text-xs flex-shrink-0 ${isOverdue ? 'bg-red-600' : isUrgent ? 'bg-orange-500' : 'bg-blue-600'}`}>
+                        {isOverdue ? `${Math.abs(daysUntil)}d vencido` : `${daysUntil}d`}
+                      </Badge>
+                    )}
                   </div>
                 </div>
               );

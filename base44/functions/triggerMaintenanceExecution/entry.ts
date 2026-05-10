@@ -1,8 +1,10 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
 /**
- * Genera una orden de trabajo para un plan específico
- * Parámetros: { plan_id, responsible_id }
+ * Genera una MaintenanceSchedule (orden de trabajo) para un plan específico.
+ * Si immediate=true → estado "En Proceso" (ejecución inmediata)
+ * Si immediate=false → estado "Programado" (orden futura)
+ * Parámetros: { plan_id, responsible_id, immediate }
  */
 Deno.serve(async (req) => {
   try {
@@ -14,57 +16,66 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { plan_id, responsible_id } = body;
+    const { plan_id, responsible_id, immediate = false } = body;
 
     if (!plan_id) {
       return Response.json({ error: 'plan_id is required' }, { status: 400 });
     }
 
     // Obtener el plan
-    const plan = await base44.entities.MaintenancePlan.get?.(plan_id);
+    const allPlans = await base44.entities.MaintenancePlan.filter({ id: plan_id });
+    const plan = allPlans && allPlans[0];
     if (!plan) {
       return Response.json({ error: 'Plan not found' }, { status: 404 });
     }
 
-    // Crear orden de trabajo
-    const workOrder = {
-      order_number: `MWO-${plan.id}-${Date.now()}`,
+    const now = new Date();
+    const scheduledDate = immediate ? now : (plan.proxima_fecha ? new Date(plan.proxima_fecha) : now);
+    const estado = immediate ? 'En Proceso' : 'Programado';
+
+    // Crear MaintenanceSchedule (esto alimenta Kanban, Todos, Próximos, Alertas, Historial)
+    const scheduleData = {
       machine_id: plan.machine_id,
       maintenance_plan_id: plan.id,
-      priority: 3,
-      start_date: new Date().toISOString().split('T')[0],
-      committed_delivery_date: addDays(new Date(), 1).toISOString().split('T')[0],
-      status: 'Pendiente',
-      notes: `
-Plan: ${plan.nombre_plan}
-Tipo: ${plan.tipo}
-Periodicidad: ${plan.periodicidad}
-Descripción: ${plan.descripcion || 'Sin descripción'}
-      `.trim(),
-      product_name: plan.nombre_plan,
-      client_name: 'Mantenimiento',
-      tecnico_asignado: responsible_id || user.id
+      tipo: plan.tipo || 'Preventivo',
+      descripcion: `${plan.nombre_plan} - ${plan.periodicidad || ''}`,
+      fecha_programada: scheduledDate.toISOString(),
+      estado: estado,
+      prioridad: immediate ? 'Alta' : 'Media',
+      tecnico_asignado: responsible_id || null,
+      notas: `Plan: ${plan.nombre_plan}\nPeriodicidad: ${plan.periodicidad || ''}\nIntervalo: ${plan.dias_intervalo || 30} días`,
     };
 
-    const created = await base44.entities.WorkOrder.create(workOrder);
+    if (immediate) {
+      scheduleData.fecha_inicio = now.toISOString();
+    }
 
-    // Actualizar próxima fecha del plan
-    const nextDate = addDays(new Date(plan.proxima_fecha), plan.dias_intervalo || 30);
-    await base44.entities.MaintenancePlan.update(plan.id, {
+    const created = await base44.entities.MaintenanceSchedule.create(scheduleData);
+
+    // Actualizar fechas del plan
+    const diasIntervalo = plan.dias_intervalo || 30;
+    const nextDate = addDays(scheduledDate, diasIntervalo);
+    const updateData = {
       proxima_fecha: nextDate.toISOString().split('T')[0],
-      ultima_ejecucion: new Date().toISOString()
-    });
+    };
+    if (immediate) {
+      updateData.ultima_ejecucion = now.toISOString();
+    }
+    await base44.entities.MaintenancePlan.update(plan.id, updateData);
 
     return Response.json({
       success: true,
-      workOrder: created,
-      message: 'Orden de trabajo creada exitosamente'
+      schedule: created,
+      next_date: nextDate.toISOString().split('T')[0],
+      message: immediate
+        ? 'Mantenimiento iniciado y orden de trabajo creada'
+        : 'Orden de trabajo programada correctamente'
     });
   } catch (error) {
     console.error('Error en triggerMaintenanceExecution:', error);
-    return Response.json({ 
+    return Response.json({
       error: error.message,
-      success: false 
+      success: false
     }, { status: 500 });
   }
 });
