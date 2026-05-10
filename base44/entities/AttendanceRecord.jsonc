@@ -1,0 +1,92 @@
+{
+  "name": "AttendanceRecord",
+  "type": "object",
+  "properties": {
+    "employee_id": {
+      "type": "string",
+      "description": "C\u00f3digo del empleado en el sistema de control de acceso (equivale a EmployeeMasterDatabase.codigo_empleado). IMPORTANTE: NO es el campo 'id' de EmployeeMasterDatabase. Para cruzar con la base maestra, buscar el registro cuyo codigo_empleado coincida con este valor."
+    },
+    "employee_name": {
+      "type": "string",
+      "description": "Nombre completo del empleado"
+    },
+    "direction": {
+      "type": "string",
+      "enum": [
+        "E",
+        "S"
+      ],
+      "description": "Sentido del marcaje (E: Entrada, S: Salida)"
+    },
+    "incident": {
+      "type": "string",
+      "description": "Incidencia asociada al marcaje (ej: N/A, VESTUARIOS/ASEOS)"
+    },
+    "center": {
+      "type": "string",
+      "description": "Centro donde se realiz\u00f3 el marcaje (ej: FABRICA)"
+    },
+    "department": {
+      "type": "string",
+      "description": "Departamento del empleado"
+    },
+    "device": {
+      "type": "string",
+      "description": "Dispositivo que registr\u00f3 el marcaje"
+    },
+    "record_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha del marcaje"
+    },
+    "record_time": {
+      "type": "string",
+      "description": "Hora del marcaje (HH:mm)"
+    },
+    "import_batch": {
+      "type": "string",
+      "description": "Identificador del lote de importaci\u00f3n"
+    }
+  },
+  "required": [
+    "employee_id",
+    "employee_name",
+    "direction",
+    "record_date",
+    "record_time"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    },
+    "read": {
+      "$or": [
+        {
+          "data.employee_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "Supervisor"
+          }
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    }
+  }
+}
