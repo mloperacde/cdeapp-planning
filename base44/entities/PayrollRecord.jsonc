@@ -170,28 +170,14 @@
   ],
   "rls": {
     "create": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "rrhh"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "payroll"
-          }
-        }
-      ]
+      "user_condition": {
+        "role": "admin"
+      }
     },
     "read": {
       "$or": [
         {
-          "data.employee_id": "{{user.employee_id}}"
+          "data.employee_id": "{{user.id}}"
         },
         {
           "user_condition": {
@@ -201,52 +187,19 @@
         {
           "user_condition": {
             "role": "rrhh"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "payroll"
           }
         }
       ]
     },
     "update": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "rrhh"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "payroll"
-          }
-        }
-      ]
+      "user_condition": {
+        "role": "admin"
+      }
     },
     "delete": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "rrhh"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "payroll"
-          }
-        }
-      ]
+      "user_condition": {
+        "role": "admin"
+      }
     }
   }
 }
