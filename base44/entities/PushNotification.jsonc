@@ -1,0 +1,114 @@
+{
+  "name": "PushNotification",
+  "type": "object",
+  "properties": {
+    "employee_id": {
+      "type": "string",
+      "description": "ID del empleado destinatario"
+    },
+    "user_email": {
+      "type": "string",
+      "description": "Email del usuario destinatario"
+    },
+    "tipo": {
+      "type": "string",
+      "enum": [
+        "Ausencia Aprobada",
+        "Ausencia Rechazada",
+        "Ausencia Solicitada",
+        "Planning Actualizado",
+        "Mantenimiento Urgente",
+        "M\u00e1quina Detenida",
+        "Nuevo Mensaje",
+        "Cambio de Turno",
+        "Alerta Sistema",
+        "Contrato Por Vencer",
+        "Empleado Ausente",
+        "Tarea Asignada"
+      ],
+      "description": "Tipo de notificaci\u00f3n"
+    },
+    "prioridad": {
+      "type": "string",
+      "enum": [
+        "Baja",
+        "Media",
+        "Alta",
+        "Cr\u00edtica"
+      ],
+      "default": "Media",
+      "description": "Prioridad de la notificaci\u00f3n"
+    },
+    "titulo": {
+      "type": "string",
+      "description": "T\u00edtulo de la notificaci\u00f3n"
+    },
+    "mensaje": {
+      "type": "string",
+      "description": "Mensaje de la notificaci\u00f3n"
+    },
+    "leida": {
+      "type": "boolean",
+      "default": false,
+      "description": "Si la notificaci\u00f3n ha sido le\u00edda"
+    },
+    "fecha_lectura": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Fecha en que fue le\u00edda"
+    },
+    "enlace": {
+      "type": "string",
+      "description": "Enlace de acci\u00f3n (URL relativa)"
+    },
+    "icono": {
+      "type": "string",
+      "description": "Nombre del icono a mostrar"
+    },
+    "datos_relacionados": {
+      "type": "object",
+      "description": "Datos adicionales de contexto"
+    },
+    "enviado_por": {
+      "type": "string",
+      "description": "Email del usuario que gener\u00f3 la notificaci\u00f3n"
+    }
+  },
+  "required": [
+    "tipo",
+    "titulo",
+    "mensaje"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    },
+    "read": {
+      "$or": [
+        {
+          "data.employee_id": "{{user.id}}"
+        },
+        {
+          "data.user_email": "{{user.email}}"
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.employee_id": "{{user.id}}"
+        },
+        {
+          "data.user_email": "{{user.email}}"
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    }
+  }
+}
