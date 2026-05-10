@@ -1,0 +1,119 @@
+{
+  "name": "RecurringPlanning",
+  "type": "object",
+  "properties": {
+    "machine_id": {
+      "type": "string",
+      "description": "ID de la m\u00e1quina"
+    },
+    "process_id": {
+      "type": "string",
+      "description": "ID del proceso"
+    },
+    "team_key": {
+      "type": "string",
+      "enum": [
+        "team_1",
+        "team_2"
+      ],
+      "description": "Equipo"
+    },
+    "fecha_inicio": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha de inicio de la recurrencia"
+    },
+    "fecha_fin": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha de fin de la recurrencia (opcional)"
+    },
+    "tipo_recurrencia": {
+      "type": "string",
+      "enum": [
+        "Diaria",
+        "Semanal",
+        "Mensual"
+      ],
+      "description": "Tipo de recurrencia"
+    },
+    "intervalo": {
+      "type": "number",
+      "default": 1,
+      "description": "Intervalo de recurrencia (ej: cada 2 d\u00edas, cada 3 semanas)"
+    },
+    "dias_semana": {
+      "type": "array",
+      "items": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 6
+      },
+      "description": "D\u00edas de la semana para recurrencia semanal (0=Domingo, 6=S\u00e1bado)"
+    },
+    "activa": {
+      "type": "boolean",
+      "default": true,
+      "description": "Si la recurrencia est\u00e1 activa"
+    },
+    "operadores_necesarios": {
+      "type": "number",
+      "description": "N\u00famero de operadores necesarios"
+    }
+  },
+  "required": [
+    "machine_id",
+    "team_key",
+    "fecha_inicio",
+    "tipo_recurrencia"
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "manager"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "manager"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "manager"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
