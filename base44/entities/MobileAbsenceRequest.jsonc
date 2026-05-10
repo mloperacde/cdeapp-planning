@@ -1,0 +1,116 @@
+{
+  "name": "MobileAbsenceRequest",
+  "type": "object",
+  "properties": {
+    "employee_id": {
+      "type": "string",
+      "description": "ID del empleado"
+    },
+    "fecha_inicio": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Fecha y hora de inicio de la ausencia"
+    },
+    "fecha_fin": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Fecha y hora de fin de la ausencia"
+    },
+    "motivo": {
+      "type": "string",
+      "description": "Motivo de la ausencia"
+    },
+    "tipo": {
+      "type": "string",
+      "enum": [
+        "Vacaciones",
+        "Baja m\u00e9dica",
+        "Permiso",
+        "Ausencia justificada",
+        "Ausencia injustificada",
+        "Otro"
+      ],
+      "description": "Tipo de ausencia"
+    },
+    "notas": {
+      "type": "string",
+      "description": "Notas adicionales"
+    },
+    "documentos_adjuntos": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "URLs de documentos o im\u00e1genes adjuntas"
+    },
+    "estado": {
+      "type": "string",
+      "enum": [
+        "Pendiente",
+        "Aprobada",
+        "Rechazada"
+      ],
+      "default": "Pendiente",
+      "description": "Estado de la solicitud"
+    },
+    "revisado_por": {
+      "type": "string",
+      "description": "ID del usuario que revis\u00f3 la solicitud"
+    },
+    "fecha_revision": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Fecha de revisi\u00f3n"
+    },
+    "comentarios_revision": {
+      "type": "string",
+      "description": "Comentarios del revisor"
+    },
+    "fecha_solicitud": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Fecha de la solicitud"
+    }
+  },
+  "required": [
+    "employee_id",
+    "fecha_inicio",
+    "fecha_fin",
+    "motivo",
+    "tipo"
+  ],
+  "rls": {
+    "create": {
+      "data.employee_id": "{{user.id}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "data.employee_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.employee_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    }
+  }
+}
