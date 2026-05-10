@@ -1,0 +1,174 @@
+{
+  "name": "RiskAssessment",
+  "type": "object",
+  "properties": {
+    "codigo": {
+      "type": "string",
+      "description": "C\u00f3digo \u00fanico de la evaluaci\u00f3n"
+    },
+    "titulo": {
+      "type": "string",
+      "description": "T\u00edtulo de la evaluaci\u00f3n"
+    },
+    "departamento": {
+      "type": "string",
+      "description": "Departamento evaluado"
+    },
+    "puesto": {
+      "type": "string",
+      "description": "Puesto de trabajo evaluado"
+    },
+    "area": {
+      "type": "string",
+      "description": "\u00c1rea f\u00edsica evaluada"
+    },
+    "fecha_evaluacion": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha de realizaci\u00f3n de la evaluaci\u00f3n"
+    },
+    "fecha_revision": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha prevista de revisi\u00f3n"
+    },
+    "evaluador_id": {
+      "type": "string",
+      "description": "ID del evaluador (miembro del comit\u00e9)"
+    },
+    "riesgos_identificados": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "descripcion": {
+            "type": "string"
+          },
+          "tipo_riesgo": {
+            "type": "string",
+            "enum": [
+              "F\u00edsico",
+              "Qu\u00edmico",
+              "Biol\u00f3gico",
+              "Ergon\u00f3mico",
+              "Psicosocial",
+              "Seguridad"
+            ]
+          },
+          "probabilidad": {
+            "type": "string",
+            "enum": [
+              "Baja",
+              "Media",
+              "Alta"
+            ]
+          },
+          "severidad": {
+            "type": "string",
+            "enum": [
+              "Leve",
+              "Moderada",
+              "Grave",
+              "Muy Grave"
+            ]
+          },
+          "nivel_riesgo": {
+            "type": "string",
+            "enum": [
+              "Trivial",
+              "Tolerable",
+              "Moderado",
+              "Importante",
+              "Intolerable"
+            ]
+          },
+          "medidas_preventivas_actuales": {
+            "type": "string"
+          },
+          "medidas_correctoras_propuestas": {
+            "type": "string"
+          },
+          "responsable_accion": {
+            "type": "string"
+          },
+          "plazo_implantacion": {
+            "type": "string",
+            "format": "date"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "Pendiente",
+              "En Proceso",
+              "Completada"
+            ],
+            "default": "Pendiente"
+          }
+        }
+      },
+      "description": "Lista de riesgos identificados"
+    },
+    "plan_accion": {
+      "type": "string",
+      "description": "Plan de acci\u00f3n general"
+    },
+    "estado_general": {
+      "type": "string",
+      "enum": [
+        "En Proceso",
+        "Completada",
+        "Revisi\u00f3n Pendiente"
+      ],
+      "default": "En Proceso",
+      "description": "Estado general de la evaluaci\u00f3n"
+    },
+    "documento_url": {
+      "type": "string",
+      "description": "URL del documento de evaluaci\u00f3n"
+    },
+    "notas": {
+      "type": "string",
+      "description": "Notas adicionales"
+    }
+  },
+  "required": [
+    "titulo",
+    "fecha_evaluacion"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    },
+    "read": {
+      "$or": [
+        {
+          "data.evaluador_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        },
+        {
+          "data.evaluador_id": "{{user.id}}"
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    }
+  }
+}
