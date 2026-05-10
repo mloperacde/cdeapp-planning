@@ -107,15 +107,15 @@
   ],
   "rls": {
     "create": {
-      "data.solicitante_id": "{{user.employee_id}}"
+      "data.solicitante_id": "{{user.id}}"
     },
     "read": {
       "$or": [
         {
-          "data.solicitante_id": "{{user.employee_id}}"
+          "data.solicitante_id": "{{user.id}}"
         },
         {
-          "data.receptor_id": "{{user.employee_id}}"
+          "data.receptor_id": "{{user.id}}"
         },
         {
           "user_condition": {
@@ -132,17 +132,10 @@
     "update": {
       "$or": [
         {
-          "data.solicitante_id": "{{user.employee_id}}",
-          "data.estado": {
-            "$in": [
-              "Publicado",
-              "Pendiente Aprobaci\u00f3n"
-            ]
-          }
+          "data.solicitante_id": "{{user.id}}"
         },
         {
-          "data.receptor_id": "{{user.employee_id}}",
-          "data.estado": "Publicado"
+          "data.receptor_id": "{{user.id}}"
         },
         {
           "user_condition": {
@@ -157,27 +150,9 @@
       ]
     },
     "delete": {
-      "$or": [
-        {
-          "data.solicitante_id": "{{user.employee_id}}",
-          "data.estado": {
-            "$in": [
-              "Publicado",
-              "Pendiente Aprobaci\u00f3n"
-            ]
-          }
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "supervisor"
-          }
-        }
-      ]
+      "user_condition": {
+        "role": "admin"
+      }
     }
   }
 }
