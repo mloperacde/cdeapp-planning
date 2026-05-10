@@ -402,13 +402,7 @@
     "read": {
       "$or": [
         {
-          "id": "{{user.employee_id}}"
-        },
-        {
-          "data.departamento": "{{user.data.departamento}}",
-          "user_condition": {
-            "role": "supervisor"
-          }
+          "id": "{{user.id}}"
         },
         {
           "user_condition": {
@@ -419,13 +413,18 @@
           "user_condition": {
             "role": "rrhh"
           }
+        },
+        {
+          "user_condition": {
+            "role": "supervisor"
+          }
         }
       ]
     },
     "update": {
       "$or": [
         {
-          "id": "{{user.employee_id}}"
+          "id": "{{user.id}}"
         },
         {
           "user_condition": {
