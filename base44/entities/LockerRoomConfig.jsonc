@@ -1,0 +1,48 @@
+{
+  "name": "LockerRoomConfig",
+  "type": "object",
+  "row_level_security": [
+    {
+      "operation": "read",
+      "allow": "{{user.role == 'admin' or user.role == 'rrhh'}}"
+    },
+    {
+      "operation": "create",
+      "allow": "{{user.role == 'admin'}}"
+    },
+    {
+      "operation": "update",
+      "allow": "{{user.role == 'admin'}}"
+    },
+    {
+      "operation": "delete",
+      "allow": "{{user.role == 'admin'}}"
+    }
+  ],
+  "properties": {
+    "vestuario": {
+      "type": "string",
+      "enum": [
+        "Vestuario Femenino Planta Baja",
+        "Vestuario Femenino Planta Alta",
+        "Vestuario Masculino Planta Baja"
+      ]
+    },
+    "numero_taquillas_instaladas": {
+      "type": "number"
+    },
+    "identificadores_taquillas": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "notas": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "vestuario",
+    "numero_taquillas_instaladas"
+  ]
+}

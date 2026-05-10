@@ -1,14 +1,30 @@
 {
   "name": "TrainingNeed",
   "type": "object",
+  "row_level_security": [
+    {
+      "operation": "read",
+      "allow": "{{user.role == 'admin' or user.role == 'rrhh' or user.role == 'supervisor' or user.employee_id == employee_id}}"
+    },
+    {
+      "operation": "create",
+      "allow": "{{user.role == 'admin' or user.role == 'rrhh'}}"
+    },
+    {
+      "operation": "update",
+      "allow": "{{user.role == 'admin' or user.role == 'rrhh'}}"
+    },
+    {
+      "operation": "delete",
+      "allow": "{{user.role == 'admin'}}"
+    }
+  ],
   "properties": {
     "employee_id": {
-      "type": "string",
-      "description": "ID del empleado"
+      "type": "string"
     },
     "skill_id": {
-      "type": "string",
-      "description": "ID de la habilidad"
+      "type": "string"
     },
     "nivel_actual": {
       "type": "string",
@@ -19,8 +35,7 @@
         "Avanzado",
         "Experto"
       ],
-      "default": "Ninguno",
-      "description": "Nivel actual del empleado"
+      "default": "Ninguno"
     },
     "nivel_objetivo": {
       "type": "string",
@@ -29,8 +44,7 @@
         "Intermedio",
         "Avanzado",
         "Experto"
-      ],
-      "description": "Nivel objetivo a alcanzar"
+      ]
     },
     "prioridad": {
       "type": "string",
@@ -40,26 +54,21 @@
         "Alta",
         "Urgente"
       ],
-      "default": "Media",
-      "description": "Prioridad de la formaci\u00f3n"
+      "default": "Media"
     },
     "razon": {
-      "type": "string",
-      "description": "Raz\u00f3n de la necesidad de formaci\u00f3n"
+      "type": "string"
     },
     "proceso_relacionado_id": {
-      "type": "string",
-      "description": "ID del proceso que requiere esta habilidad"
+      "type": "string"
     },
     "fecha_identificacion": {
       "type": "string",
-      "format": "date-time",
-      "description": "Fecha en que se identific\u00f3 la necesidad"
+      "format": "date-time"
     },
     "fecha_objetivo": {
       "type": "string",
-      "format": "date",
-      "description": "Fecha objetivo para completar la formaci\u00f3n"
+      "format": "date"
     },
     "estado": {
       "type": "string",
@@ -69,79 +78,18 @@
         "Completada",
         "Cancelada"
       ],
-      "default": "Pendiente",
-      "description": "Estado de la necesidad de formaci\u00f3n"
+      "default": "Pendiente"
     },
     "training_module_id": {
-      "type": "string",
-      "description": "ID del m\u00f3dulo de formaci\u00f3n asignado"
+      "type": "string"
     },
     "notas": {
-      "type": "string",
-      "description": "Notas adicionales"
+      "type": "string"
     }
   },
   "required": [
     "employee_id",
     "skill_id",
     "nivel_objetivo"
-  ],
-  "rls": {
-    "create": {
-      "$or": [
-        {
-          "data.employee_id": "{{user.employee_id}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "rrhh"
-          }
-        }
-      ]
-    },
-    "read": {
-      "$or": [
-        {
-          "data.employee_id": "{{user.employee_id}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "rrhh"
-          }
-        }
-      ]
-    },
-    "update": {
-      "$or": [
-        {
-          "data.employee_id": "{{user.employee_id}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "rrhh"
-          }
-        }
-      ]
-    },
-    "delete": {
-      "user_condition": {
-        "role": "admin"
-      }
-    }
-  }
+  ]
 }

@@ -21,44 +21,35 @@
   ],
   "properties": {
     "employee_id": {
-      "type": "string",
-      "description": "ID del registro del empleado en EmployeeMasterDatabase (llave for\u00e1nea \u2192 EmployeeMasterDatabase.id). IMPORTANTE: apunta al campo 'id' del registro maestro, NO al campo 'codigo_empleado' ni a 'legacy_employee_id'"
+      "type": "string"
     },
     "fecha_inicio": {
       "type": "string",
-      "format": "date-time",
-      "description": "Fecha y hora de inicio de la ausencia"
+      "format": "date-time"
     },
     "fecha_fin": {
       "type": "string",
-      "format": "date-time",
-      "description": "Fecha y hora de fin de la ausencia"
+      "format": "date-time"
     },
     "fecha_fin_desconocida": {
       "type": "boolean",
-      "default": false,
-      "description": "Si la fecha de fin es desconocida (ausencia indefinida)"
+      "default": false
     },
     "motivo": {
-      "type": "string",
-      "description": "Motivo de la ausencia"
+      "type": "string"
     },
     "tipo": {
-      "type": "string",
-      "description": "Nombre del tipo de ausencia (desnormalizado desde AbsenceType para consultas r\u00e1pidas)"
+      "type": "string"
     },
     "absence_type_id": {
-      "type": "string",
-      "description": "ID del tipo de ausencia configurado (llave for\u00e1nea \u2192 AbsenceType.id)"
+      "type": "string"
     },
     "remunerada": {
       "type": "boolean",
-      "default": true,
-      "description": "Si la ausencia es remunerada"
+      "default": true
     },
     "notas": {
-      "type": "string",
-      "description": "Notas adicionales"
+      "type": "string"
     },
     "estado_aprobacion": {
       "type": "string",
@@ -68,72 +59,32 @@
         "Rechazada",
         "Cancelada"
       ],
-      "default": "Pendiente",
-      "description": "Estado de aprobaci\u00f3n de la ausencia"
+      "default": "Pendiente"
     },
     "solicitado_por": {
-      "type": "string",
-      "description": "ID del usuario que solicit\u00f3 la ausencia (llave for\u00e1nea \u2192 User.id)"
+      "type": "string"
     },
     "aprobado_por": {
-      "type": "string",
-      "description": "ID del usuario que aprob\u00f3/rechaz\u00f3 (llave for\u00e1nea \u2192 User.id)"
+      "type": "string"
     },
     "fecha_aprobacion": {
       "type": "string",
-      "format": "date-time",
-      "description": "Fecha de aprobaci\u00f3n/rechazo"
+      "format": "date-time"
     },
     "comentario_aprobacion": {
-      "type": "string",
-      "description": "Comentario del aprobador"
+      "type": "string"
     },
     "documentos_adjuntos": {
       "type": "array",
       "items": {
-        "type": "object",
-        "properties": {
-          "nombre": {
-            "type": "string"
-          },
-          "url": {
-            "type": "string"
-          },
-          "tipo": {
-            "type": "string"
-          },
-          "fecha_subida": {
-            "type": "string",
-            "format": "date-time"
-          }
-        }
-      },
-      "description": "Documentos adjuntos a la solicitud"
+        "type": "object"
+      }
     },
     "flujo_aprobacion": {
       "type": "array",
       "items": {
-        "type": "object",
-        "properties": {
-          "usuario_id": {
-            "type": "string"
-          },
-          "nivel": {
-            "type": "number"
-          },
-          "estado": {
-            "type": "string"
-          },
-          "fecha": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "comentario": {
-            "type": "string"
-          }
-        }
-      },
-      "description": "Historial del flujo de aprobaci\u00f3n"
+        "type": "object"
+      }
     }
   },
   "required": [

@@ -21,58 +21,7 @@
   ],
   "properties": {
     "styles": {
-      "type": "object",
-      "properties": {
-        "festivo_bg": {
-          "type": "string",
-          "description": "Color de fondo para d\u00edas festivos"
-        },
-        "festivo_text": {
-          "type": "string",
-          "description": "Color de texto para d\u00edas festivos"
-        },
-        "festivo_border": {
-          "type": "string",
-          "description": "Color de borde para d\u00edas festivos"
-        },
-        "vacaciones_bg": {
-          "type": "string",
-          "description": "Color de fondo para per\u00edodos de vacaciones"
-        },
-        "vacaciones_text": {
-          "type": "string",
-          "description": "Color de texto para per\u00edodos de vacaciones"
-        },
-        "vacaciones_border": {
-          "type": "string",
-          "description": "Color de borde para per\u00edodos de vacaciones"
-        },
-        "fin_semana_bg": {
-          "type": "string",
-          "description": "Color de fondo para fines de semana"
-        },
-        "fin_semana_text": {
-          "type": "string",
-          "description": "Color de texto para fines de semana"
-        },
-        "fin_semana_border": {
-          "type": "string",
-          "description": "Color de borde para fines de semana"
-        },
-        "habil_bg": {
-          "type": "string",
-          "description": "Color de fondo para d\u00edas h\u00e1biles"
-        },
-        "habil_text": {
-          "type": "string",
-          "description": "Color de texto para d\u00edas h\u00e1biles"
-        },
-        "habil_border": {
-          "type": "string",
-          "description": "Color de borde para d\u00edas h\u00e1biles"
-        }
-      },
-      "description": "Configuraci\u00f3n de estilos del calendario"
+      "type": "object"
     }
   },
   "required": [

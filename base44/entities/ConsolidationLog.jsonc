@@ -21,8 +21,7 @@
   ],
   "properties": {
     "task_name": {
-      "type": "string",
-      "description": "Nombre de la tarea ejecutada"
+      "type": "string"
     },
     "triggered_by": {
       "type": "string",
@@ -30,8 +29,7 @@
         "scheduled",
         "manual"
       ],
-      "default": "scheduled",
-      "description": "C\u00f3mo fue disparada la tarea"
+      "default": "scheduled"
     },
     "status": {
       "type": "string",
@@ -41,78 +39,46 @@
         "error",
         "running"
       ],
-      "default": "running",
-      "description": "Estado de la ejecuci\u00f3n"
+      "default": "running"
     },
     "started_at": {
       "type": "string",
-      "format": "date-time",
-      "description": "Timestamp de inicio"
+      "format": "date-time"
     },
     "completed_at": {
       "type": "string",
-      "format": "date-time",
-      "description": "Timestamp de finalizaci\u00f3n"
+      "format": "date-time"
     },
     "duration_seconds": {
-      "type": "number",
-      "description": "Duraci\u00f3n en segundos"
+      "type": "number"
     },
     "summary": {
-      "type": "object",
-      "description": "Resumen de resultados de la ejecuci\u00f3n"
+      "type": "object"
     },
     "steps": {
       "type": "array",
       "items": {
-        "type": "object",
-        "properties": {
-          "step": {
-            "type": "string"
-          },
-          "status": {
-            "type": "string"
-          },
-          "msg": {
-            "type": "string"
-          }
-        }
-      },
-      "description": "Pasos de la ejecuci\u00f3n con detalle"
+        "type": "object"
+      }
     },
     "anomalies": {
       "type": "array",
       "items": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string"
-          },
-          "description": {
-            "type": "string"
-          },
-          "severity": {
-            "type": "string"
-          }
-        }
-      },
-      "description": "Anomal\u00edas detectadas durante la ejecuci\u00f3n"
+        "type": "object"
+      }
     },
     "errors": {
       "type": "array",
       "items": {
         "type": "object"
-      },
-      "description": "Errores producidos durante la ejecuci\u00f3n"
+      }
     },
     "notification_sent": {
       "type": "boolean",
-      "default": false,
-      "description": "Si se envi\u00f3 notificaci\u00f3n de anomal\u00edas"
+      "default": false
     },
     "notification_email": {
-      "type": "string",
-      "description": "Email al que se envi\u00f3 la notificaci\u00f3n"
+      "type": "string"
     }
   },
   "required": [

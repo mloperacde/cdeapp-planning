@@ -21,12 +21,10 @@
   ],
   "properties": {
     "titulo": {
-      "type": "string",
-      "description": "T\u00edtulo del documento"
+      "type": "string"
     },
     "descripcion": {
-      "type": "string",
-      "description": "Descripci\u00f3n del documento"
+      "type": "string"
     },
     "categoria": {
       "type": "string",
@@ -40,8 +38,7 @@
         "Formaci\u00f3n",
         "Calidad",
         "Otro"
-      ],
-      "description": "Categor\u00eda del documento"
+      ]
     },
     "tipo_entidad_asociada": {
       "type": "string",
@@ -53,29 +50,23 @@
         "Skill",
         "TrainingModule",
         "General"
-      ],
-      "description": "Tipo de entidad a la que est\u00e1 asociado"
+      ]
     },
     "entidad_asociada_id": {
-      "type": "string",
-      "description": "ID de la entidad asociada"
+      "type": "string"
     },
     "archivo_url": {
-      "type": "string",
-      "description": "URL del archivo"
+      "type": "string"
     },
     "tipo_archivo": {
-      "type": "string",
-      "description": "Tipo de archivo (pdf, docx, xlsx, etc.)"
+      "type": "string"
     },
     "tamano_bytes": {
-      "type": "number",
-      "description": "Tama\u00f1o del archivo en bytes"
+      "type": "number"
     },
     "version": {
       "type": "string",
-      "default": "1.0",
-      "description": "Versi\u00f3n del documento"
+      "default": "1.0"
     },
     "estado": {
       "type": "string",
@@ -85,105 +76,71 @@
         "Obsoleto",
         "Archivado"
       ],
-      "default": "Vigente",
-      "description": "Estado del documento"
+      "default": "Vigente"
     },
     "fecha_creacion": {
       "type": "string",
-      "format": "date-time",
-      "description": "Fecha de creaci\u00f3n del documento"
+      "format": "date-time"
     },
     "fecha_vigencia": {
       "type": "string",
-      "format": "date",
-      "description": "Fecha desde la que es vigente"
+      "format": "date"
     },
     "fecha_caducidad": {
       "type": "string",
-      "format": "date",
-      "description": "Fecha de caducidad"
+      "format": "date"
     },
     "roles_acceso": {
       "type": "array",
       "items": {
         "type": "string"
-      },
-      "description": "IDs de roles que pueden acceder al documento"
+      }
     },
     "departamentos_acceso": {
       "type": "array",
       "items": {
         "type": "string"
-      },
-      "description": "Departamentos que pueden acceder (vac\u00edo = todos)"
+      }
     },
     "es_publico": {
       "type": "boolean",
-      "default": false,
-      "description": "Si es visible para todos los usuarios"
+      "default": false
     },
     "historial_versiones": {
       "type": "array",
       "items": {
-        "type": "object",
-        "properties": {
-          "version": {
-            "type": "string"
-          },
-          "fecha": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "archivo_url": {
-            "type": "string"
-          },
-          "cambios": {
-            "type": "string"
-          },
-          "subido_por": {
-            "type": "string"
-          }
-        }
-      },
-      "description": "Historial de versiones anteriores"
+        "type": "object"
+      }
     },
     "etiquetas": {
       "type": "array",
       "items": {
         "type": "string"
-      },
-      "description": "Etiquetas para clasificaci\u00f3n"
+      }
     },
     "contenido_indexado": {
-      "type": "string",
-      "description": "Contenido extra\u00eddo del documento para b\u00fasqueda de texto completo"
+      "type": "string"
     },
     "subido_por": {
-      "type": "string",
-      "description": "ID del usuario que subi\u00f3 el documento"
+      "type": "string"
     },
     "ultima_modificacion": {
       "type": "string",
-      "format": "date-time",
-      "description": "Fecha de \u00faltima modificaci\u00f3n"
+      "format": "date-time"
     },
     "modificado_por": {
-      "type": "string",
-      "description": "ID del usuario que modific\u00f3"
+      "type": "string"
     },
     "contador_descargas": {
       "type": "number",
-      "default": 0,
-      "description": "N\u00famero de veces descargado"
+      "default": 0
     },
     "ultima_descarga": {
       "type": "string",
-      "format": "date-time",
-      "description": "Fecha de \u00faltima descarga"
+      "format": "date-time"
     },
     "cambios_recientes": {
-      "type": "string",
-      "description": "Descripci\u00f3n de los \u00faltimos cambios realizados"
+      "type": "string"
     }
   },
   "required": [

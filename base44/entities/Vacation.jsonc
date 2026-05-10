@@ -1,10 +1,10 @@
 {
-  "name": "AbsenceApprovalFlow",
+  "name": "Vacation",
   "type": "object",
   "row_level_security": [
     {
       "operation": "read",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{true}}"
     },
     {
       "operation": "create",
@@ -20,22 +20,34 @@
     }
   ],
   "properties": {
-    "absence_type_id": {
+    "start_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "end_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "name": {
       "type": "string"
     },
-    "niveles": {
-      "type": "array",
-      "items": {
-        "type": "object"
-      }
+    "notes": {
+      "type": "string"
     },
-    "activo": {
+    "aplica_todos": {
       "type": "boolean",
       "default": true
+    },
+    "employee_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
     }
   },
   "required": [
-    "absence_type_id",
-    "niveles"
+    "start_date",
+    "end_date",
+    "name"
   ]
 }

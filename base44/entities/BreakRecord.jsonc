@@ -21,25 +21,20 @@
   ],
   "properties": {
     "employee_id": {
-      "type": "string",
-      "description": "ID del registro en EmployeeMasterDatabase (llave for\u00e1nea)"
+      "type": "string"
     },
     "employee_name": {
-      "type": "string",
-      "description": "Nombre del empleado (desnormalizado)"
+      "type": "string"
     },
     "employee_code": {
-      "type": "string",
-      "description": "C\u00f3digo del empleado (codigo_empleado)"
+      "type": "string"
     },
     "department": {
-      "type": "string",
-      "description": "Departamento del empleado (desnormalizado)"
+      "type": "string"
     },
     "record_date": {
       "type": "string",
-      "format": "date",
-      "description": "Fecha de la jornada laboral"
+      "format": "date"
     },
     "shift": {
       "type": "string",
@@ -48,40 +43,31 @@
         "Tarde",
         "Noche",
         "N/A"
-      ],
-      "description": "Turno de trabajo"
+      ]
     },
     "break_type": {
-      "type": "string",
-      "description": "Tipo de interrupci\u00f3n seg\u00fan el campo 'incident' (ej: VESTUARIOS/ASEOS, DESCANSO)"
+      "type": "string"
     },
     "break_start": {
-      "type": "string",
-      "description": "Hora de inicio de la interrupci\u00f3n (HH:mm, fichaje S con incidente)"
+      "type": "string"
     },
     "break_end": {
-      "type": "string",
-      "description": "Hora de fin de la interrupci\u00f3n (HH:mm, fichaje E siguiente)"
+      "type": "string"
     },
     "duration_minutes": {
-      "type": "number",
-      "description": "Duraci\u00f3n de la interrupci\u00f3n en minutos"
+      "type": "number"
     },
     "work_session_start": {
-      "type": "string",
-      "description": "Primer fichaje E del d\u00eda (inicio real de jornada, HH:mm)"
+      "type": "string"
     },
     "work_session_end": {
-      "type": "string",
-      "description": "\u00daltimo fichaje S con incident N/A del d\u00eda (fin real de jornada, HH:mm)"
+      "type": "string"
     },
     "total_work_minutes": {
-      "type": "number",
-      "description": "Total de minutos en planta (desde primer E hasta \u00faltimo S)"
+      "type": "number"
     },
     "import_batch": {
-      "type": "string",
-      "description": "Identificador del lote de procesamiento"
+      "type": "string"
     }
   },
   "required": [

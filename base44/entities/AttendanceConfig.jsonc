@@ -22,93 +22,67 @@
   "properties": {
     "nombre_configuracion": {
       "type": "string",
-      "default": "Configuraci\u00f3n General",
-      "description": "Nombre de la configuraci\u00f3n"
+      "default": "Configuraci\u00f3n General"
     },
     "tolerancia_entrada_minutos": {
       "type": "number",
-      "default": 10,
-      "description": "Minutos de tolerancia en entrada antes de marcar retraso"
+      "default": 10
     },
     "tolerancia_salida_minutos": {
       "type": "number",
-      "default": 10,
-      "description": "Minutos de tolerancia en salida anticipada"
+      "default": 10
     },
     "marcar_ausente_despues_de_minutos": {
       "type": "number",
-      "default": 60,
-      "description": "Marcar como ausente si no ficha despu\u00e9s de X minutos"
+      "default": 60
     },
     "auto_actualizar_disponibilidad": {
       "type": "boolean",
-      "default": true,
-      "description": "Actualizar autom\u00e1ticamente campo disponibilidad del empleado"
+      "default": true
     },
     "crear_ausencia_automatica": {
       "type": "boolean",
-      "default": true,
-      "description": "Crear registro de ausencia autom\u00e1ticamente si no ficha"
+      "default": true
     },
     "notificar_ausencias": {
       "type": "boolean",
-      "default": true,
-      "description": "Enviar notificaciones por ausencias"
+      "default": true
     },
     "notificar_retrasos": {
       "type": "boolean",
-      "default": true,
-      "description": "Enviar notificaciones por retrasos"
+      "default": true
     },
     "notificar_retrasos_solo_si_mas_de_minutos": {
       "type": "number",
-      "default": 15,
-      "description": "Notificar retrasos solo si superan X minutos"
+      "default": 15
     },
     "destinatarios_notificaciones": {
       "type": "array",
       "items": {
-        "type": "object",
-        "properties": {
-          "nombre": {
-            "type": "string"
-          },
-          "email": {
-            "type": "string"
-          },
-          "rol": {
-            "type": "string"
-          }
-        }
-      },
-      "description": "Lista de destinatarios para notificaciones"
+        "type": "object"
+      }
     },
     "departamentos_estrictos": {
       "type": "array",
       "items": {
         "type": "string"
-      },
-      "description": "Departamentos con tolerancia reducida"
+      }
     },
     "tolerancia_reducida_minutos": {
       "type": "number",
-      "default": 5,
-      "description": "Tolerancia para departamentos estrictos"
+      "default": 5
     },
     "activar_predicciones_ml": {
       "type": "boolean",
-      "default": true,
-      "description": "Activar predicciones ML de ausencias"
+      "default": true
     },
     "umbral_alertas_patron_retrasos": {
       "type": "number",
-      "default": 3,
-      "description": "Alertar si X retrasos en \u00faltimo mes"
+      "default": 3
     },
     "activo": {
       "type": "boolean",
-      "default": true,
-      "description": "Si la configuraci\u00f3n est\u00e1 activa"
+      "default": true
     }
   },
   "required": [

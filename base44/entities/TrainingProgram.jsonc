@@ -1,0 +1,122 @@
+{
+  "name": "TrainingProgram",
+  "type": "object",
+  "row_level_security": [
+    {
+      "operation": "read",
+      "allow": "{{true}}"
+    },
+    {
+      "operation": "create",
+      "allow": "{{user.role == 'admin' or user.role == 'rrhh'}}"
+    },
+    {
+      "operation": "update",
+      "allow": "{{user.role == 'admin' or user.role == 'rrhh'}}"
+    },
+    {
+      "operation": "delete",
+      "allow": "{{user.role == 'admin'}}"
+    }
+  ],
+  "properties": {
+    "titulo": {
+      "type": "string"
+    },
+    "descripcion": {
+      "type": "string"
+    },
+    "departamentos": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "nivel": {
+      "type": "string",
+      "enum": [
+        "B\u00e1sico",
+        "Intermedio",
+        "Avanzado",
+        "Especialista"
+      ],
+      "default": "B\u00e1sico"
+    },
+    "categoria": {
+      "type": "string",
+      "enum": [
+        "Seguridad y PRL",
+        "Procesos de Envasado",
+        "Calidad y GMP",
+        "Mantenimiento",
+        "Almac\u00e9n y Log\u00edstica",
+        "Planificaci\u00f3n",
+        "Fabricaci\u00f3n de Cosm\u00e9ticos",
+        "Fabricaci\u00f3n de Sanitarios",
+        "Etiquetado y Codificaci\u00f3n",
+        "Gesti\u00f3n de Equipos",
+        "Normativa y Cumplimiento",
+        "Habilidades Transversales"
+      ]
+    },
+    "puestosObjetivo": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "duracionHoras": {
+      "type": "number"
+    },
+    "estado": {
+      "type": "string",
+      "enum": [
+        "Borrador",
+        "En Revisi\u00f3n",
+        "Publicado",
+        "Archivado"
+      ],
+      "default": "Borrador"
+    },
+    "objetivos": {
+      "type": "string"
+    },
+    "contenido": {
+      "type": "string"
+    },
+    "evaluacion": {
+      "type": "string"
+    },
+    "bibliografia": {
+      "type": "string"
+    },
+    "normativaReferencia": {
+      "type": "string"
+    },
+    "generadoPorIA": {
+      "type": "boolean",
+      "default": false
+    },
+    "versionContenido": {
+      "type": "number",
+      "default": 1
+    },
+    "esObligatorio": {
+      "type": "boolean",
+      "default": false
+    },
+    "periodicidadMeses": {
+      "type": "number"
+    },
+    "autor": {
+      "type": "string"
+    },
+    "codigoModulo": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "titulo",
+    "estado"
+  ]
+}

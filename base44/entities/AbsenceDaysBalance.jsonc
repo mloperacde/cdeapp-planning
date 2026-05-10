@@ -21,12 +21,10 @@
   ],
   "properties": {
     "employee_id": {
-      "type": "string",
-      "description": "ID del empleado"
+      "type": "string"
     },
     "anio": {
-      "type": "number",
-      "description": "A\u00f1o de registro"
+      "type": "number"
     },
     "tipo_permiso": {
       "type": "string",
@@ -40,51 +38,26 @@
         "Permiso Examen",
         "Permiso Mudanza",
         "Otro Permiso Remunerado"
-      ],
-      "description": "Tipo de permiso remunerado"
+      ]
     },
     "dias_totales_derecho": {
-      "type": "number",
-      "description": "D\u00edas totales a los que tiene derecho por a\u00f1o"
+      "type": "number"
     },
     "dias_disfrutados": {
       "type": "number",
-      "default": 0,
-      "description": "D\u00edas ya disfrutados"
+      "default": 0
     },
     "dias_pendientes": {
-      "type": "number",
-      "description": "D\u00edas pendientes de disfrutar (calculado)"
+      "type": "number"
     },
     "periodos_disfrutados": {
       "type": "array",
       "items": {
-        "type": "object",
-        "properties": {
-          "fecha_inicio": {
-            "type": "string",
-            "format": "date"
-          },
-          "fecha_fin": {
-            "type": "string",
-            "format": "date"
-          },
-          "dias_consumidos": {
-            "type": "number"
-          },
-          "absence_id": {
-            "type": "string"
-          },
-          "notas": {
-            "type": "string"
-          }
-        }
-      },
-      "description": "Historial de per\u00edodos disfrutados"
+        "type": "object"
+      }
     },
     "observaciones": {
-      "type": "string",
-      "description": "Observaciones sobre el balance"
+      "type": "string"
     }
   },
   "required": [

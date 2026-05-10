@@ -1,27 +1,40 @@
 {
   "name": "UnionHoursRecord",
   "type": "object",
+  "row_level_security": [
+    {
+      "operation": "read",
+      "allow": "{{user.role == 'admin' or user.role == 'rrhh'}}"
+    },
+    {
+      "operation": "create",
+      "allow": "{{user.role == 'admin' or user.role == 'rrhh'}}"
+    },
+    {
+      "operation": "update",
+      "allow": "{{user.role == 'admin' or user.role == 'rrhh'}}"
+    },
+    {
+      "operation": "delete",
+      "allow": "{{user.role == 'admin'}}"
+    }
+  ],
   "properties": {
     "committee_member_id": {
-      "type": "string",
-      "description": "ID del miembro del comit\u00e9"
+      "type": "string"
     },
     "employee_id": {
-      "type": "string",
-      "description": "ID del empleado"
+      "type": "string"
     },
     "fecha": {
       "type": "string",
-      "format": "date",
-      "description": "Fecha del uso de horas"
+      "format": "date"
     },
     "horas_utilizadas": {
-      "type": "number",
-      "description": "Horas sindicales utilizadas"
+      "type": "number"
     },
     "motivo": {
-      "type": "string",
-      "description": "Motivo del uso de horas"
+      "type": "string"
     },
     "actividad": {
       "type": "string",
@@ -31,16 +44,13 @@
         "Asesoramiento Trabajadores",
         "Formaci\u00f3n Sindical",
         "Otro"
-      ],
-      "description": "Tipo de actividad realizada"
+      ]
     },
     "aprobado_por": {
-      "type": "string",
-      "description": "ID de quien aprob\u00f3 el uso de horas"
+      "type": "string"
     },
     "notas": {
-      "type": "string",
-      "description": "Notas adicionales"
+      "type": "string"
     }
   },
   "required": [
@@ -49,62 +59,5 @@
     "fecha",
     "horas_utilizadas",
     "motivo"
-  ],
-  "rls": {
-    "create": {
-      "$or": [
-        {
-          "data.committee_member_id": "{{user.employee_id}}"
-        },
-        {
-          "data.employee_id": "{{user.employee_id}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        }
-      ]
-    },
-    "read": {
-      "$or": [
-        {
-          "data.committee_member_id": "{{user.employee_id}}"
-        },
-        {
-          "data.employee_id": "{{user.employee_id}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "rrhh"
-          }
-        }
-      ]
-    },
-    "update": {
-      "$or": [
-        {
-          "data.committee_member_id": "{{user.employee_id}}"
-        },
-        {
-          "data.employee_id": "{{user.employee_id}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        }
-      ]
-    },
-    "delete": {
-      "user_condition": {
-        "role": "admin"
-      }
-    }
-  }
+  ]
 }

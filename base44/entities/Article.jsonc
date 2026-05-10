@@ -21,61 +21,47 @@
   ],
   "properties": {
     "codigo": {
-      "type": "string",
-      "description": "C\u00f3digo del art\u00edculo"
+      "type": "string"
     },
     "nombre": {
-      "type": "string",
-      "description": "Nombre del art\u00edculo"
+      "type": "string"
     },
     "descripcion": {
-      "type": "string",
-      "description": "Descripci\u00f3n del art\u00edculo"
+      "type": "string"
     },
     "maquina_1": {
-      "type": "string",
-      "description": "ID de m\u00e1quina que puede fabricar este art\u00edculo"
+      "type": "string"
     },
     "maquina_2": {
-      "type": "string",
-      "description": "ID de m\u00e1quina que puede fabricar este art\u00edculo"
+      "type": "string"
     },
     "maquina_3": {
-      "type": "string",
-      "description": "ID de m\u00e1quina que puede fabricar este art\u00edculo"
+      "type": "string"
     },
     "maquina_4": {
-      "type": "string",
-      "description": "ID de m\u00e1quina que puede fabricar este art\u00edculo"
+      "type": "string"
     },
     "maquina_5": {
-      "type": "string",
-      "description": "ID de m\u00e1quina que puede fabricar este art\u00edculo"
+      "type": "string"
     },
     "maquina_6": {
-      "type": "string",
-      "description": "ID de m\u00e1quina que puede fabricar este art\u00edculo"
+      "type": "string"
     },
     "maquina_7": {
-      "type": "string",
-      "description": "ID de m\u00e1quina que puede fabricar este art\u00edculo"
+      "type": "string"
     },
     "maquina_8": {
-      "type": "string",
-      "description": "ID de m\u00e1quina que puede fabricar este art\u00edculo"
+      "type": "string"
     },
     "maquina_9": {
-      "type": "string",
-      "description": "ID de m\u00e1quina que puede fabricar este art\u00edculo"
+      "type": "string"
     },
     "maquina_10": {
-      "type": "string",
-      "description": "ID de m\u00e1quina que puede fabricar este art\u00edculo"
+      "type": "string"
     },
     "activo": {
       "type": "boolean",
-      "default": true,
-      "description": "Si el art\u00edculo est\u00e1 activo"
+      "default": true
     }
   },
   "required": [

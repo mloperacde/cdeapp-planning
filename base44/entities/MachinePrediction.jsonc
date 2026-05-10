@@ -1,0 +1,122 @@
+{
+  "name": "MachinePrediction",
+  "type": "object",
+  "row_level_security": [
+    {
+      "operation": "read",
+      "allow": "{{user.role == 'admin' or user.role == 'T\u00e9cnico' or user.role == 'supervisor'}}"
+    },
+    {
+      "operation": "create",
+      "allow": "{{user.role == 'admin'}}"
+    },
+    {
+      "operation": "update",
+      "allow": "{{user.role == 'admin' or user.role == 'T\u00e9cnico'}}"
+    },
+    {
+      "operation": "delete",
+      "allow": "{{user.role == 'admin'}}"
+    }
+  ],
+  "properties": {
+    "machine_id": {
+      "type": "string"
+    },
+    "tipo_prediccion": {
+      "type": "string",
+      "enum": [
+        "Fallo Inminente",
+        "Degradaci\u00f3n",
+        "Mantenimiento Preventivo",
+        "Anomal\u00eda"
+      ]
+    },
+    "nivel_riesgo": {
+      "type": "string",
+      "enum": [
+        "Bajo",
+        "Medio",
+        "Alto",
+        "Cr\u00edtico"
+      ],
+      "default": "Medio"
+    },
+    "probabilidad": {
+      "type": "number"
+    },
+    "fecha_prediccion": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "fecha_estimada_fallo": {
+      "type": "string",
+      "format": "date"
+    },
+    "componente_afectado": {
+      "type": "string"
+    },
+    "descripcion": {
+      "type": "string"
+    },
+    "factores_contribuyentes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "recomendaciones": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "tiempo_estimado_reparacion_horas": {
+      "type": "number"
+    },
+    "impacto_produccion": {
+      "type": "string",
+      "enum": [
+        "Ninguno",
+        "Bajo",
+        "Medio",
+        "Alto",
+        "Cr\u00edtico"
+      ]
+    },
+    "estado": {
+      "type": "string",
+      "enum": [
+        "Pendiente",
+        "Revisada",
+        "En Proceso",
+        "Mantenimiento Programado",
+        "Completada",
+        "Falsa Alarma"
+      ],
+      "default": "Pendiente"
+    },
+    "maintenance_id": {
+      "type": "string"
+    },
+    "metricas_modelo": {
+      "type": "object"
+    },
+    "confianza_modelo": {
+      "type": "number"
+    },
+    "fecha_revision": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "notas": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "machine_id",
+    "tipo_prediccion",
+    "nivel_riesgo",
+    "fecha_prediccion"
+  ]
+}

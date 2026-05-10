@@ -21,36 +21,29 @@
   ],
   "properties": {
     "nombre": {
-      "type": "string",
-      "description": "Nombre del turno de descanso"
+      "type": "string"
     },
     "hora_inicio": {
-      "type": "string",
-      "description": "Hora de inicio del descanso (HH:mm)"
+      "type": "string"
     },
     "duracion_minutos": {
       "type": "number",
-      "default": 20,
-      "description": "Duraci\u00f3n del descanso en minutos"
+      "default": 20
     },
     "personas_por_turno": {
-      "type": "number",
-      "description": "N\u00famero de personas por turno de descanso"
+      "type": "number"
     },
     "aplica_turno_manana": {
       "type": "boolean",
-      "default": true,
-      "description": "Aplica para turno de ma\u00f1ana"
+      "default": true
     },
     "aplica_turno_tarde": {
       "type": "boolean",
-      "default": true,
-      "description": "Aplica para turno de tarde"
+      "default": true
     },
     "activo": {
       "type": "boolean",
-      "default": true,
-      "description": "Si el turno de descanso est\u00e1 activo"
+      "default": true
     }
   },
   "required": [

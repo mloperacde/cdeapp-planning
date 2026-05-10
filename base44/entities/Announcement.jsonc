@@ -21,12 +21,10 @@
   ],
   "properties": {
     "titulo": {
-      "type": "string",
-      "description": "T\u00edtulo del comunicado"
+      "type": "string"
     },
     "contenido": {
-      "type": "string",
-      "description": "Contenido del comunicado"
+      "type": "string"
     },
     "tipo": {
       "type": "string",
@@ -36,22 +34,18 @@
         "Recordatorio",
         "Evento"
       ],
-      "default": "Informativo",
-      "description": "Tipo de comunicado"
+      "default": "Informativo"
     },
     "activo": {
       "type": "boolean",
-      "default": true,
-      "description": "Si el comunicado est\u00e1 visible"
+      "default": true
     },
     "fecha_expiracion": {
       "type": "string",
-      "format": "date",
-      "description": "Fecha en que deja de mostrarse"
+      "format": "date"
     },
     "autor_nombre": {
-      "type": "string",
-      "description": "Nombre del autor"
+      "type": "string"
     }
   },
   "required": [

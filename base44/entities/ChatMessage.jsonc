@@ -1,18 +1,33 @@
 {
   "name": "ChatMessage",
   "type": "object",
+  "row_level_security": [
+    {
+      "operation": "read",
+      "allow": "{{user.role == 'admin' or user.id == sender_id}}"
+    },
+    {
+      "operation": "create",
+      "allow": "{{user.id == sender_id}}"
+    },
+    {
+      "operation": "update",
+      "allow": "{{user.role == 'admin' or user.id == sender_id}}"
+    },
+    {
+      "operation": "delete",
+      "allow": "{{user.role == 'admin' or user.id == sender_id}}"
+    }
+  ],
   "properties": {
     "channel_id": {
-      "type": "string",
-      "description": "ID del canal"
+      "type": "string"
     },
     "sender_id": {
-      "type": "string",
-      "description": "ID del empleado remitente"
+      "type": "string"
     },
     "mensaje": {
-      "type": "string",
-      "description": "Contenido del mensaje"
+      "type": "string"
     },
     "tipo": {
       "type": "string",
@@ -22,76 +37,26 @@
         "imagen",
         "sistema"
       ],
-      "default": "texto",
-      "description": "Tipo de mensaje"
+      "default": "texto"
     },
     "archivo_url": {
-      "type": "string",
-      "description": "URL del archivo adjunto"
+      "type": "string"
     },
     "leido_por": {
       "type": "array",
       "items": {
         "type": "string"
       },
-      "default": [],
-      "description": "IDs de usuarios que han le\u00eddo el mensaje"
+      "default": []
     },
     "fecha_envio": {
       "type": "string",
-      "format": "date-time",
-      "description": "Fecha y hora de env\u00edo"
+      "format": "date-time"
     }
   },
   "required": [
     "channel_id",
     "sender_id",
     "mensaje"
-  ],
-  "rls": {
-    "create": {
-      "data.sender_id": "{{user.id}}"
-    },
-    "read": {
-      "$or": [
-        {
-          "data.sender_id": "{{user.id}}"
-        },
-        {
-          "data.channel_id": {
-            "$in": "{{user.data.chat_channels}}"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        }
-      ]
-    },
-    "update": {
-      "$or": [
-        {
-          "data.sender_id": "{{user.id}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        }
-      ]
-    },
-    "delete": {
-      "$or": [
-        {
-          "data.sender_id": "{{user.id}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        }
-      ]
-    }
-  }
+  ]
 }

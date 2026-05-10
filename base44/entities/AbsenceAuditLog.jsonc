@@ -21,16 +21,13 @@
   ],
   "properties": {
     "employee_id": {
-      "type": "string",
-      "description": "ID del empleado afectado (\u2192 EmployeeMasterDatabase.id)"
+      "type": "string"
     },
     "employee_name": {
-      "type": "string",
-      "description": "Nombre del empleado (desnormalizado)"
+      "type": "string"
     },
     "employee_dept": {
-      "type": "string",
-      "description": "Departamento del empleado (desnormalizado)"
+      "type": "string"
     },
     "action_type": {
       "type": "string",
@@ -45,17 +42,14 @@
         "retraso_detectado",
         "turno_reset",
         "turno_iniciado"
-      ],
-      "description": "Tipo de acci\u00f3n registrada"
+      ]
     },
     "absence_id": {
-      "type": "string",
-      "description": "ID del registro Absence afectado (si aplica)"
+      "type": "string"
     },
     "sync_date": {
       "type": "string",
-      "format": "date",
-      "description": "Fecha de sincronizaci\u00f3n que gener\u00f3 el evento"
+      "format": "date"
     },
     "turno_afectado": {
       "type": "string",
@@ -64,21 +58,17 @@
         "Tarde",
         "Noche",
         "No aplica"
-      ],
-      "description": "Turno de trabajo en el que ocurri\u00f3 el evento"
+      ]
     },
     "turno_inicio_esperado": {
-      "type": "string",
-      "description": "Hora de inicio de turno esperada (HH:mm)"
+      "type": "string"
     },
     "turno_fin_esperado": {
-      "type": "string",
-      "description": "Hora de fin de turno esperada (HH:mm)"
+      "type": "string"
     },
     "hora_evento": {
       "type": "string",
-      "format": "date-time",
-      "description": "Timestamp exacto del momento en que ocurri\u00f3 el evento"
+      "format": "date-time"
     },
     "origen": {
       "type": "string",
@@ -88,29 +78,23 @@
         "manual_rrhh",
         "sistema"
       ],
-      "default": "shiftAudit",
-      "description": "Origen del evento"
+      "default": "shiftAudit"
     },
     "estado_anterior": {
-      "type": "string",
-      "description": "Estado de presencia antes de la acci\u00f3n"
+      "type": "string"
     },
     "estado_nuevo": {
-      "type": "string",
-      "description": "Estado de presencia despu\u00e9s de la acci\u00f3n"
+      "type": "string"
     },
     "motivo": {
-      "type": "string",
-      "description": "Motivo o descripci\u00f3n del evento"
+      "type": "string"
     },
     "leido_por_rrhh": {
       "type": "boolean",
-      "default": false,
-      "description": "Si el evento ha sido revisado por RRHH"
+      "default": false
     },
     "notas": {
-      "type": "string",
-      "description": "Notas adicionales del sistema"
+      "type": "string"
     }
   },
   "required": [

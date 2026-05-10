@@ -21,13 +21,11 @@
   ],
   "properties": {
     "employee_id": {
-      "type": "string",
-      "description": "ID of the employee involved"
+      "type": "string"
     },
     "date": {
       "type": "string",
-      "format": "date",
-      "description": "Date of the incident"
+      "format": "date"
     },
     "type": {
       "type": "string",
@@ -37,8 +35,7 @@
         "unreported_absence",
         "presence_during_absence",
         "other"
-      ],
-      "description": "Type of discrepancy"
+      ]
     },
     "severity": {
       "type": "string",
@@ -48,20 +45,16 @@
         "high",
         "critical"
       ],
-      "default": "medium",
-      "description": "Severity level"
+      "default": "medium"
     },
     "description": {
-      "type": "string",
-      "description": "Auto-generated description of the issue"
+      "type": "string"
     },
     "manager_comment": {
-      "type": "string",
-      "description": "Comment added by the manager"
+      "type": "string"
     },
     "flagged_by": {
-      "type": "string",
-      "description": "ID of the user who flagged this"
+      "type": "string"
     },
     "status": {
       "type": "string",
@@ -71,12 +64,10 @@
         "resolved",
         "dismissed"
       ],
-      "default": "open",
-      "description": "Status of the incident"
+      "default": "open"
     },
     "ai_analysis": {
-      "type": "string",
-      "description": "AI analysis of this specific incident if applicable"
+      "type": "string"
     }
   },
   "required": [

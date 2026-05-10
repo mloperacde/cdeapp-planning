@@ -21,12 +21,10 @@
   ],
   "properties": {
     "nombre": {
-      "type": "string",
-      "description": "Nombre del canal"
+      "type": "string"
     },
     "descripcion": {
-      "type": "string",
-      "description": "Descripci\u00f3n del canal"
+      "type": "string"
     },
     "tipo": {
       "type": "string",
@@ -36,40 +34,33 @@
         "Departamento",
         "General"
       ],
-      "default": "General",
-      "description": "Tipo de canal"
+      "default": "General"
     },
     "equipo": {
-      "type": "string",
-      "description": "Equipo asociado (si tipo = Equipo)"
+      "type": "string"
     },
     "departamento": {
-      "type": "string",
-      "description": "Departamento asociado (si tipo = Departamento)"
+      "type": "string"
     },
     "participantes": {
       "type": "array",
       "items": {
         "type": "string"
-      },
-      "description": "IDs de empleados participantes"
+      }
     },
     "admins": {
       "type": "array",
       "items": {
         "type": "string"
-      },
-      "description": "IDs de administradores del canal"
+      }
     },
     "activo": {
       "type": "boolean",
-      "default": true,
-      "description": "Si el canal est\u00e1 activo"
+      "default": true
     },
     "ultimo_mensaje_fecha": {
       "type": "string",
-      "format": "date-time",
-      "description": "Fecha del \u00faltimo mensaje"
+      "format": "date-time"
     }
   },
   "required": [

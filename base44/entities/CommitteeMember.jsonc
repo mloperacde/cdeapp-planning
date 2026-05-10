@@ -21,94 +21,55 @@
   ],
   "properties": {
     "employee_id": {
-      "type": "string",
-      "description": "ID del empleado miembro del comit\u00e9"
+      "type": "string"
     },
     "tipos_comite": {
       "type": "array",
       "items": {
-        "type": "string",
-        "enum": [
-          "Comit\u00e9 de Empresa",
-          "Delegado Personal",
-          "Comit\u00e9 Seguridad y Salud",
-          "Comit\u00e9 Prevenci\u00f3n Acoso",
-          "Equipo de Emergencia"
-        ]
-      },
-      "description": "Tipos de comit\u00e9s a los que pertenece"
+        "type": "string"
+      }
     },
     "cargo": {
-      "type": "string",
-      "description": "Cargo dentro del comit\u00e9 (Presidente, Secretario, Vocal, etc.)"
+      "type": "string"
     },
     "fecha_inicio": {
       "type": "string",
-      "format": "date",
-      "description": "Fecha de inicio en el comit\u00e9"
+      "format": "date"
     },
     "fecha_fin": {
       "type": "string",
-      "format": "date",
-      "description": "Fecha de fin (si aplica)"
+      "format": "date"
     },
     "activo": {
       "type": "boolean",
-      "default": true,
-      "description": "Si el miembro est\u00e1 activo"
+      "default": true
     },
     "horas_sindicales_mensuales": {
       "type": "number",
-      "default": 0,
-      "description": "Horas sindicales/representaci\u00f3n asignadas al mes"
+      "default": 0
     },
     "horas_sindicales_consumidas_mes_actual": {
       "type": "number",
-      "default": 0,
-      "description": "Horas consumidas en el mes actual"
+      "default": 0
     },
     "ultimo_reset_horas_sindicales": {
       "type": "string",
-      "format": "date",
-      "description": "Fecha del \u00faltimo reset mensual"
+      "format": "date"
     },
     "funciones": {
-      "type": "string",
-      "description": "Descripci\u00f3n de funciones y responsabilidades"
+      "type": "string"
     },
     "formacion_especifica": {
       "type": "array",
       "items": {
-        "type": "object",
-        "properties": {
-          "nombre_curso": {
-            "type": "string"
-          },
-          "fecha_realizacion": {
-            "type": "string",
-            "format": "date"
-          },
-          "duracion_horas": {
-            "type": "number"
-          },
-          "certificado_url": {
-            "type": "string"
-          },
-          "fecha_caducidad": {
-            "type": "string",
-            "format": "date"
-          }
-        }
-      },
-      "description": "Formaci\u00f3n espec\u00edfica recibida para el comit\u00e9"
+        "type": "object"
+      }
     },
     "contacto_emergencia_comite": {
-      "type": "string",
-      "description": "Tel\u00e9fono de contacto para funciones del comit\u00e9"
+      "type": "string"
     },
     "notas": {
-      "type": "string",
-      "description": "Notas adicionales"
+      "type": "string"
     }
   },
   "required": [

@@ -1,113 +1,54 @@
 {
   "name": "VacationPendingBalance",
   "type": "object",
+  "row_level_security": [
+    {
+      "operation": "read",
+      "allow": "{{user.role == 'admin' or user.role == 'rrhh' or user.employee_id == employee_id}}"
+    },
+    {
+      "operation": "create",
+      "allow": "{{user.role == 'admin' or user.role == 'rrhh'}}"
+    },
+    {
+      "operation": "update",
+      "allow": "{{user.role == 'admin' or user.role == 'rrhh'}}"
+    },
+    {
+      "operation": "delete",
+      "allow": "{{user.role == 'admin'}}"
+    }
+  ],
   "properties": {
     "employee_id": {
-      "type": "string",
-      "description": "ID del empleado"
+      "type": "string"
     },
     "anio": {
-      "type": "number",
-      "description": "A\u00f1o del balance"
+      "type": "number"
     },
     "dias_pendientes": {
       "type": "number",
-      "default": 0,
-      "description": "D\u00edas de vacaciones no consumidos por estar ausente"
+      "default": 0
     },
     "detalle_ausencias": {
       "type": "array",
       "items": {
-        "type": "object",
-        "properties": {
-          "absence_id": {
-            "type": "string"
-          },
-          "tipo_ausencia": {
-            "type": "string"
-          },
-          "fecha_inicio": {
-            "type": "string",
-            "format": "date"
-          },
-          "fecha_fin": {
-            "type": "string",
-            "format": "date"
-          },
-          "dias_coincidentes": {
-            "type": "number"
-          },
-          "periodos_vacaciones": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "vacation_id": {
-                  "type": "string"
-                },
-                "nombre": {
-                  "type": "string"
-                },
-                "dias": {
-                  "type": "number"
-                }
-              }
-            }
-          }
-        }
-      },
-      "description": "Detalle de ausencias que generaron d\u00edas pendientes"
+        "type": "object"
+      }
     },
     "dias_consumidos": {
       "type": "number",
-      "default": 0,
-      "description": "D\u00edas pendientes ya consumidos"
+      "default": 0
     },
     "dias_disponibles": {
-      "type": "number",
-      "description": "D\u00edas pendientes disponibles (calculado: pendientes - consumidos)"
+      "type": "number"
     },
     "observaciones": {
-      "type": "string",
-      "description": "Observaciones adicionales"
+      "type": "string"
     }
   },
   "required": [
     "employee_id",
     "anio"
-  ],
-  "rls": {
-    "create": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "read": {
-      "$or": [
-        {
-          "data.employee_id": "{{user.employee_id}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "rrhh"
-          }
-        }
-      ]
-    },
-    "update": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "delete": {
-      "user_condition": {
-        "role": "admin"
-      }
-    }
-  }
+  ]
 }

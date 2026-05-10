@@ -21,49 +21,39 @@
   ],
   "properties": {
     "employee_id": {
-      "type": "string",
-      "description": "C\u00f3digo del empleado en el sistema de control de acceso (equivale a EmployeeMasterDatabase.codigo_empleado). IMPORTANTE: NO es el campo 'id' de EmployeeMasterDatabase. Para cruzar con la base maestra, buscar el registro cuyo codigo_empleado coincida con este valor."
+      "type": "string"
     },
     "employee_name": {
-      "type": "string",
-      "description": "Nombre completo del empleado"
+      "type": "string"
     },
     "direction": {
       "type": "string",
       "enum": [
         "E",
         "S"
-      ],
-      "description": "Sentido del marcaje (E: Entrada, S: Salida)"
+      ]
     },
     "incident": {
-      "type": "string",
-      "description": "Incidencia asociada al marcaje (ej: N/A, VESTUARIOS/ASEOS)"
+      "type": "string"
     },
     "center": {
-      "type": "string",
-      "description": "Centro donde se realiz\u00f3 el marcaje (ej: FABRICA)"
+      "type": "string"
     },
     "department": {
-      "type": "string",
-      "description": "Departamento del empleado"
+      "type": "string"
     },
     "device": {
-      "type": "string",
-      "description": "Dispositivo que registr\u00f3 el marcaje"
+      "type": "string"
     },
     "record_date": {
       "type": "string",
-      "format": "date",
-      "description": "Fecha del marcaje"
+      "format": "date"
     },
     "record_time": {
-      "type": "string",
-      "description": "Hora del marcaje (HH:mm)"
+      "type": "string"
     },
     "import_batch": {
-      "type": "string",
-      "description": "Identificador del lote de importaci\u00f3n"
+      "type": "string"
     }
   },
   "required": [

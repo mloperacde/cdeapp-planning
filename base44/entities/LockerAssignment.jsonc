@@ -1,15 +1,31 @@
 {
   "name": "LockerAssignment",
   "type": "object",
+  "row_level_security": [
+    {
+      "operation": "read",
+      "allow": "{{user.role == 'admin' or user.role == 'rrhh' or user.employee_id == employee_id}}"
+    },
+    {
+      "operation": "create",
+      "allow": "{{user.role == 'admin' or user.role == 'rrhh'}}"
+    },
+    {
+      "operation": "update",
+      "allow": "{{user.role == 'admin' or user.role == 'rrhh'}}"
+    },
+    {
+      "operation": "delete",
+      "allow": "{{user.role == 'admin'}}"
+    }
+  ],
   "properties": {
     "employee_id": {
-      "type": "string",
-      "description": "ID del empleado"
+      "type": "string"
     },
     "requiere_taquilla": {
       "type": "boolean",
-      "default": true,
-      "description": "Si el empleado requiere taquilla"
+      "default": true
     },
     "vestuario": {
       "type": "string",
@@ -17,95 +33,33 @@
         "Vestuario Femenino Planta Baja",
         "Vestuario Femenino Planta Alta",
         "Vestuario Masculino Planta Baja"
-      ],
-      "description": "Vestuario asignado"
+      ]
     },
     "numero_taquilla_actual": {
-      "type": "string",
-      "description": "N\u00famero de taquilla actual"
+      "type": "string"
     },
     "numero_taquilla_nuevo": {
-      "type": "string",
-      "description": "Nuevo n\u00famero de taquilla (para reasignaci\u00f3n)"
+      "type": "string"
     },
     "fecha_asignacion": {
       "type": "string",
-      "format": "date-time",
-      "description": "Fecha de \u00faltima asignaci\u00f3n"
+      "format": "date-time"
     },
     "historial_cambios": {
       "type": "array",
       "items": {
-        "type": "object",
-        "properties": {
-          "fecha": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "vestuario_anterior": {
-            "type": "string"
-          },
-          "taquilla_anterior": {
-            "type": "string"
-          },
-          "vestuario_nuevo": {
-            "type": "string"
-          },
-          "taquilla_nueva": {
-            "type": "string"
-          },
-          "motivo": {
-            "type": "string"
-          }
-        }
-      },
-      "description": "Historial de cambios de taquilla"
+        "type": "object"
+      }
     },
     "notas": {
-      "type": "string",
-      "description": "Notas adicionales"
+      "type": "string"
     },
     "notificacion_enviada": {
       "type": "boolean",
-      "default": false,
-      "description": "Si se envi\u00f3 notificaci\u00f3n de reasignaci\u00f3n"
+      "default": false
     }
   },
   "required": [
     "employee_id"
-  ],
-  "rls": {
-    "create": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "read": {
-      "$or": [
-        {
-          "data.employee_id": "{{user.employee_id}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "rrhh"
-          }
-        }
-      ]
-    },
-    "update": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "delete": {
-      "user_condition": {
-        "role": "admin"
-      }
-    }
-  }
+  ]
 }
