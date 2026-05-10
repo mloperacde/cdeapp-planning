@@ -83,7 +83,7 @@
     "read": {
       "$or": [
         {
-          "data.employee_id": "{{user.id}}"
+          "data.employee_id": "{{user.employee_id}}"
         },
         {
           "user_condition": {
@@ -92,7 +92,7 @@
         },
         {
           "user_condition": {
-            "role": "supervisor"
+            "role": "rrhh"
           }
         }
       ]
