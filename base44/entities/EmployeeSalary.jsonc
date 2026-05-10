@@ -1,0 +1,119 @@
+{
+  "name": "EmployeeSalary",
+  "type": "object",
+  "properties": {
+    "employee_id": {
+      "type": "string",
+      "description": "ID del empleado (EmployeeMasterDatabase)"
+    },
+    "employee_name": {
+      "type": "string",
+      "description": "Nombre del empleado (para facilitar consultas)"
+    },
+    "employee_code": {
+      "type": "string",
+      "description": "C\u00f3digo del empleado"
+    },
+    "component_id": {
+      "type": "string",
+      "description": "ID del componente salarial"
+    },
+    "component_name": {
+      "type": "string",
+      "description": "Nombre del componente (para facilitar consultas)"
+    },
+    "component_code": {
+      "type": "string",
+      "description": "C\u00f3digo del componente"
+    },
+    "amount": {
+      "type": "number",
+      "description": "Cantidad asignada"
+    },
+    "percentage": {
+      "type": "number",
+      "description": "Porcentaje si aplica"
+    },
+    "start_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha de inicio de vigencia"
+    },
+    "end_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha de fin de vigencia (para hist\u00f3rico)"
+    },
+    "is_current": {
+      "type": "boolean",
+      "default": true,
+      "description": "Si es el registro actual vigente"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Notas o comentarios sobre la asignaci\u00f3n"
+    },
+    "approved_by": {
+      "type": "string",
+      "description": "Usuario que aprob\u00f3 el cambio"
+    },
+    "approval_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Fecha de aprobaci\u00f3n"
+    },
+    "requires_approval": {
+      "type": "boolean",
+      "default": false,
+      "description": "Si requiere aprobaci\u00f3n"
+    },
+    "change_request_id": {
+      "type": "string",
+      "description": "ID de la solicitud de cambio asociada"
+    },
+    "previous_version_id": {
+      "type": "string",
+      "description": "ID de la versi\u00f3n anterior (para historial)"
+    },
+    "version": {
+      "type": "number",
+      "default": 1,
+      "description": "N\u00famero de versi\u00f3n"
+    }
+  },
+  "required": [
+    "employee_id",
+    "component_id",
+    "amount",
+    "start_date"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    },
+    "read": {
+      "$or": [
+        {
+          "data.employee_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    }
+  }
+}
