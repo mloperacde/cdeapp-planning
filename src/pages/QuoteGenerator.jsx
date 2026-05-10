@@ -56,10 +56,7 @@ export default function QuoteGenerator() {
     return (
       formData.client_name &&
       formData.client_email &&
-      formData.quote_type &&
-      formData.product_type &&
-      formData.volume &&
-      formData.container_type
+      formData.quote_type
     );
   };
 
