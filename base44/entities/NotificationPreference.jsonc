@@ -139,33 +139,13 @@
       "data.user_email": "{{user.email}}"
     },
     "read": {
-      "$or": [
-        {
-          "data.user_email": "{{user.email}}"
-        },
-        {
-          "user_condition": {
-            "role": "Admin"
-          }
-        }
-      ]
+      "data.user_email": "{{user.email}}"
     },
     "update": {
-      "$or": [
-        {
-          "data.user_email": "{{user.email}}"
-        },
-        {
-          "user_condition": {
-            "role": "Admin"
-          }
-        }
-      ]
+      "data.user_email": "{{user.email}}"
     },
     "delete": {
-      "user_condition": {
-        "role": "Admin"
-      }
+      "data.user_email": "{{user.email}}"
     }
   }
 }
