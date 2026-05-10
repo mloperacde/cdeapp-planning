@@ -1,0 +1,67 @@
+{
+  "name": "MachineAssignmentAudit",
+  "type": "object",
+  "properties": {
+    "machine_id": {
+      "type": "string",
+      "description": "ID de la m\u00e1quina afectada"
+    },
+    "machine_name": {
+      "type": "string",
+      "description": "Nombre de la m\u00e1quina (para referencia hist\u00f3rica)"
+    },
+    "team_key": {
+      "type": "string",
+      "description": "Clave del equipo (ej: team_1)"
+    },
+    "action": {
+      "type": "string",
+      "enum": [
+        "create",
+        "update"
+      ],
+      "description": "Tipo de acci\u00f3n"
+    },
+    "changes": {
+      "type": "string",
+      "description": "Descripci\u00f3n JSON stringified de los cambios (antiguo -> nuevo)"
+    },
+    "modified_by": {
+      "type": "string",
+      "description": "Email del usuario que realiz\u00f3 el cambio"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Fecha y hora del cambio"
+    }
+  },
+  "required": [
+    "machine_id",
+    "action",
+    "modified_by",
+    "timestamp"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    }
+  }
+}
