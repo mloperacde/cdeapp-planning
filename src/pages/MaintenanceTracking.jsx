@@ -32,14 +32,28 @@ import MaintenanceSchedulingCalendar from "../components/maintenance/Maintenance
 const EMPTY_ARRAY = [];
 
 export default function MaintenanceTrackingPage() {
-  const [currentTab, setCurrentTab] = useState('gmao');
-  const [selectedMachine, setSelectedMachine] = useState(null);
+  const [currentTab, setCurrentTab] = useState(() => {
+    return localStorage.getItem('mt_tab') || 'gmao';
+  });
+  const [selectedMachineId, setSelectedMachineId] = useState(() => {
+    return localStorage.getItem('mt_machine_id') || null;
+  });
   const [showForm, setShowForm] = useState(false);
   const [editingMaintenance, setEditingMaintenance] = useState(null);
   const [filters, setFilters] = useState({});
   const [showTypeManager, setShowTypeManager] = useState(false);
   const [showWorkOrder, setShowWorkOrder] = useState(null);
   const queryClient = useQueryClient();
+
+  const handleTabChange = (tab) => {
+    setCurrentTab(tab);
+    localStorage.setItem('mt_tab', tab);
+  };
+
+  const handleSelectMachine = (machine) => {
+    setSelectedMachineId(machine?.id || null);
+    localStorage.setItem('mt_machine_id', machine?.id || '');
+  };
 
   const { data: maintenances = EMPTY_ARRAY } = useQuery({
     queryKey: ['maintenances'],
@@ -69,6 +83,12 @@ export default function MaintenanceTrackingPage() {
     queryFn: () => base44.entities.MaintenanceType.list(),
     initialData: EMPTY_ARRAY,
   });
+
+  // Derive selectedMachine from persisted ID once machines are loaded
+  const selectedMachine = useMemo(() => {
+    if (!selectedMachineId || !machines.length) return null;
+    return machines.find(m => m.id === selectedMachineId) || null;
+  }, [selectedMachineId, machines]);
 
   // Filtered maintenances
   const filteredMaintenances = React.useMemo(() => {
@@ -355,7 +375,7 @@ export default function MaintenanceTrackingPage() {
           </Card>
         </div>
 
-        <Tabs value={currentTab} onValueChange={setCurrentTab} className="space-y-6">
+        <Tabs value={currentTab} onValueChange={handleTabChange} className="space-y-6">
           <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="gmao">GMAO</TabsTrigger>
             <TabsTrigger value="kanban">
@@ -382,8 +402,8 @@ export default function MaintenanceTrackingPage() {
                 <CardContent className="flex-1 p-4 overflow-hidden">
                   <MachineInventory 
                     machines={machines}
-                    onSelectMachine={setSelectedMachine}
-                    selectedMachineId={selectedMachine?.id}
+                    onSelectMachine={handleSelectMachine}
+                    selectedMachineId={selectedMachineId}
                   />
                 </CardContent>
               </Card>
