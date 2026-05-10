@@ -1,0 +1,145 @@
+{
+  "name": "PerformanceImprovementPlan",
+  "type": "object",
+  "properties": {
+    "employee_id": {
+      "type": "string",
+      "description": "ID del registro del empleado en EmployeeMasterDatabase (llave for\u00e1nea \u2192 EmployeeMasterDatabase.id)"
+    },
+    "titulo": {
+      "type": "string",
+      "description": "T\u00edtulo del plan de mejora"
+    },
+    "fecha_inicio": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha de inicio del plan"
+    },
+    "fecha_fin_prevista": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha de finalizaci\u00f3n prevista"
+    },
+    "fecha_fin_real": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha de finalizaci\u00f3n real"
+    },
+    "problema_identificado": {
+      "type": "string",
+      "description": "Descripci\u00f3n del problema o \u00e1rea de mejora"
+    },
+    "objetivos_mejora": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "descripcion": {
+            "type": "string"
+          },
+          "completado": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "description": "Lista de objetivos de mejora"
+    },
+    "acciones_requeridas": {
+      "type": "string",
+      "description": "Acciones espec\u00edficas que debe tomar el empleado"
+    },
+    "soporte_necesario": {
+      "type": "string",
+      "description": "Soporte o recursos necesarios"
+    },
+    "seguimientos": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "fecha": {
+            "type": "string",
+            "format": "date"
+          },
+          "comentarios": {
+            "type": "string"
+          },
+          "progreso": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          }
+        }
+      },
+      "description": "Registro de seguimientos"
+    },
+    "estado": {
+      "type": "string",
+      "enum": [
+        "Activo",
+        "Completado",
+        "Cancelado"
+      ],
+      "default": "Activo",
+      "description": "Estado del plan"
+    },
+    "resultado_final": {
+      "type": "string",
+      "enum": [
+        "Exitoso",
+        "Parcialmente Exitoso",
+        "No Exitoso",
+        "Pendiente"
+      ],
+      "default": "Pendiente",
+      "description": "Resultado del plan"
+    },
+    "notas_finales": {
+      "type": "string",
+      "description": "Notas o comentarios finales"
+    }
+  },
+  "required": [
+    "employee_id",
+    "titulo",
+    "fecha_inicio",
+    "problema_identificado"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    },
+    "read": {
+      "$or": [
+        {
+          "data.employee_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.employee_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    }
+  }
+}
