@@ -28,45 +28,32 @@ Deno.serve(async (req) => {
       timestamp: new Date().toISOString(),
     };
 
-    // Eliminar registros de ausencias
-    const absences = await base44.asServiceRole.entities.Absence.list();
-    if (absences.length > 0) {
-      const absenceIds = absences.map(a => a.id);
-      for (const id of absenceIds) {
-        await base44.asServiceRole.entities.Absence.delete(id);
+    // Helper para eliminar secuencialmente con delays para evitar rate limit
+    const deleteSequentially = async (entity, delayMs = 800) => {
+      const records = await base44.asServiceRole.entities[entity].list();
+      let deleted = 0;
+      
+      for (const record of records) {
+        try {
+          await base44.asServiceRole.entities[entity].delete(record.id);
+          deleted++;
+          await new Promise(resolve => setTimeout(resolve, delayMs));
+        } catch (err) {
+          if (err.message?.includes('Rate limit')) {
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            await base44.asServiceRole.entities[entity].delete(record.id);
+            deleted++;
+          }
+        }
       }
-      deletionStats.absences = absenceIds.length;
-    }
+      return deleted;
+    };
 
-    // Eliminar registros de asistencia
-    const attendanceRecords = await base44.asServiceRole.entities.AttendanceRecord.list();
-    if (attendanceRecords.length > 0) {
-      const recordIds = attendanceRecords.map(r => r.id);
-      for (const id of recordIds) {
-        await base44.asServiceRole.entities.AttendanceRecord.delete(id);
-      }
-      deletionStats.attendanceRecords = recordIds.length;
-    }
-
-    // Eliminar registros de descansos
-    const breakRecords = await base44.asServiceRole.entities.BreakRecord.list();
-    if (breakRecords.length > 0) {
-      const breakIds = breakRecords.map(b => b.id);
-      for (const id of breakIds) {
-        await base44.asServiceRole.entities.BreakRecord.delete(id);
-      }
-      deletionStats.breakRecords = breakIds.length;
-    }
-
-    // Eliminar logs de auditoría de ausencias
-    const auditLogs = await base44.asServiceRole.entities.AbsenceAuditLog.list();
-    if (auditLogs.length > 0) {
-      const logIds = auditLogs.map(l => l.id);
-      for (const id of logIds) {
-        await base44.asServiceRole.entities.AbsenceAuditLog.delete(id);
-      }
-      deletionStats.absenceAuditLogs = logIds.length;
-    }
+    // Eliminar datos históricos secuencialmente
+    deletionStats.absences = await deleteSequentially('Absence', 800);
+    deletionStats.attendanceRecords = await deleteSequentially('AttendanceRecord', 800);
+    deletionStats.breakRecords = await deleteSequentially('BreakRecord', 800);
+    deletionStats.absenceAuditLogs = await deleteSequentially('AbsenceAuditLog', 800);
 
     return Response.json({
       success: true,
