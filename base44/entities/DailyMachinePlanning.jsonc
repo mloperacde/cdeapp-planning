@@ -1,0 +1,175 @@
+{
+  "name": "DailyMachinePlanning",
+  "type": "object",
+  "properties": {
+    "date": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha de la planificaci\u00f3n"
+    },
+    "shift": {
+      "type": "string",
+      "enum": [
+        "Ma\u00f1ana",
+        "Tarde",
+        "Noche"
+      ],
+      "description": "Turno de trabajo"
+    },
+    "machine_id": {
+      "type": "string",
+      "description": "ID de la m\u00e1quina"
+    },
+    "team_key": {
+      "type": "string",
+      "description": "Equipo para el que se planifica"
+    },
+    "process_id": {
+      "type": "string",
+      "description": "ID del proceso seleccionado"
+    },
+    "activa": {
+      "type": "boolean",
+      "default": true,
+      "description": "Si la m\u00e1quina est\u00e1 activa en el planning"
+    },
+    "operadores_necesarios": {
+      "type": "number",
+      "description": "N\u00famero de operadores necesarios"
+    },
+    "responsable_linea": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "IDs de responsables de l\u00ednea"
+    },
+    "segunda_linea": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "IDs de segundas de l\u00ednea"
+    },
+    "operador_1": {
+      "type": "string",
+      "description": "ID operador 1"
+    },
+    "operador_2": {
+      "type": "string",
+      "description": "ID operador 2"
+    },
+    "operador_3": {
+      "type": "string",
+      "description": "ID operador 3"
+    },
+    "operador_4": {
+      "type": "string",
+      "description": "ID operador 4"
+    },
+    "operador_5": {
+      "type": "string",
+      "description": "ID operador 5"
+    },
+    "operador_6": {
+      "type": "string",
+      "description": "ID operador 6"
+    },
+    "operador_7": {
+      "type": "string",
+      "description": "ID operador 7"
+    },
+    "operador_8": {
+      "type": "string",
+      "description": "ID operador 8"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Borrador",
+        "Confirmado"
+      ],
+      "default": "Borrador",
+      "description": "Estado de la planificaci\u00f3n"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Notas sobre la asignaci\u00f3n"
+    },
+    "migration_from": {
+      "type": "string",
+      "enum": [
+        "MachinePlanning",
+        "DailyMachineStaffing"
+      ],
+      "description": "Origen de migraci\u00f3n"
+    }
+  },
+  "required": [
+    "date",
+    "machine_id"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "Jefe Turno Produccion"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "Operario"
+          }
+        },
+        {
+          "data.operador_1": "{{user.id}}"
+        },
+        {
+          "data.operador_2": "{{user.id}}"
+        },
+        {
+          "data.responsable_linea": "{{user.id}}"
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "Jefe Turno Produccion"
+          }
+        },
+        {
+          "data.operador_1": "{{user.id}}"
+        },
+        {
+          "data.operador_2": "{{user.id}}"
+        },
+        {
+          "data.responsable_linea": "{{user.id}}"
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    }
+  }
+}
