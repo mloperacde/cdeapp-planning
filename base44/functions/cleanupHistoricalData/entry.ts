@@ -6,7 +6,14 @@ Deno.serve(async (req) => {
     const user = await base44.auth.me();
 
     // Solo admin puede limpiar datos históricos
-    if (user?.role !== 'admin') {
+    if (!user) {
+      return Response.json(
+        { error: 'Unauthorized: User not authenticated' },
+        { status: 401 }
+      );
+    }
+
+    if (!user.role || user.role.toLowerCase() !== 'admin') {
       return Response.json(
         { error: 'Forbidden: Admin access required' },
         { status: 403 }
