@@ -82,18 +82,47 @@
   ],
   "rls": {
     "create": {
-      "user_condition": {
-        "role": "Admin"
-      }
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "manager"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "Jefe Turno Produccion"
+          }
+        }
+      ]
     },
     "read": {
       "$or": [
         {
-          "data.operadores_asignados": "{{user.id}}"
+          "data.responsable_linea_id": "{{user.id}}"
+        },
+        {
+          "data.segunda_linea_id": "{{user.id}}"
+        },
+        {
+          "data.operadores_asignados": {
+            "$in": [
+              "{{user.id}}"
+            ]
+          }
         },
         {
           "user_condition": {
-            "role": "Admin"
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "manager"
           }
         },
         {
@@ -107,7 +136,12 @@
       "$or": [
         {
           "user_condition": {
-            "role": "Admin"
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "manager"
           }
         },
         {
@@ -119,7 +153,7 @@
     },
     "delete": {
       "user_condition": {
-        "role": "Admin"
+        "role": "admin"
       }
     }
   }
