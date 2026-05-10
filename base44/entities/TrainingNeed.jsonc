@@ -1,0 +1,123 @@
+{
+  "name": "TrainingNeed",
+  "type": "object",
+  "properties": {
+    "employee_id": {
+      "type": "string",
+      "description": "ID del empleado"
+    },
+    "skill_id": {
+      "type": "string",
+      "description": "ID de la habilidad"
+    },
+    "nivel_actual": {
+      "type": "string",
+      "enum": [
+        "Ninguno",
+        "B\u00e1sico",
+        "Intermedio",
+        "Avanzado",
+        "Experto"
+      ],
+      "default": "Ninguno",
+      "description": "Nivel actual del empleado"
+    },
+    "nivel_objetivo": {
+      "type": "string",
+      "enum": [
+        "B\u00e1sico",
+        "Intermedio",
+        "Avanzado",
+        "Experto"
+      ],
+      "description": "Nivel objetivo a alcanzar"
+    },
+    "prioridad": {
+      "type": "string",
+      "enum": [
+        "Baja",
+        "Media",
+        "Alta",
+        "Urgente"
+      ],
+      "default": "Media",
+      "description": "Prioridad de la formaci\u00f3n"
+    },
+    "razon": {
+      "type": "string",
+      "description": "Raz\u00f3n de la necesidad de formaci\u00f3n"
+    },
+    "proceso_relacionado_id": {
+      "type": "string",
+      "description": "ID del proceso que requiere esta habilidad"
+    },
+    "fecha_identificacion": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Fecha en que se identific\u00f3 la necesidad"
+    },
+    "fecha_objetivo": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha objetivo para completar la formaci\u00f3n"
+    },
+    "estado": {
+      "type": "string",
+      "enum": [
+        "Pendiente",
+        "En Progreso",
+        "Completada",
+        "Cancelada"
+      ],
+      "default": "Pendiente",
+      "description": "Estado de la necesidad de formaci\u00f3n"
+    },
+    "training_module_id": {
+      "type": "string",
+      "description": "ID del m\u00f3dulo de formaci\u00f3n asignado"
+    },
+    "notas": {
+      "type": "string",
+      "description": "Notas adicionales"
+    }
+  },
+  "required": [
+    "employee_id",
+    "skill_id",
+    "nivel_objetivo"
+  ],
+  "rls": {
+    "create": {
+      "data.employee_id": "{{user.id}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "data.employee_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.employee_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    }
+  }
+}
