@@ -1,0 +1,184 @@
+{
+  "name": "EmployeeOnboarding",
+  "type": "object",
+  "properties": {
+    "employee_id": {
+      "type": "string",
+      "description": "ID del empleado"
+    },
+    "estado": {
+      "type": "string",
+      "enum": [
+        "En Proceso",
+        "Completado",
+        "Pendiente"
+      ],
+      "default": "En Proceso",
+      "description": "Estado general del onboarding"
+    },
+    "fecha_inicio": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha de inicio del onboarding"
+    },
+    "fecha_completado": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha de finalizaci\u00f3n del onboarding"
+    },
+    "paso_actual": {
+      "type": "number",
+      "default": 1,
+      "description": "Paso actual en el proceso (1-6)"
+    },
+    "pasos_completados": {
+      "type": "object",
+      "description": "Estado de cada paso del proceso",
+      "properties": {
+        "paso_1_bienvenida": {
+          "type": "boolean",
+          "default": false
+        },
+        "paso_2_datos_personales": {
+          "type": "boolean",
+          "default": false
+        },
+        "paso_3_documentos": {
+          "type": "boolean",
+          "default": false
+        },
+        "paso_4_configuracion_cuenta": {
+          "type": "boolean",
+          "default": false
+        },
+        "paso_5_asignacion_recursos": {
+          "type": "boolean",
+          "default": false
+        },
+        "paso_6_formacion_inicial": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "documentos_pendientes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string"
+          },
+          "requerido": {
+            "type": "boolean"
+          },
+          "recibido": {
+            "type": "boolean"
+          },
+          "fecha_recepcion": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "archivo_url": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Lista de documentos a recopilar"
+    },
+    "recursos_asignados": {
+      "type": "object",
+      "description": "Recursos asignados al empleado",
+      "properties": {
+        "taquilla_asignada": {
+          "type": "boolean",
+          "default": false
+        },
+        "equipo_asignado": {
+          "type": "boolean",
+          "default": false
+        },
+        "accesos_sistemas": {
+          "type": "boolean",
+          "default": false
+        },
+        "formacion_seguridad": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "notificaciones_enviadas": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string"
+          },
+          "fecha": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "destinatario": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Historial de notificaciones enviadas"
+    },
+    "responsable_onboarding": {
+      "type": "string",
+      "description": "ID o email del responsable del onboarding"
+    },
+    "notas": {
+      "type": "string",
+      "description": "Notas adicionales del proceso"
+    },
+    "porcentaje_completado": {
+      "type": "number",
+      "default": 0,
+      "description": "Porcentaje de completado (0-100)"
+    }
+  },
+  "required": [
+    "employee_id",
+    "fecha_inicio"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    },
+    "read": {
+      "$or": [
+        {
+          "data.employee_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.employee_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    }
+  }
+}
