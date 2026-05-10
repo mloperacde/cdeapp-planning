@@ -5,13 +5,17 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { useAppData } from "../components/data/DataProvider";
+import { useQueryClient } from "@tanstack/react-query";
+import { base44 } from "@/api/base44Client";
 import { Badge } from "../components/ui/badge";
+import { Button } from "../components/ui/button";
+import { Dialog, DialogContent, DialogTrigger } from "../components/ui/dialog";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import {
   LayoutDashboard, UserX, Clock, BarChart3, Settings,
   Radio, Radar, CalendarDays, FileText, CheckSquare,
-  Coffee, LogIn, Calendar, Cog, Activity
+  Coffee, LogIn, Calendar, Cog, Activity, Trash2, RefreshCw
 } from "lucide-react";
 
 // Módulos de presencia
@@ -159,15 +163,19 @@ function SubNav({ items, active, onSelect }) {
 // ── Página principal ──────────────────────────────────────────────────────────
 export default function PresenceAbsenceHub() {
   const location = useLocation();
+  const queryClient = useQueryClient();
   const {
     user: currentUser,
     absences = [],
     employees = [],
     absenceTypes = [],
+    isAdmin = false
   } = useAppData();
 
   const [activeSection, setActiveSection] = useState("overview");
   const [activeSub, setActiveSub] = useState({});
+  const [cleanupLoading, setCleanupLoading] = useState(false);
+  const [showCleanupDialog, setShowCleanupDialog] = useState(false);
 
   // Sync desde URL params
   useEffect(() => {
@@ -185,6 +193,25 @@ export default function PresenceAbsenceHub() {
     const navItem = NAV_STRUCTURE.find(n => n.id === section);
     if (navItem?.children && !activeSub[section]) {
       setActiveSub(prev => ({ ...prev, [section]: navItem.children[0].id }));
+    }
+  };
+
+  const handleRefresh = () => {
+    queryClient.invalidateQueries({ queryKey: ['absences'] });
+    queryClient.invalidateQueries({ queryKey: ['employeeMasterDatabase'] });
+  };
+
+  const handleCleanupHistorical = async () => {
+    setCleanupLoading(true);
+    try {
+      const result = await base44.functions.invoke('cleanupHistoricalData', {});
+      queryClient.invalidateQueries();
+      setShowCleanupDialog(false);
+      alert(`Histórico limpiado: ${result.data.deletionStats.absences} ausencias, ${result.data.deletionStats.attendanceRecords} registros de asistencia eliminados`);
+    } catch (error) {
+      alert('Error al limpiar histórico: ' + error.message);
+    } finally {
+      setCleanupLoading(false);
     }
   };
 
@@ -277,13 +304,74 @@ export default function PresenceAbsenceHub() {
         )}
 
         {/* ══ AUSENCIAS ══════════════════════════════════════════════════════ */}
-        {activeSection === "ausencias" && (
-          <div>
-            <SubNav
-              items={currentSubItems}
-              active={currentSub}
-              onSelect={(sub) => setActiveSub(prev => ({ ...prev, ausencias: sub }))}
-            />
+         {activeSection === "ausencias" && (
+           <div>
+             {isAdmin && (
+               <div className="mb-4 flex gap-2 justify-end">
+                 <Button
+                   type="button"
+                   variant="ghost"
+                   size="sm"
+                   className="h-8 text-xs gap-2"
+                   onClick={handleRefresh}
+                   title="Actualizar datos"
+                 >
+                   <RefreshCw className="w-3 h-3" />
+                   Actualizar
+                 </Button>
+                 <Dialog open={showCleanupDialog} onOpenChange={setShowCleanupDialog}>
+                   <DialogTrigger asChild>
+                     <Button 
+                       type="button"
+                       variant="ghost"
+                       size="sm"
+                       className="h-8 text-xs gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                       title="Limpiar histórico completo"
+                     >
+                       <Trash2 className="w-3 h-3" />
+                       Limpiar Histórico
+                     </Button>
+                   </DialogTrigger>
+                   <DialogContent>
+                     <div className="space-y-4">
+                       <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">⚠️ Limpiar Histórico Completo</h2>
+                       <p className="text-sm text-slate-600 dark:text-slate-400">
+                         Esta acción eliminará permanentemente:
+                       </p>
+                       <ul className="text-sm text-slate-600 dark:text-slate-400 list-disc list-inside space-y-1">
+                         <li>Todos los registros de ausencias</li>
+                         <li>Todos los registros de asistencia</li>
+                         <li>Todos los registros de descansos</li>
+                         <li>Logs de auditoría de ausencias</li>
+                       </ul>
+                       <p className="text-sm font-semibold text-red-600 dark:text-red-400">
+                         ❌ Esta acción no se puede deshacer.
+                       </p>
+                       <div className="flex gap-3 justify-end pt-4">
+                         <Button 
+                           variant="outline"
+                           onClick={() => setShowCleanupDialog(false)}
+                         >
+                           Cancelar
+                         </Button>
+                         <Button 
+                           className="bg-red-600 hover:bg-red-700 text-white"
+                           onClick={handleCleanupHistorical}
+                           disabled={cleanupLoading}
+                         >
+                           {cleanupLoading ? 'Limpiando...' : 'Confirmar Limpieza'}
+                         </Button>
+                       </div>
+                     </div>
+                   </DialogContent>
+                 </Dialog>
+               </div>
+             )}
+             <SubNav
+               items={currentSubItems}
+               active={currentSub}
+               onSelect={(sub) => setActiveSub(prev => ({ ...prev, ausencias: sub }))}
+             />
             {currentSub === "list" && (
               <UnifiedAbsenceManager
                 sourceContext="absence_page"
