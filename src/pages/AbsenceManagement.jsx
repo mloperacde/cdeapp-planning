@@ -39,7 +39,7 @@ export default function AbsenceManagementPage() {
     absences = [], 
     employees = [],
     absenceTypes = [],
-    isAdmin
+    isAdmin = false
   } = useAppData();
   const [cleanupLoading, setCleanupLoading] = useState(false);
   const [showCleanupDialog, setShowCleanupDialog] = useState(false);
