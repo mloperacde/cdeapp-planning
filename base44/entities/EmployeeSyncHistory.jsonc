@@ -1,0 +1,90 @@
+{
+  "name": "EmployeeSyncHistory",
+  "type": "object",
+  "properties": {
+    "master_employee_id": {
+      "type": "string",
+      "description": "ID del registro en EmployeeMasterDatabase"
+    },
+    "employee_id": {
+      "type": "string",
+      "description": "ID del registro en Employee"
+    },
+    "sync_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Fecha de sincronizaci\u00f3n"
+    },
+    "sync_type": {
+      "type": "string",
+      "enum": [
+        "Creaci\u00f3n",
+        "Actualizaci\u00f3n",
+        "Sincronizaci\u00f3n Total",
+        "Sincronizaci\u00f3n Parcial",
+        "Sincronizaci\u00f3n Autom\u00e1tica",
+        "Deshacer Sincronizaci\u00f3n"
+      ],
+      "description": "Tipo de sincronizaci\u00f3n"
+    },
+    "fields_synced": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Campos que fueron sincronizados"
+    },
+    "changes_detected": {
+      "type": "object",
+      "description": "Cambios detectados (antes y despu\u00e9s)"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Exitoso",
+        "Error"
+      ],
+      "default": "Exitoso",
+      "description": "Estado de la sincronizaci\u00f3n"
+    },
+    "error_message": {
+      "type": "string",
+      "description": "Mensaje de error si fall\u00f3"
+    },
+    "synced_by": {
+      "type": "string",
+      "description": "Usuario que ejecut\u00f3 la sincronizaci\u00f3n"
+    },
+    "sync_rule_applied": {
+      "type": "string",
+      "description": "Regla de sincronizaci\u00f3n aplicada (employee_empty, always_master, most_recent, merge_text)"
+    }
+  },
+  "required": [
+    "master_employee_id",
+    "sync_date",
+    "sync_type"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    }
+  }
+}
