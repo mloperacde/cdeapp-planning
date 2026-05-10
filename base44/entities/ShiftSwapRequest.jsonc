@@ -1,0 +1,165 @@
+{
+  "name": "ShiftSwapRequest",
+  "type": "object",
+  "properties": {
+    "solicitante_id": {
+      "type": "string",
+      "description": "ID del empleado que solicita el intercambio"
+    },
+    "nombre_solicitante": {
+      "type": "string",
+      "description": "Nombre del empleado solicitante"
+    },
+    "equipo_solicitante": {
+      "type": "string",
+      "description": "Equipo del empleado solicitante"
+    },
+    "fecha_cambio": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha para la que se solicita el cambio"
+    },
+    "turno_actual": {
+      "type": "string",
+      "enum": [
+        "Ma\u00f1ana",
+        "Tarde",
+        "Noche"
+      ],
+      "description": "Turno actual del solicitante"
+    },
+    "turno_deseado": {
+      "type": "string",
+      "enum": [
+        "Ma\u00f1ana",
+        "Tarde",
+        "Noche"
+      ],
+      "description": "Turno al que quiere cambiar"
+    },
+    "interesados": {
+      "type": "array",
+      "description": "Lista de empleados interesados en el cambio",
+      "items": {
+        "type": "object",
+        "properties": {
+          "employee_id": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "equipo": {
+            "type": "string"
+          },
+          "fecha_interes": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    "receptor_id": {
+      "type": "string",
+      "description": "ID del empleado aceptado definitivamente"
+    },
+    "nombre_receptor": {
+      "type": "string",
+      "description": "Nombre del empleado aceptado"
+    },
+    "motivo": {
+      "type": "string",
+      "description": "Motivo del intercambio"
+    },
+    "estado": {
+      "type": "string",
+      "enum": [
+        "Publicado",
+        "Pendiente Aprobaci\u00f3n",
+        "Aprobada",
+        "Rechazada",
+        "Cancelada"
+      ],
+      "default": "Publicado",
+      "description": "Estado de la solicitud"
+    },
+    "fecha_solicitud": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Fecha de publicaci\u00f3n"
+    },
+    "fecha_respuesta_supervisor": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "supervisor_id": {
+      "type": "string"
+    },
+    "comentarios_supervisor": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "solicitante_id",
+    "fecha_cambio",
+    "turno_actual",
+    "turno_deseado"
+  ],
+  "rls": {
+    "create": {
+      "data.solicitante_id": "{{user.id}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "data.solicitante_id": "{{user.id}}"
+        },
+        {
+          "data.receptor_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "Supervisor"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.solicitante_id": "{{user.id}}"
+        },
+        {
+          "data.receptor_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "Supervisor"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.solicitante_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        }
+      ]
+    }
+  }
+}
