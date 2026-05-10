@@ -1,0 +1,184 @@
+{
+  "name": "QualityInspection",
+  "type": "object",
+  "properties": {
+    "work_order_id": {
+      "type": "string",
+      "description": "ID de la orden de trabajo inspeccionada"
+    },
+    "product_article_code": {
+      "type": "string",
+      "description": "C\u00f3digo del art\u00edculo inspeccionado"
+    },
+    "product_name": {
+      "type": "string",
+      "description": "Nombre del producto inspeccionado"
+    },
+    "inspection_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Fecha y hora de la inspecci\u00f3n"
+    },
+    "inspector_id": {
+      "type": "string",
+      "description": "ID del inspector (empleado)"
+    },
+    "inspector_name": {
+      "type": "string",
+      "description": "Nombre del inspector"
+    },
+    "result": {
+      "type": "string",
+      "enum": [
+        "Aprobado",
+        "Rechazado",
+        "Aprobado con Observaciones"
+      ],
+      "description": "Resultado de la inspecci\u00f3n"
+    },
+    "defects_found": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Lista de defectos encontrados"
+    },
+    "quantity_inspected": {
+      "type": "number",
+      "description": "Cantidad inspeccionada"
+    },
+    "quantity_approved": {
+      "type": "number",
+      "description": "Cantidad aprobada"
+    },
+    "quantity_rejected": {
+      "type": "number",
+      "description": "Cantidad rechazada"
+    },
+    "comments": {
+      "type": "string",
+      "description": "Comentarios y observaciones"
+    },
+    "rework_required": {
+      "type": "boolean",
+      "default": false,
+      "description": "Si requiere retrabajo"
+    },
+    "rework_assigned_to": {
+      "type": "string",
+      "description": "ID del empleado asignado al retrabajo"
+    },
+    "rework_completed": {
+      "type": "boolean",
+      "default": false,
+      "description": "Si el retrabajo est\u00e1 completado"
+    },
+    "rework_completion_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Fecha de finalizaci\u00f3n del retrabajo"
+    },
+    "images": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "URLs de im\u00e1genes de la inspecci\u00f3n"
+    },
+    "machine_id": {
+      "type": "string",
+      "description": "ID de la m\u00e1quina donde se produjo"
+    },
+    "machine_name": {
+      "type": "string",
+      "description": "Nombre de la m\u00e1quina"
+    },
+    "team_key": {
+      "type": "string",
+      "description": "Equipo al que pertenece"
+    },
+    "responsable_linea": {
+      "type": "string",
+      "description": "ID del responsable de l\u00ednea"
+    },
+    "responsable_linea_name": {
+      "type": "string",
+      "description": "Nombre del responsable"
+    },
+    "segunda_linea": {
+      "type": "string",
+      "description": "ID de la segunda de l\u00ednea"
+    },
+    "segunda_linea_name": {
+      "type": "string",
+      "description": "Nombre de la segunda"
+    },
+    "operarios": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Lista de operarios en la l\u00ednea"
+    },
+    "severity": {
+      "type": "string",
+      "enum": [
+        "Baja",
+        "Media",
+        "Alta",
+        "Cr\u00edtica"
+      ],
+      "default": "Media",
+      "description": "Severidad del problema (si rechazado)"
+    }
+  },
+  "required": [
+    "inspection_date",
+    "inspector_id",
+    "result"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    },
+    "read": {
+      "$or": [
+        {
+          "data.inspector_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        },
+        {
+          "data.inspector_id": "{{user.id}}"
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    }
+  }
+}
