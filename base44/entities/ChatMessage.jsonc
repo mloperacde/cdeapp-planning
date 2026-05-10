@@ -1,0 +1,97 @@
+{
+  "name": "ChatMessage",
+  "type": "object",
+  "properties": {
+    "channel_id": {
+      "type": "string",
+      "description": "ID del canal"
+    },
+    "sender_id": {
+      "type": "string",
+      "description": "ID del empleado remitente"
+    },
+    "mensaje": {
+      "type": "string",
+      "description": "Contenido del mensaje"
+    },
+    "tipo": {
+      "type": "string",
+      "enum": [
+        "texto",
+        "archivo",
+        "imagen",
+        "sistema"
+      ],
+      "default": "texto",
+      "description": "Tipo de mensaje"
+    },
+    "archivo_url": {
+      "type": "string",
+      "description": "URL del archivo adjunto"
+    },
+    "leido_por": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "IDs de usuarios que han le\u00eddo el mensaje"
+    },
+    "fecha_envio": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Fecha y hora de env\u00edo"
+    }
+  },
+  "required": [
+    "channel_id",
+    "sender_id",
+    "mensaje"
+  ],
+  "rls": {
+    "create": {
+      "data.sender_id": "{{user.id}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "data.sender_id": "{{user.id}}"
+        },
+        {
+          "data.channel_id": {
+            "$in": "{{user.data.chat_channels}}"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.sender_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.sender_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}
