@@ -90,7 +90,7 @@
   "rls": {
     "create": {
       "user_condition": {
-        "role": "rrhh"
+        "role": "admin"
       }
     },
     "read": {
@@ -107,22 +107,17 @@
           "user_condition": {
             "role": "rrhh"
           }
-        },
-        {
-          "user_condition": {
-            "role": "payroll"
-          }
         }
       ]
     },
     "update": {
       "user_condition": {
-        "role": "rrhh"
+        "role": "admin"
       }
     },
     "delete": {
       "user_condition": {
-        "role": "rrhh"
+        "role": "admin"
       }
     }
   }
