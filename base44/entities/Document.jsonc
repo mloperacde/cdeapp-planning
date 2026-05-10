@@ -180,17 +180,33 @@
     "read": {
       "$or": [
         {
-          "created_by": "{{user.email}}"
-        },
-        {
           "data.es_publico": true
         },
         {
-          "data.roles_acceso": "{{user.role}}"
+          "created_by": "{{user.email}}"
+        },
+        {
+          "data.roles_acceso": {
+            "$in": [
+              "{{user.role}}"
+            ]
+          }
+        },
+        {
+          "data.departamentos_acceso": {
+            "$in": [
+              "{{user.data.department}}"
+            ]
+          }
         },
         {
           "user_condition": {
-            "role": "Admin"
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "rrhh"
           }
         }
       ]
@@ -202,7 +218,7 @@
         },
         {
           "user_condition": {
-            "role": "Admin"
+            "role": "admin"
           }
         }
       ]
@@ -214,7 +230,7 @@
         },
         {
           "user_condition": {
-            "role": "Admin"
+            "role": "admin"
           }
         }
       ]
