@@ -158,7 +158,10 @@
     "read": {
       "$or": [
         {
-          "data.employee_id": "{{user.id}}"
+          "data.employee_id": "{{user.employee_id}}"
+        },
+        {
+          "data.investigado_por": "{{user.employee_id}}"
         },
         {
           "user_condition": {
@@ -167,7 +170,12 @@
         },
         {
           "user_condition": {
-            "role": "supervisor"
+            "role": "PRL"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "manager"
           }
         }
       ]
@@ -175,7 +183,7 @@
     "update": {
       "$or": [
         {
-          "created_by": "{{user.email}}"
+          "data.investigado_por": "{{user.employee_id}}"
         },
         {
           "user_condition": {
@@ -184,7 +192,7 @@
         },
         {
           "user_condition": {
-            "role": "supervisor"
+            "role": "PRL"
           }
         }
       ]
