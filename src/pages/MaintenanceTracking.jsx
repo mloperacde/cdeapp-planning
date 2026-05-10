@@ -28,6 +28,7 @@ import AdvancedSearch from "../components/common/AdvancedSearch";
 import MachineInventory from "../components/maintenance/MachineInventory";
 import MaintenancePlanManager from "../components/maintenance/MaintenancePlanManager";
 import MaintenanceSchedulingCalendar from "../components/maintenance/MaintenanceSchedulingCalendar";
+import MaintenanceHistoryView from "../components/maintenance/MaintenanceHistoryView";
 
 const EMPTY_ARRAY = [];
 
@@ -507,14 +508,15 @@ export default function MaintenanceTrackingPage() {
 
           <TabsContent value="history">
             <Card className="shadow-lg border-0 bg-white/80 dark:bg-card/80 backdrop-blur-sm">
-              <CardContent className="p-6">
-                {completedMaintenances.length === 0 ? (
-                  <div className="p-12 text-center text-slate-500 dark:text-slate-400">
-                    No hay historial de mantenimientos
-                  </div>
-                ) : (
-                  renderMaintenanceTable(completedMaintenances)
-                )}
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-blue-600" />
+                  Historial de Mantenimientos Ejecutados
+                  <span className="text-xs font-normal text-slate-500 ml-1">— Registro permanente para auditorías</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4">
+                <MaintenanceHistoryView machines={machines} employees={employees} />
               </CardContent>
             </Card>
           </TabsContent>

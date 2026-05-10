@@ -1,0 +1,166 @@
+{
+  "name": "MaintenanceRecord",
+  "type": "object",
+  "properties": {
+    "numero_registro": {
+      "type": "string",
+      "description": "N\u00famero \u00fanico de registro (ej: MR-2024-00123)"
+    },
+    "machine_id": {
+      "type": "string",
+      "description": "ID de la m\u00e1quina en MachineMasterDatabase"
+    },
+    "machine_name": {
+      "type": "string",
+      "description": "Nombre de la m\u00e1quina (desnormalizado para auditor\u00eda)"
+    },
+    "machine_codigo": {
+      "type": "string",
+      "description": "C\u00f3digo de la m\u00e1quina (desnormalizado para auditor\u00eda)"
+    },
+    "maintenance_plan_id": {
+      "type": "string",
+      "description": "ID del plan de mantenimiento origen"
+    },
+    "maintenance_plan_nombre": {
+      "type": "string",
+      "description": "Nombre del plan (desnormalizado)"
+    },
+    "maintenance_schedule_id": {
+      "type": "string",
+      "description": "ID de la orden de trabajo en MaintenanceSchedule"
+    },
+    "tipo": {
+      "type": "string",
+      "enum": [
+        "Preventivo",
+        "Correctivo",
+        "Predictivo",
+        "Mixto"
+      ],
+      "description": "Tipo de mantenimiento realizado"
+    },
+    "periodicidad": {
+      "type": "string",
+      "description": "Periodicidad del plan (ej: Mensual, Trimestral)"
+    },
+    "fecha_inicio": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Fecha y hora de inicio del mantenimiento"
+    },
+    "fecha_fin": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Fecha y hora de finalizaci\u00f3n del mantenimiento"
+    },
+    "duracion_minutos": {
+      "type": "number",
+      "description": "Duraci\u00f3n total en minutos"
+    },
+    "tecnico_id": {
+      "type": "string",
+      "description": "ID del t\u00e9cnico responsable"
+    },
+    "tecnico_nombre": {
+      "type": "string",
+      "description": "Nombre del t\u00e9cnico (desnormalizado)"
+    },
+    "ejecutado_por": {
+      "type": "string",
+      "description": "Email del usuario que registr\u00f3 la finalizaci\u00f3n"
+    },
+    "tareas_realizadas": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "titulo": {
+            "type": "string"
+          },
+          "completada": {
+            "type": "boolean"
+          },
+          "observaciones": {
+            "type": "string"
+          },
+          "subtareas": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "titulo": {
+                  "type": "string"
+                },
+                "completada": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        }
+      },
+      "description": "Lista de tareas y subtareas realizadas"
+    },
+    "observaciones": {
+      "type": "string",
+      "description": "Observaciones generales del mantenimiento"
+    },
+    "incidencias": {
+      "type": "string",
+      "description": "Incidencias o anomal\u00edas detectadas"
+    },
+    "materiales_usados": {
+      "type": "string",
+      "description": "Materiales y repuestos utilizados"
+    },
+    "firma_tecnico": {
+      "type": "string",
+      "description": "Firma digital del t\u00e9cnico (base64 data URL)"
+    },
+    "firma_supervisor": {
+      "type": "string",
+      "description": "Firma digital del supervisor (base64 data URL)"
+    },
+    "supervisor_nombre": {
+      "type": "string",
+      "description": "Nombre del supervisor que valid\u00f3"
+    },
+    "estado": {
+      "type": "string",
+      "enum": [
+        "Completado",
+        "Completado con incidencias",
+        "Cancelado"
+      ],
+      "default": "Completado",
+      "description": "Estado final del mantenimiento"
+    },
+    "proxima_fecha_calculada": {
+      "type": "string",
+      "format": "date",
+      "description": "Pr\u00f3xima fecha calculada tras este mantenimiento"
+    },
+    "imagenes_evidencia": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "URLs de im\u00e1genes de evidencia"
+    },
+    "pdf_url": {
+      "type": "string",
+      "description": "URL del PDF de la orden de trabajo archivada"
+    },
+    "numero_orden": {
+      "type": "string",
+      "description": "N\u00famero de la orden de trabajo original"
+    }
+  },
+  "required": [
+    "machine_id",
+    "tipo",
+    "fecha_inicio",
+    "estado"
+  ]
+}
