@@ -1,0 +1,107 @@
+{
+  "name": "RecurringAbsencePattern",
+  "type": "object",
+  "properties": {
+    "employee_id": {
+      "type": "string",
+      "description": "ID del empleado"
+    },
+    "tipo_ausencia": {
+      "type": "string",
+      "description": "Tipo de ausencia recurrente"
+    },
+    "patron_detectado": {
+      "type": "string",
+      "enum": [
+        "Lunes",
+        "Viernes",
+        "Lunes/Viernes",
+        "D\u00edas espec\u00edficos",
+        "Mensual",
+        "Otro"
+      ],
+      "description": "Patr\u00f3n detectado"
+    },
+    "numero_repeticiones": {
+      "type": "number",
+      "description": "N\u00famero de veces que se repite"
+    },
+    "periodo_analisis": {
+      "type": "string",
+      "description": "Per\u00edodo analizado (ej. \u00daltimos 3 meses)"
+    },
+    "fecha_inicio_periodo": {
+      "type": "string",
+      "format": "date",
+      "description": "Inicio del per\u00edodo de an\u00e1lisis"
+    },
+    "fecha_fin_periodo": {
+      "type": "string",
+      "format": "date",
+      "description": "Fin del per\u00edodo de an\u00e1lisis"
+    },
+    "ausencias_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "IDs de las ausencias que conforman el patr\u00f3n"
+    },
+    "nivel_alerta": {
+      "type": "string",
+      "enum": [
+        "Bajo",
+        "Medio",
+        "Alto"
+      ],
+      "description": "Nivel de alerta del patr\u00f3n"
+    },
+    "requiere_revision": {
+      "type": "boolean",
+      "default": false,
+      "description": "Si requiere revisi\u00f3n por RRHH"
+    },
+    "revisado_por": {
+      "type": "string",
+      "description": "ID de quien revis\u00f3"
+    },
+    "fecha_revision": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "notas_revision": {
+      "type": "string"
+    },
+    "activo": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "employee_id",
+    "tipo_ausencia",
+    "numero_repeticiones"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    }
+  }
+}
