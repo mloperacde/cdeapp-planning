@@ -1,0 +1,114 @@
+{
+  "name": "EmployeeIncentiveResult",
+  "type": "object",
+  "properties": {
+    "incentive_plan_id": {
+      "type": "string",
+      "description": "ID del plan de incentivos"
+    },
+    "employee_id": {
+      "type": "string",
+      "description": "ID del empleado"
+    },
+    "departamento": {
+      "type": "string",
+      "description": "Departamento del empleado"
+    },
+    "periodo_evaluacion": {
+      "type": "string",
+      "description": "Per\u00edodo evaluado (ej. 2025-Q1, 2025-01)"
+    },
+    "resultados": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "parametro": {
+            "type": "string"
+          },
+          "valor_obtenido": {
+            "type": "number"
+          },
+          "meta_objetivo": {
+            "type": "number"
+          },
+          "peso_porcentaje": {
+            "type": "number"
+          },
+          "porcentaje_cumplimiento": {
+            "type": "number",
+            "description": "% de cumplimiento calculado"
+          },
+          "puntos_obtenidos": {
+            "type": "number",
+            "description": "Puntos ponderados obtenidos"
+          }
+        }
+      },
+      "description": "Resultados de cada par\u00e1metro"
+    },
+    "cumplimiento_total": {
+      "type": "number",
+      "description": "Porcentaje total de cumplimiento"
+    },
+    "incentivo_calculado": {
+      "type": "number",
+      "description": "Monto del incentivo calculado"
+    },
+    "estado": {
+      "type": "string",
+      "enum": [
+        "Pendiente",
+        "En Revisi\u00f3n",
+        "Aprobado",
+        "Pagado"
+      ],
+      "default": "Pendiente"
+    },
+    "observaciones": {
+      "type": "string"
+    },
+    "fecha_evaluacion": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "evaluado_por": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "incentive_plan_id",
+    "employee_id",
+    "departamento",
+    "periodo_evaluacion"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    },
+    "read": {
+      "$or": [
+        {
+          "data.employee_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    }
+  }
+}
