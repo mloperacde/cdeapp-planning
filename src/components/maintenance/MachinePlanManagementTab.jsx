@@ -189,12 +189,7 @@ export default function MachinePlanManagementTab({ machine }) {
             <Calendar className="w-5 h-5 text-green-600" />
             Planes Configurados ({machinePlans.length})
           </CardTitle>
-          {applicableTypes.length > 0 && (
-            <Button size="sm" onClick={handleOpenNew} className="gap-2">
-              <Plus className="w-4 h-4" />
-              Nuevo Plan
-            </Button>
-          )}
+
         </CardHeader>
         <CardContent>
           {machinePlans.length === 0 ? (

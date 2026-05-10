@@ -1,185 +1,112 @@
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { AlertCircle, Calendar, CheckCircle, Edit2, Plus, Trash2, Clock, AlertTriangle, Zap } from "lucide-react";
-import { toast } from "sonner";
-import { format, addDays, differenceInDays, isPast } from "date-fns";
+import { AlertCircle, Calendar, CheckCircle, Clock, AlertTriangle, Play, Zap, ChevronDown, ChevronUp } from "lucide-react";
+import { format, differenceInDays, isPast } from "date-fns";
 import { es } from "date-fns/locale";
 
-const PERIODICITIES = {
-  'Diaria': 1,
-  'Semanal': 7,
-  'Quincenal': 15,
-  'Mensual': 30,
-  'Trimestral': 90,
-  'Semestral': 180,
-  'Anual': 365
-};
-
 export default function GmaoMaintenancePlans({ machine }) {
-  const [showDialog, setShowDialog] = useState(false);
-  const [editingPlan, setEditingPlan] = useState(null);
-  const [formData, setFormData] = useState({
-    periodicidad: 'Mensual',
-    dias_intervalo: 30,
-    ultima_ejecucion: new Date().toISOString().split('T')[0]
-  });
+  const [expandedType, setExpandedType] = useState(null);
+  const [executingPlanId, setExecutingPlanId] = useState(null);
   const queryClient = useQueryClient();
 
-  // Obtener planes para esta máquina específica
+  const { data: maintenanceTypes = [] } = useQuery({
+    queryKey: ['maintenance-types'],
+    queryFn: () => base44.entities.MaintenanceType.list(),
+    staleTime: 10 * 60 * 1000,
+  });
+
   const { data: machinePlans = [], isLoading: plansLoading } = useQuery({
     queryKey: ['gmao-plans', machine.id],
     queryFn: async () => {
-      try {
-        const allPlans = await base44.entities.MaintenancePlan.list(undefined, 100);
-        return allPlans.filter(p => p.machine_id === machine.id);
-      } catch (err) {
-        console.error('Error loading plans:', err);
-        return [];
-      }
+      const allPlans = await base44.entities.MaintenancePlan.list(undefined, 200);
+      return allPlans.filter(p => p.machine_id === machine.id);
     },
     staleTime: 5 * 60 * 1000,
   });
 
-  const createPlanMutation = useMutation({
-    mutationFn: (data) => base44.entities.MaintenancePlan.create(data),
+  const executePlanMutation = useMutation({
+    mutationFn: (plan_id) => base44.functions.invoke('triggerMaintenanceExecution', { plan_id }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['gmao-plans', machine.id] });
       queryClient.invalidateQueries({ queryKey: ['maintenance-plans'] });
-      setShowDialog(false);
-      resetForm();
-      toast.success('Plan de mantenimiento creado');
+      setExecutingPlanId(null);
     },
-    onError: (error) => {
-      toast.error('Error al crear plan: ' + error.message);
-    }
   });
 
-  const updatePlanMutation = useMutation({
-    mutationFn: (data) => base44.entities.MaintenancePlan.update(editingPlan.id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['gmao-plans', machine.id] });
-      queryClient.invalidateQueries({ queryKey: ['maintenance-plans'] });
-      setShowDialog(false);
-      setEditingPlan(null);
-      resetForm();
-      toast.success('Plan actualizado');
-    },
-    onError: (error) => {
-      toast.error('Error al actualizar: ' + error.message);
+  // Tipos asignados a esta máquina
+  const assignedTypes = maintenanceTypes.filter(mt =>
+    mt.machine_ids && mt.machine_ids.includes(machine.id) && mt.activo !== false
+  );
+
+  const getTareas = (type) => {
+    const tareas = [];
+    for (let i = 1; i <= 6; i++) {
+      const t = type[`tarea_${i}`];
+      if (t?.nombre) {
+        const subtareas = [];
+        for (let j = 1; j <= 8; j++) {
+          const st = t[`subtarea_${j}`];
+          if (st?.titulo) subtareas.push(st);
+        }
+        tareas.push({ ...t, subtareas });
+      }
     }
-  });
-
-  const deletePlanMutation = useMutation({
-    mutationFn: (id) => base44.entities.MaintenancePlan.delete(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['gmao-plans', machine.id] });
-      queryClient.invalidateQueries({ queryKey: ['maintenance-plans'] });
-      toast.success('Plan eliminado');
-    },
-    onError: (error) => {
-      toast.error('Error al eliminar: ' + error.message);
-    }
-  });
-
-  const resetForm = () => {
-    setFormData({
-      periodicidad: 'Mensual',
-      dias_intervalo: 30,
-      ultima_ejecucion: new Date().toISOString().split('T')[0]
-    });
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const diasIntervalo = PERIODICITIES[formData.periodicidad] || 30;
-    const proximaFecha = addDays(new Date(formData.ultima_ejecucion), diasIntervalo);
-
-    const planData = {
-      periodicidad: formData.periodicidad,
-      dias_intervalo: diasIntervalo,
-      ultima_ejecucion: formData.ultima_ejecucion + 'T00:00:00.000Z',
-      proxima_fecha: proximaFecha.toISOString().split('T')[0],
-      activo: true
-    };
-
-    if (editingPlan) {
-      updatePlanMutation.mutate(planData);
-    } else {
-      createPlanMutation.mutate({
-        machine_id: machine.id,
-        machine_name: machine.nombre_maquina || machine.nombre || getMachineDisplay(),
-        nombre_plan: `Plan ${formData.periodicidad} - ${machine.nombre_maquina || machine.nombre}`,
-        descripcion: `Plan de mantenimiento preventivo ${formData.periodicidad.toLowerCase()} para ${machine.nombre_maquina || machine.nombre}`,
-        tipo: 'Preventivo',
-        ...planData,
-        tareas: []
-      });
-    }
-  };
-
-  const handleEdit = (plan) => {
-    setEditingPlan(plan);
-    setFormData({
-      periodicidad: plan.periodicidad || 'Mensual',
-      dias_intervalo: plan.dias_intervalo || 30,
-      ultima_ejecucion: plan.ultima_ejecucion ? plan.ultima_ejecucion.split('T')[0] : new Date().toISOString().split('T')[0]
-    });
-    setShowDialog(true);
-  };
-
-  const getMachineDisplay = () => {
-    return machine.nombre_maquina || machine.nombre || machine.codigo_maquina || machine.id;
+    return tareas;
   };
 
   const getPlanStatus = (plan) => {
-    if (!plan.activo) {
-      return { status: 'inactivo', color: 'bg-slate-100 text-slate-700', icon: AlertCircle, label: 'Inactivo' };
-    }
-
+    if (!plan?.proxima_fecha) return null;
     const proximaDate = new Date(plan.proxima_fecha);
-    const ahora = new Date();
-    const dias = differenceInDays(proximaDate, ahora);
-
-    if (isPast(proximaDate)) {
-      return { status: 'vencido', color: 'bg-red-100 text-red-700', icon: AlertTriangle, label: 'VENCIDO', days: dias };
-    } else if (dias <= 7) {
-      return { status: 'urgente', color: 'bg-orange-100 text-orange-700', icon: Clock, label: 'PRÓXIMO', days: dias };
-    } else {
-      return { status: 'activo', color: 'bg-green-100 text-green-700', icon: CheckCircle, label: 'Activo', days: dias };
-    }
+    const dias = differenceInDays(proximaDate, new Date());
+    if (isPast(proximaDate)) return { label: 'VENCIDO', color: 'bg-red-100 text-red-700', icon: AlertTriangle };
+    if (dias <= 7) return { label: 'PRÓXIMO', color: 'bg-orange-100 text-orange-700', icon: Clock };
+    return { label: 'Activo', color: 'bg-green-100 text-green-700', icon: CheckCircle };
   };
+
+  if (plansLoading) {
+    return <div className="text-center py-8 text-slate-400 text-sm">Cargando planes...</div>;
+  }
 
   return (
     <div className="space-y-6">
-      {/* Resumen de Planes */}
-      {machinePlans.length > 0 && (
-        <Card className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-900">
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Zap className="w-5 h-5 text-blue-600" />
-                Planes de Mantenimiento Configurados
-              </div>
-              <Badge variant="outline" className="bg-white">{machinePlans.length} plan(es)</Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {machinePlans.map((plan) => {
-                const { status, color, icon: IconComponent, label, days } = getPlanStatus(plan);
-                const isOverdue = isPast(new Date(plan.proxima_fecha));
+      {/* Tipos de Mantenimiento Asignados */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Zap className="w-5 h-5 text-blue-600" />
+              Planes de Mantenimiento
+            </div>
+            <Badge variant="outline">{assignedTypes.length} asignado(s)</Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {assignedTypes.length === 0 ? (
+            <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-lg border border-slate-200">
+              <AlertCircle className="w-5 h-5 text-slate-400 flex-shrink-0" />
+              <p className="text-sm text-slate-600">
+                No hay planes de mantenimiento asignados. Configúralos en la sección de Tipos.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {assignedTypes.map((type) => {
+                const tareas = getTareas(type);
+                const isExpanded = expandedType === type.id;
+                const relatedPlan = machinePlans.find(p =>
+                  p.nombre_plan?.toLowerCase().includes(type.nombre?.toLowerCase().split(' ')[0])
+                ) || machinePlans[0];
+                const planStatus = getPlanStatus(relatedPlan);
+                const StatusIcon = planStatus?.icon;
+                const isOverdue = relatedPlan && isPast(new Date(relatedPlan.proxima_fecha));
 
                 return (
                   <div
-                    key={plan.id}
+                    key={type.id}
                     className={`p-4 rounded-lg border-2 transition-all ${
                       isOverdue
                         ? 'bg-red-50 border-red-300 dark:bg-red-900/20'
@@ -188,170 +115,114 @@ export default function GmaoMaintenancePlans({ machine }) {
                   >
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex-1">
-                        <h4 className="font-bold text-sm text-slate-900 dark:text-white">{plan.nombre_plan}</h4>
-                        <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">{plan.descripcion}</p>
+                        <h4 className="font-bold text-sm text-slate-900 dark:text-white">{type.nombre}</h4>
+                        {type.descripcion && (
+                          <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 line-clamp-2">{type.descripcion}</p>
+                        )}
                       </div>
-                      <Badge className={color}>
-                        <IconComponent className="w-3 h-3 mr-1" />
-                        {label}
+                      {planStatus && (
+                        <Badge className={planStatus.color + ' ml-2 flex-shrink-0'}>
+                          <StatusIcon className="w-3 h-3 mr-1" />
+                          {planStatus.label}
+                        </Badge>
+                      )}
+                    </div>
+
+                    {/* Info de ejecución */}
+                    {relatedPlan && (
+                      <div className="grid grid-cols-2 gap-2 text-xs mb-3 bg-slate-50 dark:bg-slate-700/50 p-2 rounded">
+                        <div>
+                          <span className="text-slate-500 dark:text-slate-400 block">Periodicidad</span>
+                          <p className="font-semibold">{relatedPlan.periodicidad || '—'}</p>
+                        </div>
+                        <div>
+                          <span className="text-slate-500 dark:text-slate-400 block">Intervalo</span>
+                          <p className="font-semibold">{relatedPlan.dias_intervalo ? `${relatedPlan.dias_intervalo}d` : '—'}</p>
+                        </div>
+                        {relatedPlan.ultima_ejecucion && (
+                          <div>
+                            <span className="text-slate-500 dark:text-slate-400 block">Último</span>
+                            <p className="font-semibold">
+                              {format(new Date(relatedPlan.ultima_ejecucion), 'dd/MM/yy', { locale: es })}
+                            </p>
+                          </div>
+                        )}
+                        {relatedPlan.proxima_fecha && (
+                          <div>
+                            <span className="text-slate-500 dark:text-slate-400 block">Próximo</span>
+                            <p className={`font-semibold ${isOverdue ? 'text-red-600' : ''}`}>
+                              {format(new Date(relatedPlan.proxima_fecha), 'dd/MM/yy', { locale: es })}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Tareas */}
+                    <div className="flex items-center justify-between mb-2">
+                      <Badge variant="outline" className="text-xs">
+                        {tareas.length} tarea(s)
                       </Badge>
+                      {tareas.length > 0 && (
+                        <button
+                          onClick={() => setExpandedType(isExpanded ? null : type.id)}
+                          className="text-xs text-blue-600 hover:underline flex items-center gap-1"
+                        >
+                          {isExpanded ? <><ChevronUp className="w-3 h-3" /> Ocultar</> : <><ChevronDown className="w-3 h-3" /> Ver tareas</>}
+                        </button>
+                      )}
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2 text-xs mb-3 bg-slate-50 dark:bg-slate-700/50 p-2 rounded">
-                      <div>
-                        <span className="text-slate-500 dark:text-slate-400 block">Periodicidad</span>
-                        <p className="font-semibold">{plan.periodicidad}</p>
+                    {isExpanded && tareas.length > 0 && (
+                      <div className="pt-2 border-t border-slate-200 dark:border-slate-700 space-y-2 mb-3">
+                        {tareas.map((tarea, idx) => (
+                          <div key={idx} className="text-xs">
+                            <div className="flex items-start gap-2">
+                              <span className="text-blue-600 font-bold mt-0.5">{idx + 1}.</span>
+                              <div className="flex-1">
+                                <p className="font-semibold">{tarea.nombre}</p>
+                                {tarea.subtareas.length > 0 && (
+                                  <ul className="mt-1 space-y-0.5 pl-2">
+                                    {tarea.subtareas.map((st, sidx) => (
+                                      <li key={sidx} className="flex items-start gap-1 text-slate-600 dark:text-slate-400">
+                                        <span className="text-slate-400">•</span>
+                                        <span>{st.titulo}</span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                )}
+                              </div>
+                              {tarea.duracion_minutos > 0 && (
+                                <span className="text-slate-400 flex-shrink-0">{tarea.duracion_minutos}min</span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                      <div>
-                        <span className="text-slate-500 dark:text-slate-400 block">Intervalo</span>
-                        <p className="font-semibold">{plan.dias_intervalo}d</p>
-                      </div>
-                      <div>
-                        <span className="text-slate-500 dark:text-slate-400 block">Último</span>
-                        <p className="font-semibold">
-                          {format(new Date(plan.ultima_ejecucion), 'dd/MM/yy', { locale: es })}
-                        </p>
-                      </div>
-                      <div>
-                        <span className="text-slate-500 dark:text-slate-400 block">Próximo</span>
-                        <p className={`font-semibold ${isOverdue ? 'text-red-600' : ''}`}>
-                          {format(new Date(plan.proxima_fecha), 'dd/MM/yy', { locale: es })}
-                        </p>
-                      </div>
-                    </div>
+                    )}
 
-                    <div className="flex gap-2">
+                    {relatedPlan && (
                       <Button
+                        onClick={() => {
+                          setExecutingPlanId(relatedPlan.id);
+                          executePlanMutation.mutate(relatedPlan.id);
+                        }}
                         size="sm"
                         variant="outline"
-                        onClick={() => handleEdit(plan)}
-                        className="flex-1"
+                        className="w-full gap-2 text-green-600 border-green-300 hover:bg-green-50"
+                        disabled={executingPlanId === relatedPlan.id}
                       >
-                        <Edit2 className="w-3 h-3 mr-1" />
-                        Editar
+                        <Play className="w-3 h-3" />
+                        {executingPlanId === relatedPlan.id ? 'Ejecutando...' : 'Ejecutar Mantenimiento'}
                       </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => deletePlanMutation.mutate(plan.id)}
-                        className="hover:bg-red-50 hover:text-red-600"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </Button>
-                    </div>
+                    )}
                   </div>
                 );
               })}
             </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Sin planes */}
-      {machinePlans.length === 0 && !plansLoading && (
-        <Card className="border-dashed">
-          <CardContent className="pt-6">
-            <div className="text-center py-8">
-              <AlertCircle className="w-12 h-12 mx-auto text-slate-300 mb-3" />
-              <p className="text-slate-500 mb-4">No hay planes de mantenimiento configurados</p>
-              <Button onClick={() => setShowDialog(true)} size="sm">
-                <Plus className="w-4 h-4 mr-2" />
-                Crear Primer Plan
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Botón Agregar Plan */}
-      {machinePlans.length > 0 && (
-        <Button onClick={() => setShowDialog(true)} className="w-full gap-2">
-          <Plus className="w-4 h-4" />
-          Agregar Otro Plan
-        </Button>
-      )}
-
-      {/* Dialog para crear/editar */}
-      {showDialog && (
-        <Dialog open={showDialog} onOpenChange={setShowDialog}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>
-                {editingPlan ? 'Editar Plan de Mantenimiento' : 'Nuevo Plan de Mantenimiento'}
-              </DialogTitle>
-              <DialogDescription>
-                Máquina: {getMachineDisplay()}
-              </DialogDescription>
-            </DialogHeader>
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="periodicidad">Periodicidad</Label>
-                <Select
-                  value={formData.periodicidad}
-                  onValueChange={(value) => {
-                    setFormData({
-                      ...formData,
-                      periodicidad: value,
-                      dias_intervalo: PERIODICITIES[value] || 30
-                    });
-                  }}
-                >
-                  <SelectTrigger id="periodicidad">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.keys(PERIODICITIES).map((period) => (
-                      <SelectItem key={period} value={period}>
-                        {period}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="dias">Intervalo (días)</Label>
-                <Input
-                  id="dias"
-                  type="number"
-                  min="1"
-                  value={formData.dias_intervalo}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    dias_intervalo: parseInt(e.target.value) || 30
-                  })}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="ultima_ejecucion">Última Ejecución</Label>
-                <Input
-                  id="ultima_ejecucion"
-                  type="date"
-                  value={formData.ultima_ejecucion}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    ultima_ejecucion: e.target.value
-                  })}
-                />
-                <p className="text-xs text-slate-500">
-                  Próximo mantenimiento: {format(addDays(new Date(formData.ultima_ejecucion), PERIODICITIES[formData.periodicidad]), 'dd/MM/yyyy', { locale: es })}
-                </p>
-              </div>
-
-              <div className="flex gap-3 pt-4">
-                <Button type="button" variant="outline" onClick={() => setShowDialog(false)}>
-                  Cancelar
-                </Button>
-                <Button type="submit" className="flex-1">
-                  {editingPlan ? 'Actualizar' : 'Crear'}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
-      )}
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

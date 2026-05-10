@@ -119,14 +119,13 @@ export default function MachineInventory({ machines = [], onSelectMachine, selec
                            {status === 'activo' && 'Activo'}
                          </Badge>
                        )}
-                       {machineActivePlans.length > 0 && (
+                       {getAssignedTypes(machine.id).length > 0 ? (
                          <Badge variant="outline" className="text-xs bg-green-50 text-green-700">
-                           {machineActivePlans.length} plan(es) activo(s)
+                           {getAssignedTypes(machine.id).length} plan(es) asignado(s)
                          </Badge>
-                       )}
-                       {getAssignedTypes(machine.id).length > 0 && (
-                         <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700">
-                           {getAssignedTypes(machine.id).length} tipo(s)
+                       ) : (
+                         <Badge variant="outline" className="text-xs bg-slate-50 text-slate-500">
+                           Sin planes
                          </Badge>
                        )}
                      </div>
