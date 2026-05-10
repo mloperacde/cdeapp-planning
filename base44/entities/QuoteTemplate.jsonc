@@ -4,11 +4,11 @@
   "properties": {
     "quote_number": {
       "type": "string",
-      "description": "N\u00famero \u00fanico de presupuesto (ej: QUOTE-2024-001)"
+      "description": "N\u00famero \u00fanico de presupuesto (ej: PRES-2025-0001)"
     },
     "client_name": {
       "type": "string",
-      "description": "Nombre del cliente"
+      "description": "Nombre del cliente o contacto"
     },
     "client_email": {
       "type": "string",
@@ -23,13 +23,17 @@
       "type": "string",
       "description": "Nombre de la empresa del cliente"
     },
+    "client_address": {
+      "type": "string",
+      "description": "Direcci\u00f3n de la empresa cliente"
+    },
     "quote_type": {
       "type": "string",
       "enum": [
         "ENVASADO_SOLO",
         "SERVICIO_360"
       ],
-      "description": "Tipo de presupuesto"
+      "description": "Tipo de presupuesto: Maquila pura o Llave en mano"
     },
     "product_type": {
       "type": "string",
@@ -37,25 +41,80 @@
         "cosmetico",
         "perfumeria",
         "sanitario",
-        "alimenticio"
+        "alimenticio",
+        "otro"
       ],
-      "description": "Tipo de producto a envasar"
+      "description": "Categor\u00eda del producto a envasar"
+    },
+    "product_description": {
+      "type": "string",
+      "description": "Descripci\u00f3n detallada del producto (ej: Crema Hidratante Facial 50ml)"
+    },
+    "product_texture": {
+      "type": "string",
+      "enum": [
+        "liquido",
+        "crema",
+        "gel",
+        "polvo",
+        "solido",
+        "emulsion",
+        "spray",
+        "otro"
+      ],
+      "description": "Textura/consistencia del producto"
     },
     "volume": {
       "type": "number",
-      "description": "Volumen de unidades a envasar"
+      "description": "Cantidad de unidades a envasar (MOQ)"
+    },
+    "unit_volume_ml": {
+      "type": "number",
+      "description": "Volumen por unidad en ml/gr"
     },
     "container_type": {
       "type": "string",
       "enum": [
         "frasco",
         "bote",
+        "tarro",
+        "sachet",
+        "sachet_toallita",
+        "ampolla",
         "blister",
+        "tubo",
+        "sobre",
         "carton",
-        "bolsa",
         "otro"
       ],
-      "description": "Tipo de envase"
+      "description": "Tipo de envase primario"
+    },
+    "container_material": {
+      "type": "string",
+      "enum": [
+        "vidrio",
+        "pet",
+        "hdpe",
+        "aluminio",
+        "papel",
+        "laminado",
+        "otro"
+      ],
+      "description": "Material del envase"
+    },
+    "closure_type": {
+      "type": "string",
+      "enum": [
+        "rosca",
+        "flip_top",
+        "bomba",
+        "spray",
+        "gotero",
+        "induccion",
+        "soldadura",
+        "otro"
+      ],
+      "description": "Tipo de cierre"
     },
     "filling_system": {
       "type": "string",
@@ -63,27 +122,44 @@
         "bomba_peristaltica",
         "piston",
         "masa",
-        "volumetrica"
+        "volumetrica",
+        "dosificadora_polvo",
+        "termoformado",
+        "soldadura_calor"
       ],
       "description": "Sistema de llenado"
     },
     "labeling_system": {
       "type": "string",
       "enum": [
-        "semiautomatico",
-        "automatico",
-        "manual"
-      ],
-      "description": "Sistema de etiquetado"
-    },
-    "capping_system": {
-      "type": "string",
-      "enum": [
         "manual",
         "semiautomatico",
         "automatico"
       ],
-      "description": "Sistema de taponado/cerrado"
+      "description": "Sistema de etiquetado"
+    },
+    "coding_system": {
+      "type": "string",
+      "enum": [
+        "inkjet",
+        "laser",
+        "termotransferencia",
+        "manual",
+        "ninguno"
+      ],
+      "description": "Sistema de codificaci\u00f3n lote/caducidad"
+    },
+    "packaging_type": {
+      "type": "string",
+      "enum": [
+        "estuche",
+        "flow_pack",
+        "termoretractil",
+        "film",
+        "ninguno",
+        "otro"
+      ],
+      "description": "Tipo de empaquetado secundario"
     },
     "line_type": {
       "type": "string",
@@ -93,71 +169,187 @@
       ],
       "description": "L\u00ednea completa o m\u00e1quinas espec\u00edficas"
     },
-    "selected_machines": {
+    "special_requirements": {
+      "type": "string",
+      "description": "Normativas/Certificaciones: GMP, ISO 22716, APPCC, ISO 13485, ATEX..."
+    },
+    "delivery_days": {
+      "type": "number",
+      "description": "Plazo de entrega estimado en d\u00edas laborables"
+    },
+    "validity_days": {
+      "type": "number",
+      "default": 30,
+      "description": "D\u00edas de validez del presupuesto"
+    },
+    "service_lines": {
       "type": "array",
       "items": {
         "type": "object",
         "properties": {
-          "machine_id": {
+          "code": {
             "type": "string"
           },
-          "machine_name": {
+          "concept": {
             "type": "string"
           },
-          "daily_capacity": {
+          "description": {
+            "type": "string"
+          },
+          "unit_cost": {
             "type": "number"
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number"
+          },
+          "is_fixed": {
+            "type": "boolean",
+            "description": "true = coste fijo (set-up); false = coste por unidad"
           }
         }
       },
-      "description": "M\u00e1quinas seleccionadas"
-    },
-    "special_requirements": {
-      "type": "string",
-      "description": "Requisitos especiales (normativas, certificaciones, etc.)"
-    },
-    "delivery_days": {
-      "type": "number",
-      "description": "Plazo de entrega en d\u00edas"
+      "description": "L\u00edneas de servicio del presupuesto (PROD-01, ENV-01, ACAB-01...)"
     },
     "materials_supply": {
       "type": "object",
       "properties": {
-        "blisters": {
+        "envase_primario": {
           "type": "boolean"
         },
-        "printed_cards": {
-          "type": "boolean"
-        },
-        "caps": {
-          "type": "boolean"
-        },
-        "pumps": {
-          "type": "boolean"
-        },
-        "labels": {
-          "type": "boolean"
-        },
-        "other": {
+        "envase_primario_descripcion": {
           "type": "string"
+        },
+        "envase_primario_coste": {
+          "type": "number"
+        },
+        "cierre": {
+          "type": "boolean"
+        },
+        "cierre_descripcion": {
+          "type": "string"
+        },
+        "cierre_coste": {
+          "type": "number"
+        },
+        "etiqueta": {
+          "type": "boolean"
+        },
+        "etiqueta_descripcion": {
+          "type": "string"
+        },
+        "etiqueta_coste": {
+          "type": "number"
+        },
+        "packaging_secundario": {
+          "type": "boolean"
+        },
+        "packaging_secundario_descripcion": {
+          "type": "string"
+        },
+        "packaging_secundario_coste": {
+          "type": "number"
+        },
+        "materia_prima": {
+          "type": "boolean"
+        },
+        "materia_prima_descripcion": {
+          "type": "string"
+        },
+        "materia_prima_coste": {
+          "type": "number"
+        },
+        "margen_gestion": {
+          "type": "number",
+          "default": 15,
+          "description": "% margen sobre materiales gestionados"
         }
       },
-      "description": "Materiales a suministrar (solo para SERVICIO_360)"
+      "description": "Materiales a suministrar en SERVICIO_360"
     },
     "distribution_included": {
       "type": "boolean",
-      "default": false,
-      "description": "Incluye distribuci\u00f3n a puntos de venta"
+      "default": false
+    },
+    "distribution_cost": {
+      "type": "number",
+      "description": "Coste de distribuci\u00f3n si aplica"
+    },
+    "quality_services": {
+      "type": "object",
+      "properties": {
+        "microbiological_analysis": {
+          "type": "boolean"
+        },
+        "microbiological_cost": {
+          "type": "number"
+        },
+        "stability_test": {
+          "type": "boolean"
+        },
+        "stability_cost": {
+          "type": "number"
+        },
+        "regulatory_management": {
+          "type": "boolean"
+        },
+        "regulatory_cost": {
+          "type": "number"
+        }
+      },
+      "description": "Servicios de calidad y regulatorio"
+    },
+    "commercial_conditions": {
+      "type": "object",
+      "properties": {
+        "moq_note": {
+          "type": "string",
+          "description": "Nota sobre cantidad m\u00ednima"
+        },
+        "waste_percentage": {
+          "type": "number",
+          "default": 3,
+          "description": "% merma t\u00e9cnica aceptada"
+        },
+        "incoterm": {
+          "type": "string",
+          "enum": [
+            "EXW",
+            "DDP",
+            "FCA"
+          ],
+          "default": "EXW"
+        },
+        "storage_days_free": {
+          "type": "number",
+          "default": 15
+        },
+        "storage_cost_per_pallet": {
+          "type": "number"
+        },
+        "payment_terms": {
+          "type": "string"
+        },
+        "ip_ownership": {
+          "type": "string"
+        }
+      }
     },
     "price_breakdown": {
       "type": "object",
       "properties": {
-        "labor_cost": {
+        "setup_cost": {
           "type": "number"
         },
-        "machine_cost": {
+        "services_subtotal": {
           "type": "number"
         },
-        "material_cost": {
+        "materials_cost": {
+          "type": "number"
+        },
+        "quality_cost": {
           "type": "number"
         },
         "distribution_cost": {
@@ -167,13 +359,20 @@
           "type": "number"
         },
         "tax_percentage": {
+          "type": "number",
+          "default": 21
+        },
+        "tax_amount": {
           "type": "number"
         },
         "total": {
           "type": "number"
+        },
+        "unit_price": {
+          "type": "number",
+          "description": "Precio por unidad (sin IVA)"
         }
-      },
-      "description": "Desglose de precios"
+      }
     },
     "status": {
       "type": "string",
@@ -184,31 +383,26 @@
         "rechazado",
         "cancelado"
       ],
-      "default": "borrador",
-      "description": "Estado del presupuesto"
+      "default": "borrador"
     },
     "notes": {
       "type": "string",
-      "description": "Notas adicionales"
+      "description": "Notas adicionales y condiciones espec\u00edficas"
+    },
+    "internal_notes": {
+      "type": "string",
+      "description": "Notas internas (no aparecen en el PDF)"
     },
     "pdf_url": {
-      "type": "string",
-      "description": "URL del PDF generado"
+      "type": "string"
     },
     "sent_date": {
       "type": "string",
-      "format": "date-time",
-      "description": "Fecha de env\u00edo al cliente"
+      "format": "date-time"
     },
     "approval_date": {
       "type": "string",
-      "format": "date-time",
-      "description": "Fecha de aprobaci\u00f3n"
-    },
-    "validity_days": {
-      "type": "number",
-      "default": 30,
-      "description": "D\u00edas de validez del presupuesto"
+      "format": "date-time"
     }
   },
   "required": [
@@ -216,7 +410,6 @@
     "client_name",
     "quote_type",
     "product_type",
-    "volume",
-    "container_type"
+    "volume"
   ]
 }
