@@ -64,6 +64,17 @@ async function retry(fn, retries = 4, baseDelay = 1000) {
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
+
+    // Auth: allow admins or system/automation calls (no user token)
+    try {
+      const user = await base44.auth.me();
+      if (user && user.role !== 'admin') {
+        return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
+      }
+    } catch {
+      // No authenticated user — this is a scheduled automation call, allow it
+    }
+
     const apiKey = Deno.env.get('CdeApp');
     if (!apiKey) {
       return Response.json({ error: 'CdeApp secret no configurado' }, { status: 500 });
