@@ -1,0 +1,200 @@
+{
+  "name": "PayrollRecord",
+  "type": "object",
+  "properties": {
+    "employee_id": {
+      "type": "string",
+      "description": "ID del empleado"
+    },
+    "employee_name": {
+      "type": "string",
+      "description": "Nombre del empleado"
+    },
+    "employee_code": {
+      "type": "string",
+      "description": "C\u00f3digo del empleado"
+    },
+    "payroll_period": {
+      "type": "string",
+      "description": "Periodo de n\u00f3mina (ej. 2026-02)"
+    },
+    "pay_period_start": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha de inicio del periodo"
+    },
+    "pay_period_end": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha de fin del periodo"
+    },
+    "payment_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha de pago programada"
+    },
+    "actual_payment_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha real de pago"
+    },
+    "gross_salary": {
+      "type": "number",
+      "description": "Salario bruto total"
+    },
+    "salary_components": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "component_name": {
+            "type": "string"
+          },
+          "component_code": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "number"
+          },
+          "is_taxable": {
+            "type": "boolean"
+          },
+          "is_contributory": {
+            "type": "boolean"
+          }
+        }
+      },
+      "description": "Desglose de componentes salariales"
+    },
+    "deductions": {
+      "type": "object",
+      "properties": {
+        "irpf_percentage": {
+          "type": "number"
+        },
+        "irpf_amount": {
+          "type": "number"
+        },
+        "social_security_employee": {
+          "type": "number"
+        },
+        "other_deductions": {
+          "type": "number"
+        }
+      },
+      "description": "Deducciones aplicadas"
+    },
+    "employer_contributions": {
+      "type": "object",
+      "properties": {
+        "social_security_employer": {
+          "type": "number"
+        },
+        "other_contributions": {
+          "type": "number"
+        }
+      },
+      "description": "Aportaciones del empleador"
+    },
+    "net_salary": {
+      "type": "number",
+      "description": "Salario neto a percibir"
+    },
+    "total_cost": {
+      "type": "number",
+      "description": "Coste total para la empresa (bruto + aportaciones)"
+    },
+    "worked_days": {
+      "type": "number",
+      "description": "D\u00edas trabajados en el periodo"
+    },
+    "absence_days": {
+      "type": "number",
+      "default": 0,
+      "description": "D\u00edas de ausencia"
+    },
+    "extra_hours": {
+      "type": "number",
+      "default": 0,
+      "description": "Horas extras"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Borrador",
+        "Calculada",
+        "Validada",
+        "Aprobada",
+        "Procesada",
+        "Pagada"
+      ],
+      "default": "Borrador",
+      "description": "Estado de la n\u00f3mina"
+    },
+    "payslip_url": {
+      "type": "string",
+      "description": "URL del PDF de la n\u00f3mina"
+    },
+    "payment_method": {
+      "type": "string",
+      "enum": [
+        "Transferencia Bancaria",
+        "Cheque",
+        "Efectivo"
+      ],
+      "default": "Transferencia Bancaria",
+      "description": "M\u00e9todo de pago"
+    },
+    "bank_reference": {
+      "type": "string",
+      "description": "Referencia bancaria del pago"
+    },
+    "processed_by": {
+      "type": "string",
+      "description": "Usuario que proces\u00f3 la n\u00f3mina"
+    },
+    "approved_by": {
+      "type": "string",
+      "description": "Usuario que aprob\u00f3 la n\u00f3mina"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Notas adicionales"
+    }
+  },
+  "required": [
+    "employee_id",
+    "payroll_period",
+    "pay_period_start",
+    "pay_period_end"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    },
+    "read": {
+      "$or": [
+        {
+          "data.employee_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    }
+  }
+}
