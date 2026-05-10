@@ -52,9 +52,23 @@
   ],
   "rls": {
     "create": {
-      "user_condition": {
-        "role": "Admin"
-      }
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "manager"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "Jefe Turno Produccion"
+          }
+        }
+      ]
     },
     "read": {
       "$or": [
@@ -66,7 +80,12 @@
         },
         {
           "user_condition": {
-            "role": "Admin"
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "manager"
           }
         },
         {
@@ -86,7 +105,7 @@
         },
         {
           "user_condition": {
-            "role": "Admin"
+            "role": "admin"
           }
         },
         {
@@ -98,7 +117,7 @@
     },
     "delete": {
       "user_condition": {
-        "role": "Admin"
+        "role": "admin"
       }
     }
   }
