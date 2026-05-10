@@ -28,32 +28,45 @@ Deno.serve(async (req) => {
       timestamp: new Date().toISOString(),
     };
 
-    // Helper para eliminar secuencialmente con delays para evitar rate limit
-    const deleteSequentially = async (entity, delayMs = 800) => {
-      const records = await base44.asServiceRole.entities[entity].list();
-      let deleted = 0;
+    // Helper para eliminar registros con lotes
+    const deleteInBatches = async (entity, batchSize = 50) => {
+      let totalDeleted = 0;
       
-      for (const record of records) {
+      for (let batch = 0; batch < 5; batch++) {
         try {
-          await base44.asServiceRole.entities[entity].delete(record.id);
-          deleted++;
-          await new Promise(resolve => setTimeout(resolve, delayMs));
+          const records = await base44.asServiceRole.entities[entity].list(undefined, batchSize);
+          if (records.length === 0) break;
+          
+          const deletePromises = records.map(r => 
+            base44.asServiceRole.entities[entity].delete(r.id)
+              .catch(() => null) // Ignorar errores de eliminación
+          );
+          
+          await Promise.allSettled(deletePromises);
+          totalDeleted += records.length;
+          
+          // Espera antes de siguiente batch
+          if (batch < 4) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
         } catch (err) {
+          // Si es rate limit, esperar y continuar
           if (err.message?.includes('Rate limit')) {
             await new Promise(resolve => setTimeout(resolve, 2000));
-            await base44.asServiceRole.entities[entity].delete(record.id);
-            deleted++;
+            batch--;
           }
+          break;
         }
       }
-      return deleted;
+      
+      return totalDeleted;
     };
 
-    // Eliminar datos históricos secuencialmente
-    deletionStats.absences = await deleteSequentially('Absence', 800);
-    deletionStats.attendanceRecords = await deleteSequentially('AttendanceRecord', 800);
-    deletionStats.breakRecords = await deleteSequentially('BreakRecord', 800);
-    deletionStats.absenceAuditLogs = await deleteSequentially('AbsenceAuditLog', 800);
+    // Eliminar datos históricos por lotes
+    deletionStats.absences = await deleteInBatches('Absence');
+    deletionStats.attendanceRecords = await deleteInBatches('AttendanceRecord');
+    deletionStats.breakRecords = await deleteInBatches('BreakRecord');
+    deletionStats.absenceAuditLogs = await deleteInBatches('AbsenceAuditLog');
 
     return Response.json({
       success: true,
