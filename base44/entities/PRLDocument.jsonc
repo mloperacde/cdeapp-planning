@@ -1,0 +1,228 @@
+{
+  "name": "PRLDocument",
+  "type": "object",
+  "properties": {
+    "titulo": {
+      "type": "string",
+      "description": "T\u00edtulo del documento"
+    },
+    "tipo_documento": {
+      "type": "string",
+      "enum": [
+        "Evaluaci\u00f3n de Riesgos",
+        "Pol\u00edtica de Prevenci\u00f3n",
+        "Evaluaci\u00f3n Solicitada",
+        "Evaluaci\u00f3n Pendiente",
+        "Riesgo Comunicado",
+        "Riesgo Pendiente",
+        "Documentaci\u00f3n de Formaci\u00f3n",
+        "Plan de Emergencia",
+        "Procedimiento de Trabajo",
+        "Informe de Investigaci\u00f3n",
+        "Otro"
+      ],
+      "description": "Tipo de documento PRL"
+    },
+    "categoria": {
+      "type": "string",
+      "enum": [
+        "Seguridad en el Trabajo",
+        "Higiene Industrial",
+        "Ergonom\u00eda",
+        "Psicosociolog\u00eda",
+        "Medicina del Trabajo",
+        "General"
+      ],
+      "description": "Categor\u00eda del documento"
+    },
+    "descripcion": {
+      "type": "string",
+      "description": "Descripci\u00f3n del documento"
+    },
+    "archivo_url": {
+      "type": "string",
+      "description": "URL del archivo"
+    },
+    "fecha_subida": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Fecha de subida"
+    },
+    "fecha_documento": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha del documento"
+    },
+    "fecha_caducidad": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha de caducidad del documento"
+    },
+    "subido_por": {
+      "type": "string",
+      "description": "ID del usuario que subi\u00f3 el documento"
+    },
+    "departamento_afectado": {
+      "type": "string",
+      "description": "Departamento al que afecta"
+    },
+    "puestos_afectados": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Puestos de trabajo afectados"
+    },
+    "roles_afectados": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Roles o categor\u00edas afectados"
+    },
+    "estado": {
+      "type": "string",
+      "enum": [
+        "Vigente",
+        "Pendiente Revisi\u00f3n",
+        "Caducado",
+        "Archivado"
+      ],
+      "default": "Vigente",
+      "description": "Estado del documento"
+    },
+    "version": {
+      "type": "string",
+      "description": "Versi\u00f3n del documento"
+    },
+    "historial_versiones": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "string"
+          },
+          "fecha": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "archivo_url": {
+            "type": "string"
+          },
+          "cambios": {
+            "type": "string"
+          },
+          "subido_por": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Historial de versiones del documento"
+    },
+    "requiere_accion": {
+      "type": "boolean",
+      "default": false,
+      "description": "Si requiere alguna acci\u00f3n"
+    },
+    "accion_requerida": {
+      "type": "string",
+      "description": "Descripci\u00f3n de la acci\u00f3n requerida"
+    },
+    "responsable_accion": {
+      "type": "string",
+      "description": "ID del responsable de la acci\u00f3n"
+    },
+    "fecha_limite_accion": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha l\u00edmite para la acci\u00f3n"
+    },
+    "recordatorio_dias_antes": {
+      "type": "number",
+      "default": 30,
+      "description": "D\u00edas antes de caducidad para enviar recordatorio"
+    },
+    "ultimo_recordatorio_enviado": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha del \u00faltimo recordatorio enviado"
+    },
+    "etiquetas": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Etiquetas para clasificaci\u00f3n"
+    },
+    "notas": {
+      "type": "string",
+      "description": "Notas adicionales"
+    }
+  },
+  "required": [
+    "titulo",
+    "tipo_documento",
+    "archivo_url",
+    "fecha_documento"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "data.roles_afectados": {
+            "$in": [
+              "{{user.role}}"
+            ]
+          }
+        },
+        {
+          "data.departamento_afectado": "{{user.data.department}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "rrhh"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "PRL"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "PRL"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
