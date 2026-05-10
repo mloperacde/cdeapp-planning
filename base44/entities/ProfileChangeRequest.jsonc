@@ -1,0 +1,97 @@
+{
+  "name": "ProfileChangeRequest",
+  "type": "object",
+  "properties": {
+    "employee_id": {
+      "type": "string",
+      "description": "ID del empleado que solicita el cambio"
+    },
+    "campo_modificado": {
+      "type": "string",
+      "description": "Campo que se solicita modificar"
+    },
+    "valor_actual": {
+      "type": "string",
+      "description": "Valor actual del campo"
+    },
+    "valor_solicitado": {
+      "type": "string",
+      "description": "Nuevo valor solicitado"
+    },
+    "categoria_cambio": {
+      "type": "string",
+      "enum": [
+        "Contacto",
+        "Direcci\u00f3n",
+        "Emergencia",
+        "Bancario"
+      ],
+      "description": "Categor\u00eda del cambio solicitado"
+    },
+    "estado": {
+      "type": "string",
+      "enum": [
+        "Pendiente",
+        "Aprobado",
+        "Rechazado"
+      ],
+      "default": "Pendiente",
+      "description": "Estado de la solicitud"
+    },
+    "motivo_rechazo": {
+      "type": "string",
+      "description": "Motivo del rechazo si aplica"
+    },
+    "fecha_solicitud": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Fecha de la solicitud"
+    },
+    "fecha_respuesta": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Fecha de aprobaci\u00f3n o rechazo"
+    },
+    "aprobado_por": {
+      "type": "string",
+      "description": "ID del usuario que aprob\u00f3/rechaz\u00f3"
+    },
+    "notas": {
+      "type": "string",
+      "description": "Notas adicionales sobre el cambio"
+    }
+  },
+  "required": [
+    "employee_id",
+    "campo_modificado",
+    "valor_solicitado",
+    "categoria_cambio"
+  ],
+  "rls": {
+    "create": {
+      "data.employee_id": "{{user.id}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "data.employee_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    }
+  }
+}
