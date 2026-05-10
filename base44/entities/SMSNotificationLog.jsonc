@@ -1,0 +1,74 @@
+{
+  "name": "SMSNotificationLog",
+  "type": "object",
+  "properties": {
+    "telefono": {
+      "type": "string",
+      "description": "N\u00famero de tel\u00e9fono destinatario"
+    },
+    "mensaje": {
+      "type": "string",
+      "description": "Contenido del SMS"
+    },
+    "tipo_evento": {
+      "type": "string",
+      "description": "Tipo de evento que gener\u00f3 el SMS"
+    },
+    "absence_id": {
+      "type": "string",
+      "description": "ID de la ausencia relacionada"
+    },
+    "employee_id": {
+      "type": "string",
+      "description": "ID del empleado relacionado"
+    },
+    "estado": {
+      "type": "string",
+      "enum": [
+        "Pendiente",
+        "Enviado",
+        "Error",
+        "Entregado"
+      ],
+      "default": "Pendiente"
+    },
+    "fecha_envio": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "error_mensaje": {
+      "type": "string"
+    },
+    "proveedor": {
+      "type": "string",
+      "description": "Proveedor SMS utilizado"
+    }
+  },
+  "required": [
+    "telefono",
+    "mensaje",
+    "tipo_evento"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    }
+  }
+}
