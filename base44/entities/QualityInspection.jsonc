@@ -147,18 +147,7 @@
   ],
   "rls": {
     "create": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "quality"
-          }
-        }
-      ]
+      "data.inspector_id": "{{user.employee_id}}"
     },
     "read": {
       "$or": [
@@ -172,12 +161,12 @@
         },
         {
           "user_condition": {
-            "role": "quality"
+            "role": "manager"
           }
         },
         {
           "user_condition": {
-            "role": "production_manager"
+            "role": "Calidad"
           }
         }
       ]
@@ -185,30 +174,24 @@
     "update": {
       "$or": [
         {
+          "data.inspector_id": "{{user.employee_id}}"
+        },
+        {
           "user_condition": {
             "role": "admin"
           }
         },
         {
           "user_condition": {
-            "role": "quality"
+            "role": "Calidad"
           }
         }
       ]
     },
     "delete": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "quality"
-          }
-        }
-      ]
+      "user_condition": {
+        "role": "admin"
+      }
     }
   }
 }
