@@ -166,34 +166,39 @@
   "rls": {
     "create": {
       "user_condition": {
-        "role": "Admin"
+        "role": "admin"
       }
     },
     "read": {
       "$or": [
         {
-          "data.tecnico_id": "{{user.id}}"
+          "data.tecnico_id": "{{user.employee_id}}"
         },
         {
           "user_condition": {
-            "role": "Admin"
+            "role": "admin"
           }
         },
         {
           "user_condition": {
             "role": "T\u00e9cnico"
           }
+        },
+        {
+          "user_condition": {
+            "role": "manager"
+          }
         }
       ]
     },
     "update": {
       "user_condition": {
-        "role": "Admin"
+        "role": "admin"
       }
     },
     "delete": {
       "user_condition": {
-        "role": "Admin"
+        "role": "admin"
       }
     }
   }
