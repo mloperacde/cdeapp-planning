@@ -1,0 +1,105 @@
+{
+  "name": "ShiftHandover",
+  "type": "object",
+  "properties": {
+    "fecha": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha del traspaso de turno"
+    },
+    "turno_saliente": {
+      "type": "string",
+      "enum": [
+        "Ma\u00f1ana",
+        "Tarde",
+        "Noche"
+      ],
+      "description": "Turno que sale"
+    },
+    "turno_entrante": {
+      "type": "string",
+      "enum": [
+        "Ma\u00f1ana",
+        "Tarde",
+        "Noche"
+      ],
+      "description": "Turno que entra"
+    },
+    "jefe_turno_saliente": {
+      "type": "string",
+      "description": "ID del jefe de turno saliente"
+    },
+    "jefe_turno_entrante": {
+      "type": "string",
+      "description": "ID del jefe de turno entrante"
+    },
+    "observaciones_maquinas": {
+      "type": "object",
+      "description": "Observaciones por m\u00e1quina",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "otras_indicaciones": {
+      "type": "string",
+      "description": "Otras indicaciones generales del turno"
+    }
+  },
+  "required": [
+    "fecha",
+    "turno_saliente",
+    "turno_entrante"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    },
+    "read": {
+      "$or": [
+        {
+          "data.jefe_turno_saliente": "{{user.id}}"
+        },
+        {
+          "data.jefe_turno_entrante": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "Jefe Turno Produccion"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.jefe_turno_saliente": "{{user.id}}"
+        },
+        {
+          "data.jefe_turno_entrante": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "Jefe Turno Produccion"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    }
+  }
+}
