@@ -1,0 +1,253 @@
+{
+  "name": "TechnicalReport",
+  "type": "object",
+  "properties": {
+    "tituloInforme": {
+      "type": "string",
+      "description": "T\u00edtulo del informe t\u00e9cnico"
+    },
+    "estadoInforme": {
+      "type": "string",
+      "enum": [
+        "Borrador",
+        "En Revisi\u00f3n",
+        "Pendiente",
+        "Validado",
+        "Rechazado"
+      ],
+      "default": "Borrador",
+      "description": "Estado actual del informe"
+    },
+    "tipoInforme": {
+      "type": "string",
+      "enum": [
+        "Calificaci\u00f3n de Instalaci\u00f3n (IQ)",
+        "Calificaci\u00f3n Operacional (OQ)",
+        "Calificaci\u00f3n de Funcionamiento (PQ)",
+        "Validaci\u00f3n de Proceso",
+        "Validaci\u00f3n de Limpieza",
+        "Validaci\u00f3n de M\u00e9todo Anal\u00edtico",
+        "Otro"
+      ],
+      "description": "Tipo de informe CQV"
+    },
+    "articulo": {
+      "type": "string",
+      "description": "Art\u00edculo o producto al que se refiere el informe"
+    },
+    "productId": {
+      "type": "string",
+      "description": "ID o c\u00f3digo del producto/equipo"
+    },
+    "sala": {
+      "type": "string",
+      "description": "Sala o \u00e1rea donde se realiz\u00f3 la validaci\u00f3n"
+    },
+    "linea": {
+      "type": "string",
+      "description": "L\u00ednea de producci\u00f3n involucrada"
+    },
+    "lote": {
+      "type": "string",
+      "description": "N\u00famero de lote de la prueba"
+    },
+    "fecha": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha del informe"
+    },
+    "fechaInicio": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha de inicio de la actividad"
+    },
+    "fechaFin": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha de fin de la actividad"
+    },
+    "autor": {
+      "type": "string",
+      "description": "Nombre del autor o responsable del informe"
+    },
+    "departamento": {
+      "type": "string",
+      "description": "Departamento responsable"
+    },
+    "aprobadorQA": {
+      "type": "string",
+      "description": "Nombre del aprobador de Control de Calidad"
+    },
+    "objetivo": {
+      "type": "string",
+      "description": "Objetivo del informe"
+    },
+    "alcance": {
+      "type": "string",
+      "description": "Alcance del informe"
+    },
+    "resumenEjecutivo": {
+      "type": "string",
+      "description": "Resumen ejecutivo del informe"
+    },
+    "metodologia": {
+      "type": "string",
+      "description": "Descripci\u00f3n de la metodolog\u00eda empleada"
+    },
+    "hallazgos": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "Baja",
+              "Media",
+              "Alta",
+              "Cr\u00edtica"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "Pendiente",
+              "En Progreso",
+              "Resuelto",
+              "Verificado"
+            ]
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "Mec\u00e1nico",
+              "El\u00e9ctrico",
+              "Software",
+              "Proceso",
+              "Seguridad",
+              "Documentaci\u00f3n"
+            ]
+          },
+          "accionCorrectiva": {
+            "type": "string"
+          },
+          "responsable": {
+            "type": "string"
+          },
+          "fechaLimite": {
+            "type": "string",
+            "format": "date"
+          }
+        }
+      },
+      "description": "Lista de hallazgos t\u00e9cnicos"
+    },
+    "evidencias": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "image",
+              "video",
+              "document"
+            ]
+          },
+          "url": {
+            "type": "string"
+          },
+          "caption": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Lista de evidencias multimedia"
+    },
+    "conclusiones": {
+      "type": "string",
+      "description": "Conclusiones finales del informe"
+    },
+    "recomendaciones": {
+      "type": "string",
+      "description": "Recomendaciones para mejora"
+    },
+    "firmaAutor": {
+      "type": "boolean",
+      "default": false,
+      "description": "El autor ha firmado el informe"
+    },
+    "firmaQA": {
+      "type": "boolean",
+      "default": false,
+      "description": "El responsable QA ha firmado el informe"
+    },
+    "numeroInforme": {
+      "type": "string",
+      "description": "N\u00famero \u00fanico de referencia del informe (ej: IQ-2024-001)"
+    }
+  },
+  "required": [
+    "tituloInforme",
+    "estadoInforme",
+    "autor",
+    "fecha"
+  ],
+  "rls": {
+    "create": {
+      "data.autor": "{{user.full_name}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "data.autor": "{{user.full_name}}"
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.autor": "{{user.full_name}}"
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.autor": "{{user.full_name}}"
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        }
+      ]
+    }
+  }
+}
