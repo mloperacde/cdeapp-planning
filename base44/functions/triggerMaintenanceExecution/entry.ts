@@ -53,8 +53,10 @@ Deno.serve(async (req) => {
     const created = await base44.entities.MaintenanceSchedule.create(scheduleData);
 
     // Actualizar fechas del plan
+    // La próxima fecha siempre se calcula desde la última ejecución real, no desde scheduledDate
     const diasIntervalo = plan.dias_intervalo || 30;
-    const nextDate = addDays(scheduledDate, diasIntervalo);
+    const baseDate = immediate ? now : (plan.ultima_ejecucion ? new Date(plan.ultima_ejecucion) : now);
+    const nextDate = addDays(baseDate, diasIntervalo);
     const updateData = {
       proxima_fecha: nextDate.toISOString().split('T')[0],
     };
