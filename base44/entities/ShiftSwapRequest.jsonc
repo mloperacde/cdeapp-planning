@@ -107,24 +107,24 @@
   ],
   "rls": {
     "create": {
-      "data.solicitante_id": "{{user.id}}"
+      "data.solicitante_id": "{{user.employee_id}}"
     },
     "read": {
       "$or": [
         {
-          "data.solicitante_id": "{{user.id}}"
+          "data.solicitante_id": "{{user.employee_id}}"
         },
         {
-          "data.receptor_id": "{{user.id}}"
+          "data.receptor_id": "{{user.employee_id}}"
         },
         {
           "user_condition": {
-            "role": "Admin"
+            "role": "admin"
           }
         },
         {
           "user_condition": {
-            "role": "Supervisor"
+            "role": "supervisor"
           }
         }
       ]
@@ -132,19 +132,26 @@
     "update": {
       "$or": [
         {
-          "data.solicitante_id": "{{user.id}}"
+          "data.solicitante_id": "{{user.employee_id}}",
+          "data.estado": {
+            "$in": [
+              "Publicado",
+              "Pendiente Aprobaci\u00f3n"
+            ]
+          }
         },
         {
-          "data.receptor_id": "{{user.id}}"
+          "data.receptor_id": "{{user.employee_id}}",
+          "data.estado": "Publicado"
         },
         {
           "user_condition": {
-            "role": "Admin"
+            "role": "admin"
           }
         },
         {
           "user_condition": {
-            "role": "Supervisor"
+            "role": "supervisor"
           }
         }
       ]
@@ -152,11 +159,22 @@
     "delete": {
       "$or": [
         {
-          "data.solicitante_id": "{{user.id}}"
+          "data.solicitante_id": "{{user.employee_id}}",
+          "data.estado": {
+            "$in": [
+              "Publicado",
+              "Pendiente Aprobaci\u00f3n"
+            ]
+          }
         },
         {
           "user_condition": {
-            "role": "Admin"
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "supervisor"
           }
         }
       ]
