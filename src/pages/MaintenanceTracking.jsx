@@ -58,8 +58,9 @@ export default function MaintenanceTrackingPage() {
 
   const { data: maintenances = EMPTY_ARRAY } = useQuery({
     queryKey: ['maintenances'],
-    queryFn: () => base44.entities.MaintenanceSchedule.list('-fecha_programada'),
-    initialData: EMPTY_ARRAY,
+    queryFn: () => base44.entities.MaintenanceSchedule.list('-fecha_programada', 500),
+    staleTime: 0,
+    refetchOnMount: true,
   });
 
   const { data: machines = EMPTY_ARRAY } = useQuery({
