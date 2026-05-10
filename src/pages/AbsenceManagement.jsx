@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { useAppData } from "../components/data/DataProvider";
 import { useQueryClient } from "@tanstack/react-query";
+import { base44 } from "@/api/base44Client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
@@ -8,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { 
   UserX, 
   BarChart3, CalendarDays, FileText, CheckSquare, 
-  LayoutDashboard, Settings, Activity, Brain, Radio, Radar, RefreshCw
+  LayoutDashboard, Settings, Activity, Brain, Radio, Radar, RefreshCw, Trash2
 } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import { startOfMonth, eachDayOfInterval } from "date-fns";
@@ -37,12 +38,29 @@ export default function AbsenceManagementPage() {
     user: currentUser,
     absences = [], 
     employees = [],
-    absenceTypes = []
+    absenceTypes = [],
+    isAdmin
   } = useAppData();
+  const [cleanupLoading, setCleanupLoading] = useState(false);
+  const [showCleanupDialog, setShowCleanupDialog] = useState(false);
 
   const handleRefresh = () => {
     queryClient.invalidateQueries({ queryKey: ['absences'] });
     queryClient.invalidateQueries({ queryKey: ['employeeMasterDatabase'] });
+  };
+
+  const handleCleanupHistorical = async () => {
+    setCleanupLoading(true);
+    try {
+      const result = await base44.functions.invoke('cleanupHistoricalData', {});
+      queryClient.invalidateQueries();
+      setShowCleanupDialog(false);
+      alert(`Histórico limpiado: ${result.data.deletionStats.absences} ausencias, ${result.data.deletionStats.attendanceRecords} registros de asistencia eliminados`);
+    } catch (error) {
+      alert('Error al limpiar histórico: ' + error.message);
+    } finally {
+      setCleanupLoading(false);
+    }
   };
 
   const isShiftManager = useMemo(() => {
@@ -248,18 +266,66 @@ export default function AbsenceManagementPage() {
           </div>
           
           <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-8 text-xs gap-2"
-                onClick={handleRefresh}
-                title="Actualizar datos"
-              >
-                <RefreshCw className="w-3 h-3" />
-                Actualizar
-              </Button>
-          {!isShiftManager && (
+               <Button
+                 type="button"
+                 variant="ghost"
+                 size="sm"
+                 className="h-8 text-xs gap-2"
+                 onClick={handleRefresh}
+                 title="Actualizar datos"
+               >
+                 <RefreshCw className="w-3 h-3" />
+                 Actualizar
+               </Button>
+               {isAdmin && (
+                <Dialog open={showCleanupDialog} onOpenChange={setShowCleanupDialog}>
+                  <DialogTrigger asChild>
+                    <Button 
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 text-xs gap-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                      title="Limpiar histórico completo"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      Limpiar Histórico
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <div className="space-y-4">
+                      <h2 className="text-lg font-bold text-slate-900">⚠️ Limpiar Histórico Completo</h2>
+                      <p className="text-sm text-slate-600">
+                        Esta acción eliminará permanentemente:
+                      </p>
+                      <ul className="text-sm text-slate-600 list-disc list-inside space-y-1">
+                        <li>Todos los registros de ausencias</li>
+                        <li>Todos los registros de asistencia</li>
+                        <li>Todos los registros de descansos</li>
+                        <li>Logs de auditoría de ausencias</li>
+                      </ul>
+                      <p className="text-sm font-semibold text-red-600">
+                        ❌ Esta acción no se puede deshacer.
+                      </p>
+                      <div className="flex gap-3 justify-end pt-4">
+                        <Button 
+                          variant="outline"
+                          onClick={() => setShowCleanupDialog(false)}
+                        >
+                          Cancelar
+                        </Button>
+                        <Button 
+                          className="bg-red-600 hover:bg-red-700 text-white"
+                          onClick={handleCleanupHistorical}
+                          disabled={cleanupLoading}
+                        >
+                          {cleanupLoading ? 'Limpiando...' : 'Confirmar Limpieza'}
+                        </Button>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              )}
+           {!isShiftManager && (
             <>
               <Button
                 type="button"
