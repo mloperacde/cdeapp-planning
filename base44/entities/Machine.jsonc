@@ -1,0 +1,186 @@
+{
+  "name": "Machine",
+  "type": "object",
+  "properties": {
+    "nombre": {
+      "type": "string",
+      "description": "Nombre de la m\u00e1quina"
+    },
+    "codigo": {
+      "type": "string",
+      "description": "C\u00f3digo identificador de la m\u00e1quina"
+    },
+    "marca": {
+      "type": "string",
+      "description": "Marca de la m\u00e1quina"
+    },
+    "modelo": {
+      "type": "string",
+      "description": "Modelo de la m\u00e1quina"
+    },
+    "numero_serie": {
+      "type": "string",
+      "description": "N\u00famero de serie"
+    },
+    "fecha_compra": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha de compra"
+    },
+    "tipo": {
+      "type": "string",
+      "description": "Tipo de m\u00e1quina (Sobres, Frascos, etc.)"
+    },
+    "ubicacion": {
+      "type": "string",
+      "description": "Ubicaci\u00f3n f\u00edsica de la m\u00e1quina"
+    },
+    "descripcion": {
+      "type": "string",
+      "description": "Descripci\u00f3n adicional"
+    },
+    "orden": {
+      "type": "number",
+      "description": "Orden de visualizaci\u00f3n"
+    },
+    "programa_mantenimiento": {
+      "type": "string",
+      "description": "Programa de mantenimiento que aplica"
+    },
+    "procesos_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "IDs de procesos que puede realizar esta m\u00e1quina"
+    },
+    "articulos_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "IDs de art\u00edculos que puede fabricar esta m\u00e1quina"
+    },
+    "parametros_sobres": {
+      "type": "object",
+      "properties": {
+        "ancho_paso_minimo": {
+          "type": "number",
+          "description": "Ancho de paso m\u00ednimo (mm)"
+        },
+        "ancho_paso_maximo": {
+          "type": "number",
+          "description": "Ancho de paso m\u00e1ximo (mm)"
+        },
+        "dosis_minima": {
+          "type": "number",
+          "description": "Dosis m\u00ednima"
+        },
+        "dosis_maxima": {
+          "type": "number",
+          "description": "Dosis m\u00e1xima"
+        },
+        "cargador": {
+          "type": "boolean",
+          "default": false,
+          "description": "\u00bfTiene cargador?"
+        }
+      },
+      "description": "Par\u00e1metros espec\u00edficos para m\u00e1quinas de sobres"
+    },
+    "parametros_frascos": {
+      "type": "object",
+      "properties": {
+        "dosis_minima": {
+          "type": "number",
+          "description": "Dosis m\u00ednima"
+        },
+        "dosis_maxima": {
+          "type": "number",
+          "description": "Dosis m\u00e1xima"
+        },
+        "roscado": {
+          "type": "boolean",
+          "default": false,
+          "description": "\u00bfTiene roscado?"
+        },
+        "grafado": {
+          "type": "boolean",
+          "default": false,
+          "description": "\u00bfTiene grafado?"
+        }
+      },
+      "description": "Par\u00e1metros espec\u00edficos para m\u00e1quinas de frascos"
+    },
+    "imagenes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "URLs de im\u00e1genes de la m\u00e1quina"
+    },
+    "archivos_adjuntos": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "tipo": {
+            "type": "string"
+          },
+          "fecha_subida": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "description": "Archivos adjuntos (manuales, certificados, etc.)"
+    },
+    "historico_articulos": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "articulo": {
+            "type": "string"
+          },
+          "fecha": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "cantidad": {
+            "type": "number"
+          }
+        }
+      },
+      "description": "Hist\u00f3rico de art\u00edculos fabricados"
+    }
+  },
+  "required": [
+    "nombre",
+    "codigo"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {},
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
