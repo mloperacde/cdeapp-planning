@@ -13,7 +13,7 @@ export const CLIENT_CODE = "380";
 export function getAuthHeaders() {
   // In production, this should come exclusively from Deno.env.get("CUCO360_API_KEY")
   // For development/preview, we fallback to the provided key if env var is missing.
-  const apiKey = Deno.env.get("CUCO360_API_KEY") || "k9fKmKcVCRc44Rf7dpkxhnfU9z9t0XsgrYgkGQSr9unWFZPOKsySznPHb7bUJzBc";
+  const apiKey = Deno.env.get("CUCO360_API_KEY");
   
   if (!apiKey) {
     throw new Error("CUCO360_API_KEY environment variable is not set");

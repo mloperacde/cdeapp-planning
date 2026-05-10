@@ -14,8 +14,7 @@ import AbsenteeismReport from "../components/attendance/AbsenteeismReport";
 import PresenceDashboard from "../components/attendance/PresenceDashboard";
 import BreakAnalysis from "../components/attendance/BreakAnalysis";
 
-// Configuración para sincronización directa (Bypass Backend)
-const CUCO_API_KEY = "k9fKmKcVCRc44Rf7dpkxhnfU9z9t0XsgrYgkGQSr9unWFZPOKsySznPHb7bUJzBc";
+// Configuración para sincronización (usando backend functions para seguridad)
 const CLIENT_CODE = "380";
 const CUCO_BASE_URL = "https://cuco360.cucorent.com/api/apiv2";
 

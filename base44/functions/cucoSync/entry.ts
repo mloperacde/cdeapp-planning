@@ -21,7 +21,7 @@ Deno.serve(async (req) => {
     }
 
     // 1. Validate Configuration & API Key
-    const apiKeyEnv = Deno.env.get("CUCO360_API_KEY") || "k9fKmKcVCRc44Rf7dpkxhnfU9z9t0XsgrYgkGQSr9unWFZPOKsySznPHb7bUJzBc";
+    const apiKeyEnv = Deno.env.get("CUCO360_API_KEY");
     if (!apiKeyEnv) {
       throw new Error("Secret 'CUCO360_API_KEY' is not configured.");
     }
