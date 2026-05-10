@@ -1,0 +1,169 @@
+{
+  "name": "SalaryChangeRequest",
+  "type": "object",
+  "properties": {
+    "employee_id": {
+      "type": "string",
+      "description": "ID del empleado afectado"
+    },
+    "employee_name": {
+      "type": "string",
+      "description": "Nombre del empleado"
+    },
+    "request_type": {
+      "type": "string",
+      "enum": [
+        "Nuevo Componente",
+        "Modificaci\u00f3n Componente",
+        "Eliminaci\u00f3n Componente",
+        "Cambio Categor\u00eda",
+        "Ajuste Salarial"
+      ],
+      "description": "Tipo de solicitud"
+    },
+    "component_id": {
+      "type": "string",
+      "description": "ID del componente afectado (si aplica)"
+    },
+    "component_name": {
+      "type": "string",
+      "description": "Nombre del componente"
+    },
+    "current_amount": {
+      "type": "number",
+      "description": "Cantidad actual"
+    },
+    "requested_amount": {
+      "type": "number",
+      "description": "Cantidad solicitada"
+    },
+    "change_reason": {
+      "type": "string",
+      "description": "Justificaci\u00f3n del cambio"
+    },
+    "effective_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha efectiva del cambio"
+    },
+    "requested_by": {
+      "type": "string",
+      "description": "Usuario que solicita el cambio"
+    },
+    "requested_by_name": {
+      "type": "string",
+      "description": "Nombre del solicitante"
+    },
+    "request_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Fecha de la solicitud"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Pendiente",
+        "En Revisi\u00f3n",
+        "Aprobada",
+        "Rechazada",
+        "Aplicada"
+      ],
+      "default": "Pendiente",
+      "description": "Estado de la solicitud"
+    },
+    "approval_flow": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "approver_id": {
+            "type": "string"
+          },
+          "approver_name": {
+            "type": "string"
+          },
+          "level": {
+            "type": "number"
+          },
+          "status": {
+            "type": "string"
+          },
+          "action_date": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "comments": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Historial del flujo de aprobaci\u00f3n"
+    },
+    "approved_by": {
+      "type": "string",
+      "description": "Usuario que aprob\u00f3 finalmente"
+    },
+    "approval_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Fecha de aprobaci\u00f3n final"
+    },
+    "rejection_reason": {
+      "type": "string",
+      "description": "Motivo del rechazo"
+    },
+    "applied_by": {
+      "type": "string",
+      "description": "Usuario que aplic\u00f3 el cambio"
+    },
+    "applied_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Fecha de aplicaci\u00f3n"
+    },
+    "related_data": {
+      "type": "object",
+      "description": "Datos adicionales relacionados con la solicitud"
+    }
+  },
+  "required": [
+    "employee_id",
+    "request_type",
+    "requested_by",
+    "request_date"
+  ],
+  "rls": {
+    "create": {
+      "data.requested_by": "{{user.email}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "data.requested_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.requested_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    }
+  }
+}
