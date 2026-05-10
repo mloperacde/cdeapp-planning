@@ -345,8 +345,20 @@ export function DataProvider({ children }) {
     brandingConfig: brandingConfigQuery.data, // Alias
     brandingConfigLoading: brandingConfigQuery.isLoading,
     
-    // Helper computed
-    isAdmin: userQuery.data?.role === 'admin',
+    // Helper computed - isAdmin: rol nativo 'admin' en base44 O rol interno con isAdmin=true
+    isAdmin: (() => {
+      const u = userQuery.data;
+      if (!u) return false;
+      if (u.role === 'admin') return true;
+      // Comprobar también en rolesConfig si el rol asignado tiene isAdmin=true
+      const config = rolesConfigQuery.data;
+      if (!config) return false;
+      const assignedRole = config.user_assignments?.[u.email?.toLowerCase()];
+      if (assignedRole && config.roles?.[assignedRole]?.permissions?.isAdmin === true) return true;
+      // También comprobar por el role nativo del usuario en config
+      if (u.role && config.roles?.[u.role]?.permissions?.isAdmin === true) return true;
+      return false;
+    })(),
     isAuthenticated: !!userQuery.data,
   };
 

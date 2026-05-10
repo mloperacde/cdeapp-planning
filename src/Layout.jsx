@@ -76,7 +76,8 @@ export default function Layout({ children, currentPageName }) {
     'Revisión de páginas': true
   });
   
-  const { user, isAdmin, branding, userLoading } = useAppData();
+  const { user, isAdmin, branding, userLoading, rolesConfig } = useAppData();
+  const { role: effectiveRole } = usePermissions();
 
   const toggleCategory = (category) => {
     setExpandedCategories(prev => ({
@@ -169,7 +170,9 @@ export default function Layout({ children, currentPageName }) {
                   </Avatar>
                   <div className="flex-1 text-left">
                     <p className="text-sm font-semibold text-white">{user?.full_name || 'Usuario'}</p>
-                    <p className="text-xs text-slate-400">{isAdmin ? 'Administrador' : 'Usuario'}</p>
+                    <p className="text-xs text-slate-400">
+                      {isAdmin ? 'Administrador' : (rolesConfig?.roles?.[effectiveRole]?.name || 'Usuario')}
+                    </p>
                   </div>
                   <ChevronDown className="w-4 h-4 text-slate-400" />
                 </button>
