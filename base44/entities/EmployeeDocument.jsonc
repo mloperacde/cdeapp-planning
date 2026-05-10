@@ -58,14 +58,12 @@
   ],
   "rls": {
     "create": {
-      "user_condition": {
-        "role": "rrhh"
-      }
+      "created_by": "{{user.email}}"
     },
     "read": {
       "$or": [
         {
-          "data.employee_id": "{{user.employee_id}}"
+          "data.employee_id": "{{user.id}}"
         },
         {
           "user_condition": {
@@ -80,14 +78,33 @@
       ]
     },
     "update": {
-      "user_condition": {
-        "role": "rrhh"
-      }
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "rrhh"
+          }
+        }
+      ]
     },
     "delete": {
-      "user_condition": {
-        "role": "rrhh"
-      }
+      "$or": [
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
     }
   }
 }
