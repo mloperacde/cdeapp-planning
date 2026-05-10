@@ -139,12 +139,23 @@
     "read": {
       "$or": [
         {
+          "data.employee_id": "{{user.id}}"
+        },
+        {
           "data.requested_by": "{{user.email}}"
         },
         {
           "user_condition": {
-            "role": "Admin"
+            "role": "admin"
           }
+        },
+        {
+          "user_condition": {
+            "role": "rrhh"
+          }
+        },
+        {
+          "data.approval_flow.approver_id": "{{user.id}}"
         }
       ]
     },
@@ -155,14 +166,22 @@
         },
         {
           "user_condition": {
-            "role": "Admin"
+            "role": "admin"
           }
+        },
+        {
+          "user_condition": {
+            "role": "rrhh"
+          }
+        },
+        {
+          "data.approval_flow.approver_id": "{{user.id}}"
         }
       ]
     },
     "delete": {
       "user_condition": {
-        "role": "Admin"
+        "role": "admin"
       }
     }
   }
