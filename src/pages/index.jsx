@@ -335,6 +335,8 @@ function PagesContent() {
                 {/* Rutas faltantes - redirecciones */}
                 <Route path="/Employees" element={<MasterEmployeeDatabase />} />
                 <Route path="/AdvancedConfiguration" element={<Configuration />} />
+                <Route path="/rolemanagement" element={<Dashboard />} />
+                <Route path="/RoleManagement" element={<Dashboard />} />
                 <Route path="*" element={<Dashboard />} />
                 
                 </Routes>
