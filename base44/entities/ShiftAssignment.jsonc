@@ -69,14 +69,28 @@
   ],
   "rls": {
     "create": {
-      "user_condition": {
-        "role": "admin"
-      }
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "manager"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "Jefe Turno Produccion"
+          }
+        }
+      ]
     },
     "read": {
       "$or": [
         {
-          "data.employee_id": "{{user.id}}"
+          "data.employee_id": "{{user.employee_id}}"
         },
         {
           "user_condition": {
@@ -85,15 +99,34 @@
         },
         {
           "user_condition": {
-            "role": "supervisor"
+            "role": "manager"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "Jefe Turno Produccion"
           }
         }
       ]
     },
     "update": {
-      "user_condition": {
-        "role": "admin"
-      }
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "manager"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "Jefe Turno Produccion"
+          }
+        }
+      ]
     },
     "delete": {
       "user_condition": {
