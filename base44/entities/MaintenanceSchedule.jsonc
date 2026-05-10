@@ -162,22 +162,27 @@
   "rls": {
     "create": {
       "user_condition": {
-        "role": "Admin"
+        "role": "admin"
       }
     },
     "read": {
       "$or": [
         {
-          "data.tecnico_asignado": "{{user.id}}"
+          "data.tecnico_asignado": "{{user.employee_id}}"
         },
         {
           "user_condition": {
-            "role": "Admin"
+            "role": "admin"
           }
         },
         {
           "user_condition": {
             "role": "T\u00e9cnico"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "manager"
           }
         }
       ]
@@ -185,11 +190,11 @@
     "update": {
       "$or": [
         {
-          "data.tecnico_asignado": "{{user.id}}"
+          "data.tecnico_asignado": "{{user.employee_id}}"
         },
         {
           "user_condition": {
-            "role": "Admin"
+            "role": "admin"
           }
         },
         {
@@ -201,7 +206,7 @@
     },
     "delete": {
       "user_condition": {
-        "role": "Admin"
+        "role": "admin"
       }
     }
   }
