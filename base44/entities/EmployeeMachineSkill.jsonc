@@ -1,0 +1,80 @@
+{
+  "name": "EmployeeMachineSkill",
+  "type": "object",
+  "properties": {
+    "employee_id": {
+      "type": "string",
+      "description": "ID del empleado"
+    },
+    "machine_id": {
+      "type": "string",
+      "description": "ID de la m\u00e1quina"
+    },
+    "nivel_habilidad": {
+      "type": "string",
+      "enum": [
+        "Principiante",
+        "Intermedio",
+        "Avanzado",
+        "Experto"
+      ],
+      "default": "Intermedio",
+      "description": "Nivel de habilidad con la m\u00e1quina"
+    },
+    "certificado": {
+      "type": "boolean",
+      "default": false,
+      "description": "Si tiene certificaci\u00f3n"
+    },
+    "fecha_certificacion": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha de certificaci\u00f3n"
+    },
+    "experiencia_anos": {
+      "type": "number",
+      "description": "A\u00f1os de experiencia"
+    },
+    "observaciones": {
+      "type": "string",
+      "description": "Observaciones adicionales"
+    },
+    "orden_preferencia": {
+      "type": "number",
+      "description": "Orden de preferencia (1-10, basado en maquina_X slot)"
+    }
+  },
+  "required": [
+    "employee_id",
+    "machine_id"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    },
+    "read": {
+      "$or": [
+        {
+          "data.employee_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    }
+  }
+}
