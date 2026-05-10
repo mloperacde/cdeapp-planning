@@ -1,0 +1,188 @@
+{
+  "name": "WorkIncident",
+  "type": "object",
+  "properties": {
+    "codigo_incidente": {
+      "type": "string",
+      "description": "C\u00f3digo \u00fanico del incidente"
+    },
+    "tipo": {
+      "type": "string",
+      "enum": [
+        "Accidente",
+        "Incidente",
+        "Casi Accidente"
+      ],
+      "description": "Tipo de suceso"
+    },
+    "employee_id": {
+      "type": "string",
+      "description": "ID del empleado afectado"
+    },
+    "fecha_hora": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Fecha y hora del incidente"
+    },
+    "lugar": {
+      "type": "string",
+      "description": "Lugar donde ocurri\u00f3 el incidente"
+    },
+    "departamento": {
+      "type": "string",
+      "description": "Departamento donde ocurri\u00f3"
+    },
+    "descripcion": {
+      "type": "string",
+      "description": "Descripci\u00f3n detallada del incidente"
+    },
+    "gravedad": {
+      "type": "string",
+      "enum": [
+        "Leve",
+        "Grave",
+        "Muy Grave",
+        "Mortal"
+      ],
+      "description": "Gravedad del incidente"
+    },
+    "parte_cuerpo_afectada": {
+      "type": "string",
+      "description": "Parte del cuerpo afectada (si aplica)"
+    },
+    "dias_baja": {
+      "type": "number",
+      "default": 0,
+      "description": "D\u00edas de baja m\u00e9dica"
+    },
+    "testigos": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "IDs de empleados testigos"
+    },
+    "causas_inmediatas": {
+      "type": "string",
+      "description": "Causas inmediatas identificadas"
+    },
+    "causas_basicas": {
+      "type": "string",
+      "description": "Causas b\u00e1sicas/ra\u00edz identificadas"
+    },
+    "medidas_correctoras": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "medida": {
+            "type": "string"
+          },
+          "responsable_id": {
+            "type": "string"
+          },
+          "plazo": {
+            "type": "string",
+            "format": "date"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "Pendiente",
+              "En Proceso",
+              "Completada"
+            ],
+            "default": "Pendiente"
+          }
+        }
+      },
+      "description": "Medidas correctoras implementadas"
+    },
+    "investigado_por": {
+      "type": "string",
+      "description": "ID del responsable de la investigaci\u00f3n"
+    },
+    "fecha_investigacion": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha de la investigaci\u00f3n"
+    },
+    "notificado_autoridad": {
+      "type": "boolean",
+      "default": false,
+      "description": "Si se notific\u00f3 a la autoridad laboral"
+    },
+    "fecha_notificacion_autoridad": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha de notificaci\u00f3n a autoridad"
+    },
+    "estado_investigacion": {
+      "type": "string",
+      "enum": [
+        "Pendiente",
+        "En Curso",
+        "Completada",
+        "Cerrada"
+      ],
+      "default": "Pendiente",
+      "description": "Estado de la investigaci\u00f3n"
+    },
+    "documento_investigacion_url": {
+      "type": "string",
+      "description": "URL del documento de investigaci\u00f3n"
+    },
+    "fotos_url": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "URLs de fotos del incidente"
+    },
+    "notas": {
+      "type": "string",
+      "description": "Notas adicionales"
+    }
+  },
+  "required": [
+    "tipo",
+    "employee_id",
+    "fecha_hora",
+    "descripcion",
+    "gravedad"
+  ],
+  "rls": {
+    "create": {
+      "data.employee_id": "{{user.id}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "data.employee_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.employee_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "Admin"
+      }
+    }
+  }
+}
