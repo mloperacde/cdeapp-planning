@@ -224,18 +224,63 @@ Deno.serve(async (req) => {
     const endEnc = encodeURIComponent(`${to} 23:59:59`);
     const url = `https://cuco360.cucorent.com/api/apiv2/checking/getfullchecks/${CLIENT_CODE}?start_date=${startEnc}&end_date=${endEnc}`;
 
-    const response = await fetch(url, {
-      headers: {
-        "Content-Type": "application/json",
-        "accept": "application/json",
-        "APIkey": authHeader,
-        "X-CSRF-TOKEN": ""
+    // Fetch con reintentos ante Cloudflare 429/503
+    let response = null;
+    let lastCucoError = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      if (attempt > 0) {
+        const delay = 3000 * attempt; // 3s, 6s
+        console.log(`[cucoSyncV2] Reintento ${attempt} tras error Cuco360, esperando ${delay}ms...`);
+        await sleep(delay);
       }
-    });
+      try {
+        response = await fetch(url, {
+          headers: {
+            "Content-Type": "application/json",
+            "accept": "application/json",
+            "APIkey": authHeader,
+            "X-CSRF-TOKEN": ""
+          }
+        });
+
+        if (response.status === 429 || response.status === 503) {
+          lastCucoError = `Cuco360 devolvió ${response.status} (demasiadas peticiones). Reintentando...`;
+          console.warn(`[cucoSyncV2] ${lastCucoError}`);
+          response = null;
+          continue;
+        }
+
+        if (response.status === 403) {
+          const text = await response.text();
+          // Cloudflare challenge — no es un error de auth de la API
+          if (text.includes('cloudflare') || text.includes('Just a moment') || text.includes('challenge')) {
+            lastCucoError = `Cuco360 bloqueado temporalmente por Cloudflare (protección anti-bot). Espera unos minutos e inténtalo de nuevo.`;
+            console.error(`[cucoSyncV2] Cloudflare challenge detectado en intento ${attempt}`);
+            response = null;
+            await sleep(5000); // Esperar más antes de reintentar
+            continue;
+          }
+          throw new Error(`CUCO360 API Error (403): Acceso denegado. Verifica la API key.`);
+        }
+
+        break; // Respuesta válida
+      } catch (fetchErr) {
+        lastCucoError = fetchErr.message;
+        if (attempt === 2) throw fetchErr;
+      }
+    }
+
+    if (!response) {
+      return Response.json({
+        success: false,
+        error: lastCucoError || "Cuco360 no disponible tras 3 intentos",
+        retry_suggested: true
+      }, { status: 503 });
+    }
 
     if (!response.ok) {
       const text = await response.text();
-      throw new Error(`CUCO360 API Error (${response.status}): ${text}`);
+      throw new Error(`CUCO360 API Error (${response.status}): ${text.slice(0, 200)}`);
     }
 
     const json = await response.json();

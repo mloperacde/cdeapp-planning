@@ -10,16 +10,30 @@ export default function AutomationStatusPanel() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSync, setLastSync] = useState(null);
   const [lastResult, setLastResult] = useState(null);
+  const [syncError, setSyncError] = useState(null);
 
   const handleManualSync = async () => {
     setIsSyncing(true);
+    setSyncError(null);
     try {
       const result = await base44.functions.invoke("cucoSyncV2", {});
+      const data = result.data;
+      
+      // Cuco360 devolvió error controlado (Cloudflare / rate limit)
+      if (data?.success === false) {
+        const msg = data.error || "Error desconocido en Cuco360";
+        setSyncError(msg);
+        toast.error(msg, { duration: 8000 });
+        return;
+      }
+
       setLastSync(new Date());
-      setLastResult(result.data);
-      toast.success(`Sincronización completada. ${result.data?.count || 0} marcajes.`);
+      setLastResult(data);
+      toast.success(`Sincronización completada. ${data?.count || 0} marcajes.`);
     } catch (err) {
-      toast.error("Error al sincronizar: " + err.message);
+      const msg = err.message || "Error de conexión";
+      setSyncError(msg);
+      toast.error("Error al sincronizar: " + msg, { duration: 8000 });
     } finally {
       setIsSyncing(false);
     }
@@ -108,6 +122,21 @@ export default function AutomationStatusPanel() {
               </Button>
             </div>
           </div>
+
+          {syncError && (
+            <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800 text-xs">
+              <p className="font-semibold text-red-700 dark:text-red-300 mb-1 flex items-center gap-1">
+                <AlertTriangle className="w-3.5 h-3.5" />
+                Error en la sincronización
+              </p>
+              <p className="text-red-600 dark:text-red-400">{syncError}</p>
+              {syncError.toLowerCase().includes('cloudflare') && (
+                <p className="text-red-500 dark:text-red-500 mt-1">
+                  💡 Espera 2-3 minutos e inténtalo de nuevo. Si persiste, verifica que la API key de Cuco360 sea correcta.
+                </p>
+              )}
+            </div>
+          )}
 
           {lastResult && (
             <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800 text-xs">
