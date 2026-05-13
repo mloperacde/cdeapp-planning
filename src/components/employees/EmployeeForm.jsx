@@ -351,6 +351,13 @@ export default function EmployeeForm({ employee, machines, onClose }) {
 
   const [validationErrors, setValidationErrors] = useState([]);
 
+  const isAbsent = formData.disponibilidad === "Ausente";
+  const hasAbsenceData = formData.ausencia_inicio && formData.ausencia_fin;
+  const isTurnoFijo = formData.tipo_turno === "Fijo Mañana" || formData.tipo_turno === "Fijo Tarde";
+  const isMaintenanceDepartment = formData.departamento === "MANTENIMIENTO";
+  const isETT = formData.tipo_contrato?.toUpperCase().includes("ETT");
+  const isBaja = formData.estado_empleado === "Baja";
+
   const validateRequired = () => {
     if (employee) return []; // Solo validar en creación
 
@@ -363,17 +370,13 @@ export default function EmployeeForm({ employee, machines, onClose }) {
     if (!formData.contacto_emergencia_telefono?.trim()) errors.push("Teléfono de emergencia");
     if (!formData.department_id && !formData.departamento?.trim()) errors.push("Departamento");
     if (!formData.puesto?.trim()) errors.push("Puesto");
-    if (!formData.team_id && !formData.equipo?.trim() && !isTurnoFijo) errors.push("Equipo");
+    if (!isTurnoFijo && !formData.team_id && !formData.equipo?.trim()) errors.push("Equipo");
     if (!formData.pin?.trim()) errors.push("PIN");
     if (!formData.numero_tarjeta?.trim()) errors.push("Número de tarjeta Cuco360");
     if (!formData.tipo_jornada?.trim()) errors.push("Tipo de jornada");
     if (!formData.num_horas_jornada) errors.push("Horas de jornada");
     if (!formData.tipo_turno?.trim()) errors.push("Tipo de turno");
-    if (!formData.horario_manana_inicio?.trim()) errors.push("Horario inicio mañana");
-    if (!formData.horario_manana_fin?.trim()) errors.push("Horario fin mañana");
-    if (!formData.horario_tarde_inicio?.trim()) errors.push("Horario inicio tarde");
-    if (!formData.horario_tarde_fin?.trim()) errors.push("Horario fin tarde");
-    if (!formData.fecha_alta?.trim()) errors.push("Fecha de alta");
+    if (!formData.fecha_alta?.trim()) errors.push("Fecha de alta (pestaña Contrato)");
     return errors;
   };
 
@@ -404,13 +407,6 @@ export default function EmployeeForm({ employee, machines, onClose }) {
     });
   };
 
-  const isAbsent = formData.disponibilidad === "Ausente";
-  const hasAbsenceData = formData.ausencia_inicio && formData.ausencia_fin;
-  const isTurnoFijo = formData.tipo_turno === "Fijo Mañana" || formData.tipo_turno === "Fijo Tarde";
-  const isMaintenanceDepartment = formData.departamento === "MANTENIMIENTO";
-  const isETT = formData.tipo_contrato?.toUpperCase().includes("ETT");
-  const isBaja = formData.estado_empleado === "Baja"; // New derived state
-
   return (
     <Dialog open={true} onOpenChange={onClose}>
       <DialogContent 
@@ -426,7 +422,7 @@ export default function EmployeeForm({ employee, machines, onClose }) {
 
         <form onSubmit={handleSubmit}>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-7">
+            <TabsList className="grid w-full grid-cols-8">
               <TabsTrigger value="datos">Datos</TabsTrigger>
               <TabsTrigger value="schedule">Horarios</TabsTrigger>
               <TabsTrigger value="taquilla">Taquilla</TabsTrigger>
