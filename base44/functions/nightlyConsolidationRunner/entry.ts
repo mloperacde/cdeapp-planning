@@ -17,13 +17,16 @@ Deno.serve(async (req) => {
 
   try {
     const user = await base44.auth.me().catch(() => null);
-    if (user) {
-      if (user.role !== 'admin') {
+    if (user && user.email) {
+      // Llamada manual con usuario autenticado
+      const userRole = (user.role || '').toLowerCase();
+      if (userRole !== 'admin') {
         return Response.json({ error: 'Solo administradores pueden ejecutar esta tarea' }, { status: 403 });
       }
       triggeredBy = 'manual';
       notificationEmail = user.email;
     }
+    // Si user es null o no tiene email → llamada del scheduler, permitir
   } catch (_) {
     // scheduled: sin usuario autenticado, OK
   }

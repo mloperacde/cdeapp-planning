@@ -67,8 +67,9 @@ Deno.serve(async (req) => {
 
     // Auth: allow admins or system/automation calls (no user token)
     try {
-      const user = await base44.auth.me();
-      if (user && user.role !== 'admin') {
+      const user = await base44.auth.me().catch(() => null);
+      const userRole = (user?.role || '').toLowerCase();
+      if (user && user.email && userRole !== 'admin') {
         return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
       }
     } catch {

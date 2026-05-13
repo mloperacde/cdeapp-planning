@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Utilidades de tiempo
@@ -170,8 +170,9 @@ Deno.serve(async (req) => {
 
     // Auth: allow admin users or scheduled calls (no user token)
     let user = null;
-    try { user = await base44.auth.me(); } catch (_) {}
-    if (user && user.role !== 'admin') {
+    try { user = await base44.auth.me().catch(() => null); } catch (_) {}
+    const userRole = (user?.role || '').toLowerCase();
+    if (user && user.email && userRole !== 'admin') {
       return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
     }
 
