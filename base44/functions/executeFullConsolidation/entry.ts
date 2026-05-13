@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
 Deno.serve(async (req) => {
   const execution = {
@@ -10,16 +10,18 @@ Deno.serve(async (req) => {
 
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-
-    if (!user || user.role !== 'admin') {
+    // Auth: admin directo, scheduler (sin user), o llamada interna de servicio
+    const user = await base44.auth.me().catch(() => null);
+    const userRole = (user?.role || '').trim().toLowerCase();
+    // Solo bloquear si es un usuario real con rol no-admin (no bloquear scheduler ni llamadas de servicio)
+    if (user && user.email && !user.email.includes('service+') && userRole !== 'admin') {
       return Response.json({ 
         error: 'Solo administradores pueden ejecutar consolidación',
         success: false 
       }, { status: 403 });
     }
 
-    execution.steps.push({ step: 'Auth', status: 'success', msg: `Usuario: ${user.email}` });
+    execution.steps.push({ step: 'Auth', status: 'success', msg: `Usuario: ${user ? user.email : 'sistema/scheduled'}` });
 
     // ============ PASO 1: CONSOLIDAR MÁQUINAS ============
     execution.steps.push({ step: 'Consolidate', status: 'processing', msg: 'Iniciando consolidación de máquinas...' });
