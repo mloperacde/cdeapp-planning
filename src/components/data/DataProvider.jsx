@@ -346,17 +346,19 @@ export function DataProvider({ children }) {
     brandingConfigLoading: brandingConfigQuery.isLoading,
     
     // Helper computed - isAdmin: rol nativo 'admin' en base44 O rol interno con isAdmin=true
+    // IMPORTANTE: Base44 puede devolver el rol como "Admin" (capital A). Normalizamos siempre.
     isAdmin: (() => {
       const u = userQuery.data;
       if (!u) return false;
-      if (u.role === 'admin') return true;
+      const normalizedRole = (u.role || '').trim().toLowerCase();
+      if (normalizedRole === 'admin') return true;
       // Comprobar también en rolesConfig si el rol asignado tiene isAdmin=true
       const config = rolesConfigQuery.data;
       if (!config) return false;
       const assignedRole = config.user_assignments?.[u.email?.toLowerCase()];
       if (assignedRole && config.roles?.[assignedRole]?.permissions?.isAdmin === true) return true;
-      // También comprobar por el role nativo del usuario en config
-      if (u.role && config.roles?.[u.role]?.permissions?.isAdmin === true) return true;
+      // También comprobar por el role nativo del usuario en config (normalizado)
+      if (normalizedRole && config.roles?.[normalizedRole]?.permissions?.isAdmin === true) return true;
       return false;
     })(),
     isAuthenticated: !!userQuery.data,

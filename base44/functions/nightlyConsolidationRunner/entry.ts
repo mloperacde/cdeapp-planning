@@ -125,7 +125,8 @@ Deno.serve(async (req) => {
     try {
       // Obtener admins para notificar
       const admins = await base44.asServiceRole.entities.User.list('email', 50);
-      const adminEmails = admins.filter(u => u.role === 'admin').map(u => u.email);
+      // Normalizar rol a minúsculas para comparación robusta (Base44 puede devolver "Admin")
+      const adminEmails = admins.filter(u => (u.role || '').toLowerCase() === 'admin').map(u => u.email);
       const targets = notificationEmail ? [notificationEmail, ...adminEmails.filter(e => e !== notificationEmail)] : adminEmails;
       const uniqueTargets = [...new Set(targets)].slice(0, 5);
 

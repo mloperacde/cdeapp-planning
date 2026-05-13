@@ -212,13 +212,16 @@ export function usePermissions() {
     }
 
     // 1. Determinar rol efectivo
+    // IMPORTANTE: Base44 puede devolver el rol nativo como "Admin" (capital A).
+    // Siempre normalizamos a minúsculas para comparaciones consistentes.
     let rawRole = "user";
     const userEmail = user.email?.toLowerCase();
 
     if (rolesConfig?.user_assignments?.[userEmail]) {
       rawRole = rolesConfig.user_assignments[userEmail];
     } else if (user.role) {
-      rawRole = user.role;
+      // Normalizar el rol nativo de Base44 a minúsculas
+      rawRole = user.role.trim().toLowerCase();
     }
 
     // 2. Resolver a configuración de rol
