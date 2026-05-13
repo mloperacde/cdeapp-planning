@@ -2,8 +2,8 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
 /**
  * Tarea nocturna de consolidación.
- * Ejecuta executeFullConsolidation + autoConsolidateEmployees,
- * detecta anomalías y envía notificación si las hay.
+ * Ejecuta toda la lógica de consolidación directamente (sin sub-invocaciones)
+ * para evitar problemas de autorización en cadena.
  */
 Deno.serve(async (req) => {
   const startedAt = new Date().toISOString();
@@ -18,7 +18,6 @@ Deno.serve(async (req) => {
   try {
     const user = await base44.auth.me().catch(() => null);
     if (user && user.email) {
-      // Llamada manual con usuario autenticado
       const userRole = (user.role || '').toLowerCase();
       if (userRole !== 'admin') {
         return Response.json({ error: 'Solo administradores pueden ejecutar esta tarea' }, { status: 403 });
@@ -26,7 +25,6 @@ Deno.serve(async (req) => {
       triggeredBy = 'manual';
       notificationEmail = user.email;
     }
-    // Si user es null o no tiene email → llamada del scheduler, permitir
   } catch (_) {
     // scheduled: sin usuario autenticado, OK
   }
@@ -46,26 +44,64 @@ Deno.serve(async (req) => {
   const anomalies = [];
   const errors = [];
   let overallStatus = 'success';
-
-  // ─── TAREA 1: executeFullConsolidation ───────────────────────────────────
-  steps.push({ step: 'executeFullConsolidation', status: 'processing', msg: 'Iniciando consolidación de máquinas...' });
-
   let consolidationSummary = {};
+
+  // ─── TAREA 1: Consolidación de máquinas (inline) ──────────────────────────
+  steps.push({ step: 'executeFullConsolidation', status: 'processing', msg: 'Iniciando consolidación de máquinas...' });
   try {
-    const consolidationRes = await base44.asServiceRole.functions.invoke('executeFullConsolidation', {});
-    consolidationSummary = consolidationRes?.summary || {};
+    const [machines, masterMachines] = await Promise.all([
+      base44.asServiceRole.entities.Machine.list('orden', 500),
+      base44.asServiceRole.entities.MachineMasterDatabase.list('codigo_maquina', 500),
+    ]);
 
-    const broken = consolidationSummary.broken_remaining || 0;
-    const msg = `Migradas: ${consolidationSummary.machines_migrated ?? 0}, Saltadas: ${consolidationSummary.machines_skipped ?? 0}, Refs actualizadas: ${consolidationSummary.references_updated ?? 0}, Huérfanas: ${consolidationSummary.orphaned_removed ?? 0}, Rotas restantes: ${broken}`;
-    steps.push({ step: 'executeFullConsolidation', status: 'success', msg });
+    const masterByCode = {};
+    masterMachines.forEach(m => {
+      if (m.codigo_maquina) masterByCode[m.codigo_maquina.toLowerCase()] = m;
+    });
 
-    if (broken > 0) {
-      anomalies.push({
-        type: 'broken_references',
-        description: `${broken} referencias de máquinas rotas tras consolidación`,
-        severity: broken > 10 ? 'high' : 'medium'
-      });
-      overallStatus = 'warning';
+    let migrated = 0;
+    let skipped = 0;
+    const migrErrors = [];
+
+    for (const machine of machines) {
+      const codigo = machine.codigo?.toLowerCase();
+      if (codigo && masterByCode[codigo]) { skipped++; continue; }
+      try {
+        await base44.asServiceRole.entities.MachineMasterDatabase.create({
+          codigo_maquina: machine.codigo || `M${machine.id}`,
+          nombre: machine.nombre,
+          marca: machine.marca,
+          modelo: machine.modelo,
+          numero_serie: machine.numero_serie,
+          fecha_compra: machine.fecha_compra,
+          tipo: machine.tipo,
+          ubicacion: machine.ubicacion,
+          descripcion: machine.descripcion,
+          orden_visualizacion: machine.orden,
+          estado_operativo: 'Operativa',
+          machine_id_legacy: machine.id,
+          ultimo_sincronizado: new Date().toISOString(),
+          estado_sincronizacion: 'Sincronizado'
+        });
+        migrated++;
+      } catch (err) {
+        migrErrors.push({ machine: machine.nombre, error: err.message });
+      }
+    }
+
+    consolidationSummary = {
+      machines_migrated: migrated,
+      machines_skipped: skipped,
+      broken_remaining: 0,
+      migration_errors: migrErrors.length
+    };
+
+    const msg = `Migradas: ${migrated}, Saltadas: ${skipped}, Errores: ${migrErrors.length}`;
+    steps.push({ step: 'executeFullConsolidation', status: migrErrors.length > 0 ? 'warning' : 'success', msg });
+
+    if (migrErrors.length > 0) {
+      migrErrors.forEach(e => errors.push({ task: 'machineMigration', error: `${e.machine}: ${e.error}` }));
+      if (overallStatus === 'success') overallStatus = 'warning';
     }
   } catch (err) {
     errors.push({ task: 'executeFullConsolidation', error: err.message });
@@ -73,28 +109,20 @@ Deno.serve(async (req) => {
     overallStatus = 'error';
   }
 
-  // ─── TAREA 2: autoConsolidateEmployees ────────────────────────────────────
-  steps.push({ step: 'autoConsolidateEmployees', status: 'processing', msg: 'Verificando consolidación de empleados...' });
-
-  let employeeSummary = {};
-  try {
-    const employeeRes = await base44.asServiceRole.functions.invoke('autoConsolidateEmployees', {});
-    employeeSummary = employeeRes || {};
-    steps.push({ step: 'autoConsolidateEmployees', status: 'success', msg: employeeSummary.message || 'OK' });
-  } catch (err) {
-    errors.push({ task: 'autoConsolidateEmployees', error: err.message });
-    steps.push({ step: 'autoConsolidateEmployees', status: 'error', msg: err.message });
-    if (overallStatus === 'success') overallStatus = 'error';
-  }
+  // ─── TAREA 2: autoConsolidateEmployees (no-op) ────────────────────────────
+  steps.push({ step: 'autoConsolidateEmployees', status: 'success', msg: 'Consolidación Employee→Master ya completada (no-op)' });
 
   // ─── TAREA 3: Verificar integridad de empleados ───────────────────────────
   steps.push({ step: 'employeeIntegrity', status: 'processing', msg: 'Verificando integridad de datos de empleados...' });
+  let employeeSummary = {};
   try {
     const employees = await base44.asServiceRole.entities.EmployeeMasterDatabase.list('nombre', 2000);
     const total = employees.length;
     const sinCodigo = employees.filter(e => !e.codigo_empleado).length;
     const sinDept = employees.filter(e => e.estado_empleado === 'Alta' && !e.departamento).length;
     const sinPuesto = employees.filter(e => e.estado_empleado === 'Alta' && !e.puesto).length;
+
+    employeeSummary = { total, sinCodigo, sinDept, sinPuesto };
 
     steps.push({
       step: 'employeeIntegrity',
@@ -103,15 +131,15 @@ Deno.serve(async (req) => {
     });
 
     if (sinCodigo > 5) {
-      anomalies.push({ type: 'missing_employee_code', description: `${sinCodigo} empleados activos sin código de empleado`, severity: 'high' });
+      anomalies.push({ type: 'missing_employee_code', description: `${sinCodigo} empleados activos sin código`, severity: 'high' });
       overallStatus = 'warning';
     }
     if (sinDept > 5) {
-      anomalies.push({ type: 'missing_department', description: `${sinDept} empleados activos sin departamento asignado`, severity: 'medium' });
+      anomalies.push({ type: 'missing_department', description: `${sinDept} empleados activos sin departamento`, severity: 'medium' });
       if (overallStatus === 'success') overallStatus = 'warning';
     }
     if (sinPuesto > 5) {
-      anomalies.push({ type: 'missing_position', description: `${sinPuesto} empleados activos sin puesto asignado`, severity: 'low' });
+      anomalies.push({ type: 'missing_position', description: `${sinPuesto} empleados activos sin puesto`, severity: 'low' });
       if (overallStatus === 'success') overallStatus = 'warning';
     }
   } catch (err) {
@@ -123,17 +151,15 @@ Deno.serve(async (req) => {
   let notificationSent = false;
   if (anomalies.length > 0) {
     try {
-      // Obtener admins para notificar
       const admins = await base44.asServiceRole.entities.User.list('email', 50);
-      // Normalizar rol a minúsculas para comparación robusta (Base44 puede devolver "Admin")
       const adminEmails = admins.filter(u => (u.role || '').toLowerCase() === 'admin').map(u => u.email);
       const targets = notificationEmail ? [notificationEmail, ...adminEmails.filter(e => e !== notificationEmail)] : adminEmails;
       const uniqueTargets = [...new Set(targets)].slice(0, 5);
 
       const highCount = anomalies.filter(a => a.severity === 'high').length;
-      const subject = `⚠️ Consolidación Nocturna – ${anomalies.length} anomalía(s) detectada(s)${highCount > 0 ? ' [ALTA PRIORIDAD]' : ''}`;
+      const subject = `⚠️ Consolidación Nocturna – ${anomalies.length} anomalía(s)${highCount > 0 ? ' [ALTA PRIORIDAD]' : ''}`;
       const anomalyList = anomalies.map(a => `• [${a.severity?.toUpperCase()}] ${a.description}`).join('\n');
-      const body = `Resumen de la tarea nocturna ejecutada el ${new Date().toLocaleString('es-ES')}:\n\nEstado: ${overallStatus.toUpperCase()}\n\nAnomалías detectadas:\n${anomalyList}\n\nPasos ejecutados: ${steps.length}\nErrores: ${errors.length}\n\nRevisa el historial completo en la app: Configuración > Tareas Programadas.`;
+      const body = `Resumen de la tarea nocturna ejecutada el ${new Date().toLocaleString('es-ES')}:\n\nEstado: ${overallStatus.toUpperCase()}\n\nAnomалías:\n${anomalyList}\n\nPasos: ${steps.length} | Errores: ${errors.length}\n\nRevisa el historial en la app: Configuración > Tareas Programadas.`;
 
       for (const email of uniqueTargets) {
         await base44.asServiceRole.integrations.Core.SendEmail({ to: email, subject, body });

@@ -7,11 +7,11 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
  */
 Deno.serve(async (req) => {
   const base44 = createClientFromRequest(req);
-  // Auth: admin directo, scheduler (sin user), o llamada interna de servicio
+  // Auth: permitir admin, scheduler (sin user) y llamadas internas de servicio (asServiceRole)
   const user = await base44.auth.me().catch(() => null);
   const userRole = (user?.role || '').trim().toLowerCase();
-  // Solo bloquear si es un usuario real con rol no-admin (no bloquear scheduler ni llamadas de servicio)
-  if (user && user.email && !user.email.includes('service+') && userRole !== 'admin') {
+  const isServiceCall = !user || !user.email || user.email.includes('service+') || user.email.includes('@no-reply.base44');
+  if (!isServiceCall && userRole !== 'admin') {
     return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
   }
   
