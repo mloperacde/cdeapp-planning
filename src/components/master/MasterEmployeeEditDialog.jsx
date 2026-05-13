@@ -429,6 +429,25 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
   const isExcedencia = formData.estado_empleado === "Excedencia";
   const isTurnoFijo = formData.tipo_turno === "Fijo Mañana" || formData.tipo_turno === "Fijo Tarde";
 
+  const [validationErrors, setValidationErrors] = useState([]);
+
+  const validateRequired = () => {
+    if (employee?.id) return []; // Solo validar en creación
+    const errors = [];
+    if (!formData.nombre?.trim()) errors.push("Nombre completo");
+    if (!formData.dni?.trim()) errors.push("DNI/NIE");
+    if (!formData.telefono_movil?.trim()) errors.push("Teléfono móvil");
+    if (!formData.department_id && !formData.departamento?.trim()) errors.push("Departamento");
+    if (!formData.puesto?.trim()) errors.push("Puesto");
+    if (!isTurnoFijo && !formData.equipo?.trim()) errors.push("Equipo");
+    if (!formData.pin && formData.pin !== 0) errors.push("PIN Cuco360");
+    if (!formData.numero_tarjeta?.trim()) errors.push("Número de tarjeta Cuco360");
+    if (!formData.tipo_jornada?.trim()) errors.push("Tipo de jornada");
+    if (!formData.tipo_turno?.trim()) errors.push("Tipo de turno");
+    if (!formData.fecha_alta?.trim()) errors.push("Fecha de alta (pestaña Contrato)");
+    return errors;
+  };
+
   // Calcular duración de excedencia automáticamente
   useEffect(() => {
     if (isExcedencia && formData.fecha_inicio_excedencia && formData.fecha_fin_excedencia) {
@@ -475,6 +494,12 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    const errors = validateRequired();
+    if (errors.length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
+    setValidationErrors([]);
     saveMutation.mutate(formData);
   };
 
@@ -573,11 +598,10 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Nombre Completo *</Label>
+                  <Label>Nombre Completo {!employee && <span className="text-red-500">*</span>}</Label>
                   <Input
-                    value={formData.nombre}
+                    value={formData.nombre || ""}
                     onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
-                    required
                   />
                 </div>
 
@@ -665,7 +689,7 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
                 {permissions.campos.ver_dni && (
                   <>
                     <div className="space-y-2">
-                      <Label>DNI/NIE</Label>
+                      <Label>DNI/NIE {!employee && <span className="text-red-500">*</span>}</Label>
                       <Input
                         value={formData.dni || ""}
                         onChange={(e) => setFormData({ ...formData, dni: e.target.value })}
@@ -745,7 +769,7 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Teléfono Móvil</Label>
+                  <Label>Teléfono Móvil {!employee && <span className="text-red-500">*</span>}</Label>
                   <Input
                     value={formData.telefono_movil || ""}
                     onChange={(e) => setFormData({ ...formData, telefono_movil: e.target.value })}
@@ -823,7 +847,7 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
             <TabsContent value="organizacion" className="space-y-4 mt-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Departamento</Label>
+                  <Label>Departamento {!employee && <span className="text-red-500">*</span>}</Label>
                   <Select
                     value={formData.department_id || ""}
                     onValueChange={(value) => {
@@ -854,7 +878,7 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Puesto</Label>
+                  <Label>Puesto {!employee && <span className="text-red-500">*</span>}</Label>
                   <Select
                     value={formData.puesto || ""}
                     onValueChange={(value) => setFormData({ ...formData, puesto: value })}
@@ -919,7 +943,7 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Equipo {isTurnoFijo && "(No aplica para turnos fijos)"}</Label>
+                  <Label>Equipo {!employee && !isTurnoFijo && <span className="text-red-500">*</span>} {isTurnoFijo && <span className="text-slate-400 text-xs">(No aplica para turnos fijos)</span>}</Label>
                   <Select
                     value={formData.equipo || ""}
                     onValueChange={(value) => setFormData({ ...formData, equipo: value })}
@@ -952,7 +976,7 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
                   <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Control de Acceso (Cuco360)</p>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>PIN Cuco360</Label>
+                      <Label>PIN Cuco360 {!employee && <span className="text-red-500">*</span>}</Label>
                       <Input
                         type="number"
                         value={formData.pin ?? ""}
@@ -961,7 +985,7 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Número de Tarjeta Cuco360</Label>
+                      <Label>Número de Tarjeta Cuco360 {!employee && <span className="text-red-500">*</span>}</Label>
                       <Input
                         value={formData.numero_tarjeta || ""}
                         onChange={(e) => setFormData({ ...formData, numero_tarjeta: e.target.value })}
@@ -1003,7 +1027,7 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Tipo Jornada</Label>
+                  <Label>Tipo Jornada {!employee && <span className="text-red-500">*</span>}</Label>
                   <Select
                     value={formData.tipo_jornada || ""}
                     onValueChange={(value) => setFormData({ ...formData, tipo_jornada: value })}
@@ -1030,7 +1054,7 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Tipo Turno</Label>
+                  <Label>Tipo Turno {!employee && <span className="text-red-500">*</span>}</Label>
                   <Select
                     value={formData.tipo_turno || ""}
                     onValueChange={(value) => setFormData({ ...formData, tipo_turno: value })}
@@ -1184,7 +1208,7 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
                 )}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Fecha Alta</Label>
+                    <Label>Fecha Alta {!employee && <span className="text-red-500">*</span>}</Label>
                     <Input
                       type="date"
                       value={formData.fecha_alta || ""}
@@ -1544,6 +1568,23 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
             </TabsContent>
             )}
           </Tabs>
+
+          {validationErrors.length > 0 && (
+            <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold text-red-800 mb-1">Campos obligatorios incompletos para crear el empleado:</p>
+                  <ul className="text-sm text-red-700 list-disc list-inside space-y-0.5">
+                    {validationErrors.map((err) => (
+                      <li key={err}>{err}</li>
+                    ))}
+                  </ul>
+                  <p className="text-xs text-red-600 mt-2">Los campos marcados con <span className="font-bold">*</span> son obligatorios. Algunos campos están en otras pestañas (Org., Horarios, Contrato).</p>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="flex justify-between items-center mt-6 pt-6 border-t">
             <Button type="button" variant="ghost" onClick={onClose}>
