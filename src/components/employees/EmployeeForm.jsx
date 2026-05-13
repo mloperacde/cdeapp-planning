@@ -65,6 +65,8 @@ export default function EmployeeForm({ employee, machines, onClose }) {
     turno_partido_salida1: "",
     turno_partido_entrada2: "",
     turno_partido_salida2: "",
+    pin: "",
+    numero_tarjeta: "",
     fecha_alta: "",
     tipo_contrato: "",
     empresa_ett: "", // Added ETT field
@@ -347,8 +349,42 @@ export default function EmployeeForm({ employee, machines, onClose }) {
     }
   });
 
+  const [validationErrors, setValidationErrors] = useState([]);
+
+  const validateRequired = () => {
+    if (employee) return []; // Solo validar en creación
+
+    const errors = [];
+    if (!formData.nombre?.trim()) errors.push("Nombre completo");
+    if (!formData.codigo_empleado?.trim()) errors.push("Código de empleado");
+    if (!formData.dni?.trim()) errors.push("DNI/NIE");
+    if (!formData.telefono_movil?.trim()) errors.push("Teléfono móvil");
+    if (!formData.contacto_emergencia_nombre?.trim()) errors.push("Contacto de emergencia");
+    if (!formData.contacto_emergencia_telefono?.trim()) errors.push("Teléfono de emergencia");
+    if (!formData.department_id && !formData.departamento?.trim()) errors.push("Departamento");
+    if (!formData.puesto?.trim()) errors.push("Puesto");
+    if (!formData.team_id && !formData.equipo?.trim() && !isTurnoFijo) errors.push("Equipo");
+    if (!formData.pin?.trim()) errors.push("PIN");
+    if (!formData.numero_tarjeta?.trim()) errors.push("Número de tarjeta Cuco360");
+    if (!formData.tipo_jornada?.trim()) errors.push("Tipo de jornada");
+    if (!formData.num_horas_jornada) errors.push("Horas de jornada");
+    if (!formData.tipo_turno?.trim()) errors.push("Tipo de turno");
+    if (!formData.horario_manana_inicio?.trim()) errors.push("Horario inicio mañana");
+    if (!formData.horario_manana_fin?.trim()) errors.push("Horario fin mañana");
+    if (!formData.horario_tarde_inicio?.trim()) errors.push("Horario inicio tarde");
+    if (!formData.horario_tarde_fin?.trim()) errors.push("Horario fin tarde");
+    if (!formData.fecha_alta?.trim()) errors.push("Fecha de alta");
+    return errors;
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
+    const errors = validateRequired();
+    if (errors.length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
+    setValidationErrors([]);
     saveMutation.mutate(formData);
   };
 
@@ -406,7 +442,7 @@ export default function EmployeeForm({ employee, machines, onClose }) {
             <TabsContent value="datos" className="space-y-4 mt-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="codigo_empleado">Código de Empleado</Label>
+                  <Label htmlFor="codigo_empleado">Código de Empleado {!employee && <span className="text-red-500">*</span>}</Label>
                   <Input
                     id="codigo_empleado"
                     value={formData.codigo_empleado || ""}
@@ -415,7 +451,7 @@ export default function EmployeeForm({ employee, machines, onClose }) {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="nombre">Nombre Completo *</Label>
+                  <Label htmlFor="nombre">Nombre Completo {!employee && <span className="text-red-500">*</span>}</Label>
                   <Input
                     id="nombre"
                     value={formData.nombre}
@@ -486,7 +522,7 @@ export default function EmployeeForm({ employee, machines, onClose }) {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="dni">DNI/NIE</Label>
+                  <Label htmlFor="dni">DNI/NIE {!employee && <span className="text-red-500">*</span>}</Label>
                   <Input
                     id="dni"
                     value={formData.dni || ""}
@@ -561,7 +597,7 @@ export default function EmployeeForm({ employee, machines, onClose }) {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="telefono_movil">Teléfono Móvil</Label>
+                  <Label htmlFor="telefono_movil">Teléfono Móvil {!employee && <span className="text-red-500">*</span>}</Label>
                   <Input
                     id="telefono_movil"
                     value={formData.telefono_movil || ""}
@@ -570,7 +606,7 @@ export default function EmployeeForm({ employee, machines, onClose }) {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="contacto_emergencia_nombre">Contacto de Emergencia</Label>
+                  <Label htmlFor="contacto_emergencia_nombre">Contacto de Emergencia {!employee && <span className="text-red-500">*</span>}</Label>
                   <Input
                     id="contacto_emergencia_nombre"
                     placeholder="Nombre"
@@ -580,7 +616,7 @@ export default function EmployeeForm({ employee, machines, onClose }) {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="contacto_emergencia_telefono">Teléfono de Emergencia</Label>
+                  <Label htmlFor="contacto_emergencia_telefono">Teléfono de Emergencia {!employee && <span className="text-red-500">*</span>}</Label>
                   <Input
                     id="contacto_emergencia_telefono"
                     placeholder="Teléfono"
@@ -590,7 +626,27 @@ export default function EmployeeForm({ employee, machines, onClose }) {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="departamento">Departamento</Label>
+                  <Label htmlFor="pin">PIN {!employee && <span className="text-red-500">*</span>}</Label>
+                  <Input
+                    id="pin"
+                    value={formData.pin || ""}
+                    onChange={(e) => setFormData({ ...formData, pin: e.target.value })}
+                    placeholder="PIN del empleado"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="numero_tarjeta">Número Tarjeta Cuco360 {!employee && <span className="text-red-500">*</span>}</Label>
+                  <Input
+                    id="numero_tarjeta"
+                    value={formData.numero_tarjeta || ""}
+                    onChange={(e) => setFormData({ ...formData, numero_tarjeta: e.target.value })}
+                    placeholder="Número de tarjeta"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="departamento">Departamento {!employee && <span className="text-red-500">*</span>}</Label>
                   <Select
                     value={formData.department_id || ""}
                     onValueChange={(value) => {
@@ -619,7 +675,7 @@ export default function EmployeeForm({ employee, machines, onClose }) {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="puesto">Puesto</Label>
+                  <Label htmlFor="puesto">Puesto {!employee && <span className="text-red-500">*</span>}</Label>
                   <Input
                     id="puesto"
                     value={formData.puesto || ""}
@@ -637,7 +693,7 @@ export default function EmployeeForm({ employee, machines, onClose }) {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="equipo">Equipo {isTurnoFijo && "(No aplica para turnos fijos)"}</Label>
+                  <Label htmlFor="equipo">Equipo {!employee && !isTurnoFijo && <span className="text-red-500">*</span>} {isTurnoFijo && <span className="text-slate-400 text-xs">(No aplica para turnos fijos)</span>}</Label>
                   <Select
                     value={formData.team_id || ""}
                     onValueChange={(value) => {
@@ -1151,7 +1207,7 @@ export default function EmployeeForm({ employee, machines, onClose }) {
                 )}
 
                 <div className="space-y-2">
-                  <Label htmlFor="fecha_alta">Fecha Inicio / Alta</Label>
+                  <Label htmlFor="fecha_alta">Fecha Inicio / Alta {!employee && <span className="text-red-500">*</span>}</Label>
                   <Input
                     id="fecha_alta"
                     type="date"
@@ -1344,7 +1400,24 @@ export default function EmployeeForm({ employee, machines, onClose }) {
             </TabsContent>
           </Tabs>
 
-          <div className="flex justify-end gap-3 mt-6">
+          {validationErrors.length > 0 && (
+            <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold text-red-800 mb-1">Campos obligatorios incompletos:</p>
+                  <ul className="text-sm text-red-700 list-disc list-inside space-y-0.5">
+                    {validationErrors.map((err) => (
+                      <li key={err}>{err}</li>
+                    ))}
+                  </ul>
+                  <p className="text-xs text-red-600 mt-2">Los campos marcados con <span className="font-bold">*</span> son obligatorios para crear un nuevo empleado. Los campos de horarios y equipo se encuentran en las pestañas "Horarios" y "Datos".</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="flex justify-end gap-3 mt-4">
             <Button type="button" variant="outline" onClick={onClose}>
               Cancelar
             </Button>
