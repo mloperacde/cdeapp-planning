@@ -82,6 +82,7 @@ import QuotesList from "./QuotesList";
 import QuoteDetail from "./QuoteDetail";
 import PricingConfiguration from "./PricingConfiguration";
 import ReportingAnalytics from "./ReportingAnalytics";
+import EmployeesApiConfig from "./EmployeesApiConfig";
 
 import { BrowserRouter, HashRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -331,6 +332,7 @@ function PagesContent() {
                 <Route path="/QuoteDetail/:id" element={<QuoteDetail />} />
                 <Route path="/PricingConfiguration" element={<PricingConfiguration />} />
                 <Route path="/ReportingAnalytics" element={<ReportingAnalytics />} />
+                <Route path="/EmployeesApiConfig" element={<EmployeesApiConfig />} />
 
                 {/* Rutas faltantes - redirecciones */}
                 <Route path="/Employees" element={<MasterEmployeeDatabase />} />
