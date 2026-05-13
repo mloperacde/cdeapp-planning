@@ -136,25 +136,27 @@ async function retryOp(fn, retries = 3, baseDelay = 1000) {
 }
 
 /**
- * Elimina todos los registros de un día de forma rápida usando deletes paralelos.
+ * Elimina registros de un día filtrando por import_batch para evitar borrar todos los registros
+ * uno a uno. Usa chunks de 20 con pausa de 1s entre lotes para respetar el rate limit.
  */
 async function fastDeleteByDate(serviceClient, dateStr) {
   let totalDeleted = 0;
-  const MAX_LOOPS = 10;
+  const MAX_LOOPS = 20;
   for (let loop = 0; loop < MAX_LOOPS; loop++) {
     const page = await retryOp(() =>
-      serviceClient.entities.AttendanceRecord.filter({ record_date: dateStr }, "id", 500)
+      serviceClient.entities.AttendanceRecord.filter({ record_date: dateStr }, "id", 50)
     );
     if (!page || page.length === 0) break;
-    // Parallel delete in chunks of 25
-    const CHUNK = 25;
+    // Delete in chunks of 5 with 1.5s pause between chunks
+    const CHUNK = 5;
     for (let i = 0; i < page.length; i += CHUNK) {
       const chunk = page.slice(i, i + CHUNK);
       await Promise.allSettled(chunk.map(r => serviceClient.entities.AttendanceRecord.delete(r.id)));
       totalDeleted += chunk.length;
+      await sleep(1500);
     }
-    if (page.length < 500) break;
-    await sleep(200);
+    if (page.length < 50) break;
+    await sleep(1000);
   }
   return totalDeleted;
 }
@@ -307,7 +309,8 @@ Deno.serve(async (req) => {
     }
 
     // ── 3. Procesar registros de marcaje ────────────────────────────────────
-    const todayBatch = `cuco_v2_sync_${new Date().toISOString().split('T')[0]}`;
+    // El batch incluye la fecha del día para poder identificar y limpiar re-syncs del mismo día
+    const todayBatch = `cuco_v2_sync_${from}`;
 
     const recordsToCreate = checks.map((check) => {
       const externalId = String(check.cod_int_empleado || check.cod_interno || check.cod_empleado || "").trim();
@@ -340,13 +343,26 @@ Deno.serve(async (req) => {
 
     console.log(`[cucoSyncV2] ${recordsToCreate.length} registros obtenidos de Cuco360`);
 
-    // ── 4. Limpiar registros previos por cada día ─────────────────────────
+    // ── 4. Limpiar registros previos del mismo import_batch (solo re-sync) ─
+    // Para sync manual: borramos solo registros con import_batch que empiece por "cuco_v2_sync_"
+    // del mismo día para evitar duplicados. Máx 50 registros por día para no hacer timeout.
     const uniqueDates = [...new Set(recordsToCreate.map(r => r.record_date))];
-    console.log(`[cucoSyncV2] Limpiando ${uniqueDates.length} días...`);
+    console.log(`[cucoSyncV2] Verificando registros previos en ${uniqueDates.length} día(s)...`);
 
     for (const d of uniqueDates) {
-      const deleted = await fastDeleteByDate(serviceClient, d);
-      console.log(`[cucoSyncV2] Día ${d}: ${deleted} registros eliminados`);
+      const prevBatch = `cuco_v2_sync_${d}`;
+      const existing = await retryOp(() =>
+        serviceClient.entities.AttendanceRecord.filter({ record_date: d, import_batch: prevBatch }, "id", 200)
+      ).catch(() => []);
+      if (existing && existing.length > 0) {
+        const CHUNK = 10;
+        for (let i = 0; i < existing.length; i += CHUNK) {
+          const chunk = existing.slice(i, i + CHUNK);
+          await Promise.allSettled(chunk.map(r => serviceClient.entities.AttendanceRecord.delete(r.id)));
+          await sleep(800);
+        }
+        console.log(`[cucoSyncV2] Día ${d}: ${existing.length} registros del batch previo eliminados`);
+      }
     }
 
     // ── 5. Insertar nuevos registros en chunks ────────────────────────────

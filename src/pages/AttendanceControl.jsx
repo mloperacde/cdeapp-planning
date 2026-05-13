@@ -14,9 +14,7 @@ import AbsenteeismReport from "../components/attendance/AbsenteeismReport";
 import PresenceDashboard from "../components/attendance/PresenceDashboard";
 import BreakAnalysis from "../components/attendance/BreakAnalysis";
 
-// Configuración para sincronización (usando backend functions para seguridad)
-const CLIENT_CODE = "380";
-const CUCO_BASE_URL = "https://cuco360.cucorent.com/api/apiv2";
+// Sincronización via backend function cucoSyncV2
 
 function parseFecha(valor) {
   if (!valor && valor !== 0) return null;
@@ -431,145 +429,50 @@ export default function AttendanceControl() {
     }
   };
 
-  // ── SINCRONIZAR CON CUCO360 (DIRECTO FRONTEND) ──────────────────────────────
+  // ── SINCRONIZAR CON CUCO360 VIA BACKEND (evita CORS y timeouts) ─────────────
   const handleSyncCuco = async () => {
     if (!confirm(`¿Sincronizar marcajes de CUCO360 para el día ${filterDate}? Esto sobrescribirá los datos existentes.`)) return;
     
     setIsSyncing(true);
     try {
-      // 1. Preparar fechas (Volvemos al formato simple con espacio que funcionaba en la v1)
-      const start = encodeURIComponent(`${filterDate} 00:00:00`);
-      const end = encodeURIComponent(`${filterDate} 23:59:59`);
-      
-      // 2. Fetch directo a Cuco360 V2
-      const url = `${CUCO_BASE_URL}/checking/getfullchecks/${CLIENT_CODE}?start_date=${start}&end_date=${end}`;
-      console.log("Fetching Cuco V2 URL:", url);
-      
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        }
+      // Llamada al backend — skip_analysis=true para evitar procesar análisis.
+      // El proceso puede tardar 30-60s con muchos registros.
+      const res = await base44.functions.invoke('cucoSyncV2', {
+        date: filterDate,
+        force: true,
+        skip_analysis: true,
       });
 
-      console.log("Cuco V2 Status:", response.status);
+      const data = res.data;
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Error HTTP ${response.status}: ${errorText}`);
-      }
-
-      const rawData = await response.json();
-      console.log("Cuco V2 Raw Data:", rawData);
-      
-      // Validar estructura de respuesta
-      // V2 devuelve objeto { success: true, checks: [...] }
-      let records = [];
-      if (Array.isArray(rawData)) {
-        records = rawData;
-      } else if (Array.isArray(rawData.data)) {
-        records = rawData.data;
-      } else if (Array.isArray(rawData.checks)) {
-        records = rawData.checks;
-      }
-      
-      if (!Array.isArray(records)) {
-        throw new Error("Formato de respuesta inválido de Cuco360 (No se encontró array de 'checks')");
-      }
-
-      if (records.length === 0) {
-        console.warn("Cuco360 devolvió 0 registros para la fecha:", filterDate);
-        toast.warning(`No se encontraron marcajes en Cuco360 para el ${filterDate}. Revise si hay datos en el origen.`);
+      if (!data?.success) {
+        const errMsg = data?.error || 'Error desconocido en la sincronización';
+        if (data?.retry_suggested) {
+          toast.warning(`Cuco360 no disponible temporalmente. Inténtalo de nuevo en unos minutos.`);
+        } else {
+          toast.error('Error al sincronizar: ' + errMsg);
+        }
         return;
       }
 
-      // 3. Mapear datos usando empleados locales
-      const mappedRecords = records.map(r => {
-        // Buscar empleado (Prioridad: Código Interno > ID Cuco)
-        // Cuco devuelve a veces cod_int_empleado como número o string. 0 es válido.
-        const code = (r.cod_int_empleado !== null && r.cod_int_empleado !== undefined) ? String(r.cod_int_empleado).trim() : "";
-        const id = (r.id_empleado !== null && r.id_empleado !== undefined) ? String(r.id_empleado).trim() : "";
-        
-        let emp = null;
-        if (code) emp = employeesByCodigo.get(code);
-        if (!emp && id) emp = employeesById.get(id); // Fallback
-        
-        // Intentar recuperar nombre de la respuesta API si no cruzamos con local
-        const apiName = r.nombre_empleado || r.empleado || r.nombre || r.name || "";
-
-        // Dirección: 1=Entrada, 2=Salida, 3=Entrada, 4=Salida
-        // V2 devuelve "val_direccion": "E" o "S"
-        let direction = "E";
-        const valDir = r.val_direccion ? String(r.val_direccion).toUpperCase() : "";
-        const typeId = Number(r.id_tipo_marcaje);
-        
-        if (valDir === "S" || valDir === "SALIDA" || valDir === "OUT") {
-           direction = "S";
-        } else if (typeId === 2 || typeId === 4) {
-           direction = "S";
-        }
-        
-        // Incidencia
-        let incident = "";
-        if (r.id_incidencia && r.id_incidencia !== 0) {
-           incident = `Incidencia ${r.id_incidencia}`;
-        }
-
-        // Fecha y Hora
-        // V2 devuelve "fec_marcaje": "2026-03-04 08:15:04"
-        let recordDate = filterDate;
-        let recordTime = r.hora || "00:00";
-
-        if (r.fec_marcaje) {
-           const parts = r.fec_marcaje.split(' ');
-           recordDate = parts[0];
-           if (parts[1]) recordTime = parts[1].slice(0, 5); // HH:mm
-        } else if (r.fecha) {
-           recordDate = r.fecha.split('T')[0].split(' ')[0];
-        }
-        
-        return {
-          employee_id: code || id || "UNKNOWN",
-          employee_name: emp ? (emp.nombre || emp.name) : (apiName || `Empleado ${code || id}`),
-          department: emp ? emp.departamento : "",
-          direction: direction,
-          incident: incident,
-          record_date: recordDate,
-          record_time: recordTime,
-          center: "",
-          device: r.nom_dispositivo || "",
-          import_batch: `sync_v2_${Date.now()}`
-        };
-      });
-
-      // 4. Eliminar registros previos del día (Directo Frontend para evitar 405/500 en función)
-      // Primero buscamos los IDs a borrar
-      // Usamos la query existente 'records' si coincide con filterDate, o fetch fresco
-      const existing = await base44.entities.AttendanceRecord.filter({ record_date: filterDate }, "id", 2000);
-      if (existing.length > 0) {
-        // Borrar en lotes pequeños
-        const deleteChunkSize = 50;
-        for (let i = 0; i < existing.length; i += deleteChunkSize) {
-           const batchIds = existing.slice(i, i + deleteChunkSize).map(e => e.id);
-           await Promise.all(batchIds.map(id => base44.entities.AttendanceRecord.delete(id).catch(() => undefined)));
-        }
-      }
-
-      // 5. Guardar nuevos registros
-      const saveChunkSize = 50;
-      for (let i = 0; i < mappedRecords.length; i += saveChunkSize) {
-        await base44.entities.AttendanceRecord.bulkCreate(mappedRecords.slice(i, i + saveChunkSize));
-      }
-      
-      toast.success(`Sincronizados ${mappedRecords.length} registros correctamente.`);
+      toast.success(`✓ ${data.count ?? 0} marcajes importados desde Cuco360.`);
       await queryClient.invalidateQueries({ queryKey: ["attendanceRecords"] });
       await refetch();
       
     } catch (err) {
-      console.error("Error sync CUCO360:", err);
-      const msg = err.message || String(err);
-      toast.error("Error al sincronizar: " + msg);
+      // 504 Gateway Timeout: el backend puede haber completado el trabajo aunque el gateway
+      // haya cortado la conexión HTTP. Esperamos 5s y refrescamos para verificar.
+      const isTimeout = err.message?.includes('504') || err.message?.includes('timeout') || err.message?.includes('Timeout');
+      if (isTimeout) {
+        toast.info('La sincronización está procesando en segundo plano (puede tardar 30-60s con muchos registros). Actualizando datos...');
+        await new Promise(r => setTimeout(r, 8000));
+        await queryClient.invalidateQueries({ queryKey: ["attendanceRecords"] });
+        await refetch();
+        toast.success('Datos actualizados. Comprueba los registros del día.');
+      } else {
+        console.error("Error sync CUCO360:", err);
+        toast.error("Error al sincronizar: " + (err.message || String(err)));
+      }
     } finally {
       setIsSyncing(false);
     }
