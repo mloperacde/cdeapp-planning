@@ -43,7 +43,15 @@ export default function OrganizationalStructure() {
   const { data: employees = [] } = useQuery({
     queryKey: ['employees_vacancies_page'],
     queryFn: async () => {
-      const all = await base44.entities.EmployeeMasterDatabase.list('nombre');
+      const all = [];
+      let skip = 0;
+      const batchSize = 100;
+      while (true) {
+        const batch = await base44.entities.EmployeeMasterDatabase.list('nombre', batchSize, skip);
+        all.push(...batch);
+        if (batch.length < batchSize) break;
+        skip += batchSize;
+      }
       const isActive = (s) => {
         const v = (s || "").toString().trim().toUpperCase();
         return v === "ALTA" || v === "ACTIVO";
@@ -334,7 +342,18 @@ function MaintenanceConfigWrapper() {
 
   const { data: employees = [] } = useQuery({
     queryKey: ['employees_maintenance_config'],
-    queryFn: () => base44.entities.EmployeeMasterDatabase.list('nombre'),
+    queryFn: async () => {
+      const all = [];
+      let skip = 0;
+      const batchSize = 100;
+      while (true) {
+        const batch = await base44.entities.EmployeeMasterDatabase.list('nombre', batchSize, skip);
+        all.push(...batch);
+        if (batch.length < batchSize) break;
+        skip += batchSize;
+      }
+      return all;
+    },
   });
 
   const [config, setConfig] = useState({ areas: [], assignments: {}, machine_assignments: {} });
@@ -432,11 +451,18 @@ function ManufacturingConfigWrapper() {
   const { data: employees = [] } = useQuery({
     queryKey: ['employees_manufacturing_config'],
     queryFn: async () => {
-      const all = await base44.entities.EmployeeMasterDatabase.list('nombre');
-      // Return all to ensure we can select any employee
-            return all;
-          },
-        });
+      const all = [];
+      let skip = 0;
+      const batchSize = 100;
+      while (true) {
+        const batch = await base44.entities.EmployeeMasterDatabase.list('nombre', batchSize, skip);
+        all.push(...batch);
+        if (batch.length < batchSize) break;
+        skip += batchSize;
+      }
+      return all;
+    },
+  });
 
   const { data: teams = [] } = useQuery({
     queryKey: ['teamConfigs_manufacturing'],

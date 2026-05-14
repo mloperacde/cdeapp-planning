@@ -49,8 +49,19 @@ export default function OrganizationalChart({
   });
 
   const { data: fetchedEmps = [] } = useQuery({
-    queryKey: ['employees'],
-    queryFn: () => base44.entities.EmployeeMasterDatabase.list('nombre', 1000),
+    queryKey: ['employees_org_chart'],
+    queryFn: async () => {
+      const all = [];
+      let skip = 0;
+      const batchSize = 100;
+      while (true) {
+        const batch = await base44.entities.EmployeeMasterDatabase.list('nombre', batchSize, skip);
+        all.push(...batch);
+        if (batch.length < batchSize) break;
+        skip += batchSize;
+      }
+      return all;
+    },
     enabled: !data?.employees
   });
 

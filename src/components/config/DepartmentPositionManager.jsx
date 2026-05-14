@@ -103,8 +103,15 @@ export default function DepartmentPositionManager() {
   const { data: employees = [] } = useQuery({
     queryKey: ['employees'],
     queryFn: async () => {
-      const all = await base44.entities.EmployeeMasterDatabase.list('nombre');
-      // Solo mostrar empleados activos (permitir 'ALTA' o 'ACTIVO')
+      const all = [];
+      let skip = 0;
+      const batchSize = 100;
+      while (true) {
+        const batch = await base44.entities.EmployeeMasterDatabase.list('nombre', batchSize, skip);
+        all.push(...batch);
+        if (batch.length < batchSize) break;
+        skip += batchSize;
+      }
       const isActive = (s) => {
         const v = (s || "").toString().trim().toUpperCase();
         return v === "ALTA" || v === "ACTIVO";
