@@ -343,25 +343,35 @@ Deno.serve(async (req) => {
 
     console.log(`[cucoSyncV2] ${recordsToCreate.length} registros obtenidos de Cuco360`);
 
-    // ── 4. Limpiar registros previos del mismo import_batch (solo re-sync) ─
-    // Para sync manual: borramos solo registros con import_batch que empiece por "cuco_v2_sync_"
-    // del mismo día para evitar duplicados. Máx 50 registros por día para no hacer timeout.
+    // ── 4. Limpiar TODOS los registros previos del día antes de insertar ──
+    // Se pagina de 200 en 200 hasta eliminar absolutamente todos los registros
+    // del día (sin filtro de batch) para garantizar idempotencia total.
     const uniqueDates = [...new Set(recordsToCreate.map(r => r.record_date))];
-    console.log(`[cucoSyncV2] Verificando registros previos en ${uniqueDates.length} día(s)...`);
+    console.log(`[cucoSyncV2] Limpiando registros previos en ${uniqueDates.length} día(s)...`);
 
     for (const d of uniqueDates) {
-      const prevBatch = `cuco_v2_sync_${d}`;
-      const existing = await retryOp(() =>
-        serviceClient.entities.AttendanceRecord.filter({ record_date: d, import_batch: prevBatch }, "id", 200)
-      ).catch(() => []);
-      if (existing && existing.length > 0) {
-        const CHUNK = 10;
+      let totalDeleted = 0;
+      let safetyLimit = 50; // máx 50 páginas × 200 = 10000 registros
+      while (safetyLimit-- > 0) {
+        const existing = await retryOp(() =>
+          serviceClient.entities.AttendanceRecord.filter({ record_date: d }, "id", 200)
+        ).catch(() => []);
+        if (!existing || existing.length === 0) break;
+        // Borrar de 5 en 5 con pausa de 2s para respetar rate limits
+        const CHUNK = 5;
         for (let i = 0; i < existing.length; i += CHUNK) {
           const chunk = existing.slice(i, i + CHUNK);
-          await Promise.allSettled(chunk.map(r => serviceClient.entities.AttendanceRecord.delete(r.id)));
-          await sleep(800);
+          await Promise.allSettled(chunk.map(r =>
+            retryOp(() => serviceClient.entities.AttendanceRecord.delete(r.id), 5, 2000)
+          ));
+          await sleep(2000);
         }
-        console.log(`[cucoSyncV2] Día ${d}: ${existing.length} registros del batch previo eliminados`);
+        totalDeleted += existing.length;
+        if (existing.length < 200) break;
+        await sleep(1000);
+      }
+      if (totalDeleted > 0) {
+        console.log(`[cucoSyncV2] Día ${d}: ${totalDeleted} registros eliminados antes de reinsertar`);
       }
     }
 
