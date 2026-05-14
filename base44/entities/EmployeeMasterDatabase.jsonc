@@ -16,7 +16,7 @@
     },
     {
       "operation": "delete",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'rrhh'}}"
     }
   ],
   "properties": {
@@ -32,7 +32,8 @@
       "type": "string",
       "enum": [
         "Alta",
-        "Baja"
+        "Baja",
+        "Excedencia"
       ],
       "default": "Alta"
     },
@@ -41,6 +42,17 @@
       "format": "date"
     },
     "motivo_baja": {
+      "type": "string"
+    },
+    "fecha_inicio_excedencia": {
+      "type": "string",
+      "format": "date"
+    },
+    "fecha_fin_excedencia": {
+      "type": "string",
+      "format": "date"
+    },
+    "duracion_excedencia": {
       "type": "string"
     },
     "sujeto_a_control_horario": {
@@ -277,6 +289,10 @@
       "type": "string",
       "format": "date"
     },
+    "dias_vacaciones_proteccion": {
+      "type": "number",
+      "default": 0
+    },
     "maquina_1": {
       "type": "string"
     },
@@ -332,48 +348,5 @@
   },
   "required": [
     "nombre"
-  ],
-  "rls": {
-    "create": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "rrhh"
-          }
-        }
-      ]
-    },
-    "read": {
-      "$or": [
-        {
-          "id": "{{user.data.employee_id}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "rrhh"
-          }
-        }
-      ]
-    },
-    "update": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "delete": {
-      "user_condition": {
-        "role": "admin"
-      }
-    }
-  }
+  ]
 }

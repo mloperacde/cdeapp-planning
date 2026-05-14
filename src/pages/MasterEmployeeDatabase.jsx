@@ -179,10 +179,11 @@ export default function MasterEmployeeDatabasePage() {
   }, [location.search, masterEmployees]);
 
   const canCreateEmployee = permissions.isAdmin || permissions.canEditEmployees;
+  const canDeleteEmployee = permissions.isAdmin || permissions.canDeleteEmployees;
   // Use centralized permission check instead of hardcoded role check
   const isHrModuleAllowed = permissions.canAccessPage 
     ? permissions.canAccessPage('/MasterEmployeeDatabase') 
-    : (permissions.role === "hr_manager" || permissions.isAdmin);
+    : (permissions.role === "hr_manager" || permissions.role === "rrhh" || permissions.isAdmin);
 
   const handleSyncCuco360 = async (onlyMissing = true) => {
     setSyncingCuco(true);
@@ -1155,10 +1156,12 @@ export default function MasterEmployeeDatabasePage() {
                             className="h-6 w-6 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20" title="Editar">
                             <User className="w-3.5 h-3.5" />
                           </Button>
-                          <Button size="sm" variant="ghost" onClick={() => { setEmployeeToDelete(emp); setDeleteConfirmOpen(true); }}
-                            className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20" title="Eliminar">
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </Button>
+                          {canDeleteEmployee && (
+                            <Button size="sm" variant="ghost" onClick={() => { setEmployeeToDelete(emp); setDeleteConfirmOpen(true); }}
+                              className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20" title="Eliminar">
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     )}
@@ -1225,6 +1228,27 @@ export default function MasterEmployeeDatabasePage() {
             onClose={() => {
               setEditDialogOpen(false);
               setEmployeeToEdit(null);
+            }}
+            permissions={{
+              contrato: { ver: true, editar: permissions.isAdmin || permissions.canEditEmployees },
+              campos: {
+                editar_sensible: permissions.isAdmin || permissions.canViewPersonalData,
+                editar_contacto: permissions.isAdmin || permissions.canViewPersonalData,
+                ver_salario: permissions.isAdmin || permissions.canViewSalary,
+                ver_dni: permissions.isAdmin || permissions.canViewPersonalData,
+                ver_bancarios: permissions.isAdmin || permissions.canViewBankingData
+              },
+              tabs: {
+                personal: true,
+                organizacion: true,
+                horarios: true,
+                taquilla: true,
+                contrato: permissions.isAdmin || permissions.canEditEmployees,
+                absentismo: permissions.isAdmin,
+                maquinas: true,
+                disponibilidad: true,
+                emergencias: permissions.isAdmin
+              }
             }}
           />
         </>

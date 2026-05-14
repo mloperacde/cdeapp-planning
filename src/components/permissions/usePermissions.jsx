@@ -92,6 +92,7 @@ export const ROLE_PERMISSIONS = {
     canManageMachines: true,
     canViewReports: true,
     canConfigureSystem: true,
+    canDeleteEmployees: true,
     DocumentManagement: {
       viewDocuments: true,
       createDocuments: true,
@@ -99,6 +100,18 @@ export const ROLE_PERMISSIONS = {
       deleteDocuments: true,
       viewHistory: true
     }
+  },
+  rrhh: {
+    isAdmin: false,
+    canViewSalary: true,
+    canViewPersonalData: true,
+    canViewBankingData: true,
+    canEditEmployees: true,
+    canApproveAbsences: true,
+    canManageMachines: false,
+    canViewReports: true,
+    canConfigureSystem: false,
+    canDeleteEmployees: true,
   },
   hr_manager: {
     isAdmin: false,
@@ -110,6 +123,7 @@ export const ROLE_PERMISSIONS = {
     canManageMachines: false,
     canViewReports: true,
     canConfigureSystem: false,
+    canDeleteEmployees: true,
   },
   shift_manager_production: {
     isAdmin: false,
