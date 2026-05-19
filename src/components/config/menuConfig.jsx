@@ -35,7 +35,8 @@ import {
   Link2,
   FlaskConical,
   GraduationCap,
-  ArrowLeftRight
+  ArrowLeftRight,
+  Radio
 } from 'lucide-react';
 
 export const MENU_STRUCTURE = [
@@ -49,7 +50,8 @@ export const MENU_STRUCTURE = [
   { name: 'Sincronización Cuco360', path: '/CucoSyncDashboard', icon: Link2, category: 'Recursos Humanos' },
   { name: 'ETT y Temporales', path: '/ETTTemporaryEmployees', icon: Briefcase, category: 'Recursos Humanos' },
   { name: 'Onboarding', path: '/EmployeeOnboarding', icon: UserPlus, category: 'Recursos Humanos' },
-  { name: 'Presencia y Ausencias', path: '/PresenceAbsenceHub', icon: Clock, category: 'Recursos Humanos' },
+  { name: 'Control de Presencia', path: '/PresenceControl', icon: Radio, category: 'Recursos Humanos' },
+  { name: 'Gestión de Ausencias', path: '/PresenceAbsenceHub', icon: Clock, category: 'Recursos Humanos' },
   { name: 'Comités y PRL', path: '/CommitteeManagement', icon: Shield, category: 'Recursos Humanos' },
   { name: 'Vestuarios/Taquillas', path: '/LockerManagement', icon: Package, category: 'Recursos Humanos' },
   { name: 'Matriz Habilidades', path: '/SkillMatrix', icon: BarChart3, category: 'Recursos Humanos' },

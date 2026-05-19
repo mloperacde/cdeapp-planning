@@ -2,6 +2,7 @@ import Layout from "../Layout";
 
 import AbsenceManagement from "./AbsenceManagement";
 import PresenceAbsenceHub from "./PresenceAbsenceHub";
+import PresenceControl from "./PresenceControl";
 import AbsenceTypeConfig from "./AbsenceTypeConfig";
 import AdvancedHRDashboard from "./AdvancedHRDashboard";
 import AppUserManagement from "./AppUserManagement";
@@ -205,6 +206,7 @@ function PagesContent() {
                 
                 <Route path="/AbsenceManagement" element={<AbsenceManagement />} />
                 <Route path="/PresenceAbsenceHub" element={<PresenceAbsenceHub />} />
+                <Route path="/PresenceControl" element={<PresenceControl />} />
                 <Route path="/EmailNotifications" element={<EmailNotifications />} />
                 <Route path="/EmployeeAbsenceInfo" element={<EmployeeAbsenceInfo />} />
                 
