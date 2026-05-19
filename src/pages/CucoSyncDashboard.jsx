@@ -18,6 +18,7 @@ export default function CucoSyncDashboard() {
   const [syncingId, setSyncingId] = useState(null);
   const [syncing, setSyncing] = useState(false);
   const [lastSyncResult, setLastSyncResult] = useState(null);
+  const [syncError, setSyncError] = useState(null);
 
   const runCheck = async () => {
     setChecking(true);
@@ -70,20 +71,23 @@ export default function CucoSyncDashboard() {
   const runDailySync = async () => {
     setSyncing(true);
     setLastSyncResult(null);
+    setSyncError(null);
     try {
-      toast.info("Iniciando sync robusto con Cuco360...");
+      toast.info("Iniciando sync con Cuco360... (puede tardar varios minutos)");
       const res = await base44.functions.invoke("cucoSyncV2", { force: true });
       const data = res.data;
       setLastSyncResult(data);
       if (data.integrity?.employees_failed > 0) {
-        toast.warning(`Sync completado con ${data.integrity.employees_failed} empleados con errores`);
+        toast.warning(`Sync con ${data.integrity.employees_failed} empleados con errores`);
       } else if (data.success) {
-        toast.success(`✅ Sync completo: ${data.count} fichajes de ${data.integrity?.employees_total} empleados`);
+        toast.success(`✅ Sync completo: ${data.count} fichajes`);
       } else {
         toast.error("Sync fallido: " + (data.error || data.message));
       }
     } catch (err) {
-      toast.error("Error al sincronizar: " + err.message);
+      const msg = err.message || "Error desconocido";
+      setSyncError(msg);
+      toast.error("Error al sincronizar");
     } finally {
       setSyncing(false);
     }
@@ -120,6 +124,27 @@ export default function CucoSyncDashboard() {
       </div>
 
       <div className="space-y-4">
+
+        {/* Error persistente de sync */}
+        {syncError && (
+          <Card className="border-2 border-red-400 bg-red-50 dark:bg-red-950/30">
+            <CardContent className="pt-4 pb-4">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 shrink-0" />
+                <div className="flex-1">
+                  <p className="font-semibold text-red-700 text-sm">Error al ejecutar el sync</p>
+                  <p className="text-xs text-red-600 mt-1 font-mono break-all">{syncError}</p>
+                  <p className="text-xs text-red-500 mt-2">
+                    Si el error es <strong>502</strong> o <strong>timeout</strong>, la función tardó demasiado.
+                    El sync secuencial puede tardar varios minutos con muchos empleados.
+                    Los datos pueden haberse sincronizado parcialmente — verifica en "Verificar Consistencia".
+                  </p>
+                </div>
+                <button onClick={() => setSyncError(null)} className="text-red-400 hover:text-red-600 text-lg leading-none">×</button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Panel de resultado del último sync robusto */}
         {lsr && (

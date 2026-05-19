@@ -329,45 +329,37 @@ Deno.serve(async (req) => {
     const employeeCodes = Object.keys(recordsByEmployee);
     console.log(`[cucoSyncV2] Empleados con marcajes: ${employeeCodes.length}`);
 
-    // ── PASO 4: Sync atómico por empleado con verificación ─────────────────
-    // Procesamos de 3 en 3 empleados en paralelo para no saturar la API (rate limit)
-    const PARALLEL = 3;
+    // ── PASO 4: Sync atómico SECUENCIAL por empleado ─────────────────────
+    // Procesamos de 1 en 1 para respetar el rate limit de la API de Base44
     const syncResults = {}; // { employeeCode: { success, deleted, inserted, verified, error } }
     const failedEmployees = [];
     let totalInserted = 0;
 
-    for (let i = 0; i < employeeCodes.length; i += PARALLEL) {
-      const batch = employeeCodes.slice(i, i + PARALLEL);
-      const batchResults = await Promise.all(
-        batch.map(async (code) => {
-          const dateMap = recordsByEmployee[code];
-          const results = {};
-          for (const [dateStr, records] of Object.entries(dateMap)) {
-            const r = await syncEmployeeRecords(serviceClient, code, dateStr, records, todayBatch);
-            results[dateStr] = r;
-          }
-          return { code, results };
-        })
-      );
-
-      for (const { code, results } of batchResults) {
-        syncResults[code] = results;
-        const allDatesOk = Object.values(results).every(r => r.success);
-        if (!allDatesOk) {
-          const errors = Object.entries(results)
-            .filter(([, r]) => !r.success)
-            .map(([d, r]) => `${d}: ${r.error}`)
-            .join('; ');
-          failedEmployees.push({ code, errors });
-          console.error(`[cucoSyncV2] ❌ FALLÓ empleado ${code}: ${errors}`);
-        } else {
-          const inserted = Object.values(results).reduce((s, r) => s + r.inserted, 0);
-          totalInserted += inserted;
-        }
+    for (let i = 0; i < employeeCodes.length; i++) {
+      const code = employeeCodes[i];
+      const dateMap = recordsByEmployee[code];
+      const results = {};
+      for (const [dateStr, records] of Object.entries(dateMap)) {
+        const r = await syncEmployeeRecords(serviceClient, code, dateStr, records, todayBatch);
+        results[dateStr] = r;
       }
 
-      // Pausa entre batches para respetar rate limit
-      if (i + PARALLEL < employeeCodes.length) await sleep(600);
+      syncResults[code] = results;
+      const allDatesOk = Object.values(results).every(r => r.success);
+      if (!allDatesOk) {
+        const errors = Object.entries(results)
+          .filter(([, r]) => !r.success)
+          .map(([d, r]) => `${d}: ${r.error}`)
+          .join('; ');
+        failedEmployees.push({ code, errors });
+        console.error(`[cucoSyncV2] ❌ FALLÓ empleado ${code}: ${errors}`);
+      } else {
+        const inserted = Object.values(results).reduce((s, r) => s + r.inserted, 0);
+        totalInserted += inserted;
+      }
+
+      // Pausa entre empleados para respetar rate limit
+      if (i < employeeCodes.length - 1) await sleep(300);
     }
 
     // ── PASO 5: Reintentar empleados fallidos (hasta 2 veces más) ──────────
@@ -382,37 +374,29 @@ Deno.serve(async (req) => {
       const retryList = [...stillFailing];
       stillFailing = [];
 
-      for (let i = 0; i < retryList.length; i += PARALLEL) {
-        const batch = retryList.slice(i, i + PARALLEL);
-        const batchResults = await Promise.all(
-          batch.map(async ({ code }) => {
-            const dateMap = recordsByEmployee[code];
-            const results = {};
-            for (const [dateStr, records] of Object.entries(dateMap)) {
-              const r = await syncEmployeeRecords(serviceClient, code, dateStr, records, todayBatch);
-              results[dateStr] = r;
-            }
-            return { code, results };
-          })
-        );
-
-        for (const { code, results } of batchResults) {
-          const allDatesOk = Object.values(results).every(r => r.success);
-          if (!allDatesOk) {
-            const errors = Object.entries(results)
-              .filter(([, r]) => !r.success)
-              .map(([d, r]) => `${d}: ${r.error}`)
-              .join('; ');
-            stillFailing.push({ code, errors });
-          } else {
-            const idx = failedEmployees.findIndex(f => f.code === code);
-            if (idx >= 0) failedEmployees.splice(idx, 1);
-            const inserted = Object.values(results).reduce((s, r) => s + r.inserted, 0);
-            totalInserted += inserted;
-            console.log(`[cucoSyncV2] ✅ Recuperado en reintento ${retryRound}: ${code}`);
-          }
+      for (const { code } of retryList) {
+        const dateMap = recordsByEmployee[code];
+        const results = {};
+        for (const [dateStr, records] of Object.entries(dateMap)) {
+          const r = await syncEmployeeRecords(serviceClient, code, dateStr, records, todayBatch);
+          results[dateStr] = r;
         }
-        await sleep(800); // más pausa en reintentos
+
+        const allDatesOk = Object.values(results).every(r => r.success);
+        if (!allDatesOk) {
+          const errors = Object.entries(results)
+            .filter(([, r]) => !r.success)
+            .map(([d, r]) => `${d}: ${r.error}`)
+            .join('; ');
+          stillFailing.push({ code, errors });
+        } else {
+          const idx = failedEmployees.findIndex(f => f.code === code);
+          if (idx >= 0) failedEmployees.splice(idx, 1);
+          const inserted = Object.values(results).reduce((s, r) => s + r.inserted, 0);
+          totalInserted += inserted;
+          console.log(`[cucoSyncV2] ✅ Recuperado en reintento ${retryRound}: ${code}`);
+        }
+        await sleep(500);
       }
     }
 
