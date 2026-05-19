@@ -73,11 +73,22 @@ export default function PresenceControl() {
     setIsSyncing(true);
     try {
       const result = await base44.functions.invoke("cucoSyncV2", { date: analysisDate });
-      toast.success(`${result.data?.count || 0} marcajes sincronizados.`);
+      const data = result.data;
+      if (data?.success === false) {
+        toast.error(`Error en sync: ${data.error || "Error desconocido"}`);
+      } else {
+        const count = data?.count ?? data?.inserted ?? 0;
+        const analysis = data?.analysis;
+        const msg = analysis
+          ? `${count} marcajes · ${analysis.ficharon} ficharon · ${analysis.reactivados} reactivados`
+          : `${count} marcajes sincronizados`;
+        toast.success(msg);
+      }
       queryClient.invalidateQueries({ queryKey: ["attendanceRecords", analysisDate] });
       refetchRecords();
+      refetchExpected();
     } catch (err) {
-      toast.error("Error al sincronizar: " + err.message);
+      toast.error("Error al sincronizar: " + (err.message || "Timeout - la función tardó demasiado. Los datos se actualizarán en breve."));
     } finally {
       setIsSyncing(false);
     }
@@ -99,7 +110,7 @@ export default function PresenceControl() {
     return map;
   }, [records]);
 
-  // Empleados que no ficharon ayer (predicción)
+  // Empleados que no ficharon ayer (predicción) — solo usamos esto como señal secundaria
   const absentYesterdaySet = useMemo(() => {
     const yMap = {};
     for (const r of yesterdayRecords) {
@@ -111,6 +122,12 @@ export default function PresenceControl() {
     }
     return set;
   }, [yesterdayRecords, expectedData]);
+
+  // Hora actual en Madrid para calcular si el turno ya debería haber empezado
+  const nowMinutes = useMemo(() => {
+    const now = new Date();
+    return now.getHours() * 60 + now.getMinutes();
+  }, []);
 
   // Ausencias confirmadas para el día de análisis
   const confirmedAbsencesMap = useMemo(() => {
@@ -157,8 +174,15 @@ export default function PresenceControl() {
         } else {
           presenceStatus = "present";
         }
-      } else if (predictedAbsent) {
-        presenceStatus = "absent_predicted";
+      } else if (isToday && expectedTime !== "—") {
+        // Solo marcar como posible ausencia si: es hoy, el turno ya debería haber empezado
+        // hace más de 30 minutos Y tampoco fichó ayer (doble señal)
+        const [eh, em] = expectedTime.split(":").map(Number);
+        const expectedMinutes = eh * 60 + em;
+        const minutesLate = nowMinutes - expectedMinutes;
+        if (minutesLate >= 30 && predictedAbsent) {
+          presenceStatus = "absent_predicted";
+        }
       }
 
       return {
