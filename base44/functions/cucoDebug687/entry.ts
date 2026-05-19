@@ -1,21 +1,17 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
 Deno.serve(async (req) => {
   try {
-    const { createClientFromRequest } = await import('npm:@base44/sdk@0.8.25');
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me().catch(() => null);
-    if (!user || user.role !== 'admin') {
-      return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
-    }
 
     const apiKey = Deno.env.get("CUCO360_API_KEY");
     const CLIENT_CODE = Deno.env.get("CUCO_CLIENT_CODE") || "380";
     const authHeader = apiKey.replace("Bearer ", "").trim();
 
     const body = await req.json().catch(() => ({}));
-    const { date } = body;
+    const { date, employee_code } = body;
     const targetDate = date || new Date().toISOString().split('T')[0];
+    const searchCode = String(employee_code || '275').trim();
 
     const startEnc = encodeURIComponent(`${targetDate} 00:00:00`);
     const endEnc = encodeURIComponent(`${targetDate} 23:59:59`);
@@ -37,23 +33,31 @@ Deno.serve(async (req) => {
       return Response.json({ error: "No array returned", raw: json });
     }
 
-    // Buscar todos los registros que tienen cod_int_empleado, cod_interno o cod_empleado = "687"
+    // Buscar por cualquier campo de código
     const related = checks.filter(c => {
-      return String(c.cod_int_empleado || '').trim() === '687' ||
-             String(c.cod_interno || '').trim() === '687' ||
-             String(c.cod_empleado || '').trim() === '687';
+      return String(c.cod_int_empleado || '').trim() === searchCode ||
+             String(c.cod_interno || '').trim() === searchCode ||
+             String(c.cod_empleado || '').trim() === searchCode ||
+             String(c.employee_code || '').trim() === searchCode ||
+             String(c.id_empleado || '').trim() === searchCode;
     });
 
-    // También mostrar los primeros 3 registros para ver la estructura de campos
-    const sample = checks.slice(0, 3);
+    // Buscar también por nombre parcial "ELENA" o "HITA"
+    const byName = checks.filter(c => {
+      const name = String(c.nombre || c.name || c.employee_name || '').toUpperCase();
+      return name.includes('ELENA') || name.includes('HITA');
+    });
 
-    // Mostrar todos los campos únicos disponibles
+    // Mostrar estructura de los primeros 3 registros
+    const sample = checks.slice(0, 3);
     const allKeys = checks.length > 0 ? Object.keys(checks[0]) : [];
 
     return Response.json({
       total_checks: checks.length,
       fields_available: allKeys,
-      records_for_687: related,
+      search_code: searchCode,
+      records_by_code: related,
+      records_by_name_elena: byName,
       sample_records: sample,
     });
 

@@ -344,46 +344,44 @@ Deno.serve(async (req) => {
     console.log(`[cucoSyncV2] ${recordsToCreate.length} registros obtenidos de Cuco360`);
 
     // ── 4. Limpiar TODOS los registros previos del día antes de insertar ──
-    // Se pagina de 200 en 200 hasta eliminar absolutamente todos los registros
-    // del día (sin filtro de batch) para garantizar idempotencia total.
     const uniqueDates = [...new Set(recordsToCreate.map(r => r.record_date))];
     console.log(`[cucoSyncV2] Limpiando registros previos en ${uniqueDates.length} día(s)...`);
 
     for (const d of uniqueDates) {
       let totalDeleted = 0;
-      let safetyLimit = 50; // máx 50 páginas × 200 = 10000 registros
+      let safetyLimit = 30; // máx 30 páginas × 500 = 15000 registros
       while (safetyLimit-- > 0) {
         const existing = await retryOp(() =>
-          serviceClient.entities.AttendanceRecord.filter({ record_date: d }, "id", 200)
+          serviceClient.entities.AttendanceRecord.filter({ record_date: d }, "id", 500)
         ).catch(() => []);
         if (!existing || existing.length === 0) break;
-        // Borrar de 5 en 5 con pausa de 2s para respetar rate limits
-        const CHUNK = 5;
+        // Borrar de 20 en 20 con pausa mínima — reducimos tiempo total de borrado
+        const CHUNK = 20;
         for (let i = 0; i < existing.length; i += CHUNK) {
           const chunk = existing.slice(i, i + CHUNK);
           await Promise.allSettled(chunk.map(r =>
-            retryOp(() => serviceClient.entities.AttendanceRecord.delete(r.id), 5, 2000)
+            retryOp(() => serviceClient.entities.AttendanceRecord.delete(r.id), 3, 500)
           ));
-          await sleep(2000);
+          await sleep(300);
         }
         totalDeleted += existing.length;
-        if (existing.length < 200) break;
-        await sleep(1000);
+        if (existing.length < 500) break;
+        await sleep(500);
       }
       if (totalDeleted > 0) {
         console.log(`[cucoSyncV2] Día ${d}: ${totalDeleted} registros eliminados antes de reinsertar`);
       }
     }
 
-    // ── 5. Insertar nuevos registros en chunks ────────────────────────────
-    const BULK = 100;
+    // ── 5. Insertar nuevos registros en chunks de 200 ────────────────────
+    const BULK = 200;
     let inserted = 0;
     for (let i = 0; i < recordsToCreate.length; i += BULK) {
       const chunk = recordsToCreate.slice(i, i + BULK);
       await retryOp(() => serviceClient.entities.AttendanceRecord.bulkCreate(chunk));
       inserted += chunk.length;
-      if (i % 300 === 0) console.log(`[cucoSyncV2] Insertados ${inserted}/${recordsToCreate.length}`);
-      await sleep(200);
+      if (i % 400 === 0) console.log(`[cucoSyncV2] Insertados ${inserted}/${recordsToCreate.length}`);
+      await sleep(100);
     }
 
     // ── 6. Análisis de presencia (solo si no se omite explícitamente) ─
