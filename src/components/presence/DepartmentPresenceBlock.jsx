@@ -27,6 +27,13 @@ const STATUS_CONFIG = {
     rowClass: "bg-red-50/30 dark:bg-red-900/10",
     iconClass: "text-red-500",
   },
+  absent_no_record: {
+    label: "Sin registro",
+    icon: AlertCircle,
+    badgeClass: "bg-red-50 text-red-800 border-red-300 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700",
+    rowClass: "bg-red-50/20 dark:bg-red-900/10",
+    iconClass: "text-red-400",
+  },
   absent_predicted: {
     label: "Posible ausencia",
     icon: TrendingDown,
@@ -54,8 +61,8 @@ function getShiftTypeLabel(emp) {
 export default function DepartmentPresenceBlock({ employees, isCurrentShift, isAnalysisDate }) {
   // Ordenar: ausentes primero, luego predicciones, luego presentes, luego pendientes
   const sorted = [...employees].sort((a, b) => {
-    const order = { absent_confirmed: 0, absent_predicted: 1, late: 2, present: 3, pending: 4 };
-    return (order[a.presenceStatus] ?? 5) - (order[b.presenceStatus] ?? 5);
+    const order = { absent_confirmed: 0, absent_no_record: 1, absent_predicted: 2, late: 3, present: 4, pending: 5 };
+    return (order[a.presenceStatus] ?? 6) - (order[b.presenceStatus] ?? 6);
   });
 
   return (
@@ -123,7 +130,14 @@ export default function DepartmentPresenceBlock({ employees, isCurrentShift, isA
                 </p>
               </div>
             )}
-            {emp.predictedAbsent && !emp.confirmedAbsence && (
+            {emp.presenceStatus === "absent_no_record" && (
+              <div className="flex-shrink-0 max-w-[80px]">
+                <p className="text-[10px] text-red-500 dark:text-red-400 truncate">
+                  Sin fichaje
+                </p>
+              </div>
+            )}
+            {emp.predictedAbsent && !emp.confirmedAbsence && emp.presenceStatus === "absent_predicted" && (
               <div className="flex-shrink-0 max-w-[80px]">
                 <p className="text-[10px] text-orange-500 dark:text-orange-400 truncate">
                   Ausente ayer

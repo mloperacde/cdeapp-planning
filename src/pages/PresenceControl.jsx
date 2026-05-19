@@ -5,7 +5,7 @@
  * Usa getExpectedAttendance (backend) para calcular hora esperada con
  * lógica precisa: tipo_turno, horarios fijos, rotativo (calendario de equipo), partido.
  */
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { useAppData } from "@/components/data/DataProvider";
@@ -13,18 +13,30 @@ import { format, subDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, Zap, Calendar, AlertCircle } from "lucide-react";
+import { RefreshCw, Zap, Calendar, AlertCircle, CheckCircle2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import ShiftPanel from "@/components/presence/ShiftPanel";
 import PresenceTotalsBar from "@/components/presence/PresenceTotalsBar";
 
-const SHIFT_CUTOFF = "13:00";
+// Convierte "HH:MM" a minutos desde medianoche
+function timeToMinutes(hhmm) {
+  if (!hhmm) return null;
+  const [h, m] = hhmm.split(":").map(Number);
+  return h * 60 + m;
+}
 
-function getCurrentShift() {
-  const now = new Date();
-  const hhmm = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-  return hhmm < SHIFT_CUTOFF ? "manana" : "tarde";
+// Estado del turno basado en hora actual vs rango del turno
+// Devuelve: "before" | "active" | "closed"
+function getShiftLifecycle(timeRange, nowMins) {
+  // timeRange formato "HH:MM – HH:MM"
+  const match = timeRange.match(/(\d{2}:\d{2})\s*[–-]\s*(\d{2}:\d{2})/);
+  if (!match) return "active";
+  const start = timeToMinutes(match[1]);
+  const end = timeToMinutes(match[2]);
+  if (nowMins < start) return "before";
+  if (nowMins >= end) return "closed";
+  return "active";
 }
 
 export default function PresenceControl() {
@@ -35,8 +47,24 @@ export default function PresenceControl() {
 
   const today = new Date().toISOString().split("T")[0];
   const yesterday = subDays(new Date(analysisDate), 1).toISOString().split("T")[0];
-  const currentShift = getCurrentShift();
   const isToday = analysisDate === today;
+
+  // Reloj dinámico — se actualiza cada minuto
+  const [nowMinutes, setNowMinutes] = useState(() => {
+    const n = new Date();
+    return n.getHours() * 60 + n.getMinutes();
+  });
+  useEffect(() => {
+    const tick = () => {
+      const n = new Date();
+      setNowMinutes(n.getHours() * 60 + n.getMinutes());
+    };
+    const interval = setInterval(tick, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Última actualización de datos
+  const [lastUpdated, setLastUpdated] = useState(null);
 
   // ── 1. Empleados esperados (backend: lógica precisa con rotación de equipos) ──
   const {
@@ -55,11 +83,15 @@ export default function PresenceControl() {
   });
 
   // ── 2. Marcajes reales del día ──
-  const { data: records = [], isLoading: loadingRecords, refetch: refetchRecords } = useQuery({
+  const { data: records = [], isLoading: loadingRecords, refetch: refetchRecords, dataUpdatedAt } = useQuery({
     queryKey: ["attendanceRecords", analysisDate],
-    queryFn: () => base44.entities.AttendanceRecord.filter({ record_date: analysisDate }, "record_time", 2000),
-    staleTime: 30000,
-    refetchInterval: isToday ? 60000 : false,
+    queryFn: async () => {
+      const data = await base44.entities.AttendanceRecord.filter({ record_date: analysisDate }, "record_time", 2000);
+      setLastUpdated(new Date());
+      return data;
+    },
+    staleTime: 0,           // Siempre datos frescos para presencia
+    refetchInterval: isToday ? 120000 : false,  // Auto-refetch cada 2 min si es hoy
   });
 
   // ── 3. Marcajes de ayer (predicción de ausencia) ──
@@ -123,11 +155,7 @@ export default function PresenceControl() {
     return set;
   }, [yesterdayRecords, expectedData]);
 
-  // Hora actual en Madrid para calcular si el turno ya debería haber empezado
-  const nowMinutes = useMemo(() => {
-    const now = new Date();
-    return now.getHours() * 60 + now.getMinutes();
-  }, []);
+  // nowMinutes ya es estado dinámico definido arriba
 
   // Ausencias confirmadas para el día de análisis
   const confirmedAbsencesMap = useMemo(() => {
@@ -159,30 +187,53 @@ export default function PresenceControl() {
       // Turno normalizado para los paneles
       const expectedShift = emp.turno === "Tarde" ? "tarde" : emp.turno === "Partido" ? "manana" : "manana";
 
+      // Determinar el ciclo del turno del empleado para decidir el estado
+      // Usamos hora de salida del empleado o la del panel si no está disponible
+      const empShiftEnd = emp.hora_salida;
+      const shiftTimeRange = emp.turno === "Tarde" ? "15:00 – 22:00" : "07:00 – 15:00";
+      const shiftLifecycle = isToday
+        ? getShiftLifecycle(
+            empShiftEnd ? `${emp.hora_entrada || "07:00"} – ${empShiftEnd}` : shiftTimeRange,
+            nowMinutes
+          )
+        : "closed"; // Días históricos siempre cerrados
+
       let presenceStatus = "pending";
+
       if (confirmedAbsence) {
+        // 1. Ausencia aprobada → siempre tiene prioridad
         presenceStatus = "absent_confirmed";
+
       } else if (attendance?.entries?.length > 0) {
+        // 2. Tiene marcaje de entrada → presente o retraso
         const firstEntry = attendance.entries.sort()[0];
         if (expectedTime !== "—" && firstEntry > expectedTime) {
-          // Tolerancia de 15 minutos
           const [h, m] = expectedTime.split(":").map(Number);
-          const limitMinutes = h * 60 + m + 15;
+          const limitMinutes = h * 60 + m + 15; // tolerancia 15 min
           const [eh, em] = firstEntry.split(":").map(Number);
           const entryMinutes = eh * 60 + em;
           presenceStatus = entryMinutes > limitMinutes ? "late" : "present";
         } else {
           presenceStatus = "present";
         }
-      } else if (isToday && expectedTime !== "—") {
-        // Solo marcar como posible ausencia si: es hoy, el turno ya debería haber empezado
-        // hace más de 30 minutos Y tampoco fichó ayer (doble señal)
-        const [eh, em] = expectedTime.split(":").map(Number);
-        const expectedMinutes = eh * 60 + em;
-        const minutesLate = nowMinutes - expectedMinutes;
-        if (minutesLate >= 30 && predictedAbsent) {
-          presenceStatus = "absent_predicted";
+
+      } else if (shiftLifecycle === "closed") {
+        // 3. Turno CERRADO y sin marcaje → ausente sin registro (estado definitivo)
+        presenceStatus = "absent_no_record";
+
+      } else if (shiftLifecycle === "active" && expectedTime !== "—") {
+        // 4. Turno EN CURSO, sin marcaje → solo señal si lleva >30 min de retraso
+        const expectedMins = timeToMinutes(expectedTime);
+        if (expectedMins !== null && (nowMinutes - expectedMins) >= 30) {
+          // Solo mostrar "posible ausencia" como señal de alerta, NO como ausencia confirmada
+          // predictedAbsent es solo señal visual secundaria adicional
+          presenceStatus = predictedAbsent ? "absent_predicted" : "pending";
         }
+        // Si lleva <30 min → pending (puede estar en camino)
+
+      } else if (shiftLifecycle === "before") {
+        // 5. Turno aún no ha empezado → siempre pending
+        presenceStatus = "pending";
       }
 
       return {
@@ -204,13 +255,13 @@ export default function PresenceControl() {
   const morningEmployees = useMemo(() => enrichedEmployees.filter(e => e.expectedShift === "manana"), [enrichedEmployees]);
   const afternoonEmployees = useMemo(() => enrichedEmployees.filter(e => e.expectedShift === "tarde"), [enrichedEmployees]);
 
-  // Totales globales
+  // Totales globales — incluye absent_no_record como ausente confirmado
   const globalTotals = useMemo(() => {
     const all = enrichedEmployees;
     return {
       expected: all.length,
       present: all.filter(e => e.presenceStatus === "present" || e.presenceStatus === "late").length,
-      absent: all.filter(e => e.presenceStatus === "absent_confirmed").length,
+      absent: all.filter(e => e.presenceStatus === "absent_confirmed" || e.presenceStatus === "absent_no_record").length,
       predicted: all.filter(e => e.presenceStatus === "absent_predicted").length,
       pending: all.filter(e => e.presenceStatus === "pending").length,
     };
@@ -230,6 +281,12 @@ export default function PresenceControl() {
             {expectedData && (
               <p className="text-[10px] text-slate-400 mt-0.5">
                 Semana del {expectedData.week_start} · {expectedData.total} empleados esperados
+              </p>
+            )}
+            {lastUpdated && (
+              <p className="text-[10px] text-slate-400 flex items-center gap-1 mt-0.5">
+                <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                Datos actualizados: {format(lastUpdated, "HH:mm:ss")}
               </p>
             )}
           </div>
@@ -285,7 +342,7 @@ export default function PresenceControl() {
               label="Turno Mañana"
               timeRange="07:00 – 15:00"
               employees={morningEmployees}
-              isCurrentShift={isToday && currentShift === "manana"}
+              nowMinutes={nowMinutes}
               isAnalysisDate={isToday}
             />
 
@@ -295,7 +352,7 @@ export default function PresenceControl() {
               label="Turno Tarde"
               timeRange="15:00 – 22:00"
               employees={afternoonEmployees}
-              isCurrentShift={isToday && currentShift === "tarde"}
+              nowMinutes={nowMinutes}
               isAnalysisDate={isToday}
             />
           </div>

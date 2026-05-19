@@ -5,11 +5,28 @@
 import React, { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Sun, Moon, ChevronDown, ChevronRight, AlertTriangle, Clock } from "lucide-react";
+import { Sun, Moon, ChevronDown, ChevronRight, AlertTriangle, Clock, CheckCircle2 } from "lucide-react";
 import PresenceTotalsBar from "./PresenceTotalsBar";
 import DepartmentPresenceBlock from "./DepartmentPresenceBlock";
 
-export default function ShiftPanel({ shiftKey, label, timeRange, employees, isCurrentShift, isAnalysisDate }) {
+function timeToMinutes(hhmm) {
+  if (!hhmm) return null;
+  const [h, m] = hhmm.split(":").map(Number);
+  return h * 60 + m;
+}
+
+// Devuelve "before" | "active" | "closed"
+function getShiftLifecycle(timeRange, nowMins) {
+  const match = timeRange.match(/(\d{2}:\d{2})\s*[–\-]\s*(\d{2}:\d{2})/);
+  if (!match) return "active";
+  const start = timeToMinutes(match[1]);
+  const end = timeToMinutes(match[2]);
+  if (nowMins < start) return "before";
+  if (nowMins >= end) return "closed";
+  return "active";
+}
+
+export default function ShiftPanel({ shiftKey, label, timeRange, employees, nowMinutes, isAnalysisDate }) {
   const [expandedDepts, setExpandedDepts] = useState({});
 
   // Agrupar por departamento
@@ -24,14 +41,19 @@ export default function ShiftPanel({ shiftKey, label, timeRange, employees, isCu
     return Object.entries(map).sort(([a], [b]) => a.localeCompare(b, "es"));
   }, [employees]);
 
-  // Totales del turno
+  // Totales del turno — absent_no_record suma como ausente
   const shiftTotals = useMemo(() => ({
     expected: employees.length,
     present: employees.filter(e => e.presenceStatus === "present" || e.presenceStatus === "late").length,
-    absent: employees.filter(e => e.presenceStatus === "absent_confirmed").length,
+    absent: employees.filter(e => e.presenceStatus === "absent_confirmed" || e.presenceStatus === "absent_no_record").length,
     predicted: employees.filter(e => e.presenceStatus === "absent_predicted").length,
     pending: employees.filter(e => e.presenceStatus === "pending").length,
   }), [employees]);
+
+  // Ciclo del turno basado en hora actual
+  const shiftLifecycle = isAnalysisDate
+    ? getShiftLifecycle(timeRange, nowMinutes ?? 0)
+    : "closed";
 
   const isMorning = shiftKey === "manana";
   const ShiftIcon = isMorning ? Sun : Moon;
@@ -56,9 +78,20 @@ export default function ShiftPanel({ shiftKey, label, timeRange, employees, isCu
             <ShiftIcon className={`w-4 h-4 ${iconColor}`} />
             <CardTitle className="text-sm font-bold text-slate-800 dark:text-slate-100">{label}</CardTitle>
             <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">{timeRange}</span>
-            {isCurrentShift && (
+            {isAnalysisDate && shiftLifecycle === "active" && (
               <Badge className="bg-emerald-500 text-white text-[10px] px-1.5 py-0.5 animate-pulse">
                 EN CURSO
+              </Badge>
+            )}
+            {isAnalysisDate && shiftLifecycle === "closed" && (
+              <Badge className="bg-slate-500 text-white text-[10px] px-1.5 py-0.5 flex items-center gap-1">
+                <CheckCircle2 className="w-2.5 h-2.5" />
+                FINALIZADO
+              </Badge>
+            )}
+            {isAnalysisDate && shiftLifecycle === "before" && (
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0.5 text-slate-500">
+                PRÓXIMO
               </Badge>
             )}
             {!isAnalysisDate && (
@@ -135,7 +168,7 @@ export default function ShiftPanel({ shiftKey, label, timeRange, employees, isCu
                   {expanded && (
                     <DepartmentPresenceBlock
                       employees={deptEmployees}
-                      isCurrentShift={isCurrentShift}
+                      isCurrentShift={shiftLifecycle === "active"}
                       isAnalysisDate={isAnalysisDate}
                     />
                   )}
