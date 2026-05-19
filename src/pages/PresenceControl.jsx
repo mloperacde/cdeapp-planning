@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import ShiftPanel from "@/components/presence/ShiftPanel";
 import PresenceTotalsBar from "@/components/presence/PresenceTotalsBar";
+import UnmappedEmployeesPanel from "@/components/presence/UnmappedEmployeesPanel";
 
 // Convierte "HH:MM" a minutos desde medianoche
 function timeToMinutes(hhmm) {
@@ -172,12 +173,24 @@ export default function PresenceControl() {
     return map;
   }, [absences, analysisDate]);
 
+  // Empleados sin employee_id válido (no pueden cruzarse con Cuco360)
+  const unmappedEmployees = useMemo(() => {
+    if (!expectedData?.employees) return [];
+    return expectedData.employees.filter(emp => {
+      const code = emp.employee_id ? String(emp.employee_id).trim() : null;
+      return !code || code === "0" || code === "null" || code === "undefined";
+    });
+  }, [expectedData]);
+
   // Enriquecer empleados esperados con datos de presencia real
   const enrichedEmployees = useMemo(() => {
     if (!expectedData?.employees) return [];
 
     return expectedData.employees.map(emp => {
-      const code = emp.employee_id ? String(emp.employee_id) : null;
+      // Validar employee_id antes de cruzar — evita falsos ausentes por código mal mapeado
+      const rawCode = emp.employee_id ? String(emp.employee_id).trim() : null;
+      const isValidCode = rawCode && rawCode !== "0" && rawCode !== "null" && rawCode !== "undefined";
+      const code = isValidCode ? rawCode : null;
       const attendance = code ? todayEntriesMap[code] : null;
       const confirmedAbsence = confirmedAbsencesMap[emp.employee_db_id];
       const predictedAbsent = !confirmedAbsence && absentYesterdaySet.has(emp.employee_db_id);
@@ -248,6 +261,7 @@ export default function PresenceControl() {
         presenceStatus,
         confirmedAbsence,
         predictedAbsent,
+        unmapped: !isValidCode, // señal de diagnóstico
       };
     });
   }, [expectedData, todayEntriesMap, confirmedAbsencesMap, absentYesterdaySet]);
@@ -316,6 +330,9 @@ export default function PresenceControl() {
           <PresenceTotalsBar totals={globalTotals} label="Total empresa" variant="global" />
         </div>
       </div>
+
+      {/* Panel diagnóstico: empleados sin código Cuco360 */}
+      <UnmappedEmployeesPanel unmappedEmployees={unmappedEmployees} />
 
       {/* Error al cargar empleados esperados */}
       {expectedError && (
