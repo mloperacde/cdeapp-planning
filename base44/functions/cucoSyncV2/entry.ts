@@ -31,14 +31,6 @@ function minutesToTime(minutes) {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
-function getISOWeek(date) {
-  const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
-  const dayNum = d.getUTCDay() || 7;
-  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
-}
-
 function getEmployeeShiftToday(emp, assignedShift) {
   const nowMinutes = getNowSpainMinutes();
   if (emp.tipo_turno === 'Turno Partido') {
@@ -85,7 +77,6 @@ async function retryOp(fn, retries = 4, baseDelay = 800) {
       const isRate = e?.message?.includes('Rate limit') || e?.message?.includes('429');
       if (i < retries - 1) {
         const delay = isRate ? baseDelay * Math.pow(2, i) : baseDelay;
-        console.log(`[cucoSyncV2] Retry ${i + 1}/${retries - 1} in ${delay}ms: ${e.message?.slice(0, 80)}`);
         await sleep(delay);
         continue;
       }
@@ -96,60 +87,35 @@ async function retryOp(fn, retries = 4, baseDelay = 800) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Sync atómico por empleado: borra y reinserta solo los registros de UN empleado
-// para un día. Si falla, solo ese empleado queda afectado.
-// Devuelve { success, deleted, inserted, error? }
+// para un día. Devuelve { success, deleted, inserted, error? }
 // ─────────────────────────────────────────────────────────────────────────────
 async function syncEmployeeRecords(serviceClient, employeeCode, dateStr, records, batchId) {
-  const result = { success: false, deleted: 0, inserted: 0, verified: false, error: null };
+  const result = { success: false, deleted: 0, inserted: 0, skipped: 0, error: null };
 
   try {
-    // 1. Borrar registros existentes de este empleado para este día (secuencial, sin saturar)
-    let safetyLoop = 5;
-    while (safetyLoop-- > 0) {
-      const existing = await retryOp(() =>
-        serviceClient.entities.AttendanceRecord.filter(
-          { record_date: dateStr, employee_id: employeeCode }, "id", 200
-        ), 5, 1500
-      );
-      if (!existing || existing.length === 0) break;
-      // Borrar de 5 en 5 con pausa — evita saturar la API
-      const CHUNK = 5;
-      for (let i = 0; i < existing.length; i += CHUNK) {
-        const chunk = existing.slice(i, i + CHUNK);
-        await Promise.allSettled(chunk.map(r =>
-          retryOp(() => serviceClient.entities.AttendanceRecord.delete(r.id), 5, 1500)
-        ));
-        result.deleted += chunk.length;
-        await sleep(400);
-      }
-      if (existing.length < 200) break;
-      await sleep(500);
-    }
-
-    // 2. Insertar nuevos registros
-    if (records.length > 0) {
-      await retryOp(() => serviceClient.entities.AttendanceRecord.bulkCreate(records), 5, 1500);
-      result.inserted = records.length;
-    }
-
-    // 3. VERIFICACIÓN: confirmar que los registros insertados están en BD
-    await sleep(500);
-    const verification = await retryOp(() =>
+    // 1. Obtener registros existentes de este empleado para este día
+    const existing = await retryOp(() =>
       serviceClient.entities.AttendanceRecord.filter(
-        { record_date: dateStr, employee_id: employeeCode }, "id", 200
-      ), 5, 1500
+        { record_date: dateStr, employee_id: employeeCode }, "record_time", 200
+      ), 5, 1200
     );
-    const countInDB = verification ? verification.length : 0;
 
-    if (records.length > 0 && countInDB < records.length) {
-      result.error = `Verificación fallida: esperados ${records.length}, encontrados ${countInDB} en BD`;
-      result.verified = false;
-      result.success = false;
-      console.error(`[cucoSyncV2] ❌ INTEGRIDAD FALLIDA - ${employeeCode}: ${result.error}`);
-    } else {
-      result.verified = true;
-      result.success = true;
+    // Construir set de claves ya existentes (employee_id + record_time + direction)
+    const existingKeys = new Set();
+    for (const r of (existing || [])) {
+      existingKeys.add(`${r.record_time}_${r.direction}`);
     }
+
+    // 2. Solo insertar registros NUEVOS (que no existen todavía)
+    const toInsert = records.filter(r => !existingKeys.has(`${r.record_time}_${r.direction}`));
+    result.skipped = records.length - toInsert.length;
+
+    if (toInsert.length > 0) {
+      await retryOp(() => serviceClient.entities.AttendanceRecord.bulkCreate(toInsert), 5, 1200);
+      result.inserted = toInsert.length;
+    }
+
+    result.success = true;
 
   } catch (err) {
     result.error = err.message;
@@ -157,6 +123,47 @@ async function syncEmployeeRecords(serviceClient, employeeCode, dateStr, records
     console.error(`[cucoSyncV2] ❌ ERROR sync empleado ${employeeCode}: ${err.message}`);
   }
 
+  return result;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Procesar lote de empleados en PARALELO (hasta BATCH_SIZE simultáneos)
+// existingKeysMap: mapa precargado { "empId_date": Set<"time_dir"> }
+// ─────────────────────────────────────────────────────────────────────────────
+async function processBatch(serviceClient, batch, recordsByEmployee, todayBatch, existingKeysMap) {
+  return await Promise.allSettled(
+    batch.map(async (code) => {
+      const dateMap = recordsByEmployee[code];
+      const results = {};
+      for (const [dateStr, records] of Object.entries(dateMap)) {
+        results[dateStr] = await syncEmployeeRecordsWithCache(serviceClient, code, dateStr, records, todayBatch, existingKeysMap);
+      }
+      const allOk = Object.values(results).every(r => r.success);
+      return { code, results, success: allOk };
+    })
+  );
+}
+
+// Versión con caché precargado — no hace query por empleado, usa existingKeysMap
+async function syncEmployeeRecordsWithCache(serviceClient, employeeCode, dateStr, records, batchId, existingKeysMap) {
+  const result = { success: false, deleted: 0, inserted: 0, skipped: 0, error: null };
+  try {
+    const cacheKey = `${employeeCode}_${dateStr}`;
+    const existingKeys = existingKeysMap[cacheKey] || new Set();
+
+    const toInsert = records.filter(r => !existingKeys.has(`${r.record_time}_${r.direction}`));
+    result.skipped = records.length - toInsert.length;
+
+    if (toInsert.length > 0) {
+      await retryOp(() => serviceClient.entities.AttendanceRecord.bulkCreate(toInsert), 5, 1200);
+      result.inserted = toInsert.length;
+    }
+    result.success = true;
+  } catch (err) {
+    result.error = err.message;
+    result.success = false;
+    console.error(`[cucoSyncV2] ❌ ERROR sync empleado ${employeeCode}: ${err.message}`);
+  }
   return result;
 }
 
@@ -219,10 +226,10 @@ Deno.serve(async (req) => {
       }
     }
 
-    console.log(`[cucoSyncV2] ═══ INICIO SYNC ROBUSTO ${from}→${to} ═══`);
+    console.log(`[cucoSyncV2] ═══ INICIO SYNC ${from}→${to} ═══`);
     console.log(`[cucoSyncV2] Hora Spain: ${minutesToTime(getNowSpainMinutes())}`);
 
-    // ── PASO 1: Obtener marcajes de Cuco360 con reintentos ─────────────────
+    // ── PASO 1: Obtener marcajes de Cuco360 ───────────────────────────────
     const startEnc = encodeURIComponent(`${from} 00:00:00`);
     const endEnc = encodeURIComponent(`${to} 23:59:59`);
     const url = `https://cuco360.cucorent.com/api/apiv2/checking/getfullchecks/${CLIENT_CODE}?start_date=${startEnc}&end_date=${endEnc}`;
@@ -280,7 +287,7 @@ Deno.serve(async (req) => {
 
     console.log(`[cucoSyncV2] ✅ Cuco360 devolvió ${checks.length} marcajes`);
 
-    // ── PASO 2: Cargar base maestra ─────────────────────────────────────────
+    // ── PASO 2: Cargar base maestra ──────────────────────────────────────
     const masterEmployees = await retryOp(() =>
       serviceClient.entities.EmployeeMasterDatabase.list(undefined, 2000)
     );
@@ -292,9 +299,9 @@ Deno.serve(async (req) => {
     }
     console.log(`[cucoSyncV2] Base maestra: ${masterEmployees.length} empleados`);
 
-    // ── PASO 3: Agrupar marcajes por empleado ───────────────────────────────
+    // ── PASO 3: Agrupar marcajes por empleado ────────────────────────────
     const todayBatch = `cuco_v2_sync_${from}`;
-    const recordsByEmployee = {}; // { employeeCode: [records...] }
+    const recordsByEmployee = {};
 
     for (const check of checks) {
       const externalId = String(check.cod_int_empleado || check.cod_interno || check.cod_empleado || "").trim();
@@ -329,134 +336,118 @@ Deno.serve(async (req) => {
     const employeeCodes = Object.keys(recordsByEmployee);
     console.log(`[cucoSyncV2] Empleados con marcajes: ${employeeCodes.length}`);
 
-    // ── PASO 4: Sync atómico SECUENCIAL por empleado ─────────────────────
-    // Procesamos de 1 en 1 para respetar el rate limit de la API de Base44
-    const syncResults = {}; // { employeeCode: { success, deleted, inserted, verified, error } }
-    const failedEmployees = [];
-    let totalInserted = 0;
-
-    for (let i = 0; i < employeeCodes.length; i++) {
-      const code = employeeCodes[i];
-      const dateMap = recordsByEmployee[code];
-      const results = {};
-      for (const [dateStr, records] of Object.entries(dateMap)) {
-        const r = await syncEmployeeRecords(serviceClient, code, dateStr, records, todayBatch);
-        results[dateStr] = r;
-      }
-
-      syncResults[code] = results;
-      const allDatesOk = Object.values(results).every(r => r.success);
-      if (!allDatesOk) {
-        const errors = Object.entries(results)
-          .filter(([, r]) => !r.success)
-          .map(([d, r]) => `${d}: ${r.error}`)
-          .join('; ');
-        failedEmployees.push({ code, errors });
-        console.error(`[cucoSyncV2] ❌ FALLÓ empleado ${code}: ${errors}`);
-      } else {
-        const inserted = Object.values(results).reduce((s, r) => s + r.inserted, 0);
-        totalInserted += inserted;
-      }
-
-      // Pausa entre empleados para respetar rate limit
-      if (i < employeeCodes.length - 1) await sleep(300);
-    }
-
-    // ── PASO 5: Reintentar empleados fallidos (hasta 2 veces más) ──────────
-    let retryRound = 0;
-    let stillFailing = [...failedEmployees];
-
-    while (stillFailing.length > 0 && retryRound < 2) {
-      retryRound++;
-      console.warn(`[cucoSyncV2] 🔄 Reintento ${retryRound} para ${stillFailing.length} empleados fallidos...`);
-      await sleep(2000 * retryRound);
-
-      const retryList = [...stillFailing];
-      stillFailing = [];
-
-      for (const { code } of retryList) {
-        const dateMap = recordsByEmployee[code];
-        const results = {};
-        for (const [dateStr, records] of Object.entries(dateMap)) {
-          const r = await syncEmployeeRecords(serviceClient, code, dateStr, records, todayBatch);
-          results[dateStr] = r;
-        }
-
-        const allDatesOk = Object.values(results).every(r => r.success);
-        if (!allDatesOk) {
-          const errors = Object.entries(results)
-            .filter(([, r]) => !r.success)
-            .map(([d, r]) => `${d}: ${r.error}`)
-            .join('; ');
-          stillFailing.push({ code, errors });
-        } else {
-          const idx = failedEmployees.findIndex(f => f.code === code);
-          if (idx >= 0) failedEmployees.splice(idx, 1);
-          const inserted = Object.values(results).reduce((s, r) => s + r.inserted, 0);
-          totalInserted += inserted;
-          console.log(`[cucoSyncV2] ✅ Recuperado en reintento ${retryRound}: ${code}`);
-        }
-        await sleep(500);
-      }
-    }
-
-    // Actualizar failedEmployees final con los que siguen fallando
-    for (const sf of stillFailing) {
-      if (!failedEmployees.find(f => f.code === sf.code)) failedEmployees.push(sf);
-    }
-
-    // ── PASO 6: Verificación global de integridad ───────────────────────────
-    const uniqueDates = [...new Set(
+    // ── PASO 4: Precargar marcajes existentes en memoria (1 query por día) ──
+    // Esto evita 221 queries individuales de lectura → reducción masiva de llamadas API
+    const uniqueDatesInData = [...new Set(
       Object.values(recordsByEmployee).flatMap(d => Object.keys(d))
     )];
+    const existingKeysMap = {}; // { "empCode_date": Set<"HH:MM_E/S"> }
 
-    const integrityReport = [];
-    for (const d of uniqueDates) {
-      const expectedByDate = {};
-      for (const [code, dateMap] of Object.entries(recordsByEmployee)) {
-        if (dateMap[d]) expectedByDate[code] = dateMap[d].length;
+    for (const dateStr of uniqueDatesInData) {
+      console.log(`[cucoSyncV2] Precargando marcajes existentes para ${dateStr}...`);
+      // Una sola query con límite alto — normalmente <2000 marcajes por día
+      const allExisting = await retryOp(() =>
+        serviceClient.entities.AttendanceRecord.filter({ record_date: dateStr }, "employee_id", 2000)
+      , 5, 1500).catch(() => []);
+
+      for (const r of (allExisting || [])) {
+        const empId = String(r.employee_id || "").trim();
+        if (!empId) continue;
+        const cacheKey = `${empId}_${dateStr}`;
+        if (!existingKeysMap[cacheKey]) existingKeysMap[cacheKey] = new Set();
+        existingKeysMap[cacheKey].add(`${r.record_time}_${r.direction}`);
       }
-      const expectedTotal = Object.values(expectedByDate).reduce((s, c) => s + c, 0);
-      
-      // Contar registros reales en BD para este día
-      let actualTotal = 0;
-      let safetyLoop = 20;
-      let skip = 0;
-      while (safetyLoop-- > 0) {
-        const page = await retryOp(() =>
-          serviceClient.entities.AttendanceRecord.filter({ record_date: d, import_batch: todayBatch }, "-record_time", 500)
-        ).catch(() => []);
-        if (!page || page.length === 0) break;
-        actualTotal += page.length;
-        if (page.length < 500) break;
-        skip += 500;
+      console.log(`[cucoSyncV2] ${(allExisting || []).length} marcajes existentes precargados para ${dateStr}`);
+    }
+
+    // ── PASO 5: Sync en PARALELO por lotes ──────────────────────────────
+    // Procesamos BATCH_SIZE empleados simultáneamente con pausa entre lotes
+    const BATCH_SIZE = 8; // 8 en paralelo — ahora sin queries de lectura por empleado
+    const failedEmployees = [];
+    const syncResults = {};
+    let totalInserted = 0;
+
+    for (let i = 0; i < employeeCodes.length; i += BATCH_SIZE) {
+      const batch = employeeCodes.slice(i, i + BATCH_SIZE);
+      const batchNum = Math.floor(i / BATCH_SIZE) + 1;
+      const totalBatches = Math.ceil(employeeCodes.length / BATCH_SIZE);
+      console.log(`[cucoSyncV2] Lote ${batchNum}/${totalBatches} (${batch.length} empleados)...`);
+
+      const batchResults = await processBatch(serviceClient, batch, recordsByEmployee, todayBatch, existingKeysMap);
+
+      for (const settled of batchResults) {
+        if (settled.status === 'fulfilled') {
+          const { code, results, success } = settled.value;
+          syncResults[code] = results;
+          if (success) {
+            const inserted = Object.values(results).reduce((s, r) => s + r.inserted, 0);
+            totalInserted += inserted;
+          } else {
+            const errors = Object.entries(results)
+              .filter(([, r]) => !r.success)
+              .map(([d, r]) => `${d}: ${r.error}`)
+              .join('; ');
+            failedEmployees.push({ code, errors });
+          }
+        } else {
+          // Promise rechazada (error inesperado)
+          console.error(`[cucoSyncV2] ❌ Lote error:`, settled.reason);
+        }
       }
 
-      const integrity = {
-        date: d,
-        expected: expectedTotal,
-        actual_in_db: actualTotal,
-        match: actualTotal >= expectedTotal,
-        missing: Math.max(0, expectedTotal - actualTotal)
-      };
-      integrityReport.push(integrity);
-      
-      if (!integrity.match) {
-        console.error(`[cucoSyncV2] ⚠️ INTEGRIDAD DÍA ${d}: esperados ${expectedTotal}, en BD ${actualTotal} (faltan ${integrity.missing})`);
-      } else {
-        console.log(`[cucoSyncV2] ✅ Integridad OK ${d}: ${actualTotal}/${expectedTotal} registros`);
+      // Pausa entre lotes para respetar rate limit
+      if (i + BATCH_SIZE < employeeCodes.length) await sleep(500);
+    }
+
+    console.log(`[cucoSyncV2] Sync principal: ${totalInserted} marcajes insertados, ${failedEmployees.length} empleados fallidos`);
+
+    // ── PASO 5: Reintentar empleados fallidos ────────────────────────────
+    if (failedEmployees.length > 0) {
+      console.warn(`[cucoSyncV2] 🔄 Reintentando ${failedEmployees.length} empleados fallidos...`);
+      await sleep(2000);
+      const retryList = [...failedEmployees];
+      failedEmployees.length = 0; // limpiar para repoblar
+
+      for (let i = 0; i < retryList.length; i += BATCH_SIZE) {
+        const batch = retryList.slice(i, i + BATCH_SIZE).map(f => f.code);
+        // En retry limpiar caché de estos empleados para forzar re-inserción completa
+        for (const code of batch) {
+          for (const dateStr of Object.keys(recordsByEmployee[code] || {})) {
+            delete existingKeysMap[`${code}_${dateStr}`];
+          }
+        }
+        const batchResults = await processBatch(serviceClient, batch, recordsByEmployee, todayBatch, existingKeysMap);
+        for (const settled of batchResults) {
+          if (settled.status === 'fulfilled') {
+            const { code, results, success } = settled.value;
+            if (success) {
+              const inserted = Object.values(results).reduce((s, r) => s + r.inserted, 0);
+              totalInserted += inserted;
+              console.log(`[cucoSyncV2] ✅ Recuperado: ${code}`);
+            } else {
+              const errors = Object.entries(results)
+                .filter(([, r]) => !r.success)
+                .map(([d, r]) => `${d}: ${r.error}`)
+                .join('; ');
+              failedEmployees.push({ code, errors });
+              console.error(`[cucoSyncV2] ❌ Sigue fallando: ${code}: ${errors}`);
+            }
+          }
+        }
+        if (i + BATCH_SIZE < retryList.length) await sleep(500);
       }
     }
 
-    const daysWithIssues = integrityReport.filter(r => !r.match);
-    const syncCompleted = failedEmployees.length === 0 && daysWithIssues.length === 0;
+    const syncCompleted = failedEmployees.length === 0;
     const durationSeconds = Math.round((Date.now() - startTime) / 1000);
+    console.log(`[cucoSyncV2] ═══ FIN SYNC: ${syncCompleted ? '✅ COMPLETO' : '⚠️ CON ERRORES'} (${durationSeconds}s) · ${totalInserted} marcajes ═══`);
 
-    console.log(`[cucoSyncV2] ═══ FIN SYNC: ${syncCompleted ? '✅ COMPLETO' : '⚠️ CON ERRORES'} (${durationSeconds}s) ═══`);
-    console.log(`[cucoSyncV2] Insertados: ${totalInserted}, Empleados fallidos: ${failedEmployees.length}`);
+    // ── PASO 6: Análisis de presencia (solo día único, si hay tiempo) ────
+    // Solo ejecutamos si el sync tardó menos de 100s (dejamos margen para el análisis)
+    const canRunAnalysis = from === to && !skip_analysis && durationSeconds < 100;
 
-    // ── PASO 7: Análisis de presencia (solo día único y sin errores críticos) ─
-    if (from === to && !skip_analysis) {
+    let analysisResult = null;
+    if (canRunAnalysis) {
       const syncDate = from;
       const nowSpain = getNowSpain();
       const nowMinutes = getNowSpainMinutes();
@@ -469,18 +460,17 @@ Deno.serve(async (req) => {
         d.setDate(d.getDate() + diff);
         return d.toISOString().split('T')[0];
       })();
-      const weekSchedules = await retryOp(() =>
-        serviceClient.entities.TeamWeekSchedule.filter({ fecha_inicio_semana: mondayOfWeek })
-      ).catch(() => []);
+
+      const [weekSchedules, allAbsences] = await Promise.all([
+        retryOp(() => serviceClient.entities.TeamWeekSchedule.filter({ fecha_inicio_semana: mondayOfWeek })).catch(() => []),
+        retryOp(() => serviceClient.entities.Absence.list("-fecha_inicio", 2000)).catch(() => [])
+      ]);
 
       const teamShiftMap = {};
       for (const ws of weekSchedules) {
         if (ws.team_key && ws.turno) teamShiftMap[ws.team_key] = ws.turno;
       }
 
-      const allAbsences = await retryOp(() =>
-        serviceClient.entities.Absence.list("-fecha_inicio", 2000)
-      );
       const syncDateObj = new Date(syncDate + "T12:00:00Z");
       const activeAbsencesToday = allAbsences.filter(abs => {
         if (abs.estado_aprobacion === "Rechazada" || abs.estado_aprobacion === "Cancelada") return false;
@@ -497,17 +487,30 @@ Deno.serve(async (req) => {
         emp.estado_empleado === "Alta" && emp.sujeto_a_control_horario !== false
       );
 
-      // Usamos los codes de empleados que SÍ se insertaron correctamente
-      const ficharonHoy = new Set(
-        Object.entries(syncResults)
-          .filter(([, dateMap]) => Object.values(dateMap).some(r => r.success))
-          .flatMap(([code, dateMap]) => {
-            const hasEntry = Object.values(recordsByEmployee[code] || {})
-              .flatMap(records => records)
-              .some(r => r.direction === 'E');
-            return hasEntry ? [code] : [];
-          })
-      );
+      // Set de empleados que ficharon HOY — usar caché precargada (sin query extra)
+      // Incluye: (1) los que tenían registros en BD antes del sync, (2) los recién insertados
+      const ficharonHoy = new Set();
+
+      // De la caché precargada: empleados que ya tenían entrada antes del sync
+      for (const [cacheKey, keysSet] of Object.entries(existingKeysMap)) {
+        const parts = cacheKey.split('_');
+        const dateStr = parts[parts.length - 1];
+        if (dateStr !== syncDate) continue;
+        const code = parts.slice(0, parts.length - 1).join('_');
+        for (const key of keysSet) {
+          if (key.endsWith('_E')) { ficharonHoy.add(code); break; }
+        }
+      }
+
+      // De los recién insertados en este sync
+      for (const [code, dateMap] of Object.entries(syncResults)) {
+        if (Object.values(dateMap).some(r => r.success)) {
+          const hasEntry = Object.values(recordsByEmployee[code] || {})
+            .flatMap(records => records)
+            .some(r => r.direction === 'E');
+          if (hasEntry) ficharonHoy.add(code);
+        }
+      }
 
       const reactivados = [], confirmados = [], nuevosRetrasos = [], nuevasAusencias = [];
       const RETRASO_MIN = 5;
@@ -531,7 +534,6 @@ Deno.serve(async (req) => {
         const shiftInfo = getEmployeeShiftToday(emp, assignedShift);
 
         if (hasFichado) {
-          // Reactivar si estaba marcado como ausente/retraso O si tiene ausencia auto pendiente
           const hasAutoAbsencePending = absenceRecord &&
             absenceRecord.estado_aprobacion === "Pendiente" &&
             (absenceRecord.tipo === "Ausencia No Justificada" || (absenceRecord.notas || "").includes("[SISTEMA]") || (absenceRecord.notas || "").includes("[shiftAudit]"));
@@ -558,7 +560,8 @@ Deno.serve(async (req) => {
           .catch(e => console.warn(`[cucoSyncV2] Error audit log:`, e));
       };
 
-      for (const { emp, absence } of reactivados) {
+      // Ejecutar actualizaciones en paralelo por lotes
+      const reactivadosBatch = reactivados.map(({ emp, absence }) => async () => {
         await retryOp(() => serviceClient.entities.EmployeeMasterDatabase.update(emp.id, {
           disponibilidad: "Disponible", estado_presencia: "Presente",
           ausencia_fin: systemNow, ausencia_motivo: null, potencialmente_ausente_desde: null
@@ -578,9 +581,9 @@ Deno.serve(async (req) => {
           leido_por_rrhh: false, notas: `[SISTEMA] Sync robusto ${systemNow}`
         });
         console.log(`[cucoSyncV2] ✅ REACTIVADO: ${emp.nombre}`);
-      }
+      });
 
-      for (const { emp, absence } of confirmados) {
+      const confirmedBatch = confirmados.map(({ emp, absence }) => async () => {
         if (emp.disponibilidad !== "Ausente") {
           await retryOp(() => serviceClient.entities.EmployeeMasterDatabase.update(emp.id, {
             disponibilidad: "Ausente", estado_presencia: "Ausente",
@@ -596,11 +599,11 @@ Deno.serve(async (req) => {
             motivo: `${absence.tipo || absence.motivo} - sin fichaje`,
             leido_por_rrhh: false, notas: `[SISTEMA] Confirmación - sync ${systemNow}`
           });
+          console.log(`[cucoSyncV2] 🔵 CONFIRMADA: ${emp.nombre}`);
         }
-        console.log(`[cucoSyncV2] 🔵 CONFIRMADA: ${emp.nombre}`);
-      }
+      });
 
-      for (const { emp, shiftInfo } of nuevosRetrasos) {
+      const retrasosBatch = nuevosRetrasos.map(({ emp, shiftInfo }) => async () => {
         await retryOp(() => serviceClient.entities.EmployeeMasterDatabase.update(emp.id, {
           estado_presencia: "Retraso", potencialmente_ausente_desde: systemNow
         })).catch(e => console.warn(`[cucoSyncV2] Error retraso ${emp.nombre}:`, e));
@@ -612,10 +615,9 @@ Deno.serve(async (req) => {
           motivo: `Retraso: turno ${minutesToTime(shiftInfo.shiftStart)} — sin fichaje a las ${minutesToTime(nowMinutes)}`,
           leido_por_rrhh: false, notas: `[SISTEMA] Sync ${systemNow}`
         });
-        console.log(`[cucoSyncV2] ⚠️ RETRASO: ${emp.nombre}`);
-      }
+      });
 
-      for (const { emp, shiftInfo } of nuevasAusencias) {
+      const ausenciasBatch = nuevasAusencias.map(({ emp, shiftInfo }) => async () => {
         const absenceStart = `${syncDate}T${minutesToTime(shiftInfo.shiftStart)}:00`;
         const absenceEnd = shiftInfo.shiftEnd !== null
           ? `${syncDate}T${minutesToTime(shiftInfo.shiftEnd)}:00`
@@ -644,10 +646,16 @@ Deno.serve(async (req) => {
           leido_por_rrhh: false, notas: `[SISTEMA] Creación automática - sync ${systemNow}`
         });
         console.log(`[cucoSyncV2] 🔴 AUSENCIA AUTO: ${emp.nombre}`);
+      });
+
+      // Ejecutar todas las actualizaciones de análisis en paralelo (lotes de 8)
+      const allAnalysisTasks = [...reactivadosBatch, ...confirmedBatch, ...retrasosBatch, ...ausenciasBatch];
+      for (let i = 0; i < allAnalysisTasks.length; i += 8) {
+        await Promise.allSettled(allAnalysisTasks.slice(i, i + 8).map(fn => fn()));
+        if (i + 8 < allAnalysisTasks.length) await sleep(150);
       }
 
-      // Preparar respuesta con informe completo
-      const analysisResult = {
+      analysisResult = {
         employees_controlled: controlledEmployees.length,
         ficharon: ficharonHoy.size,
         reactivados: reactivados.length,
@@ -657,26 +665,9 @@ Deno.serve(async (req) => {
         hora_spain: minutesToTime(nowMinutes),
         turnos_equipo: teamShiftMap
       };
-
-      const syncStatus = syncCompleted ? "success" : (failedEmployees.length > 0 ? "partial" : "warning");
-
-      return Response.json({
-        success: syncCompleted,
-        status: syncStatus,
-        message: syncCompleted
-          ? `Sync completo ✅: ${totalInserted} fichajes de ${employeeCodes.length} empleados`
-          : `Sync parcial ⚠️: ${totalInserted} fichajes OK, ${failedEmployees.length} empleados fallidos`,
-        count: totalInserted,
-        duration_seconds: durationSeconds,
-        integrity: {
-          employees_total: employeeCodes.length,
-          employees_ok: employeeCodes.length - failedEmployees.length,
-          employees_failed: failedEmployees.length,
-          failed_list: failedEmployees,
-          days: integrityReport
-        },
-        analysis: analysisResult
-      });
+    } else if (from === to && !skip_analysis) {
+      // Sync tardó demasiado — disparar análisis como tarea separada (no bloqueante)
+      console.warn(`[cucoSyncV2] ⚠️ Sync tardó ${durationSeconds}s — análisis de presencia omitido para evitar timeout. Usa la automatización shiftAudit para el análisis.`);
     }
 
     const syncStatus = syncCompleted ? "success" : (failedEmployees.length > 0 ? "partial" : "warning");
@@ -686,16 +677,16 @@ Deno.serve(async (req) => {
       status: syncStatus,
       message: syncCompleted
         ? `Sync completo ✅: ${totalInserted} fichajes de ${employeeCodes.length} empleados`
-        : `Sync parcial ⚠️: ${totalInserted} OK, ${failedEmployees.length} empleados fallidos`,
+        : `Sync parcial ⚠️: ${totalInserted} fichajes OK, ${failedEmployees.length} empleados fallidos`,
       count: totalInserted,
       duration_seconds: durationSeconds,
       integrity: {
         employees_total: employeeCodes.length,
         employees_ok: employeeCodes.length - failedEmployees.length,
         employees_failed: failedEmployees.length,
-        failed_list: failedEmployees,
-        days: integrityReport
-      }
+        failed_list: failedEmployees.slice(0, 50) // limitar respuesta
+      },
+      analysis: analysisResult
     });
 
   } catch (err) {
