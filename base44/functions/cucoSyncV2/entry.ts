@@ -531,7 +531,12 @@ Deno.serve(async (req) => {
         const shiftInfo = getEmployeeShiftToday(emp, assignedShift);
 
         if (hasFichado) {
-          if (emp.disponibilidad === "Ausente" || emp.estado_presencia === "Retraso" || emp.estado_presencia === "Ausente Auto") {
+          // Reactivar si estaba marcado como ausente/retraso O si tiene ausencia auto pendiente
+          const hasAutoAbsencePending = absenceRecord &&
+            absenceRecord.estado_aprobacion === "Pendiente" &&
+            (absenceRecord.tipo === "Ausencia No Justificada" || (absenceRecord.notas || "").includes("[SISTEMA]") || (absenceRecord.notas || "").includes("[shiftAudit]"));
+
+          if (emp.disponibilidad === "Ausente" || emp.estado_presencia === "Retraso" || emp.estado_presencia === "Ausente Auto" || hasAutoAbsencePending) {
             reactivados.push({ emp, absence: absenceRecord });
           }
         } else {

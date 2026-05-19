@@ -195,6 +195,7 @@ export default function PresenceControl() {
       const confirmedAbsence = confirmedAbsencesMap[emp.employee_db_id];
       const predictedAbsent = !confirmedAbsence && absentYesterdaySet.has(emp.employee_db_id);
 
+
       // Hora esperada de entrada
       const expectedTime = emp.hora_entrada || "—";
       // Turno normalizado para los paneles
@@ -213,11 +214,22 @@ export default function PresenceControl() {
 
       let presenceStatus = "pending";
 
-      if (confirmedAbsence) {
-        // 1. Ausencia aprobada → siempre tiene prioridad
+      // Marcaje real prevalece sobre ausencias auto-generadas pendientes
+      // Solo bloquea si la ausencia está APROBADA (no "Pendiente" creada automáticamente)
+      const hasRealEntry = attendance?.entries?.length > 0;
+      const isApprovedAbsence = confirmedAbsence && confirmedAbsence.estado_aprobacion === "Aprobada";
+      const isAutoAbsencePending = confirmedAbsence &&
+        confirmedAbsence.estado_aprobacion === "Pendiente" &&
+        (confirmedAbsence.tipo === "Ausencia No Justificada" || confirmedAbsence.notas?.includes("[SISTEMA]") || confirmedAbsence.notas?.includes("[shiftAudit]"));
+
+      // Si hay marcaje real y la ausencia es solo automática/pendiente → ignorar ausencia
+      const effectiveAbsence = (hasRealEntry && isAutoAbsencePending) ? null : confirmedAbsence;
+
+      if (isApprovedAbsence && !hasRealEntry) {
+        // 1. Ausencia APROBADA y sin marcaje → ausente confirmado
         presenceStatus = "absent_confirmed";
 
-      } else if (attendance?.entries?.length > 0) {
+      } else if (hasRealEntry) {
         // 2. Tiene marcaje de entrada → presente o retraso
         const firstEntry = attendance.entries.sort()[0];
         if (expectedTime !== "—" && firstEntry > expectedTime) {
@@ -230,28 +242,29 @@ export default function PresenceControl() {
           presenceStatus = "present";
         }
 
+      } else if (effectiveAbsence && !hasRealEntry) {
+        // 3. Ausencia pendiente (no aprobada) y sin marcaje real → ausente pendiente de confirmar
+        presenceStatus = "absent_confirmed";
+
       } else if (shiftLifecycle === "closed") {
-        // 3. Turno CERRADO y sin marcaje → ausente sin registro (estado definitivo)
+        // 4. Turno CERRADO y sin marcaje → ausente sin registro (estado definitivo)
         presenceStatus = "absent_no_record";
 
       } else if (shiftLifecycle === "active" && expectedTime !== "—") {
-        // 4. Turno EN CURSO, sin marcaje → solo señal si lleva >30 min de retraso
+        // 5. Turno EN CURSO, sin marcaje → solo señal si lleva >30 min de retraso
         const expectedMins = timeToMinutes(expectedTime);
         if (expectedMins !== null && (nowMinutes - expectedMins) >= 30) {
-          // Solo mostrar "posible ausencia" como señal de alerta, NO como ausencia confirmada
-          // predictedAbsent es solo señal visual secundaria adicional
           presenceStatus = predictedAbsent ? "absent_predicted" : "pending";
         }
         // Si lleva <30 min → pending (puede estar en camino)
 
       } else if (shiftLifecycle === "before") {
-        // 5. Turno aún no ha empezado → siempre pending
+        // 6. Turno aún no ha empezado → siempre pending
         presenceStatus = "pending";
       }
 
       return {
         ...emp,
-        // Campos de compatibilidad con DepartmentPresenceBlock
         nombre: emp.nombre,
         departamento: emp.departamento,
         tipo_turno: emp.tipo_turno,
@@ -259,9 +272,9 @@ export default function PresenceControl() {
         expectedTime,
         attendance,
         presenceStatus,
-        confirmedAbsence,
+        confirmedAbsence: effectiveAbsence,
         predictedAbsent,
-        unmapped: !isValidCode, // señal de diagnóstico
+        unmapped: !isValidCode,
       };
     });
   }, [expectedData, todayEntriesMap, confirmedAbsencesMap, absentYesterdaySet]);
