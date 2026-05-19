@@ -2,6 +2,8 @@
  * PresenceControl - Módulo de Control de Presencia por Turno
  * Vista diaria por turno (mañana/tarde), agrupada por departamento,
  * con verificación en tiempo real y predicción de ausencias.
+ * Usa getExpectedAttendance (backend) para calcular hora esperada con
+ * lógica precisa: tipo_turno, horarios fijos, rotativo (calendario de equipo), partido.
  */
 import React, { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -11,46 +13,13 @@ import { format, subDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, Zap, Calendar } from "lucide-react";
+import { RefreshCw, Zap, Calendar, AlertCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import ShiftPanel from "@/components/presence/ShiftPanel";
 import PresenceTotalsBar from "@/components/presence/PresenceTotalsBar";
 
-// Límite de turno: mañana < 13:00, tarde >= 13:00
 const SHIFT_CUTOFF = "13:00";
-
-function getExpectedShift(emp) {
-  // Determina a qué turno pertenece el empleado según su horario
-  const turno = emp.tipo_turno;
-  if (turno === "Fijo Mañana") return "manana";
-  if (turno === "Fijo Tarde") return "tarde";
-  if (turno === "Turno Partido") {
-    // Turno partido: entra por la mañana
-    const entrada = emp.turno_partido_entrada1 || emp.horario_manana_inicio || "";
-    return entrada < SHIFT_CUTOFF ? "manana" : "tarde";
-  }
-  if (turno === "Rotativo") {
-    // Rotativo: depende del equipo y si es team_1 o team_2 (simplificado por hora de inicio)
-    const inicio = emp.horario_manana_inicio || emp.horario_tarde_inicio || "";
-    return inicio >= SHIFT_CUTOFF ? "tarde" : "manana";
-  }
-  // Fallback: por hora de inicio
-  const inicio = emp.horario_manana_inicio || emp.horario_tarde_inicio || "";
-  return inicio >= SHIFT_CUTOFF ? "tarde" : "manana";
-}
-
-function getExpectedTime(emp) {
-  const turno = emp.tipo_turno;
-  if (turno === "Fijo Mañana") return emp.horario_manana_inicio || "—";
-  if (turno === "Fijo Tarde") return emp.horario_tarde_inicio || "—";
-  if (turno === "Turno Partido") return emp.turno_partido_entrada1 || emp.horario_manana_inicio || "—";
-  if (turno === "Rotativo") {
-    const inicio = emp.horario_manana_inicio || "";
-    return inicio >= SHIFT_CUTOFF ? emp.horario_tarde_inicio : emp.horario_manana_inicio || "—";
-  }
-  return emp.horario_manana_inicio || emp.horario_tarde_inicio || "—";
-}
 
 function getCurrentShift() {
   const now = new Date();
@@ -60,7 +29,7 @@ function getCurrentShift() {
 
 export default function PresenceControl() {
   const queryClient = useQueryClient();
-  const { employees = [], absences = [] } = useAppData();
+  const { absences = [] } = useAppData();
   const [analysisDate, setAnalysisDate] = useState(new Date().toISOString().split("T")[0]);
   const [isSyncing, setIsSyncing] = useState(false);
 
@@ -69,15 +38,31 @@ export default function PresenceControl() {
   const currentShift = getCurrentShift();
   const isToday = analysisDate === today;
 
-  // Marcajes del día de análisis
-  const { data: records = [], isLoading: loadingRecords, refetch } = useQuery({
+  // ── 1. Empleados esperados (backend: lógica precisa con rotación de equipos) ──
+  const {
+    data: expectedData,
+    isLoading: loadingExpected,
+    refetch: refetchExpected,
+    error: expectedError,
+  } = useQuery({
+    queryKey: ["expectedAttendance", analysisDate],
+    queryFn: async () => {
+      const res = await base44.functions.invoke("getExpectedAttendance", { date: analysisDate });
+      return res.data;
+    },
+    staleTime: 300000, // 5 min – el calendario no cambia frecuentemente
+    retry: 2,
+  });
+
+  // ── 2. Marcajes reales del día ──
+  const { data: records = [], isLoading: loadingRecords, refetch: refetchRecords } = useQuery({
     queryKey: ["attendanceRecords", analysisDate],
     queryFn: () => base44.entities.AttendanceRecord.filter({ record_date: analysisDate }, "record_time", 2000),
     staleTime: 30000,
     refetchInterval: isToday ? 60000 : false,
   });
 
-  // Marcajes de ayer (para predicción)
+  // ── 3. Marcajes de ayer (predicción de ausencia) ──
   const { data: yesterdayRecords = [] } = useQuery({
     queryKey: ["attendanceRecords", yesterday],
     queryFn: () => base44.entities.AttendanceRecord.filter({ record_date: yesterday }, "record_time", 2000),
@@ -90,7 +75,7 @@ export default function PresenceControl() {
       const result = await base44.functions.invoke("cucoSyncV2", { date: analysisDate });
       toast.success(`${result.data?.count || 0} marcajes sincronizados.`);
       queryClient.invalidateQueries({ queryKey: ["attendanceRecords", analysisDate] });
-      refetch();
+      refetchRecords();
     } catch (err) {
       toast.error("Error al sincronizar: " + err.message);
     } finally {
@@ -98,13 +83,12 @@ export default function PresenceControl() {
     }
   };
 
-  // Empleados activos sujetos a control
-  const activeEmployees = useMemo(() =>
-    employees.filter(e => e.estado_empleado === "Alta" && e.sujeto_a_control_horario !== false),
-    [employees]
-  );
+  const handleRefresh = () => {
+    refetchExpected();
+    refetchRecords();
+  };
 
-  // Mapa de marcajes de hoy por empleado
+  // Mapa de marcajes de hoy por employee_id (código Cuco)
   const todayEntriesMap = useMemo(() => {
     const map = {};
     for (const r of records) {
@@ -115,19 +99,18 @@ export default function PresenceControl() {
     return map;
   }, [records]);
 
-  // Empleados que no ficharon ayer (predicción de ausencia)
+  // Empleados que no ficharon ayer (predicción)
   const absentYesterdaySet = useMemo(() => {
     const yMap = {};
     for (const r of yesterdayRecords) {
       if (r.direction === "E") yMap[r.employee_id] = true;
     }
-    // Empleados activos que NO tienen entrada ayer
-    const absentSet = new Set();
-    for (const emp of activeEmployees) {
-      if (!yMap[emp.codigo_empleado]) absentSet.add(emp.id);
+    const set = new Set();
+    for (const emp of (expectedData?.employees || [])) {
+      if (!yMap[emp.employee_id]) set.add(emp.employee_db_id);
     }
-    return absentSet;
-  }, [yesterdayRecords, activeEmployees]);
+    return set;
+  }, [yesterdayRecords, expectedData]);
 
   // Ausencias confirmadas para el día de análisis
   const confirmedAbsencesMap = useMemo(() => {
@@ -144,25 +127,33 @@ export default function PresenceControl() {
     return map;
   }, [absences, analysisDate]);
 
-  // Enriquecer empleados con datos de presencia
+  // Enriquecer empleados esperados con datos de presencia real
   const enrichedEmployees = useMemo(() => {
-    return activeEmployees.map(emp => {
-      const code = emp.codigo_empleado ? String(emp.codigo_empleado) : null;
-      const attendance = code ? todayEntriesMap[code] : null;
-      const confirmedAbsence = confirmedAbsencesMap[emp.id];
-      const predictedAbsent = !confirmedAbsence && absentYesterdaySet.has(emp.id);
-      const expectedShift = getExpectedShift(emp);
-      const expectedTime = getExpectedTime(emp);
+    if (!expectedData?.employees) return [];
 
-      let presenceStatus = "pending"; // pending, present, late, absent_confirmed, absent_predicted
+    return expectedData.employees.map(emp => {
+      const code = emp.employee_id ? String(emp.employee_id) : null;
+      const attendance = code ? todayEntriesMap[code] : null;
+      const confirmedAbsence = confirmedAbsencesMap[emp.employee_db_id];
+      const predictedAbsent = !confirmedAbsence && absentYesterdaySet.has(emp.employee_db_id);
+
+      // Hora esperada de entrada
+      const expectedTime = emp.hora_entrada || "—";
+      // Turno normalizado para los paneles
+      const expectedShift = emp.turno === "Tarde" ? "tarde" : emp.turno === "Partido" ? "manana" : "manana";
+
+      let presenceStatus = "pending";
       if (confirmedAbsence) {
         presenceStatus = "absent_confirmed";
       } else if (attendance?.entries?.length > 0) {
-        // Verificar si llegó tarde
         const firstEntry = attendance.entries.sort()[0];
-        const limit = expectedTime !== "—" ? expectedTime : null;
-        if (limit && firstEntry > limit && firstEntry <= `${limit.split(":")[0]}:${String(parseInt(limit.split(":")[1]) + 15).padStart(2, "0")}`) {
-          presenceStatus = "late";
+        if (expectedTime !== "—" && firstEntry > expectedTime) {
+          // Tolerancia de 15 minutos
+          const [h, m] = expectedTime.split(":").map(Number);
+          const limitMinutes = h * 60 + m + 15;
+          const [eh, em] = firstEntry.split(":").map(Number);
+          const entryMinutes = eh * 60 + em;
+          presenceStatus = entryMinutes > limitMinutes ? "late" : "present";
         } else {
           presenceStatus = "present";
         }
@@ -172,6 +163,10 @@ export default function PresenceControl() {
 
       return {
         ...emp,
+        // Campos de compatibilidad con DepartmentPresenceBlock
+        nombre: emp.nombre,
+        departamento: emp.departamento,
+        tipo_turno: emp.tipo_turno,
         expectedShift,
         expectedTime,
         attendance,
@@ -180,7 +175,7 @@ export default function PresenceControl() {
         predictedAbsent,
       };
     });
-  }, [activeEmployees, todayEntriesMap, confirmedAbsencesMap, absentYesterdaySet]);
+  }, [expectedData, todayEntriesMap, confirmedAbsencesMap, absentYesterdaySet]);
 
   const morningEmployees = useMemo(() => enrichedEmployees.filter(e => e.expectedShift === "manana"), [enrichedEmployees]);
   const afternoonEmployees = useMemo(() => enrichedEmployees.filter(e => e.expectedShift === "tarde"), [enrichedEmployees]);
@@ -198,6 +193,7 @@ export default function PresenceControl() {
   }, [enrichedEmployees]);
 
   const todayDisplay = format(new Date(analysisDate + "T12:00:00"), "EEEE d 'de' MMMM yyyy", { locale: es });
+  const isLoading = loadingExpected || loadingRecords;
 
   return (
     <div className="h-full flex flex-col overflow-hidden bg-slate-50 dark:bg-slate-950">
@@ -207,6 +203,11 @@ export default function PresenceControl() {
           <div>
             <h1 className="text-base font-bold text-slate-900 dark:text-slate-100">Control de Presencia</h1>
             <p className="text-xs text-slate-400 capitalize">{todayDisplay}</p>
+            {expectedData && (
+              <p className="text-[10px] text-slate-400 mt-0.5">
+                Semana del {expectedData.week_start} · {expectedData.total} empleados esperados
+              </p>
+            )}
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <div className="flex items-center gap-1.5">
@@ -218,8 +219,8 @@ export default function PresenceControl() {
                 className="h-8 w-36 text-xs"
               />
             </div>
-            <Button size="sm" variant="outline" onClick={() => { refetch(); }} className="gap-1.5 h-8 text-xs">
-              <RefreshCw className={`w-3.5 h-3.5 ${loadingRecords ? "animate-spin" : ""}`} />
+            <Button size="sm" variant="outline" onClick={handleRefresh} className="gap-1.5 h-8 text-xs">
+              <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? "animate-spin" : ""}`} />
               Actualizar
             </Button>
             <Button size="sm" onClick={handleSync} disabled={isSyncing} className="gap-1.5 h-8 text-xs bg-indigo-600 hover:bg-indigo-700">
@@ -235,12 +236,22 @@ export default function PresenceControl() {
         </div>
       </div>
 
+      {/* Error al cargar empleados esperados */}
+      {expectedError && (
+        <div className="mx-4 mt-3 flex items-center gap-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+          <AlertCircle className="w-4 h-4 flex-shrink-0" />
+          Error al calcular empleados esperados: {expectedError.message}
+        </div>
+      )}
+
       {/* Contenido: dos columnas de turno */}
       <div className="flex-1 overflow-y-auto p-4">
-        {loadingRecords ? (
+        {isLoading ? (
           <div className="flex items-center justify-center py-16">
             <RefreshCw className="w-6 h-6 animate-spin text-slate-400" />
-            <span className="ml-2 text-sm text-slate-500">Cargando datos de presencia...</span>
+            <span className="ml-2 text-sm text-slate-500">
+              {loadingExpected ? "Calculando turnos y horarios..." : "Cargando marcajes..."}
+            </span>
           </div>
         ) : (
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
@@ -248,7 +259,7 @@ export default function PresenceControl() {
             <ShiftPanel
               shiftKey="manana"
               label="Turno Mañana"
-              timeRange="06:00 – 14:00"
+              timeRange="07:00 – 15:00"
               employees={morningEmployees}
               isCurrentShift={isToday && currentShift === "manana"}
               isAnalysisDate={isToday}
@@ -258,7 +269,7 @@ export default function PresenceControl() {
             <ShiftPanel
               shiftKey="tarde"
               label="Turno Tarde"
-              timeRange="14:00 – 22:00"
+              timeRange="15:00 – 22:00"
               employees={afternoonEmployees}
               isCurrentShift={isToday && currentShift === "tarde"}
               isAnalysisDate={isToday}
