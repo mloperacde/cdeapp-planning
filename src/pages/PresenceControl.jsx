@@ -13,7 +13,7 @@ import { format, subDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, Zap, Calendar, AlertCircle, CheckCircle2 } from "lucide-react";
+import { RefreshCw, Zap, Calendar, AlertCircle, CheckCircle2, Search, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import ShiftPanel from "@/components/presence/ShiftPanel";
@@ -45,6 +45,7 @@ export default function PresenceControl() {
   const { absences = [] } = useAppData();
   const [analysisDate, setAnalysisDate] = useState(new Date().toISOString().split("T")[0]);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const today = new Date().toISOString().split("T")[0];
   const yesterday = subDays(new Date(analysisDate), 1).toISOString().split("T")[0];
@@ -279,8 +280,18 @@ export default function PresenceControl() {
     });
   }, [expectedData, todayEntriesMap, confirmedAbsencesMap, absentYesterdaySet]);
 
-  const morningEmployees = useMemo(() => enrichedEmployees.filter(e => e.expectedShift === "manana"), [enrichedEmployees]);
-  const afternoonEmployees = useMemo(() => enrichedEmployees.filter(e => e.expectedShift === "tarde"), [enrichedEmployees]);
+  // Filtrado por búsqueda
+  const filteredEmployees = useMemo(() => {
+    if (!searchQuery.trim()) return enrichedEmployees;
+    const q = searchQuery.toLowerCase().trim();
+    return enrichedEmployees.filter(e =>
+      e.nombre?.toLowerCase().includes(q) ||
+      e.departamento?.toLowerCase().includes(q)
+    );
+  }, [enrichedEmployees, searchQuery]);
+
+  const morningEmployees = useMemo(() => filteredEmployees.filter(e => e.expectedShift === "manana"), [filteredEmployees]);
+  const afternoonEmployees = useMemo(() => filteredEmployees.filter(e => e.expectedShift === "tarde"), [filteredEmployees]);
 
   // Totales globales — incluye absent_no_record como ausente confirmado
   const globalTotals = useMemo(() => {
@@ -318,6 +329,25 @@ export default function PresenceControl() {
             )}
           </div>
           <div className="flex items-center gap-2 flex-wrap">
+            {/* Buscador */}
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+              <Input
+                type="text"
+                placeholder="Buscar empleado o departamento..."
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="h-8 pl-8 pr-7 w-52 text-xs"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
             <div className="flex items-center gap-1.5">
               <Calendar className="w-3.5 h-3.5 text-slate-400" />
               <Input
