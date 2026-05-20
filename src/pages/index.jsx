@@ -1,7 +1,7 @@
 import Layout from "../Layout";
 
 import AbsenceManagement from "./AbsenceManagement";
-import PresenceAbsenceHub from "./PresenceAbsenceHub";
+import { Navigate } from 'react-router-dom';
 import PresenceControl from "./PresenceControl";
 import AbsenceTypeConfig from "./AbsenceTypeConfig";
 import AdvancedHRDashboard from "./AdvancedHRDashboard";
@@ -106,7 +106,6 @@ const queryClient = new QueryClient({
 const PAGES = {
   Dashboard: Dashboard,
   AbsenceManagement: AbsenceManagement,
-  PresenceAbsenceHub: PresenceAbsenceHub,
   AbsenceTypeConfig: AbsenceTypeConfig,
   AdvancedHRDashboard: AdvancedHRDashboard,
   ArticleManagement: ArticleManagement,
@@ -205,7 +204,7 @@ function PagesContent() {
                 
                 
                 <Route path="/AbsenceManagement" element={<AbsenceManagement />} />
-                <Route path="/PresenceAbsenceHub" element={<PresenceAbsenceHub />} />
+                <Route path="/PresenceAbsenceHub" element={<Navigate to="/AbsenceManagement" replace />} />
                 <Route path="/PresenceControl" element={<PresenceControl />} />
                 <Route path="/EmailNotifications" element={<EmailNotifications />} />
                 <Route path="/EmployeeAbsenceInfo" element={<EmployeeAbsenceInfo />} />
