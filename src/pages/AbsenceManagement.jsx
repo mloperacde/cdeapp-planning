@@ -1,48 +1,67 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { useAppData } from "../components/data/DataProvider";
 import { useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
-import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { 
-  UserX, 
-  BarChart3, CalendarDays, FileText, CheckSquare, 
-  LayoutDashboard, Settings, Activity, Brain, Radio, Radar, RefreshCw, Trash2
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import {
+  UserX, BarChart3, CalendarDays, FileText, CheckSquare,
+  LayoutDashboard, Settings, AlertTriangle, ClipboardList,
+  Brain, RefreshCw, Trash2, Calendar
 } from "lucide-react";
-import { useLocation } from "react-router-dom";
-import { startOfMonth, eachDayOfInterval } from "date-fns";
-import { getAvailability } from "@/lib/domain/planning";
 
 import AbsenceDashboard from "../components/employees/AbsenceDashboard";
-import AbsenceNotifications from "../components/employees/AbsenceNotifications";
-import UnifiedAbsenceManager from "../components/absences/UnifiedAbsenceManager";
 import AbsenceCalendar from "../components/absences/AbsenceCalendar";
 import AbsenceApprovalPanel from "../components/absences/AbsenceApprovalPanel";
+import AbsenceTypeManager from "../components/absences/AbsenceTypeManager";
+import VacationAccumulationConfig from "../components/absences/VacationAccumulationConfig";
 import VacationPendingBalancePanel from "../components/absences/VacationPendingBalancePanel";
 import VacationPendingConsumptionManager from "../components/absences/VacationPendingConsumptionManager";
 import UnpaidLeaveTracker from "../components/absences/UnpaidLeaveTracker";
-import AbsenceTypeManager from "../components/absences/AbsenceTypeManager";
-import VacationAccumulationConfig from "../components/absences/VacationAccumulationConfig";
-import AdvancedReportGenerator from "../components/reports/AdvancedReportGenerator";
-import AttendanceAnalyzer from "../components/attendance/AttendanceAnalyzer";
 import VacationWorkCompensationManager from "../components/absences/VacationWorkCompensationManager";
-import AbsenceHistoryView from "../components/absences/AbsenceHistoryView";
-import RealTimeAvailabilityPanel from "../components/absences/RealTimeAvailabilityPanel";
-import PresenceMonitorPanel from "../components/absences/PresenceMonitorPanel";
+import AttendanceAnalyzer from "../components/attendance/AttendanceAnalyzer";
+import AbsenceValidationInbox from "../components/absences/AbsenceValidationInbox";
+import FormalAbsenceManager from "../components/absences/FormalAbsenceManager";
 
 export default function AbsenceManagementPage() {
   const queryClient = useQueryClient();
-  const { 
+  const location = useLocation();
+  const {
     user: currentUser,
-    absences = [], 
+    absences = [],
     employees = [],
     absenceTypes = [],
     isAdmin = false
   } = useAppData();
+
+  const [activeTab, setActiveTab] = useState("dashboard");
+  const [initialAbsenceEmployeeId, setInitialAbsenceEmployeeId] = useState(null);
+  const [initialAbsenceEmployeeName, setInitialAbsenceEmployeeName] = useState(null);
   const [cleanupLoading, setCleanupLoading] = useState(false);
   const [showCleanupDialog, setShowCleanupDialog] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const tab = params.get('tab');
+    const employeeId = params.get('employeeId');
+    const employeeName = params.get('employeeName');
+    if (tab) setActiveTab(tab);
+    if (employeeId) {
+      setInitialAbsenceEmployeeId(employeeId);
+      setInitialAbsenceEmployeeName(employeeName || null);
+      setActiveTab('formal');
+    }
+  }, [location.search]);
+
+  const handleTabChange = (value) => {
+    setActiveTab(value);
+    const url = new URL(window.location);
+    url.searchParams.set('tab', value);
+    window.history.pushState({}, '', url);
+  };
 
   const handleRefresh = () => {
     queryClient.invalidateQueries({ queryKey: ['absences'] });
@@ -55,7 +74,7 @@ export default function AbsenceManagementPage() {
       const result = await base44.functions.invoke('cleanupHistoricalData', {});
       queryClient.invalidateQueries();
       setShowCleanupDialog(false);
-      alert(`Histórico limpiado: ${result.data.deletionStats.absences} ausencias, ${result.data.deletionStats.attendanceRecords} registros de asistencia eliminados`);
+      alert(`Histórico limpiado: ${result.data.deletionStats.absences} ausencias, ${result.data.deletionStats.attendanceRecords} registros eliminados`);
     } catch (error) {
       alert('Error al limpiar histórico: ' + error.message);
     } finally {
@@ -63,284 +82,93 @@ export default function AbsenceManagementPage() {
     }
   };
 
-  const isShiftManager = useMemo(() => {
-    // Simplified check - real app would check specific permissions/roles
-    return currentUser?.role !== 'admin' && 
-           (currentUser?.puesto?.toLowerCase().includes('jefe') || currentUser?.puesto?.toLowerCase().includes('shift'));
-  }, [currentUser]);
-
-  // Handle tab state and URL sync
-  const location = useLocation();
-  const [activeTab, setActiveTab] = useState("dashboard");
-  const [initialAbsenceEmployeeId, setInitialAbsenceEmployeeId] = useState(null);
-  const [initialAbsenceEmployeeName, setInitialAbsenceEmployeeName] = useState(null);
-
-  React.useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const tab = params.get('tab');
-    const employeeId = params.get('employeeId');
-    const employeeName = params.get('employeeName');
-
-    if (tab) {
-      setActiveTab(tab);
-    } else {
-      setActiveTab(isShiftManager ? "dashboard" : "dashboard");
-    }
-
-    if (employeeId) {
-      setInitialAbsenceEmployeeId(employeeId);
-      setInitialAbsenceEmployeeName(employeeName || null);
-    } else {
-      setInitialAbsenceEmployeeId(null);
-      setInitialAbsenceEmployeeName(null);
-    }
-  }, [location.search, isShiftManager]);
-
-  // Update URL when tab changes
-  const handleTabChange = (value) => {
-    setActiveTab(value);
-    const url = new URL(window.location);
-    url.searchParams.set('tab', value);
-    window.history.pushState({}, '', url);
-  };
-
-  const filteredAbsences = useMemo(() => {
-    return absences.filter(abs => {
-      const emp = employees.find(e => e.id === abs.employee_id);
-      if (isShiftManager && emp?.departamento !== currentUser?.departamento) return false; // Basic Shift Manager filter
-      return true;
-    });
-  }, [absences, employees, isShiftManager, currentUser]);
-
-  const activeAbsences = filteredAbsences.filter(a => {
+  // Métricas rápidas para el header
+  const stats = useMemo(() => {
     const now = new Date();
-    const start = new Date(a.fecha_inicio);
-    const end = a.fecha_fin_desconocida ? now : new Date(a.fecha_fin);
-    return now >= start && now <= end && a.estado_aprobacion !== "Rechazada";
-  });
-
-  const departmentsWithActiveAbsences = useMemo(() => {
-    const deptSet = new Set();
-    activeAbsences.forEach((a) => {
-      const emp = employees.find((e) => e.id === a.employee_id);
-      if (emp?.departamento) {
-        deptSet.add(emp.departamento);
-      }
+    const autoAbsencesPending = absences.filter(abs => {
+      const isAuto = abs.motivo === 'Ausencia no comunicada - detección automática' ||
+        (abs.notas && (abs.notas.startsWith('[SISTEMA]') || abs.notas.startsWith('[shiftAudit]')));
+      return isAuto && abs.estado_aprobacion === 'Pendiente';
     });
-    return Array.from(deptSet);
-  }, [activeAbsences, employees]);
 
-  const departmentsWithActiveAbsencesCount = departmentsWithActiveAbsences.length;
-
-  const scopedEmployees = useMemo(() => {
-    return employees.filter((emp) => {
-      if (isShiftManager && emp.departamento !== currentUser?.departamento) return false;
-      return true;
+    const formalActive = absences.filter(abs => {
+      const isAuto = abs.motivo === 'Ausencia no comunicada - detección automática' ||
+        (abs.notas && (abs.notas.startsWith('[SISTEMA]') || abs.notas.startsWith('[shiftAudit]')));
+      if (isAuto && abs.estado_aprobacion === 'Pendiente') return false;
+      if (abs.estado_aprobacion === 'Rechazada' || abs.estado_aprobacion === 'Cancelada') return false;
+      const start = new Date(abs.fecha_inicio);
+      const end = abs.fecha_fin_desconocida ? new Date('2099-12-31') : new Date(abs.fecha_fin || '2099-12-31');
+      return now >= start && now <= end;
     });
-  }, [employees, isShiftManager, currentUser]);
 
-  const activeEmployees = useMemo(() => {
-    return scopedEmployees.filter(
-      (emp) => emp.estado_empleado === "Alta" && emp.incluir_en_planning !== false
-    );
-  }, [scopedEmployees]);
+    const pendingApproval = absences.filter(abs => {
+      const isAuto = abs.motivo === 'Ausencia no comunicada - detección automática' ||
+        (abs.notas && (abs.notas.startsWith('[SISTEMA]') || abs.notas.startsWith('[shiftAudit]')));
+      return !isAuto && abs.estado_aprobacion === 'Pendiente';
+    });
 
-  const todayISO = useMemo(() => {
-    const now = new Date();
-    return now.toISOString().slice(0, 10);
-  }, []);
-
-  const dailyGlobalAbsenteeism = useMemo(() => {
-    if (activeEmployees.length === 0) {
-      return { rate: 0, total: 0, absent: 0 };
-    }
-    const result = getAvailability(activeEmployees, filteredAbsences, todayISO);
-    const rate =
-      result.totalEmpleados > 0
-        ? (result.ausentes / result.totalEmpleados) * 100
-        : 0;
     return {
-      rate,
-      total: result.totalEmpleados,
-      absent: result.ausentes,
+      autoPending: autoAbsencesPending.length,
+      formalActive: formalActive.length,
+      pendingApproval: pendingApproval.length,
     };
-  }, [activeEmployees, filteredAbsences, todayISO]);
-
-  const monthlyGlobalAbsenteeism = useMemo(() => {
-    if (activeEmployees.length === 0) {
-      return { rate: 0 };
-    }
-    const now = new Date();
-    const monthStart = startOfMonth(now);
-    const days = eachDayOfInterval({ start: monthStart, end: now });
-    if (days.length === 0) {
-      return { rate: 0 };
-    }
-    let sumRates = 0;
-    days.forEach((day) => {
-      const dateISO = day.toISOString().slice(0, 10);
-      const result = getAvailability(activeEmployees, filteredAbsences, dateISO);
-      const rate =
-        result.totalEmpleados > 0
-          ? (result.ausentes / result.totalEmpleados) * 100
-          : 0;
-      sumRates += rate;
-    });
-    const avgRate = sumRates / days.length;
-    return { rate: avgRate };
-  }, [activeEmployees, filteredAbsences]);
-
-  const dailyDeptAbsenteeism = useMemo(() => {
-    const deptRates = [];
-    const deptSet = new Set(
-      activeEmployees
-        .map((emp) => emp.departamento)
-        .filter((dept) => !!dept)
-    );
-    deptSet.forEach((dept) => {
-      const emps = activeEmployees.filter((emp) => emp.departamento === dept);
-      if (emps.length === 0) return;
-      const result = getAvailability(emps, filteredAbsences, todayISO);
-      const rate =
-        result.totalEmpleados > 0
-          ? (result.ausentes / result.totalEmpleados) * 100
-          : 0;
-      deptRates.push({ dept, rate });
-    });
-    deptRates.sort((a, b) => b.rate - a.rate);
-    return deptRates;
-  }, [activeEmployees, filteredAbsences, todayISO]);
-
-  const topDeptToday = dailyDeptAbsenteeism[0];
-
-  const monthlyDeptAbsenteeism = useMemo(() => {
-    const deptRates = [];
-    const deptSet = new Set(
-      activeEmployees
-        .map((emp) => emp.departamento)
-        .filter((dept) => !!dept)
-    );
-    if (deptSet.size === 0) return [];
-    const now = new Date();
-    const monthStart = startOfMonth(now);
-    const days = eachDayOfInterval({ start: monthStart, end: now });
-    if (days.length === 0) return [];
-    deptSet.forEach((dept) => {
-      const emps = activeEmployees.filter((emp) => emp.departamento === dept);
-      if (emps.length === 0) return;
-      let sumRates = 0;
-      days.forEach((day) => {
-        const dateISO = day.toISOString().slice(0, 10);
-        const result = getAvailability(emps, filteredAbsences, dateISO);
-        const rate =
-          result.totalEmpleados > 0
-            ? (result.ausentes / result.totalEmpleados) * 100
-            : 0;
-        sumRates += rate;
-      });
-      const avgRate = sumRates / days.length;
-      deptRates.push({ dept, rate: avgRate });
-    });
-    deptRates.sort((a, b) => b.rate - a.rate);
-    return deptRates;
-  }, [activeEmployees, filteredAbsences]);
-
-  const topDeptMonth = monthlyDeptAbsenteeism[0];
+  }, [absences]);
 
   return (
-    <div className="h-full flex flex-col p-6 gap-6 bg-slate-50 dark:bg-slate-950 overflow-y-auto">
-      
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 shrink-0 bg-white dark:bg-slate-900 p-2 px-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
+    <div className="h-full flex flex-col bg-slate-50 dark:bg-slate-950 overflow-y-auto">
+      {/* Header compacto */}
+      <div className="shrink-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-3">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-              <UserX className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+              <UserX className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
             <div>
-              <h1 className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-tight">
-                Gestión Integral de Ausencias
-              </h1>
-              <p className="text-[10px] text-slate-500 dark:text-slate-400 hidden sm:block">
-                {isShiftManager ? "Gestión de equipo y reportes de turno" : "Control centralizado de RRHH"}
-              </p>
+              <h1 className="text-base font-bold text-slate-900 dark:text-slate-100">Gestión de Ausencias</h1>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Control integral · RRHH</p>
             </div>
           </div>
-          
-          <div className="flex items-center gap-2">
-               <Button
-                 type="button"
-                 variant="ghost"
-                 size="sm"
-                 className="h-8 text-xs gap-2"
-                 onClick={handleRefresh}
-                 title="Actualizar datos"
-               >
-                 <RefreshCw className="w-3 h-3" />
-                 Actualizar
-               </Button>
-               {isAdmin && (
-                <Dialog open={showCleanupDialog} onOpenChange={setShowCleanupDialog}>
-                  <DialogTrigger asChild>
-                    <Button 
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 text-xs gap-2 text-red-600 hover:text-red-700 hover:bg-red-50"
-                      title="Limpiar histórico completo"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                      Limpiar Histórico
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <div className="space-y-4">
-                      <h2 className="text-lg font-bold text-slate-900">⚠️ Limpiar Histórico Completo</h2>
-                      <p className="text-sm text-slate-600">
-                        Esta acción eliminará permanentemente:
-                      </p>
-                      <ul className="text-sm text-slate-600 list-disc list-inside space-y-1">
-                        <li>Todos los registros de ausencias</li>
-                        <li>Todos los registros de asistencia</li>
-                        <li>Todos los registros de descansos</li>
-                        <li>Logs de auditoría de ausencias</li>
-                      </ul>
-                      <p className="text-sm font-semibold text-red-600">
-                        ❌ Esta acción no se puede deshacer.
-                      </p>
-                      <div className="flex gap-3 justify-end pt-4">
-                        <Button 
-                          variant="outline"
-                          onClick={() => setShowCleanupDialog(false)}
-                        >
-                          Cancelar
-                        </Button>
-                        <Button 
-                          className="bg-red-600 hover:bg-red-700 text-white"
-                          onClick={handleCleanupHistorical}
-                          disabled={cleanupLoading}
-                        >
-                          {cleanupLoading ? 'Limpiando...' : 'Confirmar Limpieza'}
-                        </Button>
-                      </div>
-                    </div>
-                  </DialogContent>
-                </Dialog>
+
+          {/* KPIs rápidos */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <button
+              onClick={() => handleTabChange('validation')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 border border-amber-200 hover:bg-amber-100 transition-colors"
+            >
+              <AlertTriangle className="w-4 h-4 text-amber-500" />
+              <span className="text-xs font-medium text-amber-700">Bandeja detección</span>
+              {stats.autoPending > 0 && (
+                <Badge className="bg-amber-500 text-white text-xs px-1.5 py-0 h-5">{stats.autoPending}</Badge>
               )}
-           {!isShiftManager && (
-            <>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-8 text-xs gap-2"
-                onClick={() => handleTabChange("reports")}
+            </button>
+            <button
+              onClick={() => handleTabChange('formal')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 border border-blue-200 hover:bg-blue-100 transition-colors"
+            >
+              <ClipboardList className="w-4 h-4 text-blue-600" />
+              <span className="text-xs font-medium text-blue-700">Ausencias activas</span>
+              <Badge className="bg-blue-600 text-white text-xs px-1.5 py-0 h-5">{stats.formalActive}</Badge>
+            </button>
+            {stats.pendingApproval > 0 && (
+              <button
+                onClick={() => handleTabChange('approval')}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-50 border border-orange-200 hover:bg-orange-100 transition-colors"
               >
-                <BarChart3 className="w-3 h-3" />
-                Informes
+                <CheckSquare className="w-4 h-4 text-orange-600" />
+                <span className="text-xs font-medium text-orange-700">Pendientes aprobación</span>
+                <Badge className="bg-orange-500 text-white text-xs px-1.5 py-0 h-5">{stats.pendingApproval}</Badge>
+              </button>
+            )}
+
+            <div className="flex gap-1.5 ml-2">
+              <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={handleRefresh}>
+                <RefreshCw className="w-3.5 h-3.5 mr-1" />
+                Actualizar
               </Button>
               <Dialog>
                 <DialogTrigger asChild>
-                  <Button variant="ghost" size="sm" className="h-8 text-xs gap-2 text-purple-700 hover:text-purple-800 hover:bg-purple-50">
-                    <Brain className="w-3 h-3" />
+                  <Button variant="ghost" size="sm" className="h-8 text-xs text-purple-700 hover:text-purple-800 hover:bg-purple-50">
+                    <Brain className="w-3.5 h-3.5 mr-1" />
                     Análisis IA
                   </Button>
                 </DialogTrigger>
@@ -348,201 +176,155 @@ export default function AbsenceManagementPage() {
                   <AttendanceAnalyzer />
                 </DialogContent>
               </Dialog>
-            </>
-          )}
+              {isAdmin && (
+                <Dialog open={showCleanupDialog} onOpenChange={setShowCleanupDialog}>
+                  <DialogTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-8 text-xs text-red-600 hover:bg-red-50">
+                      <Trash2 className="w-3.5 h-3.5 mr-1" />
+                      Limpiar
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <div className="space-y-4">
+                      <h2 className="text-lg font-bold">⚠️ Limpiar Histórico Completo</h2>
+                      <p className="text-sm text-slate-600">Eliminar permanentemente todos los registros de ausencias, asistencia y logs. Esta acción no se puede deshacer.</p>
+                      <div className="flex gap-3 justify-end pt-2">
+                        <Button variant="outline" onClick={() => setShowCleanupDialog(false)}>Cancelar</Button>
+                        <Button className="bg-red-600 hover:bg-red-700 text-white" onClick={handleCleanupHistorical} disabled={cleanupLoading}>
+                          {cleanupLoading ? 'Limpiando...' : 'Confirmar'}
+                        </Button>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              )}
+            </div>
           </div>
         </div>
+      </div>
 
-        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full flex flex-col gap-6">
-          <TabsList className="flex w-full flex-nowrap overflow-x-auto h-auto bg-white dark:bg-slate-800/50">
-            <TabsTrigger value="dashboard" className="flex-1 py-2" type="button">
-              <LayoutDashboard className="w-4 h-4 mr-2"/> Dashboard
+      {/* Tabs */}
+      <div className="flex-1 p-4 md:p-6">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full flex flex-col gap-5">
+          <TabsList className="flex w-full flex-nowrap overflow-x-auto h-auto bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-1 gap-0.5">
+            <TabsTrigger value="dashboard" className="flex-1 py-2 text-xs sm:text-sm" type="button">
+              <LayoutDashboard className="w-4 h-4 mr-1.5" />
+              Dashboard
             </TabsTrigger>
-            <TabsTrigger value="list" className="flex-1 py-2" type="button">
-              <FileText className="w-4 h-4 mr-2"/> Listado
+            <TabsTrigger value="validation" className="flex-1 py-2 text-xs sm:text-sm relative" type="button">
+              <AlertTriangle className="w-4 h-4 mr-1.5 text-amber-500" />
+              Detección
+              {stats.autoPending > 0 && (
+                <Badge className="bg-amber-500 text-white text-[10px] px-1 py-0 h-4 ml-1">{stats.autoPending}</Badge>
+              )}
             </TabsTrigger>
-            {!isShiftManager && (
-              <>
-                <TabsTrigger value="history" className="flex-1 py-2" type="button">
-                  <CalendarDays className="w-4 h-4 mr-2"/> Histórico
-                </TabsTrigger>
-                <TabsTrigger value="approval" className="flex-1 py-2" type="button">
-                  <CheckSquare className="w-4 h-4 mr-2"/> Aprobaciones
-                </TabsTrigger>
-                <TabsTrigger value="calendar" className="flex-1 py-2" type="button">
-                  <CalendarDays className="w-4 h-4 mr-2"/> Calendario
-                </TabsTrigger>
-                <TabsTrigger value="monitor" className="flex-1 py-2" type="button">
-                  <Radar className="w-4 h-4 mr-2"/> Monitor Presencia
-                </TabsTrigger>
-                <TabsTrigger value="realtime" className="flex-1 py-2" type="button">
-                  <Radio className="w-4 h-4 mr-2"/> Tiempo Real
-                </TabsTrigger>
-                <TabsTrigger value="types-config" className="flex-1 py-2" type="button">
-                  <Settings className="w-4 h-4 mr-2"/> Tipos de Ausencias
-                </TabsTrigger>
-                <TabsTrigger value="config" className="flex-1 py-2" type="button">
-                  <Settings className="w-4 h-4 mr-2"/> Protección de vacaciones
-                </TabsTrigger>
-              </>
-            )}
+            <TabsTrigger value="formal" className="flex-1 py-2 text-xs sm:text-sm" type="button">
+              <ClipboardList className="w-4 h-4 mr-1.5" />
+              Registro Formal
+            </TabsTrigger>
+            <TabsTrigger value="approval" className="flex-1 py-2 text-xs sm:text-sm" type="button">
+              <CheckSquare className="w-4 h-4 mr-1.5" />
+              Aprobaciones
+            </TabsTrigger>
+            <TabsTrigger value="calendar" className="flex-1 py-2 text-xs sm:text-sm" type="button">
+              <Calendar className="w-4 h-4 mr-1.5" />
+              Calendario
+            </TabsTrigger>
+            <TabsTrigger value="types-config" className="flex-1 py-2 text-xs sm:text-sm" type="button">
+              <Settings className="w-4 h-4 mr-1.5" />
+              Tipos
+            </TabsTrigger>
+            <TabsTrigger value="config" className="flex-1 py-2 text-xs sm:text-sm" type="button">
+              <Settings className="w-4 h-4 mr-1.5" />
+              Vacaciones
+            </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="dashboard" className="space-y-4 md:space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-              <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm">
-                <CardContent className="p-4 flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Ausencias activas</p>
-                    <div className="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-1">
-                      {activeAbsences.length}
-                    </div>
-                  </div>
-                  <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg">
-                    <UserX className="w-5 h-5 text-red-600 dark:text-red-400" />
-                  </div>
-                </CardContent>
-              </Card>
+          {/* Dashboard */}
+          <TabsContent value="dashboard">
+            <AbsenceDashboard absences={absences} employees={employees} />
+          </TabsContent>
 
-              <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm">
-                <CardContent className="p-4 flex items-center justify-between">
+          {/* Bandeja de validación — ausencias auto-detectadas */}
+          <TabsContent value="validation">
+            <div className="space-y-4">
+              <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="w-5 h-5 text-amber-500 mt-0.5 flex-shrink-0" />
                   <div>
-                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Departamentos con ausencias</p>
-                    <div className="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-1">
-                      {departmentsWithActiveAbsencesCount}
-                    </div>
-                  </div>
-                  <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                    <BarChart3 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm">
-                <CardContent className="p-4 flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Absentismo global</p>
-                    <div className="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-1">
-                      {dailyGlobalAbsenteeism.rate.toFixed(2)}%
-                    </div>
-                    <p className="text-[10px] text-slate-500 mt-1">
-                      Mes actual: {monthlyGlobalAbsenteeism.rate.toFixed(2)}%
+                    <p className="text-sm font-semibold text-amber-900 dark:text-amber-100">Ausencias detectadas automáticamente por Control de Presencia</p>
+                    <p className="text-xs text-amber-700 dark:text-amber-300 mt-0.5">
+                      El sistema ha detectado empleados que no ficharon entrada en su turno. Cada registro debe ser clasificado: 
+                      <strong> Justificar</strong> (convertir en ausencia formal con tipo y motivo) o <strong>Falsa alarma</strong> (el empleado sí estaba presente, error de fichaje).
                     </p>
                   </div>
-                  <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
-                    <Activity className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm">
-                <CardContent className="p-4 flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Absentismo por departamento</p>
-                    <div className="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-1">
-                      {topDeptToday ? topDeptToday.rate.toFixed(2) : "0.00"}%
-                    </div>
-                    {(topDeptToday || topDeptMonth) && (
-                      <div className="mt-1 space-y-0.5">
-                        {topDeptToday && (
-                          <p className="text-[10px] text-slate-500">
-                            Hoy: {topDeptToday.dept}
-                          </p>
-                        )}
-                        {topDeptMonth && (
-                          <p className="text-[10px] text-slate-500">
-                            Mes: {topDeptMonth.dept} ({topDeptMonth.rate.toFixed(2)}%)
-                          </p>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
-                    <BarChart3 className="w-5 h-5 text-orange-600 dark:text-orange-400" />
-                  </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
+              <AbsenceValidationInbox employees={employees} absenceTypes={absenceTypes} />
             </div>
+          </TabsContent>
 
-            {isShiftManager ? (
-              <div className="space-y-6">
-                <div className="w-full">
-                  <AbsenceNotifications absences={filteredAbsences} employees={employees} absenceTypes={absenceTypes} />
+          {/* Registro formal de ausencias */}
+          <TabsContent value="formal">
+            <div className="space-y-4">
+              <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <ClipboardList className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="text-sm font-semibold text-blue-900 dark:text-blue-100">Registro Formal de Ausencias</p>
+                    <p className="text-xs text-blue-700 dark:text-blue-300 mt-0.5">
+                      Ausencias comunicadas previamente (bajas médicas, permisos, vacaciones, etc.) y ausencias auto-detectadas ya validadas. 
+                      Usa <strong>Nueva Ausencia</strong> para registrar ausencias comunicadas por el empleado o su responsable.
+                    </p>
+                  </div>
                 </div>
-                <AbsenceDashboard absences={filteredAbsences} employees={employees} />
               </div>
-            ) : (
-              <div className="space-y-6">
-                <div className="w-full">
-                  <AbsenceNotifications absences={filteredAbsences} employees={employees} absenceTypes={absenceTypes} />
-                </div>
-                <AbsenceDashboard absences={filteredAbsences} employees={employees} />
-              </div>
-            )}
+              <FormalAbsenceManager
+                employees={employees}
+                absenceTypes={absenceTypes}
+                initialEmployeeId={initialAbsenceEmployeeId}
+                initialEmployeeName={initialAbsenceEmployeeName}
+              />
+            </div>
           </TabsContent>
 
-          <TabsContent value="list" className="space-y-6">
-            <UnifiedAbsenceManager 
-              sourceContext="absence_page" 
-              initialEmployeeId={initialAbsenceEmployeeId}
-              initialEmployeeName={initialAbsenceEmployeeName}
-            />
-          </TabsContent>
-
-          <TabsContent value="monitor" className="space-y-4">
-            <PresenceMonitorPanel />
-          </TabsContent>
-
-          <TabsContent value="realtime" className="space-y-4">
-            <RealTimeAvailabilityPanel />
-          </TabsContent>
-
-          <TabsContent value="history" className="space-y-6">
-            <AbsenceHistoryView employees={employees} />
-          </TabsContent>
-
+          {/* Aprobaciones */}
           <TabsContent value="approval">
-            <AbsenceApprovalPanel 
-              employees={employees} 
-              absenceTypes={absenceTypes} 
-              currentUser={currentUser} 
+            <AbsenceApprovalPanel
+              employees={employees}
+              absenceTypes={absenceTypes}
+              currentUser={currentUser}
             />
           </TabsContent>
 
+          {/* Calendario */}
           <TabsContent value="calendar">
-            <AbsenceCalendar 
-              absences={absences} 
-              employees={employees} 
-              absenceTypes={absenceTypes} 
+            <AbsenceCalendar
+              absences={absences}
+              employees={employees}
+              absenceTypes={absenceTypes}
             />
           </TabsContent>
 
+          {/* Tipos de ausencia */}
           <TabsContent value="types-config">
             <div className="space-y-6">
-              <div className="border rounded-lg p-4 bg-slate-50 flex items-center gap-2">
-                <CalendarDays className="w-5 h-5 text-slate-600" />
-                <p className="text-sm text-slate-700">
-                  RRHH gestiona la base de datos maestra de tipos de ausencia y sus reglas.
-                </p>
-              </div>
               <Tabs defaultValue="types">
                 <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="types">
-                    Tipos de Ausencia
-                  </TabsTrigger>
-                  <TabsTrigger value="vacation-rules">
-                    Reglas de Vacaciones
-                  </TabsTrigger>
+                  <TabsTrigger value="types">Tipos de Ausencia</TabsTrigger>
+                  <TabsTrigger value="vacation-rules">Reglas de Vacaciones</TabsTrigger>
                 </TabsList>
                 <TabsContent value="types" className="mt-4">
                   <AbsenceTypeManager />
                 </TabsContent>
-                <TabsContent value="vacation-rules" className="mt-4 space-y-4">
+                <TabsContent value="vacation-rules" className="mt-4">
                   <VacationAccumulationConfig />
                 </TabsContent>
               </Tabs>
             </div>
           </TabsContent>
 
+          {/* Protección vacaciones */}
           <TabsContent value="config">
             <div className="space-y-6">
               <VacationPendingBalancePanel employees={employees} />
@@ -551,11 +333,8 @@ export default function AbsenceManagementPage() {
               <UnpaidLeaveTracker employees={employees} />
             </div>
           </TabsContent>
-
-          <TabsContent value="reports">
-            <AdvancedReportGenerator />
-          </TabsContent>
         </Tabs>
+      </div>
     </div>
   );
 }
