@@ -8,9 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import {
-  UserX, BarChart3, CalendarDays, FileText, CheckSquare,
+  UserX, CalendarDays, FileText, CheckSquare,
   LayoutDashboard, Settings, AlertTriangle, ClipboardList,
-  Brain, RefreshCw, Trash2, Calendar
+  Brain, RefreshCw, Trash2, Calendar, TrendingDown
 } from "lucide-react";
 
 import AbsenceDashboard from "../components/employees/AbsenceDashboard";
@@ -82,7 +82,6 @@ export default function AbsenceManagementPage() {
     }
   };
 
-  // Métricas rápidas para el header
   const stats = useMemo(() => {
     const now = new Date();
     const autoAbsencesPending = absences.filter(abs => {
@@ -114,10 +113,20 @@ export default function AbsenceManagementPage() {
     };
   }, [absences]);
 
+  const tabs = [
+    { value: "dashboard", label: "Resumen", icon: LayoutDashboard },
+    { value: "validation", label: "Detección", icon: AlertTriangle, count: stats.autoPending, countColor: "bg-amber-500" },
+    { value: "formal", label: "Registro", icon: ClipboardList },
+    { value: "approval", label: "Aprobaciones", icon: CheckSquare, count: stats.pendingApproval, countColor: "bg-orange-500" },
+    { value: "calendar", label: "Calendario", icon: Calendar },
+    { value: "types-config", label: "Tipos", icon: Settings },
+    { value: "config", label: "Vacaciones", icon: TrendingDown },
+  ];
+
   return (
     <div className="h-full flex flex-col bg-slate-50 dark:bg-slate-950 overflow-y-auto">
-      {/* Header compacto */}
-      <div className="shrink-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-3">
+      {/* Header */}
+      <div className="shrink-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 md:px-6 py-3">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
@@ -130,46 +139,48 @@ export default function AbsenceManagementPage() {
           </div>
 
           {/* KPIs rápidos */}
-          <div className="flex items-center gap-3 flex-wrap">
-            <button
-              onClick={() => handleTabChange('validation')}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 border border-amber-200 hover:bg-amber-100 transition-colors"
-            >
-              <AlertTriangle className="w-4 h-4 text-amber-500" />
-              <span className="text-xs font-medium text-amber-700">Bandeja detección</span>
-              {stats.autoPending > 0 && (
+          <div className="flex items-center gap-2 flex-wrap">
+            {stats.autoPending > 0 && (
+              <button
+                onClick={() => handleTabChange('validation')}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 border border-amber-200 hover:bg-amber-100 transition-colors"
+              >
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
+                <span className="text-xs font-medium text-amber-700">Detección</span>
                 <Badge className="bg-amber-500 text-white text-xs px-1.5 py-0 h-5">{stats.autoPending}</Badge>
-              )}
-            </button>
-            <button
-              onClick={() => handleTabChange('formal')}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 border border-blue-200 hover:bg-blue-100 transition-colors"
-            >
-              <ClipboardList className="w-4 h-4 text-blue-600" />
-              <span className="text-xs font-medium text-blue-700">Ausencias activas</span>
-              <Badge className="bg-blue-600 text-white text-xs px-1.5 py-0 h-5">{stats.formalActive}</Badge>
-            </button>
+              </button>
+            )}
+            {stats.formalActive > 0 && (
+              <button
+                onClick={() => handleTabChange('formal')}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 border border-blue-200 hover:bg-blue-100 transition-colors"
+              >
+                <ClipboardList className="w-3.5 h-3.5 text-blue-600" />
+                <span className="text-xs font-medium text-blue-700">Activas</span>
+                <Badge className="bg-blue-600 text-white text-xs px-1.5 py-0 h-5">{stats.formalActive}</Badge>
+              </button>
+            )}
             {stats.pendingApproval > 0 && (
               <button
                 onClick={() => handleTabChange('approval')}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-50 border border-orange-200 hover:bg-orange-100 transition-colors"
               >
-                <CheckSquare className="w-4 h-4 text-orange-600" />
-                <span className="text-xs font-medium text-orange-700">Pendientes aprobación</span>
+                <CheckSquare className="w-3.5 h-3.5 text-orange-600" />
+                <span className="text-xs font-medium text-orange-700">Aprobación</span>
                 <Badge className="bg-orange-500 text-white text-xs px-1.5 py-0 h-5">{stats.pendingApproval}</Badge>
               </button>
             )}
 
-            <div className="flex gap-1.5 ml-2">
-              <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={handleRefresh}>
-                <RefreshCw className="w-3.5 h-3.5 mr-1" />
-                Actualizar
+            <div className="flex gap-1 ml-1">
+              <Button variant="ghost" size="sm" className="h-8 text-xs gap-1" onClick={handleRefresh}>
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Actualizar</span>
               </Button>
               <Dialog>
                 <DialogTrigger asChild>
-                  <Button variant="ghost" size="sm" className="h-8 text-xs text-purple-700 hover:text-purple-800 hover:bg-purple-50">
-                    <Brain className="w-3.5 h-3.5 mr-1" />
-                    Análisis IA
+                  <Button variant="ghost" size="sm" className="h-8 text-xs gap-1 text-purple-700 hover:bg-purple-50">
+                    <Brain className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Análisis IA</span>
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="max-w-5xl h-[85vh] overflow-y-auto">
@@ -179,19 +190,19 @@ export default function AbsenceManagementPage() {
               {isAdmin && (
                 <Dialog open={showCleanupDialog} onOpenChange={setShowCleanupDialog}>
                   <DialogTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-8 text-xs text-red-600 hover:bg-red-50">
-                      <Trash2 className="w-3.5 h-3.5 mr-1" />
-                      Limpiar
+                    <Button variant="ghost" size="sm" className="h-8 text-xs gap-1 text-red-600 hover:bg-red-50">
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">Limpiar</span>
                     </Button>
                   </DialogTrigger>
                   <DialogContent>
-                    <div className="space-y-4">
-                      <h2 className="text-lg font-bold">⚠️ Limpiar Histórico Completo</h2>
+                    <div className="space-y-4 pt-2">
+                      <h2 className="text-lg font-bold text-slate-900">⚠️ Limpiar Histórico Completo</h2>
                       <p className="text-sm text-slate-600">Eliminar permanentemente todos los registros de ausencias, asistencia y logs. Esta acción no se puede deshacer.</p>
                       <div className="flex gap-3 justify-end pt-2">
                         <Button variant="outline" onClick={() => setShowCleanupDialog(false)}>Cancelar</Button>
                         <Button className="bg-red-600 hover:bg-red-700 text-white" onClick={handleCleanupHistorical} disabled={cleanupLoading}>
-                          {cleanupLoading ? 'Limpiando...' : 'Confirmar'}
+                          {cleanupLoading ? 'Limpiando...' : 'Confirmar y Eliminar'}
                         </Button>
                       </div>
                     </div>
@@ -204,40 +215,23 @@ export default function AbsenceManagementPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex-1 p-4 md:p-6">
-        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full flex flex-col gap-5">
-          <TabsList className="flex w-full flex-nowrap overflow-x-auto h-auto bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-1 gap-0.5">
-            <TabsTrigger value="dashboard" className="flex-1 py-2 text-xs sm:text-sm" type="button">
-              <LayoutDashboard className="w-4 h-4 mr-1.5" />
-              Dashboard
-            </TabsTrigger>
-            <TabsTrigger value="validation" className="flex-1 py-2 text-xs sm:text-sm relative" type="button">
-              <AlertTriangle className="w-4 h-4 mr-1.5 text-amber-500" />
-              Detección
-              {stats.autoPending > 0 && (
-                <Badge className="bg-amber-500 text-white text-[10px] px-1 py-0 h-4 ml-1">{stats.autoPending}</Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="formal" className="flex-1 py-2 text-xs sm:text-sm" type="button">
-              <ClipboardList className="w-4 h-4 mr-1.5" />
-              Registro Formal
-            </TabsTrigger>
-            <TabsTrigger value="approval" className="flex-1 py-2 text-xs sm:text-sm" type="button">
-              <CheckSquare className="w-4 h-4 mr-1.5" />
-              Aprobaciones
-            </TabsTrigger>
-            <TabsTrigger value="calendar" className="flex-1 py-2 text-xs sm:text-sm" type="button">
-              <Calendar className="w-4 h-4 mr-1.5" />
-              Calendario
-            </TabsTrigger>
-            <TabsTrigger value="types-config" className="flex-1 py-2 text-xs sm:text-sm" type="button">
-              <Settings className="w-4 h-4 mr-1.5" />
-              Tipos
-            </TabsTrigger>
-            <TabsTrigger value="config" className="flex-1 py-2 text-xs sm:text-sm" type="button">
-              <Settings className="w-4 h-4 mr-1.5" />
-              Vacaciones
-            </TabsTrigger>
+      <div className="flex-1 p-3 md:p-5">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full flex flex-col gap-4">
+          <TabsList className="flex w-full flex-nowrap overflow-x-auto h-auto bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-1 gap-0.5 shadow-sm">
+            {tabs.map(({ value, label, icon: Icon, count, countColor }) => (
+              <TabsTrigger
+                key={value}
+                value={value}
+                className="flex-1 min-w-fit py-2 px-2 text-xs sm:text-sm flex items-center justify-center gap-1.5 rounded-lg data-[state=active]:shadow-sm"
+                type="button"
+              >
+                <Icon className={`w-3.5 h-3.5 flex-shrink-0 ${value === 'validation' && stats.autoPending > 0 ? 'text-amber-500' : ''}`} />
+                <span className="hidden xs:inline sm:inline">{label}</span>
+                {count > 0 && (
+                  <Badge className={`${countColor} text-white text-[10px] px-1 py-0 h-4 ml-0.5 flex-shrink-0`}>{count}</Badge>
+                )}
+              </TabsTrigger>
+            ))}
           </TabsList>
 
           {/* Dashboard */}
@@ -245,47 +239,36 @@ export default function AbsenceManagementPage() {
             <AbsenceDashboard absences={absences} employees={employees} />
           </TabsContent>
 
-          {/* Bandeja de validación — ausencias auto-detectadas */}
+          {/* Bandeja de detección */}
           <TabsContent value="validation">
             <div className="space-y-4">
-              <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
-                <div className="flex items-start gap-3">
-                  <AlertTriangle className="w-5 h-5 text-amber-500 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="text-sm font-semibold text-amber-900 dark:text-amber-100">Ausencias detectadas automáticamente por Control de Presencia</p>
-                    <p className="text-xs text-amber-700 dark:text-amber-300 mt-0.5">
-                      El sistema ha detectado empleados que no ficharon entrada en su turno. Cada registro debe ser clasificado: 
-                      <strong> Justificar</strong> (convertir en ausencia formal con tipo y motivo) o <strong>Falsa alarma</strong> (el empleado sí estaba presente, error de fichaje).
-                    </p>
+              {stats.autoPending > 0 && (
+                <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="w-5 h-5 text-amber-500 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm font-semibold text-amber-900 dark:text-amber-100">
+                        {stats.autoPending} ausencias detectadas automáticamente requieren revisión
+                      </p>
+                      <p className="text-xs text-amber-700 dark:text-amber-300 mt-0.5">
+                        Clasifica cada una como <strong>Justificada</strong> (ausencia formal) o <strong>Falsa alarma</strong> (error de fichaje).
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
               <AbsenceValidationInbox employees={employees} absenceTypes={absenceTypes} />
             </div>
           </TabsContent>
 
-          {/* Registro formal de ausencias */}
+          {/* Registro formal */}
           <TabsContent value="formal">
-            <div className="space-y-4">
-              <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                <div className="flex items-start gap-3">
-                  <ClipboardList className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="text-sm font-semibold text-blue-900 dark:text-blue-100">Registro Formal de Ausencias</p>
-                    <p className="text-xs text-blue-700 dark:text-blue-300 mt-0.5">
-                      Ausencias comunicadas previamente (bajas médicas, permisos, vacaciones, etc.) y ausencias auto-detectadas ya validadas. 
-                      Usa <strong>Nueva Ausencia</strong> para registrar ausencias comunicadas por el empleado o su responsable.
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <FormalAbsenceManager
-                employees={employees}
-                absenceTypes={absenceTypes}
-                initialEmployeeId={initialAbsenceEmployeeId}
-                initialEmployeeName={initialAbsenceEmployeeName}
-              />
-            </div>
+            <FormalAbsenceManager
+              employees={employees}
+              absenceTypes={absenceTypes}
+              initialEmployeeId={initialAbsenceEmployeeId}
+              initialEmployeeName={initialAbsenceEmployeeName}
+            />
           </TabsContent>
 
           {/* Aprobaciones */}
@@ -312,7 +295,7 @@ export default function AbsenceManagementPage() {
               <Tabs defaultValue="types">
                 <TabsList className="grid w-full grid-cols-2">
                   <TabsTrigger value="types">Tipos de Ausencia</TabsTrigger>
-                  <TabsTrigger value="vacation-rules">Reglas de Vacaciones</TabsTrigger>
+                  <TabsTrigger value="vacation-rules">Reglas de Acumulación</TabsTrigger>
                 </TabsList>
                 <TabsContent value="types" className="mt-4">
                   <AbsenceTypeManager />
@@ -324,7 +307,7 @@ export default function AbsenceManagementPage() {
             </div>
           </TabsContent>
 
-          {/* Protección vacaciones */}
+          {/* Vacaciones */}
           <TabsContent value="config">
             <div className="space-y-6">
               <VacationPendingBalancePanel employees={employees} />
