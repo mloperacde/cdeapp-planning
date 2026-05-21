@@ -19,7 +19,7 @@ import AbsenceForm from "./AbsenceForm";
 
 const EMPTY = [];
 
-export default function AbsenceValidationInbox({ employees = EMPTY, absenceTypes = EMPTY }) {
+export default function AbsenceValidationInbox({ employees = EMPTY, absenceTypes = EMPTY, filterDate = null }) {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [filterDept, setFilterDept] = useState("all");
@@ -51,13 +51,18 @@ export default function AbsenceValidationInbox({ employees = EMPTY, absenceTypes
       if (!isAuto || abs.estado_aprobacion !== 'Pendiente') return false;
 
       // No mostrar ausencias cuya hora de inicio todavía no ha llegado
-      // Esto evita falsos positivos para empleados del turno tarde detectados por la mañana
       const absStart = new Date(abs.fecha_inicio);
       if (absStart > now) return false;
 
+      // Filtrar por fecha seleccionada: comparar solo la parte de fecha (YYYY-MM-DD)
+      if (filterDate) {
+        const absDateStr = abs.fecha_inicio ? abs.fecha_inicio.slice(0, 10) : null;
+        if (absDateStr !== filterDate) return false;
+      }
+
       return true;
     });
-  }, [absences]);
+  }, [absences, filterDate]);
 
   const deptOptions = useMemo(() => {
     const s = new Set();

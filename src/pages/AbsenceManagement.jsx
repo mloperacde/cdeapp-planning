@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import {
   UserX, CalendarDays, FileText, CheckSquare,
   LayoutDashboard, Settings, AlertTriangle, ClipboardList,
@@ -38,6 +39,7 @@ export default function AbsenceManagementPage() {
   } = useAppData();
 
   const [activeTab, setActiveTab] = useState("dashboard");
+  const [detectionDate, setDetectionDate] = useState(new Date().toISOString().split("T")[0]);
   const [initialAbsenceEmployeeId, setInitialAbsenceEmployeeId] = useState(null);
   const [initialAbsenceEmployeeName, setInitialAbsenceEmployeeName] = useState(null);
   const [cleanupLoading, setCleanupLoading] = useState(false);
@@ -242,6 +244,26 @@ export default function AbsenceManagementPage() {
           {/* Bandeja de detección */}
           <TabsContent value="validation">
             <div className="space-y-4">
+              {/* Selector de fecha */}
+              <div className="flex items-center gap-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3">
+                <Calendar className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Fecha de detección:</span>
+                <Input
+                  type="date"
+                  value={detectionDate}
+                  onChange={e => setDetectionDate(e.target.value)}
+                  className="h-8 w-40 text-sm"
+                />
+                {detectionDate !== new Date().toISOString().split("T")[0] && (
+                  <button
+                    onClick={() => setDetectionDate(new Date().toISOString().split("T")[0])}
+                    className="text-xs text-blue-600 hover:text-blue-800 underline"
+                  >
+                    Hoy
+                  </button>
+                )}
+              </div>
+
               {stats.autoPending > 0 && (
                 <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
                   <div className="flex items-start gap-3">
@@ -257,7 +279,7 @@ export default function AbsenceManagementPage() {
                   </div>
                 </div>
               )}
-              <AbsenceValidationInbox employees={employees} absenceTypes={absenceTypes} />
+              <AbsenceValidationInbox employees={employees} absenceTypes={absenceTypes} filterDate={detectionDate} />
             </div>
           </TabsContent>
 
