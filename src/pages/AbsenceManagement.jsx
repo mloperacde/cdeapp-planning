@@ -85,23 +85,16 @@ export default function AbsenceManagementPage() {
   };
 
   const stats = useMemo(() => {
-    const now = new Date();
-    const todayStr = now.toISOString().split('T')[0];
-    // Contar empleados ÚNICOS con ausencia auto pendiente hoy, excluyendo los ya presentes
-    const uniqueAutoAbsentToday = new Set();
-    absences.forEach(abs => {
-      const isAuto = abs.motivo === 'Ausencia no comunicada - detección automática' ||
-        (abs.notas && (abs.notas.startsWith('[SISTEMA]') || abs.notas.startsWith('[shiftAudit]')));
-      if (!isAuto || abs.estado_aprobacion !== 'Pendiente') return;
-      if (new Date(abs.fecha_inicio) > new Date()) return;
-      const absDateStr = abs.fecha_inicio ? abs.fecha_inicio.slice(0, 10) : null;
-      if (absDateStr !== todayStr) return;
-      // Excluir si el empleado ya está presente (fichó después de la detección)
-      const emp = employees.find(e => String(e.id) === String(abs.employee_id));
-      if (emp && (emp.estado_presencia === 'Presente' || emp.estado_presencia === 'No Aplica')) return;
-      uniqueAutoAbsentToday.add(abs.employee_id);
-    });
-    const autoAbsencesPending = { length: uniqueAutoAbsentToday.size };
+    const now = new Date(); // usado para formalActive y pendingApproval
+    // Contar empleados con estado_presencia que indica ausencia real (misma fuente que PresenceControl)
+    // Solo empleados activos sujetos a control horario con estado de ausencia/problema
+    const absentStates = new Set(['Potencialmente Ausente', 'Retraso', 'Ausente Auto', 'Ausente']);
+    const autoPendingCount = employees.filter(emp =>
+      emp.estado_empleado === 'Alta' &&
+      emp.sujeto_a_control_horario !== false &&
+      absentStates.has(emp.estado_presencia)
+    ).length;
+    const autoAbsencesPending = { length: autoPendingCount };
 
     const formalActive = absences.filter(abs => {
       const isAuto = abs.motivo === 'Ausencia no comunicada - detección automática' ||
@@ -124,7 +117,7 @@ export default function AbsenceManagementPage() {
       formalActive: formalActive.length,
       pendingApproval: pendingApproval.length,
     };
-  }, [absences]);
+  }, [absences, employees]);
 
   const tabs = [
     { value: "dashboard", label: "Resumen", icon: LayoutDashboard },
