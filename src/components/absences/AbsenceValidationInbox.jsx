@@ -42,12 +42,20 @@ export default function AbsenceValidationInbox({ employees = EMPTY, absenceTypes
   });
 
   const autoAbsences = useMemo(() => {
+    const now = new Date();
     return absences.filter(abs => {
       const isAuto =
         abs.motivo === 'Ausencia no comunicada - detección automática' ||
         (abs.notas && abs.notas.startsWith('[SISTEMA]')) ||
         (abs.notas && abs.notas.startsWith('[shiftAudit]'));
-      return isAuto && abs.estado_aprobacion === 'Pendiente';
+      if (!isAuto || abs.estado_aprobacion !== 'Pendiente') return false;
+
+      // No mostrar ausencias cuya hora de inicio todavía no ha llegado
+      // Esto evita falsos positivos para empleados del turno tarde detectados por la mañana
+      const absStart = new Date(abs.fecha_inicio);
+      if (absStart > now) return false;
+
+      return true;
     });
   }, [absences]);
 
