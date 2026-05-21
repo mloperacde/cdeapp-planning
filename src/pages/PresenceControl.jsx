@@ -215,10 +215,9 @@ export default function PresenceControl() {
 
       let presenceStatus = "pending";
 
-      // Marcaje real prevalece sobre ausencias auto-generadas pendientes
-      // Solo bloquea si la ausencia está APROBADA (no "Pendiente" creada automáticamente)
       const hasRealEntry = attendance?.entries?.length > 0;
       const isApprovedAbsence = confirmedAbsence && confirmedAbsence.estado_aprobacion === "Aprobada";
+      // Ausencia auto-generada por el sistema (pendiente de validar por RRHH)
       const isAutoAbsencePending = confirmedAbsence &&
         confirmedAbsence.estado_aprobacion === "Pendiente" &&
         (confirmedAbsence.tipo === "Ausencia No Justificada" || confirmedAbsence.notas?.includes("[SISTEMA]") || confirmedAbsence.notas?.includes("[shiftAudit]"));
@@ -226,7 +225,16 @@ export default function PresenceControl() {
       // Si hay marcaje real y la ausencia es solo automática/pendiente → ignorar ausencia
       const effectiveAbsence = (hasRealEntry && isAutoAbsencePending) ? null : confirmedAbsence;
 
-      if (isApprovedAbsence && !hasRealEntry) {
+      // REGLA CRÍTICA: Si el turno aún NO ha empezado para este empleado → siempre "pending"
+      // Esto evita marcar como ausente a empleados cuya hora esperada todavía no ha llegado
+      const expectedMins = timeToMinutes(expectedTime !== "—" ? expectedTime : null);
+      const shiftNotStartedYet = isToday && expectedMins !== null && nowMinutes < expectedMins;
+
+      if (shiftLifecycle === "before" || shiftNotStartedYet) {
+        // 0. Turno o hora individual aún no ha llegado → siempre pending
+        presenceStatus = "pending";
+
+      } else if (isApprovedAbsence && !hasRealEntry) {
         // 1. Ausencia APROBADA y sin marcaje → ausente confirmado
         presenceStatus = "absent_confirmed";
 
@@ -245,6 +253,7 @@ export default function PresenceControl() {
 
       } else if (effectiveAbsence && !hasRealEntry) {
         // 3. Ausencia pendiente (no aprobada) y sin marcaje real → ausente pendiente de confirmar
+        // Solo aplica si la hora esperada YA ha pasado
         presenceStatus = "absent_confirmed";
 
       } else if (shiftLifecycle === "closed") {
@@ -253,15 +262,10 @@ export default function PresenceControl() {
 
       } else if (shiftLifecycle === "active" && expectedTime !== "—") {
         // 5. Turno EN CURSO, sin marcaje → solo señal si lleva >30 min de retraso
-        const expectedMins = timeToMinutes(expectedTime);
         if (expectedMins !== null && (nowMinutes - expectedMins) >= 30) {
           presenceStatus = predictedAbsent ? "absent_predicted" : "pending";
         }
         // Si lleva <30 min → pending (puede estar en camino)
-
-      } else if (shiftLifecycle === "before") {
-        // 6. Turno aún no ha empezado → siempre pending
-        presenceStatus = "pending";
       }
 
       return {
