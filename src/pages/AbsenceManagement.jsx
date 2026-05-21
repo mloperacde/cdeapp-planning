@@ -86,10 +86,14 @@ export default function AbsenceManagementPage() {
 
   const stats = useMemo(() => {
     const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
     const autoAbsencesPending = absences.filter(abs => {
       const isAuto = abs.motivo === 'Ausencia no comunicada - detección automática' ||
         (abs.notas && (abs.notas.startsWith('[SISTEMA]') || abs.notas.startsWith('[shiftAudit]')));
-      return isAuto && abs.estado_aprobacion === 'Pendiente';
+      if (!isAuto || abs.estado_aprobacion !== 'Pendiente') return false;
+      // Solo contar ausencias de HOY (misma lógica que el filterDate de AbsenceValidationInbox)
+      const absDateStr = abs.fecha_inicio ? abs.fecha_inicio.slice(0, 10) : null;
+      return absDateStr === todayStr;
     });
 
     const formalActive = absences.filter(abs => {
