@@ -53,8 +53,7 @@ Deno.serve(async (req) => {
     const result = [];
 
     for (const emp of allEmployees) {
-      // Solo empleados con control horario activo e incluidos en planning
-      if (emp.incluir_en_planning === false) continue;
+      // Solo empleados con control horario activo (incluir_en_planning es para planificación de producción, no para presencia)
 
       const tipoTurno = emp.tipo_turno;
       let turno = null;        // "Mañana" | "Tarde" | "Partido"
