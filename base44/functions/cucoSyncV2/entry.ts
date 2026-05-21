@@ -32,7 +32,6 @@ function minutesToTime(minutes) {
 }
 
 function getEmployeeShiftToday(emp, assignedShift) {
-  const nowMinutes = getNowSpainMinutes();
   if (emp.tipo_turno === 'Turno Partido') {
     const e1 = timeToMinutes(emp.turno_partido_entrada1);
     const s1 = timeToMinutes(emp.turno_partido_salida1);
@@ -51,19 +50,8 @@ function getEmployeeShiftToday(emp, assignedShift) {
     if (start === null) return null;
     return { shiftStart: start, shiftEnd: end };
   }
-  const mStart = timeToMinutes(emp.horario_manana_inicio);
-  const tStart = timeToMinutes(emp.horario_tarde_inicio);
-  if (mStart !== null && tStart !== null) {
-    const mDiff = nowMinutes - mStart;
-    const tDiff = nowMinutes - tStart;
-    if (mDiff >= 0 && (tDiff < 0 || mDiff < tDiff)) return { shiftStart: mStart, shiftEnd: timeToMinutes(emp.horario_manana_fin) };
-    if (tDiff >= 0) return { shiftStart: tStart, shiftEnd: timeToMinutes(emp.horario_tarde_fin) };
-    return mStart < tStart
-      ? { shiftStart: mStart, shiftEnd: timeToMinutes(emp.horario_manana_fin) }
-      : { shiftStart: tStart, shiftEnd: timeToMinutes(emp.horario_tarde_fin) };
-  }
-  if (mStart !== null) return { shiftStart: mStart, shiftEnd: timeToMinutes(emp.horario_manana_fin) };
-  if (tStart !== null) return { shiftStart: tStart, shiftEnd: timeToMinutes(emp.horario_tarde_fin) };
+  // Sin turno asignado conocido → no asumir ninguno para evitar falsos positivos
+  // (especialmente en empleados Rotativos sin team_key configurado)
   return null;
 }
 
@@ -622,6 +610,22 @@ Deno.serve(async (req) => {
         const absenceEnd = shiftInfo.shiftEnd !== null
           ? `${syncDate}T${minutesToTime(shiftInfo.shiftEnd)}:00`
           : `${syncDate}T${minutesToTime(shiftInfo.shiftStart + 480)}:00`;
+
+        // ── DEDUP: Verificar si ya existe ausencia auto pendiente para este empleado en este turno/fecha ──
+        const existingAutoAbsence = allAbsences.find(abs => {
+          if (abs.employee_id !== emp.id) return false;
+          if (abs.estado_aprobacion === "Rechazada" || abs.estado_aprobacion === "Cancelada") return false;
+          const isAuto = abs.motivo === "Ausencia no comunicada - detección automática" ||
+            (abs.notas || "").includes("[SISTEMA]") || (abs.notas || "").includes("[shiftAudit]");
+          if (!isAuto) return false;
+          // Misma fecha de inicio de turno
+          return abs.fecha_inicio && abs.fecha_inicio.startsWith(absenceStart);
+        });
+
+        if (existingAutoAbsence) {
+          console.log(`[cucoSyncV2] ⏭️ SKIP DEDUP: ${emp.nombre} - ya existe ausencia pendiente (id: ${existingAutoAbsence.id})`);
+          return; // No crear duplicado
+        }
 
         await retryOp(() => serviceClient.entities.EmployeeMasterDatabase.update(emp.id, {
           disponibilidad: "Ausente", estado_presencia: "Ausente Auto",
