@@ -85,16 +85,36 @@ export default function AbsenceManagementPage() {
   };
 
   const stats = useMemo(() => {
-    const now = new Date(); // usado para formalActive y pendingApproval
-    // Contar empleados con estado_presencia que indica ausencia real (misma fuente que PresenceControl)
-    // Solo empleados activos sujetos a control horario con estado de ausencia/problema
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+
+    // El badge de "Detección" cuenta exactamente lo que la bandeja mostraría para HOY:
+    // registros Absence automáticos pendientes del día de hoy cuyos empleados NO están ya presentes
     const absentStates = new Set(['Potencialmente Ausente', 'Retraso', 'Ausente Auto', 'Ausente']);
-    const autoPendingCount = employees.filter(emp =>
-      emp.estado_empleado === 'Alta' &&
-      emp.sujeto_a_control_horario !== false &&
-      absentStates.has(emp.estado_presencia)
-    ).length;
-    const autoAbsencesPending = { length: autoPendingCount };
+    // Empleados activos ausentes según estado_presencia (candidatos)
+    const absentEmpIds = new Set(
+      employees
+        .filter(emp =>
+          emp.estado_empleado === 'Alta' &&
+          emp.sujeto_a_control_horario !== false &&
+          absentStates.has(emp.estado_presencia)
+        )
+        .map(e => String(e.id))
+    );
+    // Contar ausencias automáticas pendientes de hoy cuyos empleados siguen ausentes
+    const todayAutoAbsences = absences.filter(abs => {
+      const isAuto =
+        abs.motivo === 'Ausencia no comunicada - detección automática' ||
+        (abs.notas && abs.notas.startsWith('[SISTEMA]')) ||
+        (abs.notas && abs.notas.startsWith('[shiftAudit]'));
+      if (!isAuto || abs.estado_aprobacion !== 'Pendiente') return false;
+      const absDateStr = abs.fecha_inicio ? abs.fecha_inicio.slice(0, 10) : null;
+      if (absDateStr !== todayStr) return false;
+      return absentEmpIds.has(String(abs.employee_id));
+    });
+    // Deduplicar por empleado
+    const uniqueEmpIds = new Set(todayAutoAbsences.map(a => a.employee_id));
+    const autoAbsencesPending = { length: uniqueEmpIds.size };
 
     const formalActive = absences.filter(abs => {
       const isAuto = abs.motivo === 'Ausencia no comunicada - detección automática' ||
