@@ -59,7 +59,7 @@ export default function AbsenceValidationInbox({ employees = EMPTY, absenceTypes
       return true;
     });
 
-    // 2. Deduplicar por employee_id — conservar solo la más reciente (mayor created_date / id)
+    // 2. Deduplicar por employee_id — conservar solo la más reciente
     const byEmployee = new Map();
     for (const abs of candidates) {
       const existing = byEmployee.get(abs.employee_id);
@@ -67,8 +67,17 @@ export default function AbsenceValidationInbox({ employees = EMPTY, absenceTypes
         byEmployee.set(abs.employee_id, abs);
       }
     }
-    return Array.from(byEmployee.values());
-  }, [absences, filterDate]);
+
+    // 3. Excluir empleados que ya están presentes (ficharon después de la detección)
+    return Array.from(byEmployee.values()).filter(abs => {
+      const emp = employees.find(e => String(e.id) === String(abs.employee_id));
+      if (!emp) return true; // si no encontramos el empleado, incluir por precaución
+      // Si el empleado ya está marcado como Presente o No Aplica, no necesita validación
+      const presenceStatus = emp.estado_presencia;
+      if (presenceStatus === 'Presente' || presenceStatus === 'No Aplica') return false;
+      return true;
+    });
+  }, [absences, filterDate, employees]);
 
   const deptOptions = useMemo(() => {
     const s = new Set();
