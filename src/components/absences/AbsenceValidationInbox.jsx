@@ -43,25 +43,31 @@ export default function AbsenceValidationInbox({ employees = EMPTY, absenceTypes
 
   const autoAbsences = useMemo(() => {
     const now = new Date();
-    return absences.filter(abs => {
+    // 1. Filtrar candidatas
+    const candidates = absences.filter(abs => {
       const isAuto =
         abs.motivo === 'Ausencia no comunicada - detección automática' ||
         (abs.notas && abs.notas.startsWith('[SISTEMA]')) ||
         (abs.notas && abs.notas.startsWith('[shiftAudit]'));
       if (!isAuto || abs.estado_aprobacion !== 'Pendiente') return false;
-
-      // No mostrar ausencias cuya hora de inicio todavía no ha llegado
       const absStart = new Date(abs.fecha_inicio);
       if (absStart > now) return false;
-
-      // Filtrar por fecha seleccionada: comparar solo la parte de fecha (YYYY-MM-DD)
       if (filterDate) {
         const absDateStr = abs.fecha_inicio ? abs.fecha_inicio.slice(0, 10) : null;
         if (absDateStr !== filterDate) return false;
       }
-
       return true;
     });
+
+    // 2. Deduplicar por employee_id — conservar solo la más reciente (mayor created_date / id)
+    const byEmployee = new Map();
+    for (const abs of candidates) {
+      const existing = byEmployee.get(abs.employee_id);
+      if (!existing || abs.created_date > existing.created_date) {
+        byEmployee.set(abs.employee_id, abs);
+      }
+    }
+    return Array.from(byEmployee.values());
   }, [absences, filterDate]);
 
   const deptOptions = useMemo(() => {

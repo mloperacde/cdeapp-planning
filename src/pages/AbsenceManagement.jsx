@@ -87,14 +87,17 @@ export default function AbsenceManagementPage() {
   const stats = useMemo(() => {
     const now = new Date();
     const todayStr = now.toISOString().split('T')[0];
-    const autoAbsencesPending = absences.filter(abs => {
+    // Contar empleados ÚNICOS con ausencia auto pendiente hoy (igual que la bandeja deduplicada)
+    const uniqueAutoAbsentToday = new Set();
+    absences.forEach(abs => {
       const isAuto = abs.motivo === 'Ausencia no comunicada - detección automática' ||
         (abs.notas && (abs.notas.startsWith('[SISTEMA]') || abs.notas.startsWith('[shiftAudit]')));
-      if (!isAuto || abs.estado_aprobacion !== 'Pendiente') return false;
-      // Solo contar ausencias de HOY (misma lógica que el filterDate de AbsenceValidationInbox)
+      if (!isAuto || abs.estado_aprobacion !== 'Pendiente') return;
+      if (new Date(abs.fecha_inicio) > new Date()) return;
       const absDateStr = abs.fecha_inicio ? abs.fecha_inicio.slice(0, 10) : null;
-      return absDateStr === todayStr;
+      if (absDateStr === todayStr) uniqueAutoAbsentToday.add(abs.employee_id);
     });
+    const autoAbsencesPending = { length: uniqueAutoAbsentToday.size };
 
     const formalActive = absences.filter(abs => {
       const isAuto = abs.motivo === 'Ausencia no comunicada - detección automática' ||

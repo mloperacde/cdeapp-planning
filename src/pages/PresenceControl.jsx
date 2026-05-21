@@ -13,7 +13,8 @@ import { format, subDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, Zap, Calendar, AlertCircle, CheckCircle2, Search, X } from "lucide-react";
+import { RefreshCw, Zap, Calendar, AlertCircle, CheckCircle2, Search, X, AlertTriangle } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import ShiftPanel from "@/components/presence/ShiftPanel";
@@ -300,14 +301,27 @@ export default function PresenceControl() {
   // Totales globales — incluye absent_no_record como ausente confirmado
   const globalTotals = useMemo(() => {
     const all = enrichedEmployees;
+    const todayStr = analysisDate;
+    // Ausencias automáticas pendientes de validar hoy (empleados únicos)
+    const autoPendingIds = new Set();
+    const nowTs = new Date();
+    absences.forEach(abs => {
+      const isAuto = abs.motivo === 'Ausencia no comunicada - detección automática' ||
+        (abs.notas && (abs.notas.startsWith('[SISTEMA]') || abs.notas.startsWith('[shiftAudit]')));
+      if (!isAuto || abs.estado_aprobacion !== 'Pendiente') return;
+      if (new Date(abs.fecha_inicio) > nowTs) return;
+      const d = abs.fecha_inicio ? abs.fecha_inicio.slice(0, 10) : null;
+      if (d === todayStr) autoPendingIds.add(abs.employee_id);
+    });
     return {
       expected: all.length,
       present: all.filter(e => e.presenceStatus === "present" || e.presenceStatus === "late").length,
       absent: all.filter(e => e.presenceStatus === "absent_confirmed" || e.presenceStatus === "absent_no_record").length,
       predicted: all.filter(e => e.presenceStatus === "absent_predicted").length,
       pending: all.filter(e => e.presenceStatus === "pending").length,
+      autoPendingValidation: autoPendingIds.size,
     };
-  }, [enrichedEmployees]);
+  }, [enrichedEmployees, absences, analysisDate]);
 
   const todayDisplay = format(new Date(analysisDate + "T12:00:00"), "EEEE d 'de' MMMM yyyy", { locale: es });
   const isLoading = loadingExpected || loadingRecords;
@@ -376,6 +390,20 @@ export default function PresenceControl() {
         <div className="mt-3">
           <PresenceTotalsBar totals={globalTotals} label="Total empresa" variant="global" />
         </div>
+
+        {/* Indicador de detecciones automáticas pendientes de validar */}
+        {isToday && globalTotals.autoPendingValidation > 0 && (
+          <Link
+            to="/AbsenceManagement?tab=validation"
+            className="mt-2 flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-50 border border-amber-200 hover:bg-amber-100 transition-colors text-xs text-amber-800 w-fit"
+          >
+            <AlertTriangle className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
+            <span>
+              <strong>{globalTotals.autoPendingValidation}</strong> de los ausentes tienen detección automática pendiente de validar en RRHH
+            </span>
+            <span className="text-amber-500 font-medium">→ Revisar</span>
+          </Link>
+        )}
       </div>
 
       {/* Panel diagnóstico: empleados sin código Cuco360 */}
