@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -19,12 +19,16 @@ import AbsenceForm from "./AbsenceForm";
 
 const EMPTY = [];
 
+// Estados de presencia que indican ausencia pendiente de validar
+const ABSENT_STATES = new Set(['Potencialmente Ausente', 'Retraso', 'Ausente Auto', 'Ausente']);
+
 export default function AbsenceValidationInbox({ employees = EMPTY, absenceTypes = EMPTY, filterDate = null }) {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [filterDept, setFilterDept] = useState("all");
   const [showValidateDialog, setShowValidateDialog] = useState(false);
-  const [selectedAbsence, setSelectedAbsence] = useState(null);
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [selectedAbsence, setSelectedAbsence] = useState(null); // registro Absence existente si lo hay
   const [bulkSelected, setBulkSelected] = useState(new Set());
   const [rejectReason, setRejectReason] = useState("");
   const [showRejectDialog, setShowRejectDialog] = useState(false);
@@ -34,80 +38,89 @@ export default function AbsenceValidationInbox({ employees = EMPTY, absenceTypes
     queryFn: () => base44.auth.me(),
   });
 
-  const { data: absences = EMPTY, isLoading } = useQuery({
+  const { data: absences = EMPTY, isLoading: loadingAbsences } = useQuery({
     queryKey: ['absences'],
     queryFn: () => base44.entities.Absence.list('-fecha_inicio', 2000),
     staleTime: 0,
     refetchOnWindowFocus: true,
   });
 
-  const autoAbsences = useMemo(() => {
+  // Empleados ausentes según estado_presencia (fuente de verdad)
+  const absentEmployees = useMemo(() => {
+    return employees.filter(emp =>
+      emp.estado_empleado === 'Alta' &&
+      emp.sujeto_a_control_horario !== false &&
+      ABSENT_STATES.has(emp.estado_presencia)
+    );
+  }, [employees]);
+
+  // Mapa de ausencias automáticas pendientes por employee_id (para enriquecer la tarjeta)
+  const autoAbsenceByEmpId = useMemo(() => {
+    const map = new Map();
     const now = new Date();
-    // 1. Filtrar candidatas
-    const candidates = absences.filter(abs => {
+    for (const abs of absences) {
       const isAuto =
         abs.motivo === 'Ausencia no comunicada - detección automática' ||
         (abs.notas && abs.notas.startsWith('[SISTEMA]')) ||
         (abs.notas && abs.notas.startsWith('[shiftAudit]'));
-      if (!isAuto || abs.estado_aprobacion !== 'Pendiente') return false;
+      if (!isAuto || abs.estado_aprobacion !== 'Pendiente') continue;
       const absStart = new Date(abs.fecha_inicio);
-      if (absStart > now) return false;
+      if (absStart > now) continue;
+      // Si se filtra por fecha, solo incluir registros de ese día
       if (filterDate) {
         const absDateStr = abs.fecha_inicio ? abs.fecha_inicio.slice(0, 10) : null;
-        if (absDateStr !== filterDate) return false;
+        if (absDateStr !== filterDate) continue;
       }
-      return true;
-    });
-
-    // 2. Deduplicar por employee_id — conservar solo la más reciente
-    const byEmployee = new Map();
-    for (const abs of candidates) {
-      const existing = byEmployee.get(abs.employee_id);
+      const existing = map.get(abs.employee_id);
       if (!existing || abs.created_date > existing.created_date) {
-        byEmployee.set(abs.employee_id, abs);
+        map.set(abs.employee_id, abs);
       }
     }
-
-    // 3. Excluir empleados que ya están presentes (ficharon después de la detección)
-    return Array.from(byEmployee.values()).filter(abs => {
-      const emp = employees.find(e => String(e.id) === String(abs.employee_id));
-      if (!emp) return true; // si no encontramos el empleado, incluir por precaución
-      // Si el empleado ya está marcado como Presente o No Aplica, no necesita validación
-      const presenceStatus = emp.estado_presencia;
-      if (presenceStatus === 'Presente' || presenceStatus === 'No Aplica') return false;
-      return true;
-    });
-  }, [absences, filterDate, employees]);
+    return map;
+  }, [absences, filterDate]);
 
   const deptOptions = useMemo(() => {
     const s = new Set();
-    autoAbsences.forEach(abs => {
-      const emp = employees.find(e => String(e.id) === String(abs.employee_id));
-      if (emp?.departamento) s.add(emp.departamento);
-    });
+    absentEmployees.forEach(emp => { if (emp.departamento) s.add(emp.departamento); });
     return Array.from(s).sort();
-  }, [autoAbsences, employees]);
+  }, [absentEmployees]);
 
   const filtered = useMemo(() => {
-    return autoAbsences.filter(abs => {
-      const emp = employees.find(e => String(e.id) === String(abs.employee_id));
-      const name = emp?.nombre || "";
-      const dept = emp?.departamento || "";
+    return absentEmployees.filter(emp => {
+      const name = emp.nombre || "";
+      const dept = emp.departamento || "";
       const matchSearch = !search || name.toLowerCase().includes(search.toLowerCase()) || dept.toLowerCase().includes(search.toLowerCase());
       const matchDept = filterDept === "all" || dept === filterDept;
       return matchSearch && matchDept;
     });
-  }, [autoAbsences, employees, search, filterDept]);
+  }, [absentEmployees, search, filterDept]);
 
+  // Crear o reutilizar registro Absence para el empleado
   const validateMutation = useMutation({
-    mutationFn: async (data) => {
-      return await base44.entities.Absence.update(selectedAbsence.id, {
-        ...data,
-        estado_aprobacion: 'Aprobada',
-        aprobado_por: currentUser?.email,
-        fecha_aprobacion: new Date().toISOString(),
-        notas: (selectedAbsence.notas || '') + '\n[Validado por RRHH]',
-      });
+    mutationFn: async (formData) => {
+      const absId = selectedAbsence?.id;
+      if (absId) {
+        // Actualizar el registro existente
+        return await base44.entities.Absence.update(absId, {
+          ...formData,
+          estado_aprobacion: 'Aprobada',
+          aprobado_por: currentUser?.email,
+          fecha_aprobacion: new Date().toISOString(),
+          notas: (selectedAbsence.notas || '') + '\n[Validado por RRHH]',
+        });
+      } else {
+        // Crear nuevo registro de ausencia aprobado
+        return await base44.entities.Absence.create({
+          employee_id: selectedEmployee.id,
+          fecha_inicio: selectedEmployee.ausencia_inicio || new Date().toISOString(),
+          ...formData,
+          estado_aprobacion: 'Aprobada',
+          aprobado_por: currentUser?.email,
+          fecha_aprobacion: new Date().toISOString(),
+          solicitado_por: currentUser?.email,
+          notas: '[Validado por RRHH desde bandeja de detección]',
+        });
+      }
     },
     onSuccess: async () => {
       try { await base44.functions.invoke('syncEmployeeAvailability'); } catch (_) {}
@@ -115,19 +128,30 @@ export default function AbsenceValidationInbox({ employees = EMPTY, absenceTypes
       queryClient.invalidateQueries({ queryKey: ['employeeMasterDatabase'] });
       toast.success("Ausencia justificada y clasificada correctamente");
       setShowValidateDialog(false);
+      setSelectedEmployee(null);
       setSelectedAbsence(null);
     },
     onError: (e) => toast.error("Error al validar: " + e.message),
   });
 
   const rejectMutation = useMutation({
-    mutationFn: async ({ id, reason }) => {
-      return await base44.entities.Absence.update(id, {
-        estado_aprobacion: 'Rechazada',
-        comentario_aprobacion: reason || 'Falsa alarma - empleado no estaba ausente',
-        aprobado_por: currentUser?.email,
-        fecha_aprobacion: new Date().toISOString(),
-      });
+    mutationFn: async ({ empId, reason }) => {
+      const abs = autoAbsenceByEmpId.get(empId);
+      if (abs) {
+        // Rechazar el registro existente
+        return await base44.entities.Absence.update(abs.id, {
+          estado_aprobacion: 'Rechazada',
+          comentario_aprobacion: reason || 'Falsa alarma - empleado no estaba ausente',
+          aprobado_por: currentUser?.email,
+          fecha_aprobacion: new Date().toISOString(),
+        });
+      } else {
+        // Sin registro, solo actualizar estado_presencia del empleado
+        return await base44.entities.EmployeeMasterDatabase.update(empId, {
+          estado_presencia: 'No Aplica',
+          disponibilidad: 'Disponible',
+        });
+      }
     },
     onSuccess: async () => {
       try { await base44.functions.invoke('syncEmployeeAvailability'); } catch (_) {}
@@ -136,6 +160,7 @@ export default function AbsenceValidationInbox({ employees = EMPTY, absenceTypes
       toast.success("Marcado como falsa alarma");
       setShowRejectDialog(false);
       setRejectReason("");
+      setSelectedEmployee(null);
       setSelectedAbsence(null);
     },
     onError: (e) => toast.error("Error: " + e.message),
@@ -143,15 +168,23 @@ export default function AbsenceValidationInbox({ employees = EMPTY, absenceTypes
 
   const bulkRejectMutation = useMutation({
     mutationFn: async () => {
-      const ids = Array.from(bulkSelected);
-      await Promise.all(ids.map(id =>
-        base44.entities.Absence.update(id, {
-          estado_aprobacion: 'Rechazada',
-          comentario_aprobacion: 'Falsa alarma - descartado en bloque',
-          aprobado_por: currentUser?.email,
-          fecha_aprobacion: new Date().toISOString(),
-        })
-      ));
+      const empIds = Array.from(bulkSelected);
+      await Promise.all(empIds.map(empId => {
+        const abs = autoAbsenceByEmpId.get(empId);
+        if (abs) {
+          return base44.entities.Absence.update(abs.id, {
+            estado_aprobacion: 'Rechazada',
+            comentario_aprobacion: 'Falsa alarma - descartado en bloque',
+            aprobado_por: currentUser?.email,
+            fecha_aprobacion: new Date().toISOString(),
+          });
+        } else {
+          return base44.entities.EmployeeMasterDatabase.update(empId, {
+            estado_presencia: 'No Aplica',
+            disponibilidad: 'Disponible',
+          });
+        }
+      }));
     },
     onSuccess: async () => {
       try { await base44.functions.invoke('syncEmployeeAvailability'); } catch (_) {}
@@ -163,10 +196,10 @@ export default function AbsenceValidationInbox({ employees = EMPTY, absenceTypes
     onError: (e) => toast.error("Error en operación masiva: " + e.message),
   });
 
-  const toggleBulk = (id) => {
+  const toggleBulk = (empId) => {
     setBulkSelected(prev => {
       const s = new Set(prev);
-      s.has(id) ? s.delete(id) : s.add(id);
+      s.has(empId) ? s.delete(empId) : s.add(empId);
       return s;
     });
   };
@@ -175,11 +208,21 @@ export default function AbsenceValidationInbox({ employees = EMPTY, absenceTypes
     if (bulkSelected.size === filtered.length) {
       setBulkSelected(new Set());
     } else {
-      setBulkSelected(new Set(filtered.map(a => a.id)));
+      setBulkSelected(new Set(filtered.map(e => e.id)));
     }
   };
 
-  const getEmp = (id) => employees.find(e => String(e.id) === String(id));
+  const openValidate = (emp) => {
+    setSelectedEmployee(emp);
+    setSelectedAbsence(autoAbsenceByEmpId.get(emp.id) || null);
+    setShowValidateDialog(true);
+  };
+
+  const openReject = (emp) => {
+    setSelectedEmployee(emp);
+    setSelectedAbsence(autoAbsenceByEmpId.get(emp.id) || null);
+    setShowRejectDialog(true);
+  };
 
   const getShiftFromNotes = (notes) => {
     if (!notes) return null;
@@ -187,7 +230,17 @@ export default function AbsenceValidationInbox({ employees = EMPTY, absenceTypes
     return m ? m[1] : null;
   };
 
-  if (isLoading) {
+  const presenceStatusLabel = (status) => {
+    const map = {
+      'Potencialmente Ausente': { label: 'Potencialmente Ausente', color: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300' },
+      'Retraso': { label: 'Retraso', color: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300' },
+      'Ausente Auto': { label: 'Ausente (Auto)', color: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' },
+      'Ausente': { label: 'Ausente', color: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' },
+    };
+    return map[status] || { label: status, color: 'bg-slate-100 text-slate-600' };
+  };
+
+  if (loadingAbsences) {
     return (
       <div className="flex items-center justify-center py-16">
         <RefreshCw className="w-6 h-6 animate-spin text-slate-400" />
@@ -196,14 +249,14 @@ export default function AbsenceValidationInbox({ employees = EMPTY, absenceTypes
     );
   }
 
-  if (autoAbsences.length === 0) {
+  if (absentEmployees.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
         <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
           <CheckCircle2 className="w-8 h-8 text-green-500" />
         </div>
         <p className="text-lg font-semibold text-slate-700 dark:text-slate-300">Bandeja vacía</p>
-        <p className="text-sm text-slate-400 mt-1">No hay ausencias automáticas pendientes de revisión</p>
+        <p className="text-sm text-slate-400 mt-1">No hay empleados marcados como ausentes pendientes de revisión</p>
       </div>
     );
   }
@@ -236,12 +289,7 @@ export default function AbsenceValidationInbox({ employees = EMPTY, absenceTypes
 
         <div className="flex gap-2">
           {filtered.length > 0 && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="text-xs"
-              onClick={selectAll}
-            >
+            <Button size="sm" variant="outline" className="text-xs" onClick={selectAll}>
               {bulkSelected.size === filtered.length ? "Deseleccionar todo" : `Seleccionar ${filtered.length}`}
             </Button>
           )}
@@ -261,11 +309,7 @@ export default function AbsenceValidationInbox({ employees = EMPTY, absenceTypes
               Descartar selección ({bulkSelected.size})
             </Button>
           )}
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => queryClient.invalidateQueries({ queryKey: ['absences'] })}
-          >
+          <Button size="sm" variant="ghost" onClick={() => queryClient.invalidateQueries({ queryKey: ['absences'] })}>
             <RefreshCw className="w-4 h-4" />
           </Button>
         </div>
@@ -273,27 +317,28 @@ export default function AbsenceValidationInbox({ employees = EMPTY, absenceTypes
 
       {/* Contador */}
       <p className="text-xs text-slate-500">
-        Mostrando <strong>{filtered.length}</strong> de <strong>{autoAbsences.length}</strong> ausencias pendientes
+        Mostrando <strong>{filtered.length}</strong> de <strong>{absentEmployees.length}</strong> empleados ausentes pendientes de revisión
       </p>
 
       {/* Tarjetas */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-        {filtered.map(abs => {
-          const emp = getEmp(abs.employee_id);
-          const shift = getShiftFromNotes(abs.notas);
-          const isSelected = bulkSelected.has(abs.id);
-          const initials = emp?.nombre?.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase() || '?';
-          const timeAgo = formatDistanceToNow(new Date(abs.fecha_inicio), { addSuffix: true, locale: es });
+        {filtered.map(emp => {
+          const abs = autoAbsenceByEmpId.get(emp.id);
+          const isSelected = bulkSelected.has(emp.id);
+          const initials = emp.nombre?.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase() || '?';
+          const statusInfo = presenceStatusLabel(emp.estado_presencia);
+          const shift = abs ? getShiftFromNotes(abs.notas) : null;
+          const sinceTime = emp.ausencia_inicio || emp.potencialmente_ausente_desde;
 
           return (
             <div
-              key={abs.id}
+              key={emp.id}
               className={`bg-white dark:bg-slate-800 border rounded-xl p-4 shadow-sm hover:shadow-md transition-all cursor-pointer ${
                 isSelected
                   ? 'border-amber-400 ring-2 ring-amber-200 dark:ring-amber-800'
                   : 'border-slate-200 dark:border-slate-700'
               }`}
-              onClick={() => toggleBulk(abs.id)}
+              onClick={() => toggleBulk(emp.id)}
             >
               {/* Cabecera tarjeta */}
               <div className="flex items-start justify-between mb-3">
@@ -302,19 +347,19 @@ export default function AbsenceValidationInbox({ employees = EMPTY, absenceTypes
                     <div className="w-9 h-9 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-sm font-bold text-amber-700 dark:text-amber-300">
                       {initials}
                     </div>
-                    <Bot className="w-3.5 h-3.5 text-amber-500 absolute -bottom-0.5 -right-0.5 bg-white dark:bg-slate-800 rounded-full" />
+                    {abs && <Bot className="w-3.5 h-3.5 text-amber-500 absolute -bottom-0.5 -right-0.5 bg-white dark:bg-slate-800 rounded-full" />}
                   </div>
                   <div>
                     <p className="font-semibold text-sm text-slate-900 dark:text-slate-100 leading-tight">
-                      {emp?.nombre || '—'}
+                      {emp.nombre || '—'}
                     </p>
-                    <p className="text-xs text-slate-400">{emp?.departamento || 'Sin departamento'}</p>
+                    <p className="text-xs text-slate-400">{emp.departamento || 'Sin departamento'}</p>
                   </div>
                 </div>
                 <input
                   type="checkbox"
                   checked={isSelected}
-                  onChange={() => toggleBulk(abs.id)}
+                  onChange={() => toggleBulk(emp.id)}
                   onClick={e => e.stopPropagation()}
                   className="rounded w-4 h-4 accent-amber-500 flex-shrink-0 mt-0.5"
                 />
@@ -322,21 +367,28 @@ export default function AbsenceValidationInbox({ employees = EMPTY, absenceTypes
 
               {/* Datos */}
               <div className="space-y-1.5 mb-3">
-                <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                  <Clock className="w-3 h-3 flex-shrink-0" />
-                  <span>{format(new Date(abs.fecha_inicio), "dd/MM/yyyy HH:mm", { locale: es })}</span>
-                  <span className="text-slate-300">·</span>
-                  <span className="italic">{timeAgo}</span>
-                </div>
-                {shift && (
-                  <div className="flex items-center gap-1.5">
-                    <Badge className="bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300 text-xs">
-                      Turno: {shift}
-                    </Badge>
+                <Badge className={`text-xs ${statusInfo.color}`}>{statusInfo.label}</Badge>
+                {sinceTime && (
+                  <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                    <Clock className="w-3 h-3 flex-shrink-0" />
+                    <span>Desde: {format(new Date(sinceTime), "dd/MM/yyyy HH:mm", { locale: es })}</span>
+                    <span className="text-slate-300">·</span>
+                    <span className="italic">{formatDistanceToNow(new Date(sinceTime), { addSuffix: true, locale: es })}</span>
                   </div>
                 )}
-                {emp?.puesto && (
+                {shift && (
+                  <Badge className="bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300 text-xs">
+                    Turno: {shift}
+                  </Badge>
+                )}
+                {emp.puesto && (
                   <p className="text-xs text-slate-400">{emp.puesto}</p>
+                )}
+                {!abs && (
+                  <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                    <AlertTriangle className="w-3 h-3" />
+                    Sin registro automático — ausencia manual por confirmar
+                  </p>
                 )}
               </div>
 
@@ -345,11 +397,7 @@ export default function AbsenceValidationInbox({ employees = EMPTY, absenceTypes
                 <Button
                   size="sm"
                   className="flex-1 bg-green-600 hover:bg-green-700 text-white h-8 text-xs"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedAbsence(abs);
-                    setShowValidateDialog(true);
-                  }}
+                  onClick={(e) => { e.stopPropagation(); openValidate(emp); }}
                 >
                   <ClipboardCheck className="w-3.5 h-3.5 mr-1" />
                   Justificar
@@ -358,11 +406,7 @@ export default function AbsenceValidationInbox({ employees = EMPTY, absenceTypes
                   size="sm"
                   variant="outline"
                   className="flex-1 h-8 text-xs text-red-600 border-red-200 hover:bg-red-50"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedAbsence(abs);
-                    setShowRejectDialog(true);
-                  }}
+                  onClick={(e) => { e.stopPropagation(); openReject(emp); }}
                 >
                   <X className="w-3.5 h-3.5 mr-1" />
                   Falsa alarma
@@ -374,23 +418,24 @@ export default function AbsenceValidationInbox({ employees = EMPTY, absenceTypes
       </div>
 
       {/* Dialog: Justificar */}
-      {showValidateDialog && selectedAbsence && (
-        <Dialog open={true} onOpenChange={() => { setShowValidateDialog(false); setSelectedAbsence(null); }}>
+      {showValidateDialog && selectedEmployee && (
+        <Dialog open={true} onOpenChange={() => { setShowValidateDialog(false); setSelectedEmployee(null); setSelectedAbsence(null); }}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <ClipboardCheck className="w-5 h-5 text-green-600" />
-                Clasificar Ausencia Detectada
+                Clasificar Ausencia
               </DialogTitle>
               <p className="text-sm text-slate-500 mt-1">
-                Empleado: <strong>{getEmp(selectedAbsence.employee_id)?.nombre}</strong>
-                {getShiftFromNotes(selectedAbsence.notas) && ` — Turno: ${getShiftFromNotes(selectedAbsence.notas)}`}
+                Empleado: <strong>{selectedEmployee.nombre}</strong>
+                {selectedAbsence && getShiftFromNotes(selectedAbsence.notas) && ` — Turno: ${getShiftFromNotes(selectedAbsence.notas)}`}
               </p>
             </DialogHeader>
             <AbsenceForm
               initialData={{
-                ...selectedAbsence,
-                employee_name: getEmp(selectedAbsence.employee_id)?.nombre,
+                ...(selectedAbsence || {}),
+                employee_id: selectedEmployee.id,
+                employee_name: selectedEmployee.nombre,
                 motivo: '',
                 tipo: '',
                 absence_type_id: '',
@@ -398,7 +443,7 @@ export default function AbsenceValidationInbox({ employees = EMPTY, absenceTypes
               employees={employees}
               absenceTypes={absenceTypes}
               onSubmit={(data) => validateMutation.mutate(data)}
-              onCancel={() => { setShowValidateDialog(false); setSelectedAbsence(null); }}
+              onCancel={() => { setShowValidateDialog(false); setSelectedEmployee(null); setSelectedAbsence(null); }}
               isSubmitting={validateMutation.isPending}
             />
           </DialogContent>
@@ -406,8 +451,8 @@ export default function AbsenceValidationInbox({ employees = EMPTY, absenceTypes
       )}
 
       {/* Dialog: Falsa alarma */}
-      {showRejectDialog && selectedAbsence && (
-        <Dialog open={true} onOpenChange={() => { setShowRejectDialog(false); setSelectedAbsence(null); }}>
+      {showRejectDialog && selectedEmployee && (
+        <Dialog open={true} onOpenChange={() => { setShowRejectDialog(false); setSelectedEmployee(null); setSelectedAbsence(null); }}>
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-slate-800 dark:text-slate-100">
@@ -417,15 +462,11 @@ export default function AbsenceValidationInbox({ employees = EMPTY, absenceTypes
             </DialogHeader>
             <div className="space-y-4 pt-1">
               <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-3 text-sm">
-                <p className="font-medium text-slate-800 dark:text-slate-200">
-                  {getEmp(selectedAbsence.employee_id)?.nombre}
-                </p>
-                <p className="text-slate-500 text-xs mt-0.5">
-                  Detectado: {format(new Date(selectedAbsence.fecha_inicio), "dd/MM/yyyy HH:mm", { locale: es })}
-                </p>
+                <p className="font-medium text-slate-800 dark:text-slate-200">{selectedEmployee.nombre}</p>
+                <p className="text-slate-500 text-xs mt-0.5">Estado: {selectedEmployee.estado_presencia}</p>
               </div>
               <p className="text-sm text-slate-600 dark:text-slate-400">
-                Este registro se descartará. El empleado no aparecerá como ausente por esta detección.
+                El empleado no aparecerá como ausente y su estado se restablecerá.
               </p>
               <div className="space-y-1.5">
                 <Label className="text-xs">Motivo del descarte (opcional)</Label>
@@ -438,17 +479,13 @@ export default function AbsenceValidationInbox({ employees = EMPTY, absenceTypes
                 />
               </div>
               <div className="flex gap-2 pt-1">
-                <Button
-                  variant="outline"
-                  className="flex-1"
-                  onClick={() => { setShowRejectDialog(false); setSelectedAbsence(null); }}
-                >
+                <Button variant="outline" className="flex-1" onClick={() => { setShowRejectDialog(false); setSelectedEmployee(null); setSelectedAbsence(null); }}>
                   Cancelar
                 </Button>
                 <Button
                   variant="destructive"
                   className="flex-1"
-                  onClick={() => rejectMutation.mutate({ id: selectedAbsence.id, reason: rejectReason })}
+                  onClick={() => rejectMutation.mutate({ empId: selectedEmployee.id, reason: rejectReason })}
                   disabled={rejectMutation.isPending}
                 >
                   {rejectMutation.isPending ? 'Procesando...' : 'Confirmar descarte'}
