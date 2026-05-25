@@ -269,10 +269,25 @@ export default function Articles() {
         else toCreate.push(payload);
       });
 
-      await Promise.all([
-        ...toCreate.map(p => base44.entities.ArticleComponent.create(p)),
-        ...toUpdate.map(u => base44.entities.ArticleComponent.update(u.id, u.payload))
-      ]);
+      // Procesar en lotes para evitar rate limiting (429)
+      const BATCH_SIZE = 10;
+      const BATCH_DELAY_MS = 300;
+
+      const allOps = [
+        ...toCreate.map(p => () => base44.entities.ArticleComponent.create(p)),
+        ...toUpdate.map(u => () => base44.entities.ArticleComponent.update(u.id, u.payload))
+      ];
+
+      let processed = 0;
+      for (let i = 0; i < allOps.length; i += BATCH_SIZE) {
+        const batch = allOps.slice(i, i + BATCH_SIZE);
+        await Promise.all(batch.map(fn => fn()));
+        processed += batch.length;
+        toast.info(`Procesando... ${processed}/${allOps.length}`);
+        if (i + BATCH_SIZE < allOps.length) {
+          await new Promise(resolve => setTimeout(resolve, BATCH_DELAY_MS));
+        }
+      }
 
       toast.success(`${rows.length} componentes sincronizados (${toCreate.length} nuevos, ${toUpdate.length} actualizados)`);
     } catch (error) {
