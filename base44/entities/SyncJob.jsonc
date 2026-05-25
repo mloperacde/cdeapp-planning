@@ -1,0 +1,72 @@
+{
+  "name": "SyncJob",
+  "type": "object",
+  "row_level_security": [
+    {
+      "operation": "read",
+      "allow": "{{user.role == 'admin'}}"
+    },
+    {
+      "operation": "create",
+      "allow": "{{user.role == 'admin'}}"
+    },
+    {
+      "operation": "update",
+      "allow": "{{user.role == 'admin'}}"
+    },
+    {
+      "operation": "delete",
+      "allow": "{{user.role == 'admin'}}"
+    }
+  ],
+  "properties": {
+    "job_type": {
+      "type": "string",
+      "description": "Tipo de trabajo: sync-components, sync-articles, etc."
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "running",
+        "completed",
+        "error"
+      ],
+      "default": "pending"
+    },
+    "total": {
+      "type": "integer",
+      "default": 0
+    },
+    "processed": {
+      "type": "integer",
+      "default": 0
+    },
+    "created_count": {
+      "type": "integer",
+      "default": 0
+    },
+    "updated_count": {
+      "type": "integer",
+      "default": 0
+    },
+    "error_message": {
+      "type": "string"
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "completed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "triggered_by": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "job_type",
+    "status"
+  ]
+}

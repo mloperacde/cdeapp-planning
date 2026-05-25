@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import SyncProgressPanel from "./SyncProgressPanel";
 import { Link } from "react-router-dom";
 import { localDataService } from "./services/localDataService";
 import { base44 } from "@/api/base44Client";
@@ -75,6 +76,8 @@ export default function Articles() {
   const [syncingComponents, setSyncingComponents] = useState(false);
   const [filterNoProcess, setFilterNoProcess] = useState(false);
   const [selectedRawData, setSelectedRawData] = useState(null);
+  const [syncJobId, setSyncJobId] = useState(null);
+  const [syncJob, setSyncJob] = useState(null);
 
   useEffect(() => {
     fetchArticles();
@@ -232,69 +235,30 @@ export default function Articles() {
 
   const handleSyncComponents = async () => {
     setSyncingComponents(true);
+    setSyncJob(null);
+    setSyncJobId(null);
     try {
-      toast.info("Descargando componentes desde CDEApp...");
-      const res = await base44.functions.invoke('cdeAppSync', { action: 'sync-component-articles' });
-      const response = res.data?.data;
-
-      let rows = [];
-      if (Array.isArray(response)) rows = response;
-      else if (response && Array.isArray(response.data)) rows = response.data;
-
-      if (rows.length === 0) {
-        toast.warning("No se recibieron componentes de la API");
-        return;
-      }
-
-      // Fetch existing to avoid duplicates
-      const existing = await base44.entities.ArticleComponent.list(undefined, 10000) || [];
-      const existingMap = new Map(existing.map(c => [`${c.article_cde_id}_${c.code_component}`, c]));
-
-      const toCreate = [];
-      const toUpdate = [];
-
-      rows.forEach(r => {
-        const key = `${r.article_id}_${r.code_component}`;
-        const payload = {
-          cde_id: r.id,
-          article_cde_id: r.article_id,
-          code_component: r.code_component,
-          name_component: r.name_component,
-          reference_component: r.reference_component || '',
-          is_active: r.is_active !== false,
-          updated_at_cde: r.updated_at || null
-        };
-        const ex = existingMap.get(key);
-        if (ex) toUpdate.push({ id: ex.id, payload });
-        else toCreate.push(payload);
+      toast.info("Iniciando sincronización en segundo plano...");
+      const res = await base44.functions.invoke('syncComponentsQueue', {
+        action: 'start-sync-components'
       });
-
-      // Procesar en lotes para evitar rate limiting (429)
-      const BATCH_SIZE = 10;
-      const BATCH_DELAY_MS = 300;
-
-      const allOps = [
-        ...toCreate.map(p => () => base44.entities.ArticleComponent.create(p)),
-        ...toUpdate.map(u => () => base44.entities.ArticleComponent.update(u.id, u.payload))
-      ];
-
-      let processed = 0;
-      for (let i = 0; i < allOps.length; i += BATCH_SIZE) {
-        const batch = allOps.slice(i, i + BATCH_SIZE);
-        await Promise.all(batch.map(fn => fn()));
-        processed += batch.length;
-        toast.info(`Procesando... ${processed}/${allOps.length}`);
-        if (i + BATCH_SIZE < allOps.length) {
-          await new Promise(resolve => setTimeout(resolve, BATCH_DELAY_MS));
-        }
-      }
-
-      toast.success(`${rows.length} componentes sincronizados (${toCreate.length} nuevos, ${toUpdate.length} actualizados)`);
+      const jobId = res.data?.job_id;
+      if (!jobId) throw new Error("No se pudo iniciar el job de sincronización");
+      setSyncJobId(jobId);
+      setSyncJob({ job_type: 'sync-components', status: 'running', total: 0, processed: 0, created_count: 0, updated_count: 0 });
     } catch (error) {
       console.error("Sync components error:", error);
-      toast.error("Error al sincronizar componentes: " + error.message);
-    } finally {
+      toast.error("Error al iniciar sincronización: " + error.message);
       setSyncingComponents(false);
+    }
+  };
+
+  const handleSyncComplete = (job) => {
+    setSyncingComponents(false);
+    if (job.status === 'completed') {
+      toast.success(`Sincronización completada: ${job.created_count} nuevos, ${job.updated_count} actualizados`);
+    } else {
+      toast.error("Error en sincronización: " + (job.error_message || 'Error desconocido'));
     }
   };
 
@@ -690,6 +654,17 @@ export default function Articles() {
             </ScrollArea>
           </CardContent>
         </Card>
+      )}
+
+      {/* Sync Progress Panel */}
+      {syncJobId && (
+        <SyncProgressPanel
+          jobId={syncJobId}
+          job={syncJob}
+          setJob={setSyncJob}
+          onComplete={handleSyncComplete}
+          onDismiss={() => { setSyncJobId(null); setSyncJob(null); setSyncingComponents(false); }}
+        />
       )}
 
       {/* Raw Data Debug Dialog */}
