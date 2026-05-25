@@ -1,37 +1,25 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
 const CDE_BASE_URL = 'https://cdeapp.es';
-const BATCH_SIZE = 20;
-const BATCH_DELAY_MS = 300;
+const BATCH_SIZE = 50;       // más grande para menos roundtrips
+const BATCH_DELAY_MS = 50;   // delay mínimo para no saturar
 const MAX_RETRIES = 3;
-const RETRY_BASE_DELAY_MS = 800;
+const RETRY_BASE_DELAY_MS = 600;
 
 async function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-/**
- * Fetch con reintentos y backoff exponencial
- */
-async function cdeApiFetch(endpoint, apiKey, params = {}, retries = MAX_RETRIES) {
-  const url = new URL(`${CDE_BASE_URL}/api/v1/${endpoint}`);
-  Object.entries(params).forEach(([k, v]) => {
-    if (v !== undefined && v !== null && v !== '') url.searchParams.append(k, String(v));
-  });
-
+async function cdeApiFetch(endpoint, apiKey, retries = MAX_RETRIES) {
+  const url = `${CDE_BASE_URL}/api/v1/${endpoint}`;
   let lastError;
   for (let attempt = 0; attempt <= retries; attempt++) {
-    if (attempt > 0) {
-      const delay = RETRY_BASE_DELAY_MS * Math.pow(2, attempt - 1);
-      await sleep(delay);
-    }
-
+    if (attempt > 0) await sleep(RETRY_BASE_DELAY_MS * Math.pow(2, attempt - 1));
     try {
-      const response = await fetch(url.toString(), {
+      const response = await fetch(url, {
         headers: { 'X-API-Key': apiKey, 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        signal: AbortSignal.timeout(30000)
+        signal: AbortSignal.timeout(60000)
       });
-
       if (response.status === 429) {
         const retryAfter = parseInt(response.headers.get('Retry-After') || '5', 10);
         await sleep(retryAfter * 1000);
@@ -39,23 +27,13 @@ async function cdeApiFetch(endpoint, apiKey, params = {}, retries = MAX_RETRIES)
         continue;
       }
       if (response.status >= 500) {
-        const text = await response.text().catch(() => '');
-        lastError = new Error(`Server error ${response.status}: ${text}`);
+        lastError = new Error(`Server error ${response.status}`);
         continue;
       }
-      if (!response.ok) {
-        const text = await response.text().catch(() => '');
-        throw new Error(`CDEApp Error ${response.status}: ${text || response.statusText}`);
-      }
-
+      if (!response.ok) throw new Error(`CDEApp Error ${response.status}: ${response.statusText}`);
       return await response.json();
-
     } catch (err) {
-      if (err.name === 'TimeoutError' || err.name === 'AbortError') {
-        lastError = new Error(`Timeout en ${endpoint}`);
-        continue;
-      }
-      if (attempt < retries && (err.name === 'TypeError')) {
+      if (err.name === 'TimeoutError' || err.name === 'AbortError' || err.name === 'TypeError') {
         lastError = err;
         continue;
       }
@@ -65,17 +43,12 @@ async function cdeApiFetch(endpoint, apiKey, params = {}, retries = MAX_RETRIES)
   throw lastError || new Error(`Fallo tras ${retries} reintentos`);
 }
 
-/**
- * Ejecutar una operación de BD con reintento (para errores transitorios)
- */
 async function withRetry(fn, label = '') {
   let lastErr;
   for (let i = 0; i < 3; i++) {
-    try {
-      return await fn();
-    } catch (err) {
+    try { return await fn(); } catch (err) {
       lastErr = err;
-      if (i < 2) await sleep(500 * (i + 1));
+      if (i < 2) await sleep(400 * (i + 1));
     }
   }
   throw new Error(`DB op failed (${label}): ${lastErr.message}`);
@@ -128,7 +101,7 @@ Deno.serve(async (req) => {
         triggered_by: user.email || user.full_name
       });
 
-      // Fire & forget — procesamiento en background
+      // Fire & forget
       processComponentsBackground(base44, apiKey, job.id).catch(async (err) => {
         console.error('[syncComponentsQueue] Background error:', err.message);
         await base44.asServiceRole.entities.SyncJob.update(job.id, {
@@ -178,7 +151,6 @@ Deno.serve(async (req) => {
 // PROCESAMIENTO BACKGROUND: COMPONENTES
 // ════════════════════════════════════════════════════════════
 async function processComponentsBackground(base44, apiKey, jobId) {
-  // 1. Fetch desde CDEApp con reintentos
   console.log(`[Job ${jobId}] Descargando componentes desde CDEApp...`);
   const rawData = await cdeApiFetch('sync-component-articles', apiKey);
   const allRows = normalizeRows(rawData);
@@ -186,29 +158,24 @@ async function processComponentsBackground(base44, apiKey, jobId) {
   console.log(`[Job ${jobId}] ${allRows.length} componentes recibidos`);
 
   await base44.asServiceRole.entities.SyncJob.update(jobId, {
-    total: allRows.length,
-    processed: 0,
-    status: 'running'
+    total: allRows.length, processed: 0, status: 'running'
   });
 
-  // 2. Obtener todos los existentes para upsert
+  // Obtener existentes para diferencial
   const existing = await withRetry(
     () => base44.asServiceRole.entities.ArticleComponent.list(undefined, 100000),
     'list-existing-components'
   ) || [];
 
-  // Mapa: key = article_cde_id + code_component
   const existingMap = new Map(existing.map(c => [`${c.article_cde_id}_${c.code_component}`, c]));
 
-  // 3. Clasificar en creates / updates (sincronización diferencial)
   const toCreate = [];
   const toUpdate = [];
   const errors = [];
 
   for (const r of allRows) {
     try {
-      if (!r.article_id || !r.code_component) continue; // Saltar registros inválidos
-
+      if (!r.article_id || !r.code_component) continue;
       const key = `${r.article_id}_${r.code_component}`;
       const payload = {
         cde_id: r.id ?? null,
@@ -222,13 +189,9 @@ async function processComponentsBackground(base44, apiKey, jobId) {
 
       const ex = existingMap.get(key);
       if (ex) {
-        // Solo actualizar si hay cambios (sincronización diferencial)
         const cdeDate = r.updated_at ? new Date(r.updated_at).getTime() : 0;
         const localDate = ex.updated_at_cde ? new Date(ex.updated_at_cde).getTime() : 0;
-        if (cdeDate <= localDate && ex.name_component === payload.name_component) {
-          // Sin cambios, no actualizar
-          continue;
-        }
+        if (cdeDate <= localDate && ex.name_component === payload.name_component) continue;
         toUpdate.push({ id: ex.id, payload });
       } else {
         toCreate.push(payload);
@@ -238,64 +201,67 @@ async function processComponentsBackground(base44, apiKey, jobId) {
     }
   }
 
-  console.log(`[Job ${jobId}] Creates: ${toCreate.length}, Updates: ${toUpdate.length}, Skipped (sin cambios): ${allRows.length - toCreate.length - toUpdate.length - errors.length}`);
-
-  // 4. Procesar en batches con reintentos por ítem
-  const allOps = [
-    ...toCreate.map(p => ({ type: 'create', data: p })),
-    ...toUpdate.map(u => ({ type: 'update', id: u.id, data: u.payload }))
-  ];
+  const skipped = allRows.length - toCreate.length - toUpdate.length - errors.length;
+  console.log(`[Job ${jobId}] Creates: ${toCreate.length}, Updates: ${toUpdate.length}, Skipped: ${skipped}`);
 
   let processed = 0;
   let createdCount = 0;
   let updatedCount = 0;
 
-  for (let i = 0; i < allOps.length; i += BATCH_SIZE) {
-    const batch = allOps.slice(i, i + BATCH_SIZE);
-
-    const batchResults = await Promise.allSettled(batch.map(op => {
-      if (op.type === 'create') {
-        return withRetry(
-          () => base44.asServiceRole.entities.ArticleComponent.create(op.data),
-          `create-${op.data.code_component}`
+  // ── BULK CREATE en batches de 50 ───────────────────────────
+  for (let i = 0; i < toCreate.length; i += BATCH_SIZE) {
+    const batch = toCreate.slice(i, i + BATCH_SIZE);
+    try {
+      // bulkCreate si existe, sino creates paralelos
+      if (base44.asServiceRole.entities.ArticleComponent.bulkCreate) {
+        await withRetry(
+          () => base44.asServiceRole.entities.ArticleComponent.bulkCreate(batch),
+          `bulkCreate-${i}`
         );
+        createdCount += batch.length;
       } else {
-        return withRetry(
-          () => base44.asServiceRole.entities.ArticleComponent.update(op.id, op.data),
-          `update-${op.id}`
+        const results = await Promise.allSettled(
+          batch.map(p => withRetry(() => base44.asServiceRole.entities.ArticleComponent.create(p), `create-${p.code_component}`))
         );
-      }
-    }));
-
-    // Contabilizar resultados y errores
-    batchResults.forEach((result, idx) => {
-      const op = batch[idx];
-      if (result.status === 'fulfilled') {
-        if (op.type === 'create') createdCount++;
-        else updatedCount++;
-      } else {
-        errors.push({
-          item: op.data?.code_component || op.id,
-          error: result.reason?.message || 'Error desconocido'
+        results.forEach(r => {
+          if (r.status === 'fulfilled') createdCount++;
+          else errors.push({ item: 'create', error: r.reason?.message });
         });
       }
+    } catch (err) {
+      errors.push({ item: `bulk-create-${i}`, error: err.message });
+    }
+
+    processed += batch.length;
+    await base44.asServiceRole.entities.SyncJob.update(jobId, {
+      processed, created_count: createdCount, updated_count: updatedCount
+    }).catch(() => {});
+
+    if (i + BATCH_SIZE < toCreate.length) await sleep(BATCH_DELAY_MS);
+  }
+
+  // ── UPDATES en paralelo de BATCH_SIZE ────────────────────
+  for (let i = 0; i < toUpdate.length; i += BATCH_SIZE) {
+    const batch = toUpdate.slice(i, i + BATCH_SIZE);
+    const results = await Promise.allSettled(
+      batch.map(u => withRetry(
+        () => base44.asServiceRole.entities.ArticleComponent.update(u.id, u.payload),
+        `update-${u.id}`
+      ))
+    );
+    results.forEach(r => {
+      if (r.status === 'fulfilled') updatedCount++;
+      else errors.push({ item: 'update', error: r.reason?.message });
     });
 
     processed += batch.length;
-
-    // Actualizar progreso en BD
     await base44.asServiceRole.entities.SyncJob.update(jobId, {
-      processed,
-      created_count: createdCount,
-      updated_count: updatedCount
-    }).catch(() => {}); // No bloquear si falla la actualización de progreso
+      processed, created_count: createdCount, updated_count: updatedCount
+    }).catch(() => {});
 
-    if (i + BATCH_SIZE < allOps.length) {
-      await sleep(BATCH_DELAY_MS);
-    }
+    if (i + BATCH_SIZE < toUpdate.length) await sleep(BATCH_DELAY_MS);
   }
 
-  // 5. Marcar completado con resumen de errores
   const finalStatus = errors.length > 0 && createdCount + updatedCount === 0 ? 'error' : 'completed';
   await base44.asServiceRole.entities.SyncJob.update(jobId, {
     status: finalStatus,
@@ -322,12 +288,9 @@ async function processArticlesBackground(base44, apiKey, jobId) {
   console.log(`[Job ${jobId}] ${allRows.length} artículos recibidos`);
 
   await base44.asServiceRole.entities.SyncJob.update(jobId, {
-    total: allRows.length,
-    processed: 0,
-    status: 'running'
+    total: allRows.length, processed: 0, status: 'running'
   });
 
-  // Obtener artículos existentes (entidad Article)
   const existing = await withRetry(
     () => base44.asServiceRole.entities.Article.list(undefined, 100000),
     'list-existing-articles'
@@ -366,7 +329,6 @@ async function processArticlesBackground(base44, apiKey, jobId) {
 
       const ex = existingMap.get(key);
       if (ex) {
-        // Preservar campos locales (proceso, operarios, tiempo)
         payload.process_code = ex.process_code || payload.process_code;
         payload.operators_required = ex.operators_required || payload.operators_required;
         payload.total_time_seconds = ex.total_time_seconds || payload.total_time_seconds;
@@ -379,40 +341,39 @@ async function processArticlesBackground(base44, apiKey, jobId) {
     }
   }
 
-  const allOps = [
-    ...toCreate.map(p => ({ type: 'create', data: p })),
-    ...toUpdate.map(u => ({ type: 'update', id: u.id, data: u.payload }))
-  ];
-
   let processed = 0, createdCount = 0, updatedCount = 0;
 
-  for (let i = 0; i < allOps.length; i += BATCH_SIZE) {
-    const batch = allOps.slice(i, i + BATCH_SIZE);
-
-    const results = await Promise.allSettled(batch.map(op => {
-      if (op.type === 'create') {
-        return withRetry(() => base44.asServiceRole.entities.Article.create(op.data), `create-${op.data.code}`);
+  // Bulk creates
+  for (let i = 0; i < toCreate.length; i += BATCH_SIZE) {
+    const batch = toCreate.slice(i, i + BATCH_SIZE);
+    try {
+      if (base44.asServiceRole.entities.Article.bulkCreate) {
+        await withRetry(() => base44.asServiceRole.entities.Article.bulkCreate(batch), `bulkCreate-articles-${i}`);
+        createdCount += batch.length;
       } else {
-        return withRetry(() => base44.asServiceRole.entities.Article.update(op.id, op.data), `update-${op.id}`);
+        const results = await Promise.allSettled(
+          batch.map(p => withRetry(() => base44.asServiceRole.entities.Article.create(p), `create-${p.code}`))
+        );
+        results.forEach(r => { if (r.status === 'fulfilled') createdCount++; else errors.push({ item: 'create', error: r.reason?.message }); });
       }
-    }));
-
-    results.forEach((result, idx) => {
-      const op = batch[idx];
-      if (result.status === 'fulfilled') {
-        if (op.type === 'create') createdCount++;
-        else updatedCount++;
-      } else {
-        errors.push({ item: op.data?.code || op.id, error: result.reason?.message });
-      }
-    });
-
+    } catch (err) {
+      errors.push({ item: `bulk-create-${i}`, error: err.message });
+    }
     processed += batch.length;
-    await base44.asServiceRole.entities.SyncJob.update(jobId, {
-      processed, created_count: createdCount, updated_count: updatedCount
-    }).catch(() => {});
+    await base44.asServiceRole.entities.SyncJob.update(jobId, { processed, created_count: createdCount, updated_count: updatedCount }).catch(() => {});
+    if (i + BATCH_SIZE < toCreate.length) await sleep(BATCH_DELAY_MS);
+  }
 
-    if (i + BATCH_SIZE < allOps.length) await sleep(BATCH_DELAY_MS);
+  // Parallel updates
+  for (let i = 0; i < toUpdate.length; i += BATCH_SIZE) {
+    const batch = toUpdate.slice(i, i + BATCH_SIZE);
+    const results = await Promise.allSettled(
+      batch.map(u => withRetry(() => base44.asServiceRole.entities.Article.update(u.id, u.payload), `update-${u.id}`))
+    );
+    results.forEach(r => { if (r.status === 'fulfilled') updatedCount++; else errors.push({ item: 'update', error: r.reason?.message }); });
+    processed += batch.length;
+    await base44.asServiceRole.entities.SyncJob.update(jobId, { processed, created_count: createdCount, updated_count: updatedCount }).catch(() => {});
+    if (i + BATCH_SIZE < toUpdate.length) await sleep(BATCH_DELAY_MS);
   }
 
   const finalStatus = errors.length > 0 && createdCount + updatedCount === 0 ? 'error' : 'completed';
