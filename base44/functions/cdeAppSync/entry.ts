@@ -50,6 +50,9 @@ Deno.serve(async (req) => {
       case 'sync-articles':
         data = await cdeApiFetch('sync-articles', apiKey);
         break;
+      case 'sync-component-articles':
+        data = await cdeApiFetch('sync-component-articles', apiKey);
+        break;
       default:
         return Response.json({ error: `Acción desconocida: ${action}` }, { status: 400 });
     }

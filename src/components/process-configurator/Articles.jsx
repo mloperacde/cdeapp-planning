@@ -59,7 +59,8 @@ import {
   Tag,
   Layers,
   Box,
-  Ban
+  Ban,
+  Cpu
 } from "lucide-react";
 
 // const API = `${import.meta.env.VITE_BACKEND_URL || ''}/api`;
@@ -71,6 +72,7 @@ export default function Articles() {
   const [filterType, setFilterType] = useState("all");
   const [filterClient, setFilterClient] = useState("all");
   const [uploading, setUploading] = useState(false);
+  const [syncingComponents, setSyncingComponents] = useState(false);
   const [filterNoProcess, setFilterNoProcess] = useState(false);
   const [selectedRawData, setSelectedRawData] = useState(null);
 
@@ -228,6 +230,59 @@ export default function Articles() {
     }
   };
 
+  const handleSyncComponents = async () => {
+    setSyncingComponents(true);
+    try {
+      toast.info("Descargando componentes desde CDEApp...");
+      const res = await base44.functions.invoke('cdeAppSync', { action: 'sync-component-articles' });
+      const response = res.data?.data;
+
+      let rows = [];
+      if (Array.isArray(response)) rows = response;
+      else if (response && Array.isArray(response.data)) rows = response.data;
+
+      if (rows.length === 0) {
+        toast.warning("No se recibieron componentes de la API");
+        return;
+      }
+
+      // Fetch existing to avoid duplicates
+      const existing = await base44.entities.ArticleComponent.list(undefined, 10000) || [];
+      const existingMap = new Map(existing.map(c => [`${c.article_cde_id}_${c.code_component}`, c]));
+
+      const toCreate = [];
+      const toUpdate = [];
+
+      rows.forEach(r => {
+        const key = `${r.article_id}_${r.code_component}`;
+        const payload = {
+          cde_id: r.id,
+          article_cde_id: r.article_id,
+          code_component: r.code_component,
+          name_component: r.name_component,
+          reference_component: r.reference_component || '',
+          is_active: r.is_active !== false,
+          updated_at_cde: r.updated_at || null
+        };
+        const ex = existingMap.get(key);
+        if (ex) toUpdate.push({ id: ex.id, payload });
+        else toCreate.push(payload);
+      });
+
+      await Promise.all([
+        ...toCreate.map(p => base44.entities.ArticleComponent.create(p)),
+        ...toUpdate.map(u => base44.entities.ArticleComponent.update(u.id, u.payload))
+      ]);
+
+      toast.success(`${rows.length} componentes sincronizados (${toCreate.length} nuevos, ${toUpdate.length} actualizados)`);
+    } catch (error) {
+      console.error("Sync components error:", error);
+      toast.error("Error al sincronizar componentes: " + error.message);
+    } finally {
+      setSyncingComponents(false);
+    }
+  };
+
   const formatTime = (seconds) => {
     if (!seconds) return "0 seg";
     if (seconds < 60) return `${seconds.toFixed(1)} seg`;
@@ -311,6 +366,39 @@ export default function Articles() {
               className="bg-blue-600 hover:bg-blue-700 text-white min-w-[150px]"
             >
               {uploading ? "Sincronizando..." : "Sincronizar Ahora"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Sync Components Section */}
+      <Card className="border-violet-200 bg-violet-50/30">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg flex items-center gap-2 text-violet-800">
+            <Cpu className="h-5 w-5" />
+            Sincronizar Componentes / Materias Primas
+          </CardTitle>
+          <CardDescription className="text-violet-600/80">
+            Descarga los componentes de fabricación de cada artículo desde CDEApp.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col sm:flex-row items-center gap-4 p-4 border border-violet-200 rounded-lg bg-white">
+            <div className="p-3 bg-violet-100 rounded-full">
+              <Cpu className={`h-6 w-6 text-violet-600 ${syncingComponents ? 'animate-pulse' : ''}`} />
+            </div>
+            <div className="flex-1 text-center sm:text-left">
+              <h3 className="font-medium text-violet-900">Componentes de Fabricación</h3>
+              <p className="text-sm text-violet-600">
+                Obtiene la lista de materias primas y componentes necesarios para cada artículo.
+              </p>
+            </div>
+            <Button
+              onClick={handleSyncComponents}
+              disabled={syncingComponents}
+              className="bg-violet-600 hover:bg-violet-700 text-white min-w-[180px]"
+            >
+              {syncingComponents ? "Sincronizando..." : "Sincronizar Componentes"}
             </Button>
           </div>
         </CardContent>

@@ -1,0 +1,62 @@
+{
+  "name": "ArticleComponent",
+  "type": "object",
+  "row_level_security": [
+    {
+      "operation": "read",
+      "allow": "{{true}}"
+    },
+    {
+      "operation": "create",
+      "allow": "{{user.role == 'admin'}}"
+    },
+    {
+      "operation": "update",
+      "allow": "{{user.role == 'admin'}}"
+    },
+    {
+      "operation": "delete",
+      "allow": "{{user.role == 'admin'}}"
+    }
+  ],
+  "properties": {
+    "cde_id": {
+      "type": "integer",
+      "description": "ID original en CDEApp"
+    },
+    "article_cde_id": {
+      "type": "integer",
+      "description": "ID del art\u00edculo en CDEApp (article_id de la API)"
+    },
+    "article_id": {
+      "type": "string",
+      "description": "ID del art\u00edculo en nuestra BD (referencia a Article)"
+    },
+    "code_component": {
+      "type": "string",
+      "description": "C\u00f3digo del componente"
+    },
+    "name_component": {
+      "type": "string",
+      "description": "Nombre del componente"
+    },
+    "reference_component": {
+      "type": "string",
+      "description": "Referencia del componente"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "updated_at_cde": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Fecha de actualizaci\u00f3n en CDEApp"
+    }
+  },
+  "required": [
+    "article_cde_id",
+    "code_component",
+    "name_component"
+  ]
+}

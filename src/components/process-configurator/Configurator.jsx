@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { localDataService } from "./services/localDataService";
+import ArticleComponentsPanel from "./ArticleComponentsPanel";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -68,6 +69,7 @@ export default function Configurator() {
   // Calculated values
   const [calculatedTime, setCalculatedTime] = useState(0);
   const [selectedActivitiesDetail, setSelectedActivitiesDetail] = useState([]);
+  const [articleCdeId, setArticleCdeId] = useState(null);
 
   useEffect(() => {
     fetchData();
@@ -109,6 +111,9 @@ export default function Configurator() {
           });
           setCalculatedTime(article.total_time_seconds || 0);
           setSelectedActivitiesDetail(article.activities_detail || []);
+          // El ID de CDEApp se guarda en raw_data.id o directamente como cde_id
+          const cdeId = article.raw_data?.id || article.cde_id || null;
+          setArticleCdeId(cdeId ? Number(cdeId) : null);
           
           // Check if article needs process assignment
           if (!article.process_code && (!article.selected_activities || article.selected_activities.length === 0)) {
@@ -608,6 +613,11 @@ export default function Configurator() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Components Panel */}
+        {isEditing && (
+          <ArticleComponentsPanel articleCdeId={articleCdeId} />
+        )}
 
         {/* Summary Panel */}
         <div className="space-y-4">
