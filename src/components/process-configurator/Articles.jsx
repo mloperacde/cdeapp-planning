@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
-// import axios from "axios";
 import { localDataService } from "./services/localDataService";
-import { cdeApp } from "../../api/cdeAppClient";
+import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -121,7 +120,8 @@ export default function Articles() {
       });
 
       toast.info("Iniciando sincronización con CDEApp...");
-      const response = await cdeApp.syncArticles();
+      const res = await base44.functions.invoke('cdeAppSync', { action: 'sync-articles' });
+      const response = res.data?.data;
       
       let rows = [];
       
