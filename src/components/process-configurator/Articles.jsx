@@ -76,11 +76,27 @@ export default function Articles() {
   const [syncingComponents, setSyncingComponents] = useState(false);
   const [filterNoProcess, setFilterNoProcess] = useState(false);
   const [selectedRawData, setSelectedRawData] = useState(null);
+  const SYNC_JOB_KEY = 'cde_components_sync_job';
+
   const [syncJobId, setSyncJobId] = useState(null);
   const [syncJob, setSyncJob] = useState(null);
 
+  // Al montar, recuperar job activo desde localStorage
   useEffect(() => {
     fetchArticles();
+    const saved = localStorage.getItem(SYNC_JOB_KEY);
+    if (saved) {
+      try {
+        const { jobId, job } = JSON.parse(saved);
+        if (jobId && job?.status === 'running') {
+          setSyncJobId(jobId);
+          setSyncJob(job);
+          setSyncingComponents(true);
+        } else {
+          localStorage.removeItem(SYNC_JOB_KEY);
+        }
+      } catch { localStorage.removeItem(SYNC_JOB_KEY); }
+    }
   }, []);
 
   const fetchArticles = async () => {
@@ -244,8 +260,11 @@ export default function Articles() {
       });
       const jobId = res.data?.job_id;
       if (!jobId) throw new Error("No se pudo iniciar el job de sincronización");
+      const initialJob = { job_type: 'sync-components', status: 'running', total: 0, processed: 0, created_count: 0, updated_count: 0 };
       setSyncJobId(jobId);
-      setSyncJob({ job_type: 'sync-components', status: 'running', total: 0, processed: 0, created_count: 0, updated_count: 0 });
+      setSyncJob(initialJob);
+      // Persistir en localStorage para sobrevivir navegación
+      localStorage.setItem(SYNC_JOB_KEY, JSON.stringify({ jobId, job: initialJob }));
     } catch (error) {
       console.error("Sync components error:", error);
       toast.error("Error al iniciar sincronización: " + error.message);
@@ -255,6 +274,8 @@ export default function Articles() {
 
   const handleSyncComplete = (job) => {
     setSyncingComponents(false);
+    // Limpiar localStorage al completar
+    localStorage.removeItem(SYNC_JOB_KEY);
     if (job.status === 'completed') {
       toast.success(`Sincronización completada: ${job.created_count} nuevos, ${job.updated_count} actualizados`);
     } else {
@@ -661,9 +682,20 @@ export default function Articles() {
         <SyncProgressPanel
           jobId={syncJobId}
           job={syncJob}
-          setJob={setSyncJob}
+          setJob={(updatedJob) => {
+            setSyncJob(updatedJob);
+            // Mantener localStorage actualizado durante el proceso
+            if (updatedJob?.status === 'running') {
+              localStorage.setItem(SYNC_JOB_KEY, JSON.stringify({ jobId: syncJobId, job: updatedJob }));
+            }
+          }}
           onComplete={handleSyncComplete}
-          onDismiss={() => { setSyncJobId(null); setSyncJob(null); setSyncingComponents(false); }}
+          onDismiss={() => {
+            setSyncJobId(null);
+            setSyncJob(null);
+            setSyncingComponents(false);
+            localStorage.removeItem(SYNC_JOB_KEY);
+          }}
         />
       )}
 
