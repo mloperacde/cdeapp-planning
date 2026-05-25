@@ -8,21 +8,72 @@ import { toast } from "sonner";
 
 /**
  * Muestra los componentes (materias primas) de un artículo concreto.
- * Recibe el `article_cde_id` (ID del artículo en CDEApp) para filtrar.
+ * Recibe `articleCdeId` (ID numérico en CDEApp) o `articleCode` como fallback.
  */
-export default function ArticleComponentsPanel({ articleCdeId }) {
+export default function ArticleComponentsPanel({ articleCdeId, articleCode }) {
   const [components, setComponents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [resolvedCdeId, setResolvedCdeId] = useState(null);
 
   useEffect(() => {
-    if (articleCdeId) fetchComponents();
-    else { setComponents([]); setLoading(false); }
-  }, [articleCdeId]);
+    if (articleCdeId) {
+      setResolvedCdeId(articleCdeId);
+    } else if (articleCode) {
+      // Intentar resolver el cde_id buscando en los componentes por código de artículo
+      // a través de la función de sincronización de CDEApp
+      resolveCdeIdFromCode(articleCode);
+    } else {
+      setComponents([]);
+      setLoading(false);
+    }
+  }, [articleCdeId, articleCode]);
 
-  const fetchComponents = async () => {
+  useEffect(() => {
+    if (resolvedCdeId) fetchComponents(resolvedCdeId);
+  }, [resolvedCdeId]);
+
+  const resolveCdeIdFromCode = async (code) => {
     setLoading(true);
     try {
-      const data = await base44.entities.ArticleComponent.filter({ article_cde_id: articleCdeId });
+      // 1. Primero buscar en la entidad Article de la BD (más rápido)
+      const articles = await base44.entities.Article.filter({ code });
+      if (articles?.length > 0 && articles[0].cde_id) {
+        setResolvedCdeId(Number(articles[0].cde_id));
+        return;
+      }
+      // 2. Fallback: buscar en CDEApp directamente
+      const res = await base44.functions.invoke('cdeAppSync', { action: 'sync-articles' });
+      const response = res.data?.data;
+      let rows = [];
+      if (response?.headers && Array.isArray(response.data)) {
+        rows = response.data.map(r => {
+          const obj = {};
+          response.headers.forEach((h, i) => obj[h] = r[i]);
+          return obj;
+        });
+      } else if (Array.isArray(response)) {
+        rows = response;
+      } else if (response?.data) {
+        rows = Array.isArray(response.data) ? response.data : [];
+      }
+      const match = rows.find(r => 
+        String(r.CodeCentral || r.code || '').trim().toLowerCase() === code.trim().toLowerCase()
+      );
+      if (match?.id) {
+        setResolvedCdeId(Number(match.id));
+      } else {
+        setLoading(false);
+      }
+    } catch (err) {
+      console.error("Error resolving cde_id:", err);
+      setLoading(false);
+    }
+  };
+
+  const fetchComponents = async (cdeId) => {
+    setLoading(true);
+    try {
+      const data = await base44.entities.ArticleComponent.filter({ article_cde_id: cdeId });
       setComponents(Array.isArray(data) ? data.filter(c => c.is_active !== false) : []);
     } catch (err) {
       console.error("Error loading components:", err);
@@ -32,7 +83,13 @@ export default function ArticleComponentsPanel({ articleCdeId }) {
     }
   };
 
-  if (!articleCdeId) {
+  const handleRefresh = () => {
+    if (resolvedCdeId) fetchComponents(resolvedCdeId);
+    else if (articleCdeId) fetchComponents(articleCdeId);
+    else if (articleCode) resolveCdeIdFromCode(articleCode);
+  };
+
+  if (!articleCdeId && !articleCode) {
     return (
       <Card>
         <CardHeader>
@@ -61,7 +118,7 @@ export default function ArticleComponentsPanel({ articleCdeId }) {
               <Badge variant="secondary">{components.length}</Badge>
             )}
           </CardTitle>
-          <Button variant="ghost" size="sm" onClick={fetchComponents} disabled={loading}>
+          <Button variant="ghost" size="sm" onClick={handleRefresh} disabled={loading}>
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
           </Button>
         </div>

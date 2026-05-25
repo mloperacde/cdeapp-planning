@@ -111,8 +111,9 @@ export default function Configurator() {
           });
           setCalculatedTime(article.total_time_seconds || 0);
           setSelectedActivitiesDetail(article.activities_detail || []);
-          // El ID de CDEApp se guarda en raw_data.id o directamente como cde_id
-          const cdeId = article.raw_data?.id || article.cde_id || null;
+          // El ID de CDEApp se guarda en cde_id (campo directo) o en raw_data.id (sincronización CDEApp)
+          const cdeId = article.cde_id || article.raw_data?.id || null;
+          console.log('[Configurator] articleId:', articleId, '| cde_id:', article.cde_id, '| raw_data.id:', article.raw_data?.id, '| resolved cdeId:', cdeId);
           setArticleCdeId(cdeId ? Number(cdeId) : null);
           
           // Check if article needs process assignment
@@ -616,7 +617,10 @@ export default function Configurator() {
 
         {/* Components Panel */}
         {isEditing && (
-          <ArticleComponentsPanel articleCdeId={articleCdeId} />
+          <ArticleComponentsPanel 
+            articleCdeId={articleCdeId} 
+            articleCode={!articleCdeId ? formData.code : undefined}
+          />
         )}
 
         {/* Summary Panel */}

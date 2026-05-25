@@ -53,7 +53,9 @@ export const localDataService = {
               celo: article.celo,
               unid_box: article.unid_box,
               unid_pallet: article.unid_pallet,
-              multi_unid: article.multi_unid
+              multi_unid: article.multi_unid,
+              cde_id: article.cde_id ? Number(article.cde_id) : null,
+              selected_activities: article.selected_activities || []
           };
 
           if (existing) {
@@ -156,6 +158,9 @@ export const localDataService = {
                 operators_required: parseInt(getValue(apiArt, ['operators_required', 'operators', 'operator_cost']) || 1),
                 total_time_seconds: parseFloat(getValue(apiArt, ['total_time_seconds', 'total_time', 'time_seconds']) || 0),
                 updated_at: new Date().toISOString(),
+                // ID en CDEApp para enlazar con ArticleComponent
+                cde_id: getValue(apiArt, ['cde_id']) ? Number(getValue(apiArt, ['cde_id'])) : null,
+                selected_activities: getValue(apiArt, ['selected_activities']) || [],
                 // Map new fields
                 active: getValue(apiArt, ['active', 'activo']) !== false,
                 status_article: getValue(apiArt, ['status_article', 'status']) || "PENDIENTE",

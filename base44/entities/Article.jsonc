@@ -20,52 +20,86 @@
     }
   ],
   "properties": {
-    "codigo": {
+    "code": {
+      "type": "string",
+      "description": "C\u00f3digo del art\u00edculo"
+    },
+    "name": {
+      "type": "string",
+      "description": "Nombre del art\u00edculo"
+    },
+    "description": {
       "type": "string"
     },
-    "nombre": {
+    "client": {
       "type": "string"
     },
-    "descripcion": {
+    "reference": {
       "type": "string"
     },
-    "maquina_1": {
+    "type": {
       "type": "string"
     },
-    "maquina_2": {
+    "process_code": {
       "type": "string"
     },
-    "maquina_3": {
-      "type": "string"
+    "operators_required": {
+      "type": "integer",
+      "default": 1
     },
-    "maquina_4": {
-      "type": "string"
+    "total_time_seconds": {
+      "type": "number",
+      "default": 0
     },
-    "maquina_5": {
-      "type": "string"
-    },
-    "maquina_6": {
-      "type": "string"
-    },
-    "maquina_7": {
-      "type": "string"
-    },
-    "maquina_8": {
-      "type": "string"
-    },
-    "maquina_9": {
-      "type": "string"
-    },
-    "maquina_10": {
-      "type": "string"
-    },
-    "activo": {
+    "active": {
       "type": "boolean",
       "default": true
+    },
+    "status_article": {
+      "type": "string",
+      "default": "PENDIENTE"
+    },
+    "injet": {
+      "type": "boolean",
+      "default": false
+    },
+    "laser": {
+      "type": "boolean",
+      "default": false
+    },
+    "etiquetado": {
+      "type": "boolean",
+      "default": false
+    },
+    "celo": {
+      "type": "boolean",
+      "default": false
+    },
+    "unid_box": {
+      "type": "integer",
+      "default": 0
+    },
+    "unid_pallet": {
+      "type": "integer",
+      "default": 0
+    },
+    "multi_unid": {
+      "type": "integer",
+      "default": 1
+    },
+    "cde_id": {
+      "type": "integer",
+      "description": "ID del art\u00edculo en CDEApp (para enlazar con ArticleComponent)"
+    },
+    "selected_activities": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
     }
   },
   "required": [
-    "codigo",
-    "nombre"
+    "code",
+    "name"
   ]
 }

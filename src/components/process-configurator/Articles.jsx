@@ -210,6 +210,9 @@ export default function Articles() {
             else if (prefix4 === 'EASY') articleType = 'Easysnap';
           }
 
+          // El ID numérico del artículo en CDEApp es el que enlaza con ArticleComponent.article_cde_id
+          const cdeId = r.id ? Number(r.id) : (existingArticle?.cde_id || null);
+
           return {
               id: String(r.id || existingArticle?.id || Math.random().toString(36).substr(2, 9)),
               code: code,
@@ -220,6 +223,7 @@ export default function Articles() {
               type: articleType,
               operators_required: finalOperators,
               total_time_seconds: finalTime,
+              cde_id: cdeId,
               // Nuevos campos de API
               active: r.status === true || r.status === 'true' || r.status === 1,
               status_article: r.statusArticle || existingArticle?.status_article || 'PENDIENTE',
