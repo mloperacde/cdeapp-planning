@@ -75,15 +75,18 @@ export default function Articles() {
   const [uploading, setUploading] = useState(false);
   const [syncingComponents, setSyncingComponents] = useState(false);
   const [filterNoProcess, setFilterNoProcess] = useState(false);
+  const [filterHasComponents, setFilterHasComponents] = useState(false);
+  const [articleCdeIdsWithComponents, setArticleCdeIdsWithComponents] = useState(new Set());
   const [selectedRawData, setSelectedRawData] = useState(null);
   const SYNC_JOB_KEY = 'cde_components_sync_job';
 
   const [syncJobId, setSyncJobId] = useState(null);
   const [syncJob, setSyncJob] = useState(null);
 
-  // Al montar, recuperar job activo desde localStorage
+  // Al montar, cargar artículos y cde_ids con componentes
   useEffect(() => {
     fetchArticles();
+    fetchCdeIdsWithComponents();
     const saved = localStorage.getItem(SYNC_JOB_KEY);
     if (saved) {
       try {
@@ -98,6 +101,16 @@ export default function Articles() {
       } catch { localStorage.removeItem(SYNC_JOB_KEY); }
     }
   }, []);
+
+  const fetchCdeIdsWithComponents = async () => {
+    try {
+      const components = await base44.entities.ArticleComponent.list();
+      const ids = new Set(components.map(c => c.article_cde_id).filter(Boolean));
+      setArticleCdeIdsWithComponents(ids);
+    } catch (err) {
+      console.error("Error fetching article components:", err);
+    }
+  };
 
   const fetchArticles = async () => {
     try {
@@ -308,8 +321,11 @@ export default function Articles() {
     const matchesType = filterType === "all" || article.type === filterType;
     const matchesClient = filterClient === "all" || article.client === filterClient;
     const matchesNoProcess = filterNoProcess ? !article.process_code : true;
+    const matchesHasComponents = filterHasComponents
+      ? articleCdeIdsWithComponents.has(article.cde_id) || articleCdeIdsWithComponents.has(Number(article.cde_id))
+      : true;
     
-    return matchesSearch && matchesType && matchesClient && matchesNoProcess;
+    return matchesSearch && matchesType && matchesClient && matchesNoProcess && matchesHasComponents;
   });
 
   const articlesWithoutProcess = articles.filter(a => !a.process_code).length;
@@ -471,6 +487,19 @@ export default function Articles() {
             ))}
           </SelectContent>
         </Select>
+
+        <Button
+          variant={filterHasComponents ? "default" : "outline"}
+          size="sm"
+          onClick={() => setFilterHasComponents(!filterHasComponents)}
+          className="flex items-center gap-2 whitespace-nowrap"
+        >
+          <Cpu className="h-4 w-4" />
+          {filterHasComponents ? "Con componentes ✓" : "Con componentes"}
+          {filterHasComponents && articleCdeIdsWithComponents.size > 0 && (
+            <Badge variant="secondary" className="ml-1 text-xs px-1.5 py-0">{filteredArticles.length}</Badge>
+          )}
+        </Button>
       </div>
 
       {/* Articles List */}
@@ -533,10 +562,17 @@ export default function Articles() {
                       data-testid={`article-row-${article.id}`}
                     >
                       <TableCell>
-                        <div className="flex flex-col gap-1">
-                          <span className="font-mono text-sm text-muted-foreground">
-                            {article.code || '-'}
-                          </span>
+                       <div className="flex flex-col gap-1">
+                         <div className="flex items-center gap-1.5">
+                           <span className="font-mono text-sm text-muted-foreground">
+                             {article.code || '-'}
+                           </span>
+                           {(articleCdeIdsWithComponents.has(article.cde_id) || articleCdeIdsWithComponents.has(Number(article.cde_id))) && (
+                             <span title="Tiene componentes asociados">
+                               <Cpu className="w-3.5 h-3.5 text-violet-500" />
+                             </span>
+                           )}
+                         </div>
                           {!article.active && (
                              <Badge variant="outline" className="w-fit text-[10px] px-1 h-5 text-slate-500 border-slate-300">
                                INACTIVO
