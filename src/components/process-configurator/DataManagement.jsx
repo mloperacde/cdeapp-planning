@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
-// import axios from "axios"; // Removed axios
 import { localDataService } from "./services/localDataService";
+import ActivityManager from "./ActivityManager";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 // Accordion removed - showing activities inline
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Upload, 
   FileSpreadsheet, 
@@ -24,7 +25,8 @@ import {
   Layers,
   Clock,
   RefreshCw,
-  Trash2
+  Trash2,
+  Brain
 } from "lucide-react";
 
 // const API = `${import.meta.env.VITE_BACKEND_URL || ''}/api`; // Removed API constant
@@ -160,7 +162,7 @@ export default function DataManagement() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Gestión de Datos</h1>
           <p className="text-muted-foreground mt-1">
-            Carga y gestiona los datos de procesos y actividades desde Excel
+            Carga y gestiona los datos de procesos, actividades y catálogo de detección automática
           </p>
         </div>
         <div className="flex gap-2">
@@ -470,6 +472,22 @@ export default function DataManagement() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Catálogo de Actividades IA */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Brain className="h-5 w-5 text-violet-600" />
+            Catálogo de Actividades para Detección IA
+          </CardTitle>
+          <CardDescription>
+            Define las actividades del proceso con sus velocidades y palabras clave. El agente usará este catálogo para sugerir actividades automáticamente en base a los componentes de cada artículo.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ActivityManager />
+        </CardContent>
+      </Card>
 
       {/* Info Section */}
       <Card className="bg-muted/30" data-testid="info-card">

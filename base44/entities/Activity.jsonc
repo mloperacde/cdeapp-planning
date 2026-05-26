@@ -1,0 +1,79 @@
+{
+  "name": "Activity",
+  "type": "object",
+  "row_level_security": [
+    {
+      "operation": "read",
+      "allow": "{{true}}"
+    },
+    {
+      "operation": "create",
+      "allow": "{{user.role == 'admin'}}"
+    },
+    {
+      "operation": "update",
+      "allow": "{{user.role == 'admin'}}"
+    },
+    {
+      "operation": "delete",
+      "allow": "{{user.role == 'admin'}}"
+    }
+  ],
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Nombre de la actividad (ej: Alimentar envases vac\u00edos, Montaje de estuche)"
+    },
+    "description": {
+      "type": "string",
+      "description": "Descripci\u00f3n detallada de la actividad"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "M\u00e1quina",
+        "Manual",
+        "Acondicionamiento Secundario",
+        "Log\u00edstica"
+      ],
+      "default": "Manual",
+      "description": "Tipo de actividad"
+    },
+    "interactions_per_minute": {
+      "type": "number",
+      "description": "Velocidad de la actividad en unidades/interacciones por minuto"
+    },
+    "time_seconds": {
+      "type": "number",
+      "description": "Tiempo por unidad en segundos (calculado: 60/interactions_per_minute)"
+    },
+    "component_keywords": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Palabras clave de nombres de componentes que implican esta actividad (ej: estuche, tapa, etiqueta)"
+    },
+    "component_code_patterns": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Patrones de c\u00f3digo de componente que implican esta actividad (ej: ES, ET, TA)"
+    },
+    "priority": {
+      "type": "integer",
+      "default": 5,
+      "description": "Prioridad de orden en el proceso (1=primero, 10=\u00faltimo)"
+    },
+    "active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "name",
+    "type",
+    "interactions_per_minute"
+  ]
+}

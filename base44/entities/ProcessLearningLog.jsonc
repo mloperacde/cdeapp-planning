@@ -1,0 +1,108 @@
+{
+  "name": "ProcessLearningLog",
+  "type": "object",
+  "row_level_security": [
+    {
+      "operation": "read",
+      "allow": "{{user.role == 'admin'}}"
+    },
+    {
+      "operation": "create",
+      "allow": "{{user.role == 'admin'}}"
+    },
+    {
+      "operation": "update",
+      "allow": "{{user.role == 'admin'}}"
+    },
+    {
+      "operation": "delete",
+      "allow": "{{user.role == 'admin'}}"
+    }
+  ],
+  "properties": {
+    "article_id": {
+      "type": "string",
+      "description": "ID del art\u00edculo en nuestra BD"
+    },
+    "article_code": {
+      "type": "string",
+      "description": "C\u00f3digo del art\u00edculo"
+    },
+    "article_name": {
+      "type": "string",
+      "description": "Nombre del art\u00edculo"
+    },
+    "article_type": {
+      "type": "string",
+      "description": "Tipo de art\u00edculo (Frasco, Bote, Estuche...)"
+    },
+    "components_snapshot": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      },
+      "description": "Snapshot de los componentes del art\u00edculo en el momento del aprendizaje"
+    },
+    "suggested_activities": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "IDs de actividades sugeridas por la IA"
+    },
+    "final_activities": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "IDs de actividades finales (despu\u00e9s de correcciones manuales)"
+    },
+    "corrections_made": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      },
+      "description": "Lista de correcciones realizadas: {action: added/removed, activity_id, activity_name, reason}"
+    },
+    "similar_article_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "IDs de art\u00edculos con procesos similares detectados"
+    },
+    "confidence_score": {
+      "type": "number",
+      "description": "Puntuaci\u00f3n de confianza de la detecci\u00f3n autom\u00e1tica (0-1)"
+    },
+    "process_code": {
+      "type": "string",
+      "description": "C\u00f3digo de proceso asignado (si aplica)"
+    },
+    "total_time_seconds": {
+      "type": "number",
+      "description": "Tiempo total estimado del proceso"
+    },
+    "reviewed_by": {
+      "type": "string",
+      "description": "Usuario que revis\u00f3/corrigi\u00f3"
+    },
+    "review_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending_review",
+        "reviewed",
+        "auto_applied"
+      ],
+      "default": "pending_review"
+    }
+  },
+  "required": [
+    "article_id",
+    "article_code"
+  ]
+}

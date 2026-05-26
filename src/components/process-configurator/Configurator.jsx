@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { localDataService } from "./services/localDataService";
 import ArticleComponentsPanel from "./ArticleComponentsPanel";
+import ActivityDetector from "./ActivityDetector";
+import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -70,6 +72,8 @@ export default function Configurator() {
   const [calculatedTime, setCalculatedTime] = useState(0);
   const [selectedActivitiesDetail, setSelectedActivitiesDetail] = useState([]);
   const [articleCdeId, setArticleCdeId] = useState(null);
+  const [articleComponents, setArticleComponents] = useState([]);
+  const [currentArticle, setCurrentArticle] = useState(null);
 
   useEffect(() => {
     fetchData();
@@ -111,10 +115,16 @@ export default function Configurator() {
           });
           setCalculatedTime(article.total_time_seconds || 0);
           setSelectedActivitiesDetail(article.activities_detail || []);
+          setCurrentArticle(article);
           // El ID de CDEApp se guarda en cde_id (campo directo) o en raw_data.id (sincronización CDEApp)
           const cdeId = article.cde_id || article.raw_data?.id || null;
           console.log('[Configurator] articleId:', articleId, '| cde_id:', article.cde_id, '| raw_data.id:', article.raw_data?.id, '| resolved cdeId:', cdeId);
           setArticleCdeId(cdeId ? Number(cdeId) : null);
+          // Cargar componentes para el detector
+          try {
+            const comps = await base44.entities.ArticleComponent.filter({ article_cde_id: cdeId ? Number(cdeId) : -1 });
+            setArticleComponents(Array.isArray(comps) ? comps : []);
+          } catch (_) { setArticleComponents([]); }
           
           // Check if article needs process assignment
           if (!article.process_code && (!article.selected_activities || article.selected_activities.length === 0)) {
@@ -202,6 +212,26 @@ export default function Configurator() {
       if (isEditing) {
         await localDataService.updateArticle(articleId, formData);
         toast.success("Artículo actualizado correctamente");
+        // Guardar corrección para aprendizaje si hubo cambios en actividades
+        if (currentArticle) {
+          const prevActivities = currentArticle.selected_activities || [];
+          const newActivities = formData.selected_activities || [];
+          const hasChanges = JSON.stringify([...prevActivities].sort()) !== JSON.stringify([...newActivities].sort());
+          if (hasChanges) {
+            base44.functions.invoke('detectActivitySuggestions', {
+              action: 'save_correction',
+              article_id: articleId,
+              article_code: formData.code,
+              article_name: formData.name,
+              article_type: formData.type,
+              suggested_activities: currentArticle.selected_activities || [],
+              final_activities: newActivities,
+              components_snapshot: articleComponents,
+              process_code: formData.process_code,
+              total_time_seconds: calculatedTime
+            }).catch(e => console.warn('Learning log save failed:', e));
+          }
+        }
       } else {
         const newArticle = await localDataService.createArticle(formData);
         toast.success("Artículo creado correctamente");
@@ -212,6 +242,30 @@ export default function Configurator() {
       toast.error("Error al guardar el artículo");
     } finally {
       setSaving(false);
+    }
+  };
+
+  // Aplicar sugerencias de la IA
+  const handleApplySuggestions = (suggestedIds) => {
+    setFormData(prev => ({ ...prev, selected_activities: suggestedIds }));
+    calculateTime(suggestedIds);
+    setNeedsProcess(false);
+    toast.success(`${suggestedIds.length} actividades aplicadas desde la detección IA`);
+  };
+
+  // Copiar proceso de artículo similar
+  const handleApplySimilarArticle = async (similar) => {
+    try {
+      const art = await base44.entities.Article.filter({ id: similar.article_id });
+      if (art?.length > 0 && art[0].selected_activities?.length > 0) {
+        const ids = art[0].selected_activities;
+        setFormData(prev => ({ ...prev, selected_activities: ids, process_code: art[0].process_code || null }));
+        calculateTime(ids);
+        setNeedsProcess(false);
+        toast.success(`Proceso copiado de ${similar.article_code} (${Math.round(similar.similarity_score * 100)}% similar)`);
+      }
+    } catch (e) {
+      toast.error("Error al copiar el proceso");
     }
   };
 
@@ -615,12 +669,22 @@ export default function Configurator() {
           </Card>
         </div>
 
-        {/* Components Panel */}
+        {/* AI Activity Detector Panel */}
         {isEditing && (
-          <ArticleComponentsPanel 
-            articleCdeId={articleCdeId} 
-            articleCode={!articleCdeId ? formData.code : undefined}
-          />
+          <div className="space-y-4">
+            <ActivityDetector
+              article={currentArticle}
+              components={articleComponents}
+              allActivities={activities}
+              currentSelectedIds={formData.selected_activities}
+              onApplySuggestions={handleApplySuggestions}
+              onApplySimilarArticle={handleApplySimilarArticle}
+            />
+            <ArticleComponentsPanel 
+              articleCdeId={articleCdeId} 
+              articleCode={!articleCdeId ? formData.code : undefined}
+            />
+          </div>
         )}
 
         {/* Summary Panel */}
