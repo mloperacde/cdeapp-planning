@@ -167,7 +167,7 @@ async function processComponentsBackground(base44, apiKey, jobId) {
     'list-existing-components'
   ) || [];
 
-  const existingMap = new Map(existing.map(c => [`${c.article_cde_id}_${c.code_component}`, c]));
+  const existingMap = new Map(existing.map(c => [String(c.cde_id), c]));
 
   const toCreate = [];
   const toUpdate = [];
@@ -175,10 +175,10 @@ async function processComponentsBackground(base44, apiKey, jobId) {
 
   for (const r of allRows) {
     try {
-      if (!r.article_id || !r.code_component) continue;
-      const key = `${r.article_id}_${r.code_component}`;
+      if (!r.article_id || !r.code_component || !r.id) continue;
+      const key = String(r.id);
       const payload = {
-        cde_id: r.id ?? null,
+        cde_id: r.id,
         article_cde_id: r.article_id,
         code_component: String(r.code_component).trim(),
         name_component: String(r.name_component || '').trim(),
@@ -310,7 +310,7 @@ async function processArticlesBackground(base44, apiKey, jobId) {
 
       const key = cdeId || code;
       const payload = {
-        cde_id: cdeId || null,
+        cde_id: r.id || null,
         code: code,
         name: name,
         client: String(r.customer_name || r.client || '').trim(),
