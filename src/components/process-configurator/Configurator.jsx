@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { localDataService } from "./services/localDataService";
 import ArticleComponentsPanel from "./ArticleComponentsPanel";
-import ActivityDetector from "./ActivityDetector";
+import AIActivityConfigurator from "./AIActivityConfigurator";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -669,15 +669,14 @@ export default function Configurator() {
           </Card>
         </div>
 
-        {/* AI Activity Detector Panel */}
+        {/* AI Activity Configurator Panel */}
         {isEditing && (
           <div className="space-y-4">
-            <ActivityDetector
+            <AIActivityConfigurator
               article={currentArticle}
               components={articleComponents}
-              allActivities={activities}
               currentSelectedIds={formData.selected_activities}
-              onApplySuggestions={handleApplySuggestions}
+              onApply={handleApplySuggestions}
               onApplySimilarArticle={handleApplySimilarArticle}
             />
             <ArticleComponentsPanel 
