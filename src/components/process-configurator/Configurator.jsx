@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { localDataService } from "./services/localDataService";
 import ArticleComponentsPanel from "./ArticleComponentsPanel";
-import AIActivityConfigurator from "./AIActivityConfigurator";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,7 +30,13 @@ import {
   FileDown,
   Trash2,
   AlertTriangle,
-  Building2
+  Building2,
+  Sparkles,
+  Brain,
+  Loader2,
+  TrendingUp,
+  X,
+  Info
 } from "lucide-react";
 
 export default function Configurator() {
@@ -74,6 +79,12 @@ export default function Configurator() {
   const [articleCdeId, setArticleCdeId] = useState(null);
   const [articleComponents, setArticleComponents] = useState([]);
   const [currentArticle, setCurrentArticle] = useState(null);
+
+  // Estado para sugerencias IA en el panel de actividades
+  const [aiSuggestedIds, setAiSuggestedIds] = useState([]);
+  const [aiDetecting, setAiDetecting] = useState(false);
+  const [aiResult, setAiResult] = useState(null);
+  const [showAiPanel, setShowAiPanel] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -245,7 +256,65 @@ export default function Configurator() {
     }
   };
 
-  // Aplicar sugerencias de la IA
+  // Detección IA integrada en el panel de actividades
+  const handleAiDetect = async () => {
+    if (!currentArticle?.id) {
+      toast.error("Guarda el artículo primero");
+      return;
+    }
+    if (!articleComponents?.length) {
+      toast.warning("Sincroniza los componentes desde CDEApp primero.");
+      return;
+    }
+    setAiDetecting(true);
+    setAiResult(null);
+    setAiSuggestedIds([]);
+    try {
+      const res = await base44.functions.invoke("detectActivitySuggestions", {
+        article_id: currentArticle.id,
+        article_code: formData.code,
+        article_name: formData.name,
+        article_type: formData.type,
+        article_cde_id: currentArticle.cde_id,
+        components: articleComponents
+      });
+      const data = res.data;
+      setAiResult(data);
+      const suggested = data?.suggested_activity_ids || [];
+      setAiSuggestedIds(suggested);
+      setShowAiPanel(true);
+      toast.success(`IA: ${suggested.length} actividades sugeridas`);
+    } catch (err) {
+      toast.error("Error en el análisis de actividades");
+    } finally {
+      setAiDetecting(false);
+    }
+  };
+
+  // Aceptar sugerencias IA → marcarlas como seleccionadas
+  const handleAcceptAiSuggestions = () => {
+    const merged = [...new Set([...formData.selected_activities, ...aiSuggestedIds])];
+    setFormData(prev => ({ ...prev, selected_activities: merged }));
+    calculateTime(merged);
+    setNeedsProcess(false);
+    // Guardar aprendizaje si hay diferencia
+    if (currentArticle?.id && aiSuggestedIds.length > 0) {
+      base44.functions.invoke("detectActivitySuggestions", {
+        action: "save_correction",
+        article_id: currentArticle.id,
+        article_code: formData.code,
+        article_name: formData.name,
+        article_type: formData.type,
+        suggested_activities: aiSuggestedIds,
+        final_activities: merged,
+        components_snapshot: articleComponents || []
+      }).catch(e => console.warn("Learning log save failed:", e));
+    }
+    setShowAiPanel(false);
+    toast.success(`${aiSuggestedIds.length} actividades sugeridas aplicadas`);
+  };
+
+  // Aplicar sugerencias de la IA (desde AIActivityConfigurator - panel lateral)
   const handleApplySuggestions = (suggestedIds) => {
     setFormData(prev => ({ ...prev, selected_activities: suggestedIds }));
     calculateTime(suggestedIds);
@@ -560,20 +629,131 @@ export default function Configurator() {
           {/* Activity Selection */}
           <Card data-testid="activity-selection-card">
             <CardHeader>
-              <CardTitle className="text-lg">
-                Selección de Proceso / Actividades
-                {needsProcess && (
-                  <Badge variant="outline" className="ml-2 text-orange-600 border-orange-300">
-                    Requerido
-                  </Badge>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    Selección de Proceso / Actividades
+                    {needsProcess && (
+                      <Badge variant="outline" className="text-orange-600 border-orange-300">
+                        Requerido
+                      </Badge>
+                    )}
+                  </CardTitle>
+                  <CardDescription className="mt-1">
+                    Selecciona un proceso predefinido o elige las actividades manualmente
+                  </CardDescription>
+                </div>
+                {/* Botón IA integrado */}
+                {isEditing && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleAiDetect}
+                    disabled={aiDetecting || !articleComponents?.length}
+                    className="shrink-0 gap-2 border-violet-300 text-violet-700 hover:bg-violet-50"
+                    title={!articleComponents?.length ? "Sincroniza componentes para activar el análisis IA" : "Analizar con IA"}
+                  >
+                    {aiDetecting ? (
+                      <><Loader2 className="h-4 w-4 animate-spin" /> Analizando...</>
+                    ) : (
+                      <><Brain className="h-4 w-4" /> Sugerir con IA</>
+                    )}
+                  </Button>
                 )}
-              </CardTitle>
-              <CardDescription>
-                Selecciona un proceso predefinido o elige las actividades manualmente
-              </CardDescription>
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="space-y-6">
+              <div className="space-y-4">
+
+                {/* Panel de sugerencias IA - aparece después del análisis */}
+                {showAiPanel && aiSuggestedIds.length > 0 && (
+                  <div className="border border-violet-200 rounded-lg bg-violet-50/60 dark:bg-violet-950/20 p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="h-4 w-4 text-violet-600" />
+                        <span className="text-sm font-semibold text-violet-800 dark:text-violet-300">
+                          Sugerencias de la IA — {aiSuggestedIds.length} actividades detectadas
+                        </span>
+                        {aiResult?.confidence && (
+                          <Badge className={`text-[10px] px-1.5 ${
+                            aiResult.confidence >= 0.8 ? 'bg-green-100 text-green-700 border-green-200' :
+                            aiResult.confidence >= 0.5 ? 'bg-yellow-100 text-yellow-700 border-yellow-200' :
+                            'bg-red-100 text-red-700 border-red-200'
+                          }`}>
+                            {Math.round(aiResult.confidence * 100)}% confianza
+                          </Badge>
+                        )}
+                      </div>
+                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground" onClick={() => setShowAiPanel(false)}>
+                        <X className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+
+                    {aiResult?.reasoning && (
+                      <p className="text-xs text-violet-700 dark:text-violet-400 bg-violet-100/60 dark:bg-violet-900/20 rounded px-2 py-1.5 flex gap-1.5">
+                        <Info className="h-3.5 w-3.5 shrink-0 mt-0.5 text-violet-500" />
+                        {aiResult.reasoning}
+                      </p>
+                    )}
+
+                    {aiResult?.speed_estimation?.uds_per_minute > 0 && (
+                      <div className="flex items-center gap-2 text-xs text-blue-700 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 rounded px-2 py-1.5">
+                        <TrendingUp className="h-3.5 w-3.5 shrink-0" />
+                        <span>Velocidad estimada: <strong>~{aiResult.speed_estimation.uds_per_minute} uds/min</strong></span>
+                        {aiResult.speed_estimation.bottleneck && (
+                          <span className="text-blue-500">· Cuello de botella: <strong>{aiResult.speed_estimation.bottleneck.name}</strong></span>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Lista de actividades sugeridas para revisar */}
+                    <div className="space-y-1 max-h-48 overflow-y-auto pr-1">
+                      {aiSuggestedIds.map((id, idx) => {
+                        const act = activities.find(a => a.id === id);
+                        if (!act) return null;
+                        const alreadySelected = formData.selected_activities.includes(id);
+                        return (
+                          <div key={id} className="flex items-center justify-between px-3 py-2 bg-white dark:bg-slate-800 rounded border border-violet-100 text-xs">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="text-muted-foreground shrink-0">{idx + 1}.</span>
+                              <div className="min-w-0">
+                                <span className="font-medium">{act.name}</span>
+                                <div className="flex items-center gap-2 mt-0.5 text-muted-foreground">
+                                  {act.type && <span className="text-[10px]">{act.type}</span>}
+                                  {act.time_seconds && <span className="font-mono text-[10px]">{act.time_seconds}s</span>}
+                                  {act.interactions_per_minute && <span className="text-[10px]">{act.interactions_per_minute} uds/min</span>}
+                                </div>
+                              </div>
+                            </div>
+                            {alreadySelected && (
+                              <Badge className="bg-green-100 text-green-700 text-[10px] px-1.5 shrink-0 ml-2">Ya seleccionada</Badge>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div className="flex gap-2 pt-1">
+                      <Button
+                        size="sm"
+                        className="flex-1 bg-violet-600 hover:bg-violet-700 text-white gap-2"
+                        onClick={handleAcceptAiSuggestions}
+                      >
+                        <CheckCircle2 className="h-4 w-4" />
+                        Aceptar y aplicar sugerencias
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-slate-300 text-slate-600"
+                        onClick={() => setShowAiPanel(false)}
+                      >
+                        Descartar
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
                 {/* Process Selector */}
                 <div className="space-y-2">
                   <Label>Proceso Base</Label>
@@ -626,40 +806,51 @@ export default function Configurator() {
                   ) : (
                     <ScrollArea className="h-[400px] border rounded-md p-4">
                       <div className="space-y-2">
-                        {activities.map((activity) => (
-                          <div
-                            key={activity.id}
-                            className={`flex items-center gap-3 p-3 rounded-sm border transition-colors ${
-                              formData.selected_activities.includes(activity.id)
-                                ? 'border-primary bg-primary/5'
-                                : 'hover:bg-accent'
-                            }`}
-                            data-testid={`activity-${activity.id}`}
-                          >
-                            <Checkbox
-                              id={activity.id}
-                              checked={formData.selected_activities.includes(activity.id)}
-                              onCheckedChange={() => handleActivityToggle(activity.id)}
-                              data-testid={`activity-checkbox-${activity.id}`}
-                            />
-                            <label
-                              htmlFor={activity.id}
-                              className="flex-1 cursor-pointer select-none"
+                        {activities.map((activity) => {
+                          const isSelected = formData.selected_activities.includes(activity.id);
+                          const isSuggestedByAi = aiSuggestedIds.includes(activity.id);
+                          return (
+                            <div
+                              key={activity.id}
+                              className={`flex items-center gap-3 p-3 rounded-sm border transition-colors ${
+                                isSelected
+                                  ? 'border-primary bg-primary/5'
+                                  : isSuggestedByAi && showAiPanel
+                                    ? 'border-violet-300 bg-violet-50/50 dark:bg-violet-950/20'
+                                    : 'hover:bg-accent'
+                              }`}
+                              data-testid={`activity-${activity.id}`}
                             >
-                              <div className="flex items-center justify-between">
-                                <div>
-                                  <span className="font-mono text-xs text-primary bg-primary/10 px-1.5 py-0.5 rounded mr-2">
-                                    {activity.number}
-                                  </span>
-                                  <span className="font-medium text-sm">{activity.name}</span>
+                              <Checkbox
+                                id={activity.id}
+                                checked={isSelected}
+                                onCheckedChange={() => handleActivityToggle(activity.id)}
+                                data-testid={`activity-checkbox-${activity.id}`}
+                              />
+                              <label
+                                htmlFor={activity.id}
+                                className="flex-1 cursor-pointer select-none"
+                              >
+                                <div className="flex items-center justify-between gap-2">
+                                  <div className="flex items-center gap-2 min-w-0 flex-wrap">
+                                    <span className="font-mono text-xs text-primary bg-primary/10 px-1.5 py-0.5 rounded">
+                                      {activity.number}
+                                    </span>
+                                    <span className="font-medium text-sm">{activity.name}</span>
+                                    {isSuggestedByAi && showAiPanel && (
+                                      <Badge className="bg-violet-100 text-violet-700 text-[9px] px-1 py-0 border-violet-200">
+                                        <Sparkles className="h-2.5 w-2.5 mr-0.5" />IA
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <Badge variant="outline" className="shrink-0 font-mono text-xs">
+                                    {activity.time_seconds}s
+                                  </Badge>
                                 </div>
-                                <Badge variant="outline" className="ml-2 shrink-0">
-                                  {activity.time_seconds}s
-                                </Badge>
-                              </div>
-                            </label>
-                          </div>
-                        ))}
+                              </label>
+                            </div>
+                          );
+                        })}
                       </div>
                     </ScrollArea>
                   )}
@@ -669,16 +860,9 @@ export default function Configurator() {
           </Card>
         </div>
 
-        {/* AI Activity Configurator Panel */}
+        {/* Componentes del artículo */}
         {isEditing && (
           <div className="space-y-4">
-            <AIActivityConfigurator
-              article={currentArticle}
-              components={articleComponents}
-              currentSelectedIds={formData.selected_activities}
-              onApply={handleApplySuggestions}
-              onApplySimilarArticle={handleApplySimilarArticle}
-            />
             <ArticleComponentsPanel 
               articleCdeId={articleCdeId} 
               articleCode={!articleCdeId ? formData.code : undefined}
