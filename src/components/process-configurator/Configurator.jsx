@@ -85,9 +85,15 @@ export default function Configurator() {
   const [aiDetecting, setAiDetecting] = useState(false);
   const [aiResult, setAiResult] = useState(null);
   const [showAiPanel, setShowAiPanel] = useState(false);
+  // Catálogo de actividades de la BD (para mostrar sugerencias IA)
+  const [catalogActivities, setCatalogActivities] = useState([]);
 
   useEffect(() => {
     fetchData();
+    // Cargar catálogo BD para mostrar sugerencias IA
+    base44.entities.Activity.filter({ active: true })
+      .then(data => setCatalogActivities(Array.isArray(data) ? data : []))
+      .catch(() => {});
   }, [articleId]);
 
   const fetchData = async () => {
@@ -291,13 +297,25 @@ export default function Configurator() {
     }
   };
 
-  // Aceptar sugerencias IA → marcarlas como seleccionadas
+  // Aceptar sugerencias IA → guardar IDs BD en selected_activities y calcular tiempo
   const handleAcceptAiSuggestions = () => {
+    // Los IDs sugeridos son de la BD (Activity entity). Los guardamos directamente.
     const merged = [...new Set([...formData.selected_activities, ...aiSuggestedIds])];
     setFormData(prev => ({ ...prev, selected_activities: merged }));
-    calculateTime(merged);
+    // Calcular tiempo usando actividades del catálogo BD
+    const totalTime = aiSuggestedIds.reduce((sum, id) => {
+      const act = catalogActivities.find(a => a.id === id);
+      return sum + (act?.time_seconds || act?.interactions_per_minute ? (60 / (act?.interactions_per_minute || 1)) : 0);
+    }, 0);
+    setCalculatedTime(totalTime);
+    // Hidratar detalle para el panel resumen
+    const detail = merged.map(id => {
+      const act = catalogActivities.find(a => a.id === id);
+      return act ? { id: act.id, name: act.name, time_seconds: act.time_seconds || 0, number: act.priority || '' } : null;
+    }).filter(Boolean);
+    setSelectedActivitiesDetail(detail);
     setNeedsProcess(false);
-    // Guardar aprendizaje si hay diferencia
+    // Guardar aprendizaje
     if (currentArticle?.id && aiSuggestedIds.length > 0) {
       base44.functions.invoke("detectActivitySuggestions", {
         action: "save_correction",
@@ -706,27 +724,28 @@ export default function Configurator() {
                       </div>
                     )}
 
-                    {/* Lista de actividades sugeridas para revisar */}
-                    <div className="space-y-1 max-h-48 overflow-y-auto pr-1">
+                    {/* Lista de actividades sugeridas para revisar - usa catálogo BD */}
+                    <div className="space-y-1 max-h-52 overflow-y-auto pr-1">
                       {aiSuggestedIds.map((id, idx) => {
-                        const act = activities.find(a => a.id === id);
-                        if (!act) return null;
+                        const act = catalogActivities.find(a => a.id === id);
                         const alreadySelected = formData.selected_activities.includes(id);
                         return (
                           <div key={id} className="flex items-center justify-between px-3 py-2 bg-white dark:bg-slate-800 rounded border border-violet-100 text-xs">
                             <div className="flex items-center gap-2 min-w-0">
-                              <span className="text-muted-foreground shrink-0">{idx + 1}.</span>
+                              <span className="text-muted-foreground shrink-0 w-4">{idx + 1}.</span>
                               <div className="min-w-0">
-                                <span className="font-medium">{act.name}</span>
-                                <div className="flex items-center gap-2 mt-0.5 text-muted-foreground">
-                                  {act.type && <span className="text-[10px]">{act.type}</span>}
-                                  {act.time_seconds && <span className="font-mono text-[10px]">{act.time_seconds}s</span>}
-                                  {act.interactions_per_minute && <span className="text-[10px]">{act.interactions_per_minute} uds/min</span>}
-                                </div>
+                                <span className="font-medium">{act ? act.name : <span className="text-muted-foreground italic">Actividad desconocida</span>}</span>
+                                {act && (
+                                  <div className="flex items-center gap-2 mt-0.5 text-muted-foreground">
+                                    {act.type && <span className="text-[10px] px-1 rounded border bg-muted">{act.type}</span>}
+                                    {act.interactions_per_minute && <span className="text-[10px]">{act.interactions_per_minute} uds/min</span>}
+                                    {act.time_seconds && <span className="font-mono text-[10px]">{Number(act.time_seconds).toFixed(1)}s/ud</span>}
+                                  </div>
+                                )}
                               </div>
                             </div>
                             {alreadySelected && (
-                              <Badge className="bg-green-100 text-green-700 text-[10px] px-1.5 shrink-0 ml-2">Ya seleccionada</Badge>
+                              <Badge className="bg-green-100 text-green-700 text-[10px] px-1.5 shrink-0 ml-2">Ya aplicada</Badge>
                             )}
                           </div>
                         );
@@ -797,27 +816,21 @@ export default function Configurator() {
                   </div>
                   
                   {activities.length === 0 ? (
-                    <div className="empty-state py-8 border-2 border-dashed rounded-lg text-center">
-                      <AlertCircle className="h-12 w-12 text-muted-foreground/50 mx-auto mb-3" />
-                      <p className="text-muted-foreground">
-                        No hay actividades cargadas. Sube un archivo Excel primero.
-                      </p>
+                    <div className="py-6 text-center text-sm text-muted-foreground border-2 border-dashed rounded-lg">
+                      <AlertCircle className="h-10 w-10 text-muted-foreground/40 mx-auto mb-2" />
+                      <p>No hay actividades Excel cargadas.</p>
+                      <p className="text-xs mt-1">Sube un archivo Excel en <strong>Datos Excel</strong> o usa las actividades del catálogo mediante <strong>Sugerir con IA</strong>.</p>
                     </div>
                   ) : (
                     <ScrollArea className="h-[400px] border rounded-md p-4">
                       <div className="space-y-2">
                         {activities.map((activity) => {
                           const isSelected = formData.selected_activities.includes(activity.id);
-                          const isSuggestedByAi = aiSuggestedIds.includes(activity.id);
                           return (
                             <div
                               key={activity.id}
                               className={`flex items-center gap-3 p-3 rounded-sm border transition-colors ${
-                                isSelected
-                                  ? 'border-primary bg-primary/5'
-                                  : isSuggestedByAi && showAiPanel
-                                    ? 'border-violet-300 bg-violet-50/50 dark:bg-violet-950/20'
-                                    : 'hover:bg-accent'
+                                isSelected ? 'border-primary bg-primary/5' : 'hover:bg-accent'
                               }`}
                               data-testid={`activity-${activity.id}`}
                             >
@@ -827,21 +840,13 @@ export default function Configurator() {
                                 onCheckedChange={() => handleActivityToggle(activity.id)}
                                 data-testid={`activity-checkbox-${activity.id}`}
                               />
-                              <label
-                                htmlFor={activity.id}
-                                className="flex-1 cursor-pointer select-none"
-                              >
+                              <label htmlFor={activity.id} className="flex-1 cursor-pointer select-none">
                                 <div className="flex items-center justify-between gap-2">
-                                  <div className="flex items-center gap-2 min-w-0 flex-wrap">
+                                  <div className="flex items-center gap-2 min-w-0">
                                     <span className="font-mono text-xs text-primary bg-primary/10 px-1.5 py-0.5 rounded">
                                       {activity.number}
                                     </span>
                                     <span className="font-medium text-sm">{activity.name}</span>
-                                    {isSuggestedByAi && showAiPanel && (
-                                      <Badge className="bg-violet-100 text-violet-700 text-[9px] px-1 py-0 border-violet-200">
-                                        <Sparkles className="h-2.5 w-2.5 mr-0.5" />IA
-                                      </Badge>
-                                    )}
                                   </div>
                                   <Badge variant="outline" className="shrink-0 font-mono text-xs">
                                     {activity.time_seconds}s
