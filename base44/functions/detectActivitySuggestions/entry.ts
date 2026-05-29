@@ -14,11 +14,11 @@ Deno.serve(async (req) => {
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await req.json();
-    const { article_id, article_code, article_name, article_type, action } = body;
+    const { article_id, article_code, article_name, article_type, action, learning_instructions } = body;
 
     // === ACCIÓN: salvar corrección manual para aprendizaje ===
     if (action === 'save_correction') {
-      const { suggested_activities, final_activities, components_snapshot, process_code, total_time_seconds } = body;
+      const { suggested_activities, final_activities, components_snapshot, process_code, total_time_seconds, learning_instructions: correctionInstructions } = body;
       
       const corrections = [];
       const suggestedSet = new Set(suggested_activities || []);
@@ -34,16 +34,19 @@ Deno.serve(async (req) => {
       // Buscar log existente para este artículo
       const existing = await base44.asServiceRole.entities.ProcessLearningLog.filter({ article_id });
       
+      const updatePayload = {
+        final_activities,
+        corrections_made: corrections,
+        process_code,
+        total_time_seconds,
+        reviewed_by: user.email,
+        review_date: new Date().toISOString(),
+        status: 'reviewed'
+      };
+      if (correctionInstructions) updatePayload.learning_notes = correctionInstructions;
+
       if (existing?.length > 0) {
-        await base44.asServiceRole.entities.ProcessLearningLog.update(existing[0].id, {
-          final_activities,
-          corrections_made: corrections,
-          process_code,
-          total_time_seconds,
-          reviewed_by: user.email,
-          review_date: new Date().toISOString(),
-          status: 'reviewed'
-        });
+        await base44.asServiceRole.entities.ProcessLearningLog.update(existing[0].id, updatePayload);
       } else {
         await base44.asServiceRole.entities.ProcessLearningLog.create({
           article_id,
@@ -59,7 +62,8 @@ Deno.serve(async (req) => {
           reviewed_by: user.email,
           review_date: new Date().toISOString(),
           status: 'reviewed',
-          confidence_score: 1.0
+          confidence_score: 1.0,
+          learning_notes: correctionInstructions || ''
         });
       }
 
@@ -142,6 +146,11 @@ Deno.serve(async (req) => {
       `"${a.name}" (${a.type}): actividades [${(a.selected_activities||[]).join(',')}]`
     ).join('\n');
 
+    // Cargar instrucciones de aprendizaje previas guardadas para este artículo
+    const prevLog = (await base44.asServiceRole.entities.ProcessLearningLog.filter({ article_id })) || [];
+    const prevNotes = prevLog.length > 0 && prevLog[0].learning_notes ? prevLog[0].learning_notes : null;
+    const combinedInstructions = [prevNotes, learning_instructions].filter(Boolean).join('\n');
+
     const aiPrompt = `Eres un experto en procesos de fabricación y envasado industrial. 
     
 Artículo a analizar:
@@ -160,6 +169,7 @@ ${similarExamples || 'Sin ejemplos previos'}
 
 Artículos del mismo tipo ya configurados:
 ${similarByType || 'Ninguno'}
+${combinedInstructions ? `\nINSTRUCCIONES ADICIONALES DEL OPERARIO (MUY IMPORTANTE, tener en cuenta):\n${combinedInstructions}` : ''}
 
 TAREA: Basándote en los componentes del artículo, determina qué actividades son necesarias para su proceso de envasado/acondicionamiento. 
 
@@ -170,6 +180,7 @@ REGLAS:
 4. Si hay ENVASE (frasco, bote, tubo) → necesita: alimentar envases vacíos, llenado
 5. Si hay CAJA → necesita: caja grupo primaria, caja grupo secundaria, etiqueta de caja
 6. Siempre incluir: loteado y etiqueta de palé si hay caja
+7. Si hay REJILLA, SEPARADOR, ALVÉOLO o BANDEJA → necesita: montar rejilla/separador en caja
 
 Responde SOLO con JSON válido:
 {

@@ -99,6 +99,10 @@
         "auto_applied"
       ],
       "default": "pending_review"
+    },
+    "learning_notes": {
+      "type": "string",
+      "description": "Instrucciones adicionales del operario para que la IA las tenga en cuenta en futuros an\u00e1lisis"
     }
   },
   "required": [

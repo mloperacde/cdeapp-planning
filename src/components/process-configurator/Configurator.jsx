@@ -36,7 +36,13 @@ import {
   Loader2,
   TrendingUp,
   X,
-  Info
+  Info,
+  Plus,
+  Minus,
+  MessageSquarePlus,
+  Search,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
 
 export default function Configurator() {
@@ -82,9 +88,14 @@ export default function Configurator() {
 
   // Estado para sugerencias IA en el panel de actividades
   const [aiSuggestedIds, setAiSuggestedIds] = useState([]);
+  const [aiEditedIds, setAiEditedIds] = useState([]); // edición interactiva antes de aceptar
   const [aiDetecting, setAiDetecting] = useState(false);
   const [aiResult, setAiResult] = useState(null);
   const [showAiPanel, setShowAiPanel] = useState(false);
+  const [learningInstructions, setLearningInstructions] = useState("");
+  const [showLearningInput, setShowLearningInput] = useState(false);
+  const [showCatalogSearch, setShowCatalogSearch] = useState(false);
+  const [catalogSearch, setCatalogSearch] = useState("");
   // Catálogo de actividades de la BD (para mostrar sugerencias IA)
   const [catalogActivities, setCatalogActivities] = useState([]);
 
@@ -282,12 +293,14 @@ export default function Configurator() {
         article_name: formData.name,
         article_type: formData.type,
         article_cde_id: currentArticle.cde_id,
-        components: articleComponents
+        components: articleComponents,
+        learning_instructions: learningInstructions || undefined
       });
       const data = res.data;
       setAiResult(data);
       const suggested = data?.suggested_activity_ids || [];
       setAiSuggestedIds(suggested);
+      setAiEditedIds([...suggested]); // copia editable
       setShowAiPanel(true);
       toast.success(`IA: ${suggested.length} actividades sugeridas`);
     } catch (err) {
@@ -297,15 +310,22 @@ export default function Configurator() {
     }
   };
 
-  // Aceptar sugerencias IA → guardar IDs BD en selected_activities y calcular tiempo
+  // Toggle de una actividad en la lista editable del panel IA
+  const handleAiEditToggle = (actId) => {
+    setAiEditedIds(prev =>
+      prev.includes(actId) ? prev.filter(id => id !== actId) : [...prev, actId]
+    );
+  };
+
+  // Aceptar sugerencias IA (posiblemente editadas) → guardar en selected_activities
   const handleAcceptAiSuggestions = () => {
-    // Los IDs sugeridos son de la BD (Activity entity). Los guardamos directamente.
-    const merged = [...new Set([...formData.selected_activities, ...aiSuggestedIds])];
+    const finalIds = aiEditedIds; // usa la lista editada por el usuario
+    const merged = [...new Set([...formData.selected_activities, ...finalIds])];
     setFormData(prev => ({ ...prev, selected_activities: merged }));
     // Calcular tiempo usando actividades del catálogo BD
-    const totalTime = aiSuggestedIds.reduce((sum, id) => {
+    const totalTime = merged.reduce((sum, id) => {
       const act = catalogActivities.find(a => a.id === id);
-      return sum + (act?.time_seconds || act?.interactions_per_minute ? (60 / (act?.interactions_per_minute || 1)) : 0);
+      return sum + (act?.time_seconds || (act?.interactions_per_minute ? 60 / act.interactions_per_minute : 0));
     }, 0);
     setCalculatedTime(totalTime);
     // Hidratar detalle para el panel resumen
@@ -315,8 +335,8 @@ export default function Configurator() {
     }).filter(Boolean);
     setSelectedActivitiesDetail(detail);
     setNeedsProcess(false);
-    // Guardar aprendizaje
-    if (currentArticle?.id && aiSuggestedIds.length > 0) {
+    // Guardar aprendizaje con correcciones e instrucciones
+    if (currentArticle?.id) {
       base44.functions.invoke("detectActivitySuggestions", {
         action: "save_correction",
         article_id: currentArticle.id,
@@ -325,11 +345,16 @@ export default function Configurator() {
         article_type: formData.type,
         suggested_activities: aiSuggestedIds,
         final_activities: merged,
-        components_snapshot: articleComponents || []
+        components_snapshot: articleComponents || [],
+        learning_instructions: learningInstructions || undefined
       }).catch(e => console.warn("Learning log save failed:", e));
     }
     setShowAiPanel(false);
-    toast.success(`${aiSuggestedIds.length} actividades sugeridas aplicadas`);
+    setShowLearningInput(false);
+    setShowCatalogSearch(false);
+    const added = finalIds.filter(id => !aiSuggestedIds.includes(id)).length;
+    const removed = aiSuggestedIds.filter(id => !finalIds.includes(id)).length;
+    toast.success(`${finalIds.length} actividades aplicadas${added || removed ? ` (${added ? `+${added}` : ''}${removed ? ` -${removed}` : ''} vs. IA)` : ''}`);
   };
 
   // Aplicar sugerencias de la IA (desde AIActivityConfigurator - panel lateral)
@@ -686,11 +711,17 @@ export default function Configurator() {
                 {/* Panel de sugerencias IA - aparece después del análisis */}
                 {showAiPanel && aiSuggestedIds.length > 0 && (
                   <div className="border border-violet-200 rounded-lg bg-violet-50/60 dark:bg-violet-950/20 p-4 space-y-3">
+                    {/* Cabecera */}
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <Sparkles className="h-4 w-4 text-violet-600" />
                         <span className="text-sm font-semibold text-violet-800 dark:text-violet-300">
-                          Sugerencias de la IA — {aiSuggestedIds.length} actividades detectadas
+                          Sugerencias IA — {aiEditedIds.length} actividades
+                          {aiEditedIds.length !== aiSuggestedIds.length && (
+                            <span className="text-violet-500 font-normal ml-1">
+                              (modificadas desde {aiSuggestedIds.length})
+                            </span>
+                          )}
                         </span>
                         {aiResult?.confidence && (
                           <Badge className={`text-[10px] px-1.5 ${
@@ -702,7 +733,7 @@ export default function Configurator() {
                           </Badge>
                         )}
                       </div>
-                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground" onClick={() => setShowAiPanel(false)}>
+                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground" onClick={() => { setShowAiPanel(false); setShowLearningInput(false); setShowCatalogSearch(false); }}>
                         <X className="h-3.5 w-3.5" />
                       </Button>
                     </div>
@@ -724,48 +755,149 @@ export default function Configurator() {
                       </div>
                     )}
 
-                    {/* Lista de actividades sugeridas para revisar - usa catálogo BD */}
+                    {/* Lista editable de actividades sugeridas */}
                     <div className="space-y-1 max-h-52 overflow-y-auto pr-1">
-                      {aiSuggestedIds.map((id, idx) => {
+                      {aiEditedIds.map((id, idx) => {
                         const act = catalogActivities.find(a => a.id === id);
-                        const alreadySelected = formData.selected_activities.includes(id);
+                        const wasOriginal = aiSuggestedIds.includes(id);
                         return (
-                          <div key={id} className="flex items-center justify-between px-3 py-2 bg-white dark:bg-slate-800 rounded border border-violet-100 text-xs">
+                          <div key={id} className={`flex items-center justify-between px-2 py-1.5 rounded border text-xs ${
+                            wasOriginal ? 'bg-white dark:bg-slate-800 border-violet-100' : 'bg-green-50 dark:bg-green-950/20 border-green-200'
+                          }`}>
                             <div className="flex items-center gap-2 min-w-0">
                               <span className="text-muted-foreground shrink-0 w-4">{idx + 1}.</span>
                               <div className="min-w-0">
-                                <span className="font-medium">{act ? act.name : <span className="text-muted-foreground italic">Actividad desconocida</span>}</span>
+                                <span className="font-medium">{act ? act.name : <span className="text-muted-foreground italic">ID: {id.slice(-6)}</span>}</span>
                                 {act && (
                                   <div className="flex items-center gap-2 mt-0.5 text-muted-foreground">
                                     {act.type && <span className="text-[10px] px-1 rounded border bg-muted">{act.type}</span>}
                                     {act.interactions_per_minute && <span className="text-[10px]">{act.interactions_per_minute} uds/min</span>}
-                                    {act.time_seconds && <span className="font-mono text-[10px]">{Number(act.time_seconds).toFixed(1)}s/ud</span>}
                                   </div>
                                 )}
                               </div>
                             </div>
-                            {alreadySelected && (
-                              <Badge className="bg-green-100 text-green-700 text-[10px] px-1.5 shrink-0 ml-2">Ya aplicada</Badge>
-                            )}
+                            <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                              {!wasOriginal && <Badge className="bg-green-100 text-green-700 text-[10px] px-1.5">Añadida</Badge>}
+                              <button
+                                onClick={() => handleAiEditToggle(id)}
+                                className="h-5 w-5 flex items-center justify-center rounded text-red-400 hover:bg-red-50 hover:text-red-600 transition-colors"
+                                title="Quitar esta actividad"
+                              >
+                                <Minus className="h-3 w-3" />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                      {/* Actividades sugeridas que el usuario ha quitado */}
+                      {aiSuggestedIds.filter(id => !aiEditedIds.includes(id)).map(id => {
+                        const act = catalogActivities.find(a => a.id === id);
+                        return (
+                          <div key={`removed-${id}`} className="flex items-center justify-between px-2 py-1.5 rounded border text-xs bg-slate-50 dark:bg-slate-900/30 border-slate-200 opacity-60">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <Minus className="h-3 w-3 text-red-400 shrink-0" />
+                              <span className="line-through text-muted-foreground">{act ? act.name : id.slice(-6)}</span>
+                            </div>
+                            <button
+                              onClick={() => handleAiEditToggle(id)}
+                              className="h-5 w-5 flex items-center justify-center rounded text-green-500 hover:bg-green-50 hover:text-green-700 transition-colors"
+                              title="Restaurar esta actividad"
+                            >
+                              <Plus className="h-3 w-3" />
+                            </button>
                           </div>
                         );
                       })}
                     </div>
 
+                    {/* Añadir actividad del catálogo */}
+                    <div>
+                      <button
+                        onClick={() => setShowCatalogSearch(s => !s)}
+                        className="flex items-center gap-1.5 text-xs text-violet-700 hover:text-violet-900 font-medium"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        Añadir actividad del catálogo
+                        {showCatalogSearch ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                      </button>
+                      {showCatalogSearch && (
+                        <div className="mt-2 space-y-1.5">
+                          <div className="relative">
+                            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                            <input
+                              className="w-full text-xs pl-6 pr-2 py-1.5 rounded border border-slate-200 bg-white dark:bg-slate-800 focus:outline-none focus:ring-1 focus:ring-violet-400"
+                              placeholder="Buscar actividad..."
+                              value={catalogSearch}
+                              onChange={e => setCatalogSearch(e.target.value)}
+                              autoFocus
+                            />
+                          </div>
+                          <div className="max-h-36 overflow-y-auto space-y-0.5">
+                            {catalogActivities
+                              .filter(a => !aiEditedIds.includes(a.id) && a.name.toLowerCase().includes(catalogSearch.toLowerCase()))
+                              .slice(0, 12)
+                              .map(act => (
+                                <button
+                                  key={act.id}
+                                  onClick={() => { setAiEditedIds(prev => [...prev, act.id]); setCatalogSearch(""); }}
+                                  className="w-full text-left px-2 py-1.5 text-xs rounded hover:bg-violet-100 dark:hover:bg-violet-900/30 flex items-center justify-between gap-2"
+                                >
+                                  <span className="font-medium">{act.name}</span>
+                                  <span className="text-muted-foreground text-[10px] shrink-0">{act.type}</span>
+                                </button>
+                              ))
+                            }
+                            {catalogActivities.filter(a => !aiEditedIds.includes(a.id) && a.name.toLowerCase().includes(catalogSearch.toLowerCase())).length === 0 && (
+                              <p className="text-xs text-muted-foreground text-center py-2">Sin resultados</p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Instrucciones de aprendizaje */}
+                    <div className="border-t border-violet-200 pt-3">
+                      <button
+                        onClick={() => setShowLearningInput(s => !s)}
+                        className="flex items-center gap-1.5 text-xs text-amber-700 hover:text-amber-900 font-medium"
+                      >
+                        <MessageSquarePlus className="h-3.5 w-3.5" />
+                        Enseñar algo a la IA sobre este artículo
+                        {showLearningInput ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                      </button>
+                      {showLearningInput && (
+                        <div className="mt-2 space-y-1.5">
+                          <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">
+                            Describe aquí aspectos específicos que la IA no tiene en cuenta. Ej: "lleva una rejilla separadora que hay que montar e insertar en la caja". Se guardará y se usará en próximos análisis.
+                          </p>
+                          <textarea
+                            className="w-full text-xs px-2 py-1.5 rounded border border-amber-200 bg-white dark:bg-slate-800 focus:outline-none focus:ring-1 focus:ring-amber-400 resize-none"
+                            rows={3}
+                            placeholder="Ej: Este artículo lleva una rejilla separadora que requiere ser montada e insertada en la caja antes del sellado..."
+                            value={learningInstructions}
+                            onChange={e => setLearningInstructions(e.target.value)}
+                          />
+                          <p className="text-[10px] text-muted-foreground">Se guardará al aceptar las sugerencias y mejorará los próximos análisis de este artículo.</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Botones de acción */}
                     <div className="flex gap-2 pt-1">
                       <Button
                         size="sm"
                         className="flex-1 bg-violet-600 hover:bg-violet-700 text-white gap-2"
                         onClick={handleAcceptAiSuggestions}
+                        disabled={aiEditedIds.length === 0}
                       >
                         <CheckCircle2 className="h-4 w-4" />
-                        Aceptar y aplicar sugerencias
+                        Aplicar {aiEditedIds.length} actividades
                       </Button>
                       <Button
                         size="sm"
                         variant="outline"
                         className="border-slate-300 text-slate-600"
-                        onClick={() => setShowAiPanel(false)}
+                        onClick={() => { setShowAiPanel(false); setShowLearningInput(false); setShowCatalogSearch(false); }}
                       >
                         Descartar
                       </Button>
