@@ -1,0 +1,72 @@
+{
+  "name": "MachineStatus",
+  "type": "object",
+  "properties": {
+    "machine_id": {
+      "type": "string",
+      "description": "ID de la m\u00e1quina"
+    },
+    "estado_disponibilidad": {
+      "type": "string",
+      "enum": [
+        "Disponible",
+        "No disponible"
+      ],
+      "default": "Disponible",
+      "description": "Estado de disponibilidad (vol\u00e1til, no se guarda en maestro)"
+    },
+    "estado_produccion": {
+      "type": "string",
+      "enum": [
+        "Sin orden",
+        "Orden nueva",
+        "Orden en curso"
+      ],
+      "default": "Sin orden",
+      "description": "Estado de producci\u00f3n (vol\u00e1til, no se guarda en maestro)"
+    },
+    "notas_estado": {
+      "type": "string",
+      "description": "Notas sobre el estado actual"
+    },
+    "fecha_actualizacion": {
+      "type": "string",
+      "format": "date-time",
+      "description": "\u00daltima actualizaci\u00f3n del estado"
+    },
+    "articulo_en_curso": {
+      "type": "string",
+      "description": "ID del art\u00edculo que se est\u00e1 fabricando actualmente"
+    },
+    "lotes_producidos": {
+      "type": "number",
+      "default": 0,
+      "description": "N\u00famero de lotes producidos en la orden actual"
+    },
+    "tiempo_ciclo_actual": {
+      "type": "number",
+      "description": "Tiempo de ciclo actual en minutos"
+    },
+    "tiempo_ciclo_estandar": {
+      "type": "number",
+      "description": "Tiempo de ciclo est\u00e1ndar esperado en minutos"
+    },
+    "hora_inicio_produccion": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Hora de inicio de la producci\u00f3n actual"
+    },
+    "alerta_desviacion": {
+      "type": "boolean",
+      "default": false,
+      "description": "Si hay alerta por desviaci\u00f3n de producci\u00f3n"
+    },
+    "motivo_desviacion": {
+      "type": "string",
+      "description": "Motivo de la desviaci\u00f3n detectada"
+    }
+  },
+  "required": [
+    "machine_id"
+  ]
+}

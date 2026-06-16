@@ -1,0 +1,253 @@
+{
+  "name": "User",
+  "type": "object",
+  "properties": {
+    "employee_id": {
+      "type": "string",
+      "description": "ID del empleado vinculado"
+    },
+    "role": {
+      "type": "string",
+      "enum": [
+        "Admin",
+        "Supervisor",
+        "Operario",
+        "T\u00e9cnico",
+        "Jefe Turno Produccion"
+      ],
+      "default": "Operario",
+      "description": "Rol del usuario en el sistema"
+    },
+    "permisos": {
+      "type": "object",
+      "description": "Permisos espec\u00edficos del usuario",
+      "properties": {
+        "ver_dashboard": {
+          "type": "boolean",
+          "default": true
+        },
+        "ver_empleados": {
+          "type": "boolean",
+          "default": true
+        },
+        "editar_empleados": {
+          "type": "boolean",
+          "default": false
+        },
+        "eliminar_empleados": {
+          "type": "boolean",
+          "default": false
+        },
+        "ver_maquinas": {
+          "type": "boolean",
+          "default": true
+        },
+        "editar_maquinas": {
+          "type": "boolean",
+          "default": false
+        },
+        "ver_planificacion": {
+          "type": "boolean",
+          "default": true
+        },
+        "editar_planificacion": {
+          "type": "boolean",
+          "default": false
+        },
+        "ver_mantenimiento": {
+          "type": "boolean",
+          "default": true
+        },
+        "editar_mantenimiento": {
+          "type": "boolean",
+          "default": false
+        },
+        "ver_ausencias": {
+          "type": "boolean",
+          "default": true
+        },
+        "editar_ausencias": {
+          "type": "boolean",
+          "default": false
+        },
+        "ver_reportes": {
+          "type": "boolean",
+          "default": true
+        },
+        "exportar_reportes": {
+          "type": "boolean",
+          "default": false
+        },
+        "configurar_sistema": {
+          "type": "boolean",
+          "default": false
+        },
+        "gestionar_usuarios": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "module_permissions": {
+      "type": "object",
+      "description": "Permisos granulares para m\u00f3dulos internos dentro de las p\u00e1ginas",
+      "properties": {
+        "Dashboard": {
+          "type": "object",
+          "properties": {
+            "viewMetrics": {
+              "type": "boolean",
+              "default": true
+            },
+            "viewTrends": {
+              "type": "boolean",
+              "default": true
+            },
+            "viewAlerts": {
+              "type": "boolean",
+              "default": true
+            },
+            "exportData": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        },
+        "ShiftPlanning": {
+          "type": "object",
+          "properties": {
+            "viewSchedule": {
+              "type": "boolean",
+              "default": true
+            },
+            "editSchedule": {
+              "type": "boolean",
+              "default": false
+            },
+            "assignOperators": {
+              "type": "boolean",
+              "default": false
+            },
+            "viewCosts": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        },
+        "MachineDailyPlanning": {
+          "type": "object",
+          "properties": {
+            "viewPlanning": {
+              "type": "boolean",
+              "default": true
+            },
+            "editPlanning": {
+              "type": "boolean",
+              "default": false
+            },
+            "viewMachineStatus": {
+              "type": "boolean",
+              "default": true
+            },
+            "editMachineStatus": {
+              "type": "boolean",
+              "default": false
+            },
+            "assignOperators": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        },
+        "AbsenceManagement": {
+          "type": "object",
+          "properties": {
+            "viewOwnAbsences": {
+              "type": "boolean",
+              "default": true
+            },
+            "createAbsences": {
+              "type": "boolean",
+              "default": true
+            },
+            "viewAllAbsences": {
+              "type": "boolean",
+              "default": false
+            },
+            "approveAbsences": {
+              "type": "boolean",
+              "default": false
+            },
+            "deleteAbsences": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        },
+        "MachineManagement": {
+          "type": "object",
+          "properties": {
+            "viewMachines": {
+              "type": "boolean",
+              "default": true
+            },
+            "editMachines": {
+              "type": "boolean",
+              "default": false
+            },
+            "viewMaintenance": {
+              "type": "boolean",
+              "default": true
+            },
+            "scheduleMaintenance": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        },
+        "Reports": {
+          "type": "object",
+          "properties": {
+            "viewBasicReports": {
+              "type": "boolean",
+              "default": true
+            },
+            "viewAdvancedReports": {
+              "type": "boolean",
+              "default": false
+            },
+            "exportReports": {
+              "type": "boolean",
+              "default": false
+            },
+            "viewFinancialData": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        }
+      }
+    },
+    "telefono_movil": {
+      "type": "string",
+      "description": "Tel\u00e9fono m\u00f3vil para autenticaci\u00f3n"
+    },
+    "codigo_acceso": {
+      "type": "string",
+      "description": "C\u00f3digo de acceso temporal para la app m\u00f3vil"
+    },
+    "codigo_expiracion": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Fecha de expiraci\u00f3n del c\u00f3digo"
+    },
+    "ultimo_acceso": {
+      "type": "string",
+      "format": "date-time",
+      "description": "\u00daltima vez que accedi\u00f3 al sistema"
+    }
+  },
+  "required": [
+    "role"
+  ]
+}

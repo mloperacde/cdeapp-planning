@@ -1,0 +1,68 @@
+{
+  "name": "InterventionConfig",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Nombre de la intervenci\u00f3n (ej: 'Limpieza mayor', 'Cambio de formato A\u2192B', 'Verificaci\u00f3n inicio')"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "Mec\u00e1nico",
+        "Calidad",
+        "Supply",
+        "Almac\u00e9n",
+        "Otros"
+      ],
+      "description": "Tipo/departamento responsable de la intervenci\u00f3n"
+    },
+    "duration_minutes": {
+      "type": "number",
+      "description": "Duraci\u00f3n de la intervenci\u00f3n en minutos"
+    },
+    "description": {
+      "type": "string",
+      "description": "Descripci\u00f3n detallada de las tareas a realizar"
+    },
+    "applies_to_machine_type": {
+      "type": "string",
+      "description": "Tipo de m\u00e1quina al que aplica (Sobres, Frascos, etc.) o vac\u00edo si aplica a todas"
+    },
+    "trigger_condition": {
+      "type": "string",
+      "enum": [
+        "Siempre",
+        "Cambio de producto",
+        "Cambio de formato",
+        "Cambio de cliente"
+      ],
+      "default": "Siempre",
+      "description": "Condici\u00f3n que dispara esta intervenci\u00f3n"
+    },
+    "order": {
+      "type": "number",
+      "default": 1,
+      "description": "Orden de ejecuci\u00f3n respecto a otras intervenciones simult\u00e1neas"
+    },
+    "active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Indica si esta configuraci\u00f3n de intervenci\u00f3n est\u00e1 activa"
+    },
+    "required_personnel": {
+      "type": "number",
+      "default": 1,
+      "description": "N\u00famero de personas requeridas para esta intervenci\u00f3n"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Notas adicionales o instrucciones especiales"
+    }
+  },
+  "required": [
+    "name",
+    "type",
+    "duration_minutes"
+  ]
+}

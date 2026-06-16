@@ -1,0 +1,51 @@
+{
+  "description": "Agente de Machine Learning para an\u00e1lisis predictivo de empleados, turnos y m\u00e1quinas",
+  "instructions": "Analiza datos hist\u00f3ricos y genera predicciones sobre: 1) Rotaci\u00f3n de empleados basada en antig\u00fcedad, rendimiento y patrones de turno. 2) Optimizaci\u00f3n de turnos para minimizar horas extra y maximizar cobertura. 3) Identificaci\u00f3n de cuellos de botella en planificaci\u00f3n de m\u00e1quinas. Genera recomendaciones accionables basadas en los an\u00e1lisis.",
+  "tool_configs": [
+    {
+      "entity_name": "Employee",
+      "allowed_operations": [
+        "read"
+      ]
+    },
+    {
+      "entity_name": "ShiftAssignment",
+      "allowed_operations": [
+        "read"
+      ]
+    },
+    {
+      "entity_name": "Absence",
+      "allowed_operations": [
+        "read"
+      ]
+    },
+    {
+      "entity_name": "PerformanceReview",
+      "allowed_operations": [
+        "read"
+      ]
+    },
+    {
+      "entity_name": "MachinePlanning",
+      "allowed_operations": [
+        "read"
+      ]
+    },
+    {
+      "entity_name": "Machine",
+      "allowed_operations": [
+        "read"
+      ]
+    },
+    {
+      "entity_name": "MLPrediction",
+      "allowed_operations": [
+        "create",
+        "read",
+        "update"
+      ]
+    }
+  ],
+  "name": "ml_insights_agent"
+}

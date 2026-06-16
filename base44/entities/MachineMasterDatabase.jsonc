@@ -1,0 +1,284 @@
+{
+  "name": "MachineMasterDatabase",
+  "type": "object",
+  "properties": {
+    "codigo_maquina": {
+      "type": "string",
+      "description": "C\u00f3digo \u00fanico identificador de la m\u00e1quina"
+    },
+    "nombre": {
+      "type": "string",
+      "description": "Nombre de la m\u00e1quina"
+    },
+    "area_id": {
+      "type": "string",
+      "description": "ID del \u00e1rea de fabricaci\u00f3n"
+    },
+    "area_name": {
+      "type": "string",
+      "description": "Nombre del \u00e1rea de fabricaci\u00f3n"
+    },
+    "room_id": {
+      "type": "string",
+      "description": "ID de la sala donde est\u00e1 ubicada"
+    },
+    "room_name": {
+      "type": "string",
+      "description": "Nombre de la sala donde est\u00e1 ubicada"
+    },
+    "marca": {
+      "type": "string",
+      "description": "Marca de la m\u00e1quina"
+    },
+    "modelo": {
+      "type": "string",
+      "description": "Modelo de la m\u00e1quina"
+    },
+    "numero_serie": {
+      "type": "string",
+      "description": "N\u00famero de serie"
+    },
+    "fecha_compra": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha de compra"
+    },
+    "tipo": {
+      "type": "string",
+      "enum": [
+        "Sobres",
+        "Frascos",
+        "Etiquetado",
+        "Embalaje",
+        "Control Calidad",
+        "Otro"
+      ],
+      "description": "Tipo de m\u00e1quina"
+    },
+    "ubicacion": {
+      "type": "string",
+      "description": "Ubicaci\u00f3n f\u00edsica de la m\u00e1quina"
+    },
+    "descripcion": {
+      "type": "string",
+      "description": "Descripci\u00f3n adicional"
+    },
+    "orden_visualizacion": {
+      "type": "number",
+      "description": "Orden de visualizaci\u00f3n en listados"
+    },
+    "estado_operativo": {
+      "type": "string",
+      "enum": [
+        "Operativa",
+        "Mantenimiento",
+        "Fuera de servicio",
+        "Retirada"
+      ],
+      "default": "Operativa",
+      "description": "Estado operativo de la m\u00e1quina"
+    },
+    "parametros_sobres": {
+      "type": "object",
+      "properties": {
+        "ancho_paso_minimo": {
+          "type": "number",
+          "description": "Ancho de paso m\u00ednimo (mm)"
+        },
+        "ancho_paso_maximo": {
+          "type": "number",
+          "description": "Ancho de paso m\u00e1ximo (mm)"
+        },
+        "dosis_minima": {
+          "type": "number",
+          "description": "Dosis m\u00ednima"
+        },
+        "dosis_maxima": {
+          "type": "number",
+          "description": "Dosis m\u00e1xima"
+        },
+        "cargador": {
+          "type": "boolean",
+          "default": false,
+          "description": "\u00bfTiene cargador?"
+        }
+      },
+      "description": "Par\u00e1metros espec\u00edficos para m\u00e1quinas de sobres"
+    },
+    "parametros_frascos": {
+      "type": "object",
+      "properties": {
+        "dosis_minima": {
+          "type": "number",
+          "description": "Dosis m\u00ednima"
+        },
+        "dosis_maxima": {
+          "type": "number",
+          "description": "Dosis m\u00e1xima"
+        },
+        "roscado": {
+          "type": "boolean",
+          "default": false,
+          "description": "\u00bfTiene roscado?"
+        },
+        "grafado": {
+          "type": "boolean",
+          "default": false,
+          "description": "\u00bfTiene grafado?"
+        }
+      },
+      "description": "Par\u00e1metros espec\u00edficos para m\u00e1quinas de frascos"
+    },
+    "procesos_configurados": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "process_id": {
+            "type": "string",
+            "description": "ID del proceso"
+          },
+          "nombre_proceso": {
+            "type": "string",
+            "description": "Nombre del proceso"
+          },
+          "codigo_proceso": {
+            "type": "string",
+            "description": "C\u00f3digo del proceso"
+          },
+          "operadores_requeridos": {
+            "type": "number",
+            "default": 1,
+            "description": "Operadores necesarios para este proceso"
+          },
+          "orden": {
+            "type": "number",
+            "default": 0,
+            "description": "Orden de visualizaci\u00f3n"
+          },
+          "activo": {
+            "type": "boolean",
+            "default": true,
+            "description": "Si est\u00e1 activo"
+          }
+        }
+      },
+      "description": "Lista de procesos configurados para esta m\u00e1quina"
+    },
+    "articulos_fabricables": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "IDs de art\u00edculos que puede fabricar"
+    },
+    "programa_mantenimiento": {
+      "type": "string",
+      "description": "Programa de mantenimiento que aplica"
+    },
+    "ultimo_mantenimiento": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha del \u00faltimo mantenimiento realizado"
+    },
+    "proximo_mantenimiento": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha del pr\u00f3ximo mantenimiento programado"
+    },
+    "imagenes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "URLs de im\u00e1genes de la m\u00e1quina"
+    },
+    "archivos_adjuntos": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "tipo": {
+            "type": "string"
+          },
+          "fecha_subida": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "description": "Archivos adjuntos (manuales, certificados, etc.)"
+    },
+    "historico_produccion": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "articulo_id": {
+            "type": "string"
+          },
+          "articulo_nombre": {
+            "type": "string"
+          },
+          "fecha": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "cantidad": {
+            "type": "number"
+          },
+          "tiempo_ciclo": {
+            "type": "number"
+          }
+        }
+      },
+      "description": "Hist\u00f3rico de art\u00edculos fabricados"
+    },
+    "horas_funcionamiento_total": {
+      "type": "number",
+      "default": 0,
+      "description": "Total de horas de funcionamiento"
+    },
+    "disponibilidad_promedio": {
+      "type": "number",
+      "description": "Porcentaje de disponibilidad promedio"
+    },
+    "eficiencia_promedio": {
+      "type": "number",
+      "description": "Porcentaje de eficiencia promedio (OEE)"
+    },
+    "notas": {
+      "type": "string",
+      "description": "Notas generales sobre la m\u00e1quina"
+    },
+    "machine_id_legacy": {
+      "type": "string",
+      "description": "ID del registro en la entidad Machine (sincronizaci\u00f3n)"
+    },
+    "ultimo_sincronizado": {
+      "type": "string",
+      "format": "date-time",
+      "description": "\u00daltima fecha de sincronizaci\u00f3n"
+    },
+    "estado_sincronizacion": {
+      "type": "string",
+      "enum": [
+        "Sincronizado",
+        "Pendiente",
+        "Error"
+      ],
+      "default": "Pendiente",
+      "description": "Estado de sincronizaci\u00f3n con Machine"
+    }
+  },
+  "required": [
+    "codigo_maquina",
+    "nombre"
+  ]
+}

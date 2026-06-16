@@ -99,8 +99,16 @@ export default function AbsenceValidationInbox({ employees = EMPTY, absenceTypes
   const validateMutation = useMutation({
     mutationFn: async (formData) => {
       const absId = selectedAbsence?.id;
+      // Limpiar estado del empleado para que desaparezca de la lista de detección
+      await base44.entities.EmployeeMasterDatabase.update(selectedEmployee.id, {
+        estado_presencia: 'No Aplica',
+        disponibilidad: 'Disponible',
+        ausencia_inicio: null,
+        ausencia_fin: null,
+        ausencia_motivo: null,
+        potencialmente_ausente_desde: null,
+      });
       if (absId) {
-        // Actualizar el registro existente
         return await base44.entities.Absence.update(absId, {
           ...formData,
           estado_aprobacion: 'Aprobada',
@@ -109,7 +117,6 @@ export default function AbsenceValidationInbox({ employees = EMPTY, absenceTypes
           notas: (selectedAbsence.notas || '') + '\n[Validado por RRHH]',
         });
       } else {
-        // Crear nuevo registro de ausencia aprobado
         return await base44.entities.Absence.create({
           employee_id: selectedEmployee.id,
           fecha_inicio: selectedEmployee.ausencia_inicio || new Date().toISOString(),
@@ -137,21 +144,25 @@ export default function AbsenceValidationInbox({ employees = EMPTY, absenceTypes
   const rejectMutation = useMutation({
     mutationFn: async ({ empId, reason }) => {
       const abs = autoAbsenceByEmpId.get(empId);
+      // Siempre limpiar estado del empleado para que desaparezca de la lista
+      await base44.entities.EmployeeMasterDatabase.update(empId, {
+        estado_presencia: 'No Aplica',
+        disponibilidad: 'Disponible',
+        ausencia_inicio: null,
+        ausencia_fin: null,
+        ausencia_motivo: null,
+        potencialmente_ausente_desde: null,
+      });
       if (abs) {
-        // Rechazar el registro existente
+        // Rechazar el registro existente además de limpiar el empleado
         return await base44.entities.Absence.update(abs.id, {
           estado_aprobacion: 'Rechazada',
           comentario_aprobacion: reason || 'Falsa alarma - empleado no estaba ausente',
           aprobado_por: currentUser?.email,
           fecha_aprobacion: new Date().toISOString(),
         });
-      } else {
-        // Sin registro, solo actualizar estado_presencia del empleado
-        return await base44.entities.EmployeeMasterDatabase.update(empId, {
-          estado_presencia: 'No Aplica',
-          disponibilidad: 'Disponible',
-        });
       }
+      return { empId, reason };
     },
     onSuccess: async () => {
       try { await base44.functions.invoke('syncEmployeeAvailability'); } catch (_) {}
@@ -170,20 +181,29 @@ export default function AbsenceValidationInbox({ employees = EMPTY, absenceTypes
     mutationFn: async () => {
       const empIds = Array.from(bulkSelected);
       await Promise.all(empIds.map(empId => {
-        const abs = autoAbsenceByEmpId.get(empId);
-        if (abs) {
-          return base44.entities.Absence.update(abs.id, {
-            estado_aprobacion: 'Rechazada',
-            comentario_aprobacion: 'Falsa alarma - descartado en bloque',
-            aprobado_por: currentUser?.email,
-            fecha_aprobacion: new Date().toISOString(),
-          });
-        } else {
-          return base44.entities.EmployeeMasterDatabase.update(empId, {
+        // Limpiar estado del empleado en todos los casos
+        return Promise.all([
+          base44.entities.EmployeeMasterDatabase.update(empId, {
             estado_presencia: 'No Aplica',
             disponibilidad: 'Disponible',
-          });
-        }
+            ausencia_inicio: null,
+            ausencia_fin: null,
+            ausencia_motivo: null,
+            potencialmente_ausente_desde: null,
+          }),
+          (() => {
+            const abs = autoAbsenceByEmpId.get(empId);
+            if (abs) {
+              return base44.entities.Absence.update(abs.id, {
+                estado_aprobacion: 'Rechazada',
+                comentario_aprobacion: 'Falsa alarma - descartado en bloque',
+                aprobado_por: currentUser?.email,
+                fecha_aprobacion: new Date().toISOString(),
+              });
+            }
+            return Promise.resolve();
+          })(),
+        ]);
       }));
     },
     onSuccess: async () => {
