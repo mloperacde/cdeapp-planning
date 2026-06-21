@@ -392,8 +392,11 @@ Deno.serve(async (req) => {
       // ── CASO 2: Ha fichado → Presente / Retraso / Reactivación ────────
       if (hasFichado) {
         const fichajeMinutes = firstEntryMinutes[empCode];
-        const retrasoReal = fichajeMinutes !== undefined ? fichajeMinutes - shiftInfo.shiftStart : minutesSinceStart;
-        const nuevoEstado = retrasoReal > RETRASO_MIN ? 'Retraso' : 'Presente';
+        // retrasoReal: diferencia entre fichaje y hora de inicio del turno.
+        // Si es negativo → fichó antes de hora → NO es retraso, es puntual/adelantado.
+        // Solo se considera retraso si fichajeMinutes es conocido Y positivo Y supera el umbral.
+        const retrasoReal = fichajeMinutes !== undefined ? fichajeMinutes - shiftInfo.shiftStart : 0;
+        const nuevoEstado = (fichajeMinutes !== undefined && retrasoReal > RETRASO_MIN) ? 'Retraso' : 'Presente';
 
         // Cancelar ausencia auto si existía (fichó después de ser marcado ausente)
         if (absenceAuto && ['Pendiente', 'Aprobada'].includes(absenceAuto.estado_aprobacion)) {
@@ -426,7 +429,7 @@ Deno.serve(async (req) => {
             origen: 'shiftAudit',
             estado_anterior: emp.estado_presencia,
             estado_nuevo: nuevoEstado,
-            motivo: `Fichaje detectado a los ${Math.round(retrasoReal)} min del inicio. ${nuevoEstado === 'Retraso' ? 'Retraso registrado.' : 'Presente.'} ${absenceAuto ? 'Ausencia auto cancelada.' : ''}`,
+            motivo: `Fichaje a las ${minutesToTime(fichajeMinutes || nowMinutes)} (turno ${minutesToTime(shiftInfo.shiftStart)}). ${retrasoReal > 0 ? `Retraso: ${Math.round(retrasoReal)} min.` : retrasoReal < 0 ? `Adelanto: ${Math.abs(Math.round(retrasoReal))} min.` : 'Puntual.'} ${absenceAuto ? 'Ausencia auto cancelada.' : ''}`,
             leido_por_rrhh: false,
           });
           results.reactivados++;
@@ -451,7 +454,7 @@ Deno.serve(async (req) => {
               origen: 'shiftAudit',
               estado_anterior: emp.estado_presencia || 'No Aplica',
               estado_nuevo: 'Retraso',
-              motivo: `Fichaje con ${Math.round(retrasoReal)} min de retraso (${minutesToTime(fichajeMinutes)}).`,
+              motivo: `Fichaje a las ${minutesToTime(fichajeMinutes)} con ${Math.round(retrasoReal)} min de retraso (turno: ${minutesToTime(shiftInfo.shiftStart)}).`,
               leido_por_rrhh: false,
             });
             results.retrasos++;
