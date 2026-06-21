@@ -99,13 +99,12 @@ export default function AbsenceValidationInbox({ employees = EMPTY, absenceTypes
   const validateMutation = useMutation({
     mutationFn: async (formData) => {
       const absId = selectedAbsence?.id;
-      // Limpiar estado del empleado para que desaparezca de la lista de detección
+      // Marcar al empleado como Ausente gestionado (no Auto) para que:
+      // 1. Desaparezca de la bandeja de detección (ya no es "Ausente Auto")
+      // 2. El shiftAudit lo reconozca como ausencia formal y no lo re-detecte
       await base44.entities.EmployeeMasterDatabase.update(selectedEmployee.id, {
-        estado_presencia: 'No Aplica',
-        disponibilidad: 'Disponible',
-        ausencia_inicio: null,
-        ausencia_fin: null,
-        ausencia_motivo: null,
+        estado_presencia: 'Ausente',
+        disponibilidad: 'Ausente',
         potencialmente_ausente_desde: null,
       });
       if (absId) {
