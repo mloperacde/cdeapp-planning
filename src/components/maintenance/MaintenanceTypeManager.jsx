@@ -92,15 +92,30 @@ export default function MaintenanceTypeManager({ open, onOpenChange, machines })
   });
 
   const saveMutation = useMutation({
-    mutationFn: (data) => {
+    mutationFn: async (data) => {
       if (editingType?.id) {
-        return base44.entities.MaintenanceType.update(editingType.id, data);
+        await base44.entities.MaintenanceType.update(editingType.id, data);
+      } else {
+        await base44.entities.MaintenanceType.create(data);
       }
-      return base44.entities.MaintenanceType.create(data);
+      // Sincronizar planes con máquinas automáticamente tras guardar
+      await base44.functions.invoke('syncMaintenancePlansWithMachines', {});
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['maintenanceTypes'] });
+      queryClient.invalidateQueries({ queryKey: ['maintenance-plans'] });
+      toast({
+        title: "Guardado y sincronizado",
+        description: "El tipo de mantenimiento se guardó y los planes se sincronizaron con las máquinas.",
+      });
       handleCloseForm();
+    },
+    onError: (error) => {
+      toast({
+        title: "Error al guardar",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 

@@ -10,6 +10,10 @@
       "type": "string",
       "description": "Nombre de la m\u00e1quina (desnormalizado)"
     },
+    "maintenance_type_id": {
+      "type": "string",
+      "description": "ID del tipo de mantenimiento que gener\u00f3 este plan"
+    },
     "nombre_plan": {
       "type": "string",
       "description": "Nombre del plan de mantenimiento"
