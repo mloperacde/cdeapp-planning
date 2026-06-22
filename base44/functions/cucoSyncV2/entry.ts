@@ -480,11 +480,11 @@ Deno.serve(async (req) => {
       const ficharonHoy = new Set();
 
       // De la caché precargada: empleados que ya tenían entrada antes del sync
+      // NOTA: cacheKey = "empCode_YYYY-MM-DD". La fecha siempre es el sufijo YYYY-MM-DD (10 chars).
       for (const [cacheKey, keysSet] of Object.entries(existingKeysMap)) {
-        const parts = cacheKey.split('_');
-        const dateStr = parts[parts.length - 1];
+        const dateStr = cacheKey.slice(-10);           // últimos 10 chars = "YYYY-MM-DD"
         if (dateStr !== syncDate) continue;
-        const code = parts.slice(0, parts.length - 1).join('_');
+        const code = cacheKey.slice(0, cacheKey.length - 11); // empCode (todo menos "_YYYY-MM-DD")
         for (const key of keysSet) {
           if (key.endsWith('_E')) { ficharonHoy.add(code); break; }
         }
