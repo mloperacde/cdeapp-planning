@@ -97,6 +97,28 @@ export default function AbsenceValidationInbox({ employees = EMPTY, absenceTypes
     refetchOnWindowFocus: true,
   });
 
+  // Set de employee_ids que ya tienen una ausencia formal aprobada vigente (registrada por RRHH)
+  // Estos NO deben aparecer en la bandeja de detección - ya están gestionados
+  const employeesWithApprovedAbsence = useMemo(() => {
+    const set = new Set();
+    const now = new Date();
+    for (const abs of absences) {
+      if (abs.estado_aprobacion !== 'Aprobada') continue;
+      const isAuto =
+        abs.motivo === 'Ausencia no comunicada - detección automática' ||
+        (abs.notas && (abs.notas.startsWith('[SISTEMA]') || abs.notas.startsWith('[shiftAudit]')));
+      if (isAuto) continue;
+      const start = new Date(abs.fecha_inicio);
+      const end = abs.fecha_fin_desconocida
+        ? new Date('2099-12-31')
+        : abs.fecha_fin ? new Date(abs.fecha_fin) : new Date('2099-12-31');
+      if (now >= start && now <= end) {
+        set.add(abs.employee_id);
+      }
+    }
+    return set;
+  }, [absences]);
+
   // Empleados ausentes según estado_presencia (fuente de verdad)
   // Se excluyen: turno tarde no iniciado, y empleados con ausencia formal aprobada ya registrada
   const absentEmployees = useMemo(() => {
@@ -108,30 +130,6 @@ export default function AbsenceValidationInbox({ employees = EMPTY, absenceTypes
       !employeesWithApprovedAbsence.has(emp.id)
     );
   }, [employees, isAfternoonShiftNotStarted, employeesWithApprovedAbsence]);
-
-  // Set de employee_ids que ya tienen una ausencia formal aprobada vigente (registrada por RRHH)
-  // Estos NO deben aparecer en la bandeja de detección - ya están gestionados
-  const employeesWithApprovedAbsence = useMemo(() => {
-    const set = new Set();
-    const now = new Date();
-    for (const abs of absences) {
-      if (abs.estado_aprobacion !== 'Aprobada') continue;
-      // Es formal si NO es una ausencia automática del sistema
-      const isAuto =
-        abs.motivo === 'Ausencia no comunicada - detección automática' ||
-        (abs.notas && (abs.notas.startsWith('[SISTEMA]') || abs.notas.startsWith('[shiftAudit]')));
-      if (isAuto) continue;
-      // Verificar que la ausencia está vigente ahora
-      const start = new Date(abs.fecha_inicio);
-      const end = abs.fecha_fin_desconocida
-        ? new Date('2099-12-31')
-        : abs.fecha_fin ? new Date(abs.fecha_fin) : new Date('2099-12-31');
-      if (now >= start && now <= end) {
-        set.add(abs.employee_id);
-      }
-    }
-    return set;
-  }, [absences]);
 
   // Mapa de ausencias automáticas pendientes por employee_id
   const autoAbsenceByEmpId = useMemo(() => {
