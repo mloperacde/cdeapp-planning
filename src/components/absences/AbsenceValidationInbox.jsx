@@ -1,6 +1,8 @@
 import { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { startOfWeek, format, formatDistanceToNow } from "date-fns";
+import { es } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -10,10 +12,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
   AlertTriangle, CheckCircle2, X, Search, ClipboardCheck,
-  Trash2, RefreshCw, Filter, Clock, User, Bot
+  Trash2, RefreshCw, Filter, Clock, Bot
 } from "lucide-react";
-import { format, formatDistanceToNow } from "date-fns";
-import { es } from "date-fns/locale";
 import { toast } from "sonner";
 import AbsenceForm from "./AbsenceForm";
 
@@ -28,7 +28,7 @@ export default function AbsenceValidationInbox({ employees = EMPTY, absenceTypes
   const [filterDept, setFilterDept] = useState("all");
   const [showValidateDialog, setShowValidateDialog] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
-  const [selectedAbsence, setSelectedAbsence] = useState(null); // registro Absence existente si lo hay
+  const [selectedAbsence, setSelectedAbsence] = useState(null);
   const [bulkSelected, setBulkSelected] = useState(new Set());
   const [rejectReason, setRejectReason] = useState("");
   const [showRejectDialog, setShowRejectDialog] = useState(false);
@@ -38,6 +38,58 @@ export default function AbsenceValidationInbox({ employees = EMPTY, absenceTypes
     queryFn: () => base44.auth.me(),
   });
 
+  // Cargar calendario de turnos de la semana actual
+  const mondayStr = useMemo(() => {
+    const monday = startOfWeek(new Date(), { weekStartsOn: 1 });
+    return format(monday, 'yyyy-MM-dd');
+  }, []);
+
+  const { data: weekSchedules = [] } = useQuery({
+    queryKey: ['teamWeekSchedule', mondayStr],
+    queryFn: () => base44.entities.TeamWeekSchedule.filter({ fecha_inicio_semana: mondayStr }),
+    staleTime: 10 * 60 * 1000,
+  });
+
+  // Mapa team_key → turno actual (Mañana/Tarde) según calendario rotativo
+  const teamShiftMap = useMemo(() => {
+    const map = {};
+    for (const ws of weekSchedules) {
+      if (ws.team_key && ws.turno) map[ws.team_key] = ws.turno;
+    }
+    return map;
+  }, [weekSchedules]);
+
+  // Hora actual en minutos (zona Europa/Madrid)
+  const nowMinutes = useMemo(() => {
+    const now = new Date();
+    const localStr = now.toLocaleString('en-US', {
+      timeZone: 'Europe/Madrid', hour12: false, hour: '2-digit', minute: '2-digit'
+    });
+    const [h, m] = localStr.split(':').map(Number);
+    return h * 60 + m;
+  }, []);
+
+  // Devuelve true si el empleado tiene turno tarde que AÚN NO ha comenzado
+  // (según el calendario rotativo), para excluirlos de la bandeja de detección
+  const isAfternoonShiftNotStarted = useMemo(() => {
+    const TOLERANCE_MIN = 30; // mismo margen que shiftAudit
+    return (emp) => {
+      let assignedShift = null;
+      if (emp.tipo_turno === 'Fijo Tarde') {
+        assignedShift = 'Tarde';
+      } else if (emp.tipo_turno === 'Rotativo' && emp.team_key) {
+        assignedShift = teamShiftMap[emp.team_key] || null;
+      }
+      if (assignedShift !== 'Tarde') return false;
+      const startStr = emp.horario_tarde_inicio;
+      if (!startStr) return false;
+      const [h, m] = String(startStr).split(':').map(Number);
+      if (isNaN(h) || isNaN(m)) return false;
+      const shiftStartMinutes = h * 60 + m;
+      return nowMinutes < shiftStartMinutes + TOLERANCE_MIN;
+    };
+  }, [teamShiftMap, nowMinutes]);
+
   const { data: absences = EMPTY, isLoading: loadingAbsences } = useQuery({
     queryKey: ['absences'],
     queryFn: () => base44.entities.Absence.list('-fecha_inicio', 2000),
@@ -46,15 +98,17 @@ export default function AbsenceValidationInbox({ employees = EMPTY, absenceTypes
   });
 
   // Empleados ausentes según estado_presencia (fuente de verdad)
+  // Se excluyen empleados del turno tarde cuyo turno aún no ha comenzado
   const absentEmployees = useMemo(() => {
     return employees.filter(emp =>
       emp.estado_empleado === 'Alta' &&
       emp.sujeto_a_control_horario !== false &&
-      ABSENT_STATES.has(emp.estado_presencia)
+      ABSENT_STATES.has(emp.estado_presencia) &&
+      !isAfternoonShiftNotStarted(emp)
     );
-  }, [employees]);
+  }, [employees, isAfternoonShiftNotStarted]);
 
-  // Mapa de ausencias automáticas pendientes por employee_id (para enriquecer la tarjeta)
+  // Mapa de ausencias automáticas pendientes por employee_id
   const autoAbsenceByEmpId = useMemo(() => {
     const map = new Map();
     const now = new Date();
@@ -66,7 +120,6 @@ export default function AbsenceValidationInbox({ employees = EMPTY, absenceTypes
       if (!isAuto || abs.estado_aprobacion !== 'Pendiente') continue;
       const absStart = new Date(abs.fecha_inicio);
       if (absStart > now) continue;
-      // Si se filtra por fecha, solo incluir registros de ese día
       if (filterDate) {
         const absDateStr = abs.fecha_inicio ? abs.fecha_inicio.slice(0, 10) : null;
         if (absDateStr !== filterDate) continue;
@@ -95,13 +148,9 @@ export default function AbsenceValidationInbox({ employees = EMPTY, absenceTypes
     });
   }, [absentEmployees, search, filterDept]);
 
-  // Crear o reutilizar registro Absence para el empleado
   const validateMutation = useMutation({
     mutationFn: async (formData) => {
       const absId = selectedAbsence?.id;
-      // Marcar al empleado como Ausente gestionado (no Auto) para que:
-      // 1. Desaparezca de la bandeja de detección (ya no es "Ausente Auto")
-      // 2. El shiftAudit lo reconozca como ausencia formal y no lo re-detecte
       await base44.entities.EmployeeMasterDatabase.update(selectedEmployee.id, {
         estado_presencia: 'Ausente',
         disponibilidad: 'Ausente',
@@ -143,7 +192,6 @@ export default function AbsenceValidationInbox({ employees = EMPTY, absenceTypes
   const rejectMutation = useMutation({
     mutationFn: async ({ empId, reason }) => {
       const abs = autoAbsenceByEmpId.get(empId);
-      // Siempre limpiar estado del empleado para que desaparezca de la lista
       await base44.entities.EmployeeMasterDatabase.update(empId, {
         estado_presencia: 'No Aplica',
         disponibilidad: 'Disponible',
@@ -153,7 +201,6 @@ export default function AbsenceValidationInbox({ employees = EMPTY, absenceTypes
         potencialmente_ausente_desde: null,
       });
       if (abs) {
-        // Rechazar el registro existente además de limpiar el empleado
         return await base44.entities.Absence.update(abs.id, {
           estado_aprobacion: 'Rechazada',
           comentario_aprobacion: reason || 'Falsa alarma - empleado no estaba ausente',
@@ -180,7 +227,6 @@ export default function AbsenceValidationInbox({ employees = EMPTY, absenceTypes
     mutationFn: async () => {
       const empIds = Array.from(bulkSelected);
       await Promise.all(empIds.map(empId => {
-        // Limpiar estado del empleado en todos los casos
         return Promise.all([
           base44.entities.EmployeeMasterDatabase.update(empId, {
             estado_presencia: 'No Aplica',
@@ -359,7 +405,6 @@ export default function AbsenceValidationInbox({ employees = EMPTY, absenceTypes
               }`}
               onClick={() => toggleBulk(emp.id)}
             >
-              {/* Cabecera tarjeta */}
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-2.5">
                   <div className="relative">
@@ -384,7 +429,6 @@ export default function AbsenceValidationInbox({ employees = EMPTY, absenceTypes
                 />
               </div>
 
-              {/* Datos */}
               <div className="space-y-1.5 mb-3">
                 <Badge className={`text-xs ${statusInfo.color}`}>{statusInfo.label}</Badge>
                 {sinceTime && (
@@ -411,7 +455,6 @@ export default function AbsenceValidationInbox({ employees = EMPTY, absenceTypes
                 )}
               </div>
 
-              {/* Acciones */}
               <div className="flex gap-2 pt-3 border-t border-slate-100 dark:border-slate-700" onClick={e => e.stopPropagation()}>
                 <Button
                   size="sm"

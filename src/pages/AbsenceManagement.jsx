@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { useAppData } from "../components/data/DataProvider";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -84,16 +84,54 @@ export default function AbsenceManagementPage() {
     }
   };
 
+  // Calendario de turnos para excluir turno tarde no iniciado del contador
+  const mondayStr = useMemo(() => {
+    const d = new Date();
+    const day = d.getDay();
+    const diff = day === 0 ? -6 : 1 - day;
+    d.setDate(d.getDate() + diff);
+    return d.toISOString().split('T')[0];
+  }, []);
+
+  const { data: weekSchedules = [] } = useQuery({
+    queryKey: ['teamWeekSchedule', mondayStr],
+    queryFn: () => base44.entities.TeamWeekSchedule.filter({ fecha_inicio_semana: mondayStr }),
+    staleTime: 10 * 60 * 1000,
+  });
+
+  const teamShiftMap = useMemo(() => {
+    const map = {};
+    for (const ws of weekSchedules) {
+      if (ws.team_key && ws.turno) map[ws.team_key] = ws.turno;
+    }
+    return map;
+  }, [weekSchedules]);
+
   const stats = useMemo(() => {
     const now = new Date();
-    // El badge cuenta exactamente los mismos empleados que aparecen en la bandeja:
-    // empleados activos con estado_presencia de ausencia (misma fuente que PresenceControl)
+    const localStr = now.toLocaleString('en-US', { timeZone: 'Europe/Madrid', hour12: false, hour: '2-digit', minute: '2-digit' });
+    const [h, m] = localStr.split(':').map(Number);
+    const nowMin = h * 60 + m;
+
     const absentStates = new Set(['Potencialmente Ausente', 'Retraso', 'Ausente Auto', 'Ausente']);
-    const autoPendingCount = employees.filter(emp =>
-      emp.estado_empleado === 'Alta' &&
-      emp.sujeto_a_control_horario !== false &&
-      absentStates.has(emp.estado_presencia)
-    ).length;
+    const TOLERANCE_MIN = 30;
+
+    const autoPendingCount = employees.filter(emp => {
+      if (emp.estado_empleado !== 'Alta' || emp.sujeto_a_control_horario === false) return false;
+      if (!absentStates.has(emp.estado_presencia)) return false;
+      // Excluir turno tarde no iniciado
+      let assignedShift = null;
+      if (emp.tipo_turno === 'Fijo Tarde') assignedShift = 'Tarde';
+      else if (emp.tipo_turno === 'Rotativo' && emp.team_key) assignedShift = teamShiftMap[emp.team_key] || null;
+      if (assignedShift === 'Tarde') {
+        const startStr = emp.horario_tarde_inicio;
+        if (startStr) {
+          const [sh, sm] = String(startStr).split(':').map(Number);
+          if (!isNaN(sh) && !isNaN(sm) && nowMin < (sh * 60 + sm) + TOLERANCE_MIN) return false;
+        }
+      }
+      return true;
+    }).length;
     const autoAbsencesPending = { length: autoPendingCount };
 
     const formalActive = absences.filter(abs => {
@@ -117,7 +155,7 @@ export default function AbsenceManagementPage() {
       formalActive: formalActive.length,
       pendingApproval: pendingApproval.length,
     };
-  }, [absences, employees]);
+  }, [absences, employees, teamShiftMap]);
 
   const tabs = [
     { value: "dashboard", label: "Resumen", icon: LayoutDashboard },
