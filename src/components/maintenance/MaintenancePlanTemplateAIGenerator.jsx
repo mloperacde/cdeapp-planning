@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { base44 } from '@/api/base44Client';
+import { toast } from '@/components/ui/toaster';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -125,7 +126,16 @@ La estructura EXACTA debe ser:
         }
       });
 
-      const template = response.data || response;
+      // InvokeLLM con response_json_schema devuelve el objeto directamente
+      let template = response;
+      // Por si viene envuelto en .data (compatibilidad)
+      if (response && typeof response === 'object' && response.data && typeof response.data === 'object') {
+        template = response.data;
+      }
+
+      if (!template || !template.nombre) {
+        throw new Error(`La IA no devolvió un plan válido. Respuesta: ${JSON.stringify(response).substring(0, 200)}`);
+      }
       
       // Transformar las tareas a formato MaintenanceType
       const maintenanceTypeData = {
@@ -180,12 +190,14 @@ La estructura EXACTA debe ser:
       // Crear el MaintenanceType
       const created = await base44.entities.MaintenanceType.create(maintenanceTypeData);
 
+      toast({ title: '✅ Plan generado', description: `"${created.nombre}" creado correctamente con ${template.tareas?.length || 0} tareas.` });
       onTemplateGenerated(created);
       setMachineDescription('');
       setManualContent('');
       setSelectedMachineIds([]);
     } catch (err) {
-      setError(`Error al generar: ${err.message}`);
+      console.error('[AI Generator] Error:', err);
+      setError(`Error al generar el plan: ${err.message}`);
     } finally {
       setLoading(false);
     }
