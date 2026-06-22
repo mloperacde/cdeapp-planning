@@ -116,9 +116,22 @@ export default function AbsenceManagementPage() {
     const absentStates = new Set(['Potencialmente Ausente', 'Retraso', 'Ausente Auto', 'Ausente']);
     const TOLERANCE_MIN = 30;
 
+    // Set de empleados con ausencia formal aprobada vigente (no deben aparecer en detección)
+    const employeesWithApprovedAbsence = new Set();
+    for (const abs of absences) {
+      if (abs.estado_aprobacion !== 'Aprobada') continue;
+      const isAuto = abs.motivo === 'Ausencia no comunicada - detección automática' ||
+        (abs.notas && (abs.notas.startsWith('[SISTEMA]') || abs.notas.startsWith('[shiftAudit]')));
+      if (isAuto) continue;
+      const start = new Date(abs.fecha_inicio);
+      const end = abs.fecha_fin_desconocida ? new Date('2099-12-31') : abs.fecha_fin ? new Date(abs.fecha_fin) : new Date('2099-12-31');
+      if (now >= start && now <= end) employeesWithApprovedAbsence.add(abs.employee_id);
+    }
+
     const autoPendingCount = employees.filter(emp => {
       if (emp.estado_empleado !== 'Alta' || emp.sujeto_a_control_horario === false) return false;
       if (!absentStates.has(emp.estado_presencia)) return false;
+      if (employeesWithApprovedAbsence.has(emp.id)) return false;
       // Excluir turno tarde no iniciado
       let assignedShift = null;
       if (emp.tipo_turno === 'Fijo Tarde') assignedShift = 'Tarde';
