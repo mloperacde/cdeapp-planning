@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { getMachineAlias } from "@/utils/machineAlias";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -466,6 +466,38 @@ export default function MaintenanceWorkOrder({ maintenance, onClose, onUpdate })
     initialData: [],
   });
 
+  // Si la orden no tiene tareas, cargamos el plan para obtener el maintenance_type_id
+  const { data: linkedPlan } = useQuery({
+    queryKey: ['maintenancePlan', maintenance.maintenance_plan_id],
+    queryFn: () => base44.entities.MaintenancePlan.get(maintenance.maintenance_plan_id),
+    enabled: !!maintenance.maintenance_plan_id && workOrder.tareas.length === 0 && !maintenance.maintenance_type_id,
+  });
+
+  const typeId = maintenance.maintenance_type_id || linkedPlan?.maintenance_type_id;
+  const { data: maintenanceType } = useQuery({
+    queryKey: ['maintenanceType', typeId],
+    queryFn: () => base44.entities.MaintenanceType.get(typeId),
+    enabled: !!typeId && workOrder.tareas.length === 0,
+  });
+
+  // Cuando se carga el tipo y no hay tareas en la orden, las inicializamos
+  useEffect(() => {
+    if (!maintenanceType || workOrder.tareas.length > 0) return;
+    const tareas = [];
+    for (let i = 1; i <= 6; i++) {
+      const t = maintenanceType[`tarea_${i}`];
+      if (t?.nombre) {
+        const subtareas = [];
+        for (let j = 1; j <= 8; j++) {
+          const st = t[`subtarea_${j}`];
+          if (st?.titulo) subtareas.push({ titulo: st.titulo, completada: false });
+        }
+        tareas.push({ titulo: t.nombre, descripcion: t.observaciones || '', completada: false, subtareas });
+      }
+    }
+    if (tareas.length > 0) setWorkOrder(prev => ({ ...prev, tareas }));
+  }, [maintenanceType]);
+
   const machine = machines?.find(m => m.id === maintenance.machine_id);
   const technician = employees?.find(e => e.id === maintenance.tecnico_asignado);
   const reviewer = employees?.find(e => e.id === maintenance.revisado_por);
@@ -599,6 +631,79 @@ export default function MaintenanceWorkOrder({ maintenance, onClose, onUpdate })
             </div>
           </div>
 
+          {/* TAREAS - sección principal */}
+          <div className="border-2 border-slate-300">
+            <div className="bg-blue-900 text-white p-3 flex items-center justify-between">
+              <h2 className="text-lg font-bold">
+                TAREAS A REALIZAR
+                {workOrder.tareas.length > 0 && (
+                  <span className="ml-2 text-sm font-normal text-blue-200">
+                    ({workOrder.tareas.filter(t => t.completada).length}/{workOrder.tareas.length} completadas)
+                  </span>
+                )}
+              </h2>
+            </div>
+            <div className="p-4">
+              {workOrder.tareas && workOrder.tareas.length > 0 ? (
+                <div className="space-y-3">
+                  {workOrder.tareas.map((tarea, index) => (
+                    <div key={index} className={`border rounded-lg p-3 transition-colors ${tarea.completada ? 'bg-green-50 border-green-200' : 'bg-white border-slate-200'}`}>
+                      <div className="flex items-start gap-3">
+                        <Checkbox
+                          checked={!!tarea.completada}
+                          onCheckedChange={() => handleTaskToggle(index)}
+                          className="mt-0.5"
+                        />
+                        <div className="flex-1">
+                          <div className={`font-semibold text-sm ${tarea.completada ? 'line-through text-slate-400' : 'text-slate-800'}`}>
+                            {index + 1}. {tarea.titulo}
+                          </div>
+                          {tarea.descripcion && (
+                            <div className="text-xs text-slate-500 mt-0.5">{tarea.descripcion}</div>
+                          )}
+                          {tarea.subtareas && tarea.subtareas.length > 0 && (
+                            <div className="ml-2 mt-2 space-y-1.5 border-l-2 border-slate-200 pl-3">
+                              {tarea.subtareas.map((sub, subIdx) => (
+                                <div key={subIdx} className="flex items-center gap-2">
+                                  <Checkbox
+                                    checked={!!sub.completada}
+                                    onCheckedChange={() => handleSubtaskToggle(index, subIdx)}
+                                  />
+                                  <span className={`text-xs ${sub.completada ? 'line-through text-slate-400' : 'text-slate-600'}`}>
+                                    {sub.titulo}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : typeId ? (
+                <div className="text-center text-slate-400 py-6">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500 mx-auto mb-2"></div>
+                  Cargando tareas...
+                </div>
+              ) : (
+                <div className="text-center text-slate-400 py-6 border rounded">
+                  No hay tareas definidas para este mantenimiento.
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Observaciones</Label>
+            <Textarea
+              value={workOrder.notas}
+              onChange={(e) => setWorkOrder({ ...workOrder, notas: e.target.value })}
+              rows={3}
+              placeholder="Añadir observaciones..."
+            />
+          </div>
+
           <div className="border-t pt-4">
             <h3 className="font-semibold mb-4">Firmas Digitales</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -618,54 +723,6 @@ export default function MaintenanceWorkOrder({ maintenance, onClose, onUpdate })
                 label={`Verificador (${verifier?.nombre || "No asignado"})`}
               />
             </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Observaciones</Label>
-            <Textarea
-              value={workOrder.notas}
-              onChange={(e) => setWorkOrder({ ...workOrder, notas: e.target.value })}
-              rows={3}
-              placeholder="Añadir observaciones..."
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Tareas</Label>
-            {workOrder.tareas && workOrder.tareas.length > 0 ? (
-              <div className="space-y-2">
-                {workOrder.tareas.map((tarea, index) => (
-                  <div key={index} className="border rounded p-3">
-                    <div className="flex items-start gap-3">
-                      <Checkbox
-                        checked={tarea.completada}
-                        onCheckedChange={() => handleTaskToggle(index)}
-                      />
-                      <div className="flex-1">
-                        <div className="font-semibold">{tarea.titulo}</div>
-                        {tarea.subtareas && tarea.subtareas.length > 0 && (
-                          <div className="ml-4 mt-2 space-y-1">
-                            {tarea.subtareas.map((sub, subIdx) => (
-                              <div key={subIdx} className="flex items-center gap-2">
-                                <Checkbox
-                                  checked={sub.completada}
-                                  onCheckedChange={() => handleSubtaskToggle(index, subIdx)}
-                                />
-                                <span className="text-sm">{sub.titulo}</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center text-slate-400 py-4 border rounded">
-                No hay tareas definidas para este mantenimiento.
-              </div>
-            )}
           </div>
         </div>
 
