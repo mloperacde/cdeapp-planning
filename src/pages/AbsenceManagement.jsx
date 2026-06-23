@@ -131,10 +131,13 @@ export default function AbsenceManagementPage() {
 
     // Set de empleados con ausencia formal aprobada vigente (no deben aparecer en detección)
     const employeesWithApprovedAbsence = new Set();
+    const isAutoAbsence = (abs) =>
+      abs.motivo === 'Ausencia no comunicada - detección automática' ||
+      abs.motivo === 'Ausencia detectada automáticamente por análisis de presencia' ||
+      (abs.notas && (abs.notas.startsWith('[SISTEMA]') || abs.notas.startsWith('[shiftAudit]') || abs.notas.startsWith('Creado automáticamente')));
     for (const abs of absences) {
       if (abs.estado_aprobacion !== 'Aprobada') continue;
-      const isAuto = abs.motivo === 'Ausencia no comunicada - detección automática' ||
-        (abs.notas && (abs.notas.startsWith('[SISTEMA]') || abs.notas.startsWith('[shiftAudit]')));
+      const isAuto = isAutoAbsence(abs);
       if (isAuto) continue;
       const start = new Date(abs.fecha_inicio);
       const end = abs.fecha_fin_desconocida ? new Date('2099-12-31') : abs.fecha_fin ? new Date(abs.fecha_fin) : new Date('2099-12-31');
@@ -144,8 +147,7 @@ export default function AbsenceManagementPage() {
     // Mapa de ausencias auto pendientes por employee_id (para el contador del badge)
     const autoAbsenceEmpIds = new Set();
     for (const abs of absences) {
-      const isAuto = abs.motivo === 'Ausencia no comunicada - detección automática' ||
-        (abs.notas && (abs.notas.startsWith('[SISTEMA]') || abs.notas.startsWith('[shiftAudit]')));
+      const isAuto = isAutoAbsence(abs);
       if (!isAuto || abs.estado_aprobacion !== 'Pendiente') continue;
       const absStart = new Date(abs.fecha_inicio);
       if (absStart > now) continue;
@@ -174,9 +176,7 @@ export default function AbsenceManagementPage() {
     const autoAbsencesPending = { length: autoPendingCount };
 
     const formalActive = absences.filter(abs => {
-      const isAuto = abs.motivo === 'Ausencia no comunicada - detección automática' ||
-        (abs.notas && (abs.notas.startsWith('[SISTEMA]') || abs.notas.startsWith('[shiftAudit]')));
-      if (isAuto && abs.estado_aprobacion === 'Pendiente') return false;
+      if (isAutoAbsence(abs)) return false;
       if (abs.estado_aprobacion === 'Rechazada' || abs.estado_aprobacion === 'Cancelada') return false;
       const start = new Date(abs.fecha_inicio);
       const end = abs.fecha_fin_desconocida ? new Date('2099-12-31') : new Date(abs.fecha_fin || '2099-12-31');
@@ -184,9 +184,7 @@ export default function AbsenceManagementPage() {
     });
 
     const pendingApproval = absences.filter(abs => {
-      const isAuto = abs.motivo === 'Ausencia no comunicada - detección automática' ||
-        (abs.notas && (abs.notas.startsWith('[SISTEMA]') || abs.notas.startsWith('[shiftAudit]')));
-      return !isAuto && abs.estado_aprobacion === 'Pendiente';
+      return !isAutoAbsence(abs) && abs.estado_aprobacion === 'Pendiente';
     });
 
     return {

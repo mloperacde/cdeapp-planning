@@ -61,12 +61,14 @@ export default function FormalAbsenceManager({ employees = EMPTY, absenceTypes =
 
   const formalAbsences = useMemo(() => {
     return absences.filter(abs => {
+      // Excluir TODAS las ausencias auto-detectadas por el sistema
       const isAuto =
         abs.motivo === 'Ausencia no comunicada - detección automática' ||
+        abs.motivo === 'Ausencia detectada automáticamente por análisis de presencia' ||
         (abs.notas && abs.notas.startsWith('[SISTEMA]')) ||
-        (abs.notas && abs.notas.startsWith('[shiftAudit]'));
-      if (isAuto && abs.estado_aprobacion === 'Pendiente') return false;
-      return true;
+        (abs.notas && abs.notas.startsWith('[shiftAudit]')) ||
+        (abs.notas && abs.notas.startsWith('Creado automáticamente'));
+      return !isAuto;
     });
   }, [absences]);
 
