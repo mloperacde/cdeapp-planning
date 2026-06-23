@@ -49,17 +49,29 @@ export default function Dashboard() {
   const [calendarYear, setCalendarYear] = useState(new Date().getFullYear());
 
   const stats = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const activeAbsences = absences.filter(a => {
+    const now = new Date();
+    // Ausencias formales aprobadas vigentes hoy (excluye auto-detectadas, deduplicadas por empleado)
+    const activeAbsenceEmpIds = new Set();
+    absences.forEach(a => {
+      if (a.estado_aprobacion !== "Aprobada") return;
+      const isAuto = a.motivo === 'Ausencia no comunicada - detección automática' ||
+        (a.notas && (a.notas.startsWith('[SISTEMA]') || a.notas.startsWith('[shiftAudit]')));
+      if (isAuto) return;
       const start = new Date(a.fecha_inicio);
-      const end = a.fecha_fin ? new Date(a.fecha_fin) : null;
-      return start <= today && (!end || end >= today) && a.estado_aprobacion === "Aprobada";
+      const end = a.fecha_fin_desconocida ? new Date('2099-12-31') : a.fecha_fin ? new Date(a.fecha_fin) : new Date('2099-12-31');
+      if (start <= now && end >= now) activeAbsenceEmpIds.add(a.employee_id);
+    });
+    const activeAbsences = activeAbsenceEmpIds.size;
+    // Solo pendientes manuales (no auto-detectadas del sistema)
+    const pendingAbsences = absences.filter(a => {
+      const isAuto = a.motivo === 'Ausencia no comunicada - detección automática' ||
+        (a.notas && (a.notas.startsWith('[SISTEMA]') || a.notas.startsWith('[shiftAudit]')));
+      return !isAuto && a.estado_aprobacion === "Pendiente";
     }).length;
-    const pendingAbsences = absences.filter(a => a.estado_aprobacion === "Pendiente").length;
+    const todayMidnight = new Date(); todayMidnight.setHours(0, 0, 0, 0);
     const upcomingMaintenance = maintenanceSchedules.filter(m => {
       const scheduled = new Date(m.fecha_programada);
-      const diffDays = Math.ceil((scheduled - today) / (1000 * 60 * 60 * 24));
+      const diffDays = Math.ceil((scheduled - todayMidnight) / (1000 * 60 * 60 * 24));
       return diffDays >= 0 && diffDays <= 7 && m.estado !== "Completado";
     }).length;
     return { totalEmployees: employees.length, activeAbsences, pendingAbsences, upcomingMaintenance };
