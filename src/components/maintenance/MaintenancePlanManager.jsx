@@ -91,6 +91,7 @@ export default function MaintenancePlanManager({ machine }) {
         return base44.entities.MaintenancePlan.update(relatedPlan.id, data);
       } else {
         return base44.entities.MaintenancePlan.create({
+          maintenance_type_id: type.id,
           machine_id: machine.id,
           machine_name: machine.nombre || getMachineAlias(machine),
           nombre_plan: type.nombre,
@@ -184,10 +185,9 @@ export default function MaintenancePlanManager({ machine }) {
           assignedTypes.map((type) => {
             const tareas = getTareas(type);
             const isExpanded = expandedType === type.id;
-            // Buscar plan relacionado (por nombre del tipo)
-            const relatedPlan = machinePlans.find(p =>
-              p.nombre_plan?.toLowerCase().includes(type.nombre?.toLowerCase().split(' ')[0])
-            ) || machinePlans[0];
+            // Buscar plan relacionado: primero por maintenance_type_id, luego por nombre
+            const relatedPlan = machinePlans.find(p => p.maintenance_type_id === type.id)
+              || machinePlans.find(p => p.nombre_plan?.toLowerCase().includes(type.nombre?.toLowerCase().split(' ')[0]));
             const planStatus = getPlanStatus(relatedPlan);
             const StatusIcon = planStatus?.icon;
 

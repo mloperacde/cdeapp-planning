@@ -97,9 +97,8 @@ export default function GmaoMaintenancePlans({ machine }) {
               {assignedTypes.map((type) => {
                 const tareas = getTareas(type);
                 const isExpanded = expandedType === type.id;
-                const relatedPlan = machinePlans.find(p =>
-                  p.nombre_plan?.toLowerCase().includes(type.nombre?.toLowerCase().split(' ')[0])
-                ) || machinePlans[0];
+                const relatedPlan = machinePlans.find(p => p.maintenance_type_id === type.id)
+                  || machinePlans.find(p => p.nombre_plan?.toLowerCase().includes(type.nombre?.toLowerCase().split(' ')[0]));
                 const planStatus = getPlanStatus(relatedPlan);
                 const StatusIcon = planStatus?.icon;
                 const isOverdue = relatedPlan && isPast(new Date(relatedPlan.proxima_fecha));
