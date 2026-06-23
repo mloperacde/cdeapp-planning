@@ -90,10 +90,11 @@ export default function AbsenceValidationInbox({ employees = EMPTY, absenceTypes
     };
   }, [teamShiftMap, nowMinutes]);
 
-  const { data: absences = EMPTY, isLoading: loadingAbsences } = useQuery({
+  const { data: absences = EMPTY, isLoading: loadingAbsences, isFetching } = useQuery({
     queryKey: ['absences'],
     queryFn: () => base44.entities.Absence.list('-fecha_inicio', 2000),
     staleTime: 0,
+    refetchOnMount: 'always',
     refetchOnWindowFocus: true,
   });
 
@@ -337,6 +338,8 @@ export default function AbsenceValidationInbox({ employees = EMPTY, absenceTypes
     );
   }
 
+  const isRefreshing = isFetching && !loadingAbsences;
+
   if (absentEmployees.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -403,10 +406,17 @@ export default function AbsenceValidationInbox({ employees = EMPTY, absenceTypes
         </div>
       </div>
 
-      {/* Contador */}
-      <p className="text-xs text-slate-500">
-        Mostrando <strong>{filtered.length}</strong> de <strong>{absentEmployees.length}</strong> empleados ausentes pendientes de revisión
-      </p>
+      {/* Contador + estado refresco */}
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-slate-500">
+          Mostrando <strong>{filtered.length}</strong> de <strong>{absentEmployees.length}</strong> ausencias nuevas pendientes de revisión
+        </p>
+        {isRefreshing && (
+          <span className="text-xs text-slate-400 flex items-center gap-1">
+            <RefreshCw className="w-3 h-3 animate-spin" /> Actualizando...
+          </span>
+        )}
+      </div>
 
       {/* Tarjetas */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">

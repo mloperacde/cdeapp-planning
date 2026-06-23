@@ -63,7 +63,20 @@ export default function AbsenceManagementPage() {
     const url = new URL(window.location);
     url.searchParams.set('tab', value);
     window.history.pushState({}, '', url);
+    // Al entrar a Detección, refrescar datos de empleados y ausencias para vista limpia
+    if (value === 'validation') {
+      queryClient.invalidateQueries({ queryKey: ['absences'] });
+      queryClient.invalidateQueries({ queryKey: ['employeeMasterDatabase'] });
+    }
   };
+
+  // Refrescar al montar si la URL ya apunta a detección
+  useEffect(() => {
+    if (activeTab === 'validation') {
+      queryClient.invalidateQueries({ queryKey: ['absences'] });
+      queryClient.invalidateQueries({ queryKey: ['employeeMasterDatabase'] });
+    }
+  }, []); // solo al montar
 
   const handleRefresh = () => {
     queryClient.invalidateQueries({ queryKey: ['absences'] });
