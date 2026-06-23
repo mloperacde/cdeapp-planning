@@ -99,7 +99,6 @@ export default function AbsenceValidationInbox({ employees = EMPTY, absenceTypes
   });
 
   // Set de employee_ids que ya tienen una ausencia formal aprobada vigente (registrada por RRHH)
-  // Estos NO deben aparecer en la bandeja de detección - ya están gestionados
   const employeesWithApprovedAbsence = useMemo(() => {
     const set = new Set();
     const now = new Date();
@@ -120,19 +119,7 @@ export default function AbsenceValidationInbox({ employees = EMPTY, absenceTypes
     return set;
   }, [absences]);
 
-  // Empleados ausentes según estado_presencia (fuente de verdad)
-  // Se excluyen: turno tarde no iniciado, y empleados con ausencia formal aprobada ya registrada
-  const absentEmployees = useMemo(() => {
-    return employees.filter(emp =>
-      emp.estado_empleado === 'Alta' &&
-      emp.sujeto_a_control_horario !== false &&
-      ABSENT_STATES.has(emp.estado_presencia) &&
-      !isAfternoonShiftNotStarted(emp) &&
-      !employeesWithApprovedAbsence.has(emp.id)
-    );
-  }, [employees, isAfternoonShiftNotStarted, employeesWithApprovedAbsence]);
-
-  // Mapa de ausencias automáticas pendientes por employee_id
+  // Mapa de ausencias automáticas pendientes por employee_id — calculado ANTES de absentEmployees
   const autoAbsenceByEmpId = useMemo(() => {
     const map = new Map();
     const now = new Date();
@@ -155,6 +142,22 @@ export default function AbsenceValidationInbox({ employees = EMPTY, absenceTypes
     }
     return map;
   }, [absences, filterDate]);
+
+  // Empleados ausentes pendientes de revisión:
+  // Solo se muestran como "nuevas detecciones" los que tienen una ausencia automática pendiente de HOY.
+  // Empleados con estado ausente pero sin registro auto reciente (ausencias crónicas no gestionadas) se excluyen.
+  const absentEmployees = useMemo(() => {
+    return employees.filter(emp => {
+      if (emp.estado_empleado !== 'Alta') return false;
+      if (emp.sujeto_a_control_horario === false) return false;
+      if (!ABSENT_STATES.has(emp.estado_presencia)) return false;
+      if (isAfternoonShiftNotStarted(emp)) return false;
+      if (employeesWithApprovedAbsence.has(emp.id)) return false;
+      // Solo mostrar si hay una detección automática pendiente activa para este empleado
+      if (!autoAbsenceByEmpId.has(emp.id)) return false;
+      return true;
+    });
+  }, [employees, isAfternoonShiftNotStarted, employeesWithApprovedAbsence, autoAbsenceByEmpId]);
 
   const deptOptions = useMemo(() => {
     const s = new Set();

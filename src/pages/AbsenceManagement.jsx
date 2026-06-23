@@ -141,10 +141,23 @@ export default function AbsenceManagementPage() {
       if (now >= start && now <= end) employeesWithApprovedAbsence.add(abs.employee_id);
     }
 
+    // Mapa de ausencias auto pendientes por employee_id (para el contador del badge)
+    const autoAbsenceEmpIds = new Set();
+    for (const abs of absences) {
+      const isAuto = abs.motivo === 'Ausencia no comunicada - detección automática' ||
+        (abs.notas && (abs.notas.startsWith('[SISTEMA]') || abs.notas.startsWith('[shiftAudit]')));
+      if (!isAuto || abs.estado_aprobacion !== 'Pendiente') continue;
+      const absStart = new Date(abs.fecha_inicio);
+      if (absStart > now) continue;
+      autoAbsenceEmpIds.add(abs.employee_id);
+    }
+
     const autoPendingCount = employees.filter(emp => {
       if (emp.estado_empleado !== 'Alta' || emp.sujeto_a_control_horario === false) return false;
       if (!absentStates.has(emp.estado_presencia)) return false;
       if (employeesWithApprovedAbsence.has(emp.id)) return false;
+      // Solo contar si tiene detección automática pendiente activa
+      if (!autoAbsenceEmpIds.has(emp.id)) return false;
       // Excluir turno tarde no iniciado
       let assignedShift = null;
       if (emp.tipo_turno === 'Fijo Tarde') assignedShift = 'Tarde';
