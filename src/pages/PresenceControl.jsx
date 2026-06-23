@@ -227,9 +227,11 @@ export default function PresenceControl() {
       const effectiveAbsence = (hasRealEntry && isAutoAbsencePending) ? null : confirmedAbsence;
 
       // REGLA CRÍTICA: Si el turno aún NO ha empezado para este empleado → siempre "pending"
-      // Esto evita marcar como ausente a empleados cuya hora esperada todavía no ha llegado
       const expectedMins = timeToMinutes(expectedTime !== "—" ? expectedTime : null);
       const shiftNotStartedYet = isToday && expectedMins !== null && nowMinutes < expectedMins;
+
+      // Detectar ausencia crónica: empleado ausente desde ayer o antes (sin fichar hoy ni ayer)
+      const isAbsentYesterday = absentYesterdaySet.has(emp.employee_db_id);
 
       if (shiftLifecycle === "before" || shiftNotStartedYet) {
         // 0. Turno o hora individual aún no ha llegado → siempre pending
@@ -253,20 +255,23 @@ export default function PresenceControl() {
         }
 
       } else if (effectiveAbsence && !hasRealEntry) {
-        // 3. Ausencia pendiente (no aprobada) y sin marcaje real → ausente pendiente de confirmar
-        // Solo aplica si la hora esperada YA ha pasado
+        // 3. Ausencia pendiente (auto o manual) y sin marcaje → ausente
         presenceStatus = "absent_confirmed";
 
       } else if (shiftLifecycle === "closed") {
         // 4. Turno CERRADO y sin marcaje → ausente sin registro (estado definitivo)
         presenceStatus = "absent_no_record";
 
-      } else if (shiftLifecycle === "active" && expectedTime !== "—") {
-        // 5. Turno EN CURSO, sin marcaje → solo señal si lleva >30 min de retraso
-        if (expectedMins !== null && (nowMinutes - expectedMins) >= 30) {
-          presenceStatus = predictedAbsent ? "absent_predicted" : "pending";
+      } else if (shiftLifecycle === "active") {
+        // 5. Turno EN CURSO, sin marcaje
+        if (isAbsentYesterday) {
+          // Si tampoco fichó ayer → ausente sin registro (ausencia de días anteriores)
+          presenceStatus = "absent_no_record";
+        } else if (expectedMins !== null && (nowMinutes - expectedMins) >= 30) {
+          // Lleva >30 min de retraso → pendiente (puede venir tarde)
+          presenceStatus = "pending";
         }
-        // Si lleva <30 min → pending (puede estar en camino)
+        // Si lleva <30 min o no se sabe hora → pending (puede estar en camino)
       }
 
       return {
