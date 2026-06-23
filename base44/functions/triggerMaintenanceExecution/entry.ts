@@ -99,6 +99,32 @@ Deno.serve(async (req) => {
     const plan = await base44.asServiceRole.entities.MaintenancePlan.get(plan_id);
     if (!plan) return Response.json({ error: 'Plan not found' }, { status: 404 });
 
+    // Cargar tareas del MaintenanceType asociado
+    let tareasOrden = [];
+    if (plan.maintenance_type_id) {
+      try {
+        const maintenanceType = await base44.asServiceRole.entities.MaintenanceType.get(plan.maintenance_type_id);
+        if (maintenanceType) {
+          for (let i = 1; i <= 6; i++) {
+            const t = maintenanceType[`tarea_${i}`];
+            if (t?.nombre) {
+              const subtareas = [];
+              for (let j = 1; j <= 8; j++) {
+                const st = t[`subtarea_${j}`];
+                if (st?.titulo) subtareas.push({ titulo: st.titulo, completada: false });
+              }
+              tareasOrden.push({
+                titulo: t.nombre,
+                descripcion: t.observaciones || '',
+                completada: false,
+                subtareas,
+              });
+            }
+          }
+        }
+      } catch (_) {}
+    }
+
     const now = new Date();
     const scheduledDate = immediate ? now : (plan.proxima_fecha ? new Date(plan.proxima_fecha) : now);
     const estado = immediate ? 'En Proceso' : 'Programado';
@@ -106,6 +132,7 @@ Deno.serve(async (req) => {
     const scheduleData = {
       machine_id: plan.machine_id,
       maintenance_plan_id: plan.id,
+      maintenance_type_id: plan.maintenance_type_id || null,
       tipo: plan.tipo || 'Preventivo',
       descripcion: `${plan.nombre_plan} - ${plan.periodicidad || ''}`,
       fecha_programada: scheduledDate.toISOString(),
@@ -113,6 +140,7 @@ Deno.serve(async (req) => {
       prioridad: immediate ? 'Alta' : 'Media',
       tecnico_asignado: responsible_id || null,
       notas: `Plan: ${plan.nombre_plan}\nPeriodicidad: ${plan.periodicidad || ''}\nIntervalo: ${plan.dias_intervalo || 30} días`,
+      tareas: tareasOrden,
     };
 
     if (immediate) scheduleData.fecha_inicio = now.toISOString();

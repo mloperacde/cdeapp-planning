@@ -6,6 +6,10 @@
       "type": "string",
       "description": "ID de la m\u00e1quina"
     },
+    "maintenance_plan_id": {
+      "type": "string",
+      "description": "ID del plan de mantenimiento"
+    },
     "maintenance_type_id": {
       "type": "string",
       "description": "ID del tipo de mantenimiento configurado"
@@ -18,7 +22,9 @@
         "Inspecci\u00f3n",
         "Calibraci\u00f3n",
         "Limpieza",
-        "Predictivo"
+        "Predictivo",
+        "Preventivo",
+        "Correctivo"
       ],
       "default": "Mantenimiento Planificado",
       "description": "Tipo de mantenimiento"
@@ -56,10 +62,15 @@
       "format": "date-time",
       "description": "Fecha y hora de inicio real"
     },
-    "fecha_finalizacion": {
+    "fecha_fin": {
       "type": "string",
       "format": "date-time",
       "description": "Fecha y hora de finalizaci\u00f3n real"
+    },
+    "fecha_finalizacion": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Fecha y hora de finalizaci\u00f3n real (alias)"
     },
     "duracion_estimada": {
       "type": "number",
@@ -71,7 +82,7 @@
     },
     "tecnico_asignado": {
       "type": "string",
-      "description": "ID del t\u00e9cnico asignado (departamento Mantenimiento)"
+      "description": "ID del t\u00e9cnico asignado"
     },
     "creado_por": {
       "type": "string",
@@ -92,6 +103,10 @@
     "notas": {
       "type": "string",
       "description": "Notas adicionales"
+    },
+    "numero_orden": {
+      "type": "string",
+      "description": "N\u00famero de orden de trabajo"
     },
     "tareas": {
       "type": "array",
