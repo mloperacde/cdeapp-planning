@@ -82,9 +82,24 @@ export function DataProvider({ children }) {
   });
 
   // 4. AUSENCIAS - Sin caché (datos críticos en tiempo real)
+  // Cargamos en dos queries paralelas para no perder ausencias activas antiguas:
+  // - Aprobadas + Pendientes (pocas, todas necesarias para KPIs)
+  // - Recientes por fecha (para historial/gestión)
   const absencesQuery = useQuery({
     queryKey: ['absences'],
-    queryFn: () => isLocal ? Promise.resolve([]) : base44.entities.Absence.list('-fecha_inicio', 1000),
+    queryFn: async () => {
+      if (isLocal) return [];
+      // Cargar aprobadas y pendientes (son pocas y las más críticas)
+      const [aprobadas, pendientes, recientes] = await Promise.all([
+        base44.entities.Absence.filter({ estado_aprobacion: 'Aprobada' }, '-fecha_inicio', 500),
+        base44.entities.Absence.filter({ estado_aprobacion: 'Pendiente' }, '-fecha_inicio', 500),
+        base44.entities.Absence.filter({ estado_aprobacion: 'Rechazada' }, '-fecha_inicio', 200),
+      ]);
+      // Deduplicar por id
+      const map = new Map();
+      [...aprobadas, ...pendientes, ...recientes].forEach(a => map.set(a.id, a));
+      return Array.from(map.values());
+    },
     staleTime: 0, // Siempre fresco
     gcTime: 5 * 60 * 1000,
     refetchOnWindowFocus: true,
