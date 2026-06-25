@@ -267,11 +267,14 @@ export default function PresenceControl() {
         if (isAbsentYesterday) {
           // Si tampoco fichó ayer → ausente sin registro (ausencia de días anteriores)
           presenceStatus = "absent_no_record";
-        } else if (expectedMins !== null && (nowMinutes - expectedMins) >= 30) {
-          // Lleva >30 min de retraso → pendiente (puede venir tarde)
+        } else if (expectedMins !== null && (nowMinutes - expectedMins) >= 60) {
+          // Lleva >60 min desde la hora esperada → ausente sin registro (no va a venir)
+          presenceStatus = "absent_no_record";
+        } else if (expectedMins !== null && (nowMinutes - expectedMins) >= 15) {
+          // Entre 15 y 60 min de retraso → retraso potencial, sigue como pending
           presenceStatus = "pending";
         }
-        // Si lleva <30 min o no se sabe hora → pending (puede estar en camino)
+        // Si lleva <15 min desde hora esperada → pending (puede estar en camino)
       }
 
       return {
