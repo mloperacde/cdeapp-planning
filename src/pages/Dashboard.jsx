@@ -52,56 +52,87 @@ export default function Dashboard() {
 
   const todayStr = new Date().toISOString().split('T')[0];
 
-  // Fichajes de hoy — para excluir de ausentes a quienes sí ficharon entrada
+  // Datos de presencia real del día — misma fuente que Control de Presencia
+  const { data: expectedData } = useQuery({
+    queryKey: ["expectedAttendance", todayStr],
+    queryFn: async () => {
+      const res = await base44.functions.invoke("getExpectedAttendance", { date: todayStr });
+      return res.data;
+    },
+    staleTime: 300000,
+  });
+
   const { data: todayRecords = [] } = useQuery({
     queryKey: ["attendanceRecords", todayStr],
     queryFn: () => base44.entities.AttendanceRecord.filter({ record_date: todayStr }, "record_time", 2000),
     staleTime: 120000,
   });
 
-  // Set de employee_id (código Cuco) que ficharon entrada hoy
-  const ficharonHoySet = useMemo(() => {
-    const s = new Set();
-    for (const r of todayRecords) {
-      if (r.direction === "E") s.add(r.employee_id);
-    }
-    return s;
-  }, [todayRecords]);
-
-  // Mapa código_empleado → id de empleado (para cruzar fichaje con ausencia)
-  const codigoToId = useMemo(() => {
-    const m = {};
-    for (const e of employees) {
-      if (e.codigo_empleado) m[e.codigo_empleado] = e.id;
-      if (e.legacy_employee_id) m[e.legacy_employee_id] = e.id;
-    }
-    return m;
-  }, [employees]);
-
   const stats = useMemo(() => {
     const now = new Date();
-
-    // Solo empleados en estado Alta
     const activeEmployeeIds = new Set(employees.filter(e => e.estado_empleado === 'Alta').map(e => e.id));
 
-    // Set de IDs internos de empleados que ficharon hoy
-    const ficharonIds = new Set();
-    for (const cucoId of ficharonHoySet) {
-      const empId = codigoToId[cucoId];
-      if (empId) ficharonIds.add(empId);
-    }
+    // Si ya tenemos datos de presencia del backend, calculamos exactamente igual que Control de Presencia
+    let activeAbsences;
+    if (expectedData?.employees) {
+      // Mapa de fichajes por código Cuco
+      const fichajeMap = {};
+      for (const r of todayRecords) {
+        if (r.direction === "E") fichajeMap[r.employee_id] = true;
+      }
+      // Ausencias confirmadas hoy (no canceladas/rechazadas)
+      const confirmedAbsMap = {};
+      absences.forEach(a => {
+        if (a.estado_aprobacion === "Rechazada" || a.estado_aprobacion === "Cancelada") return;
+        const start = new Date(a.fecha_inicio);
+        const end = a.fecha_fin_desconocida ? new Date('2099-12-31') : a.fecha_fin ? new Date(a.fecha_fin) : new Date('2099-12-31');
+        const midday = new Date(todayStr + "T12:00:00");
+        if (start <= midday && midday <= end) confirmedAbsMap[a.employee_id] = a;
+      });
 
-    // Ausentes reales: tienen ausencia activa hoy (no cancelada/rechazada) Y no ficharon entrada hoy
-    const activeAbsenceEmpIds = new Set();
-    absences.forEach(a => {
-      if (!activeEmployeeIds.has(a.employee_id)) return;
-      if (a.estado_aprobacion === "Rechazada" || a.estado_aprobacion === "Cancelada") return;
-      if (ficharonIds.has(a.employee_id)) return; // fichó entrada → presente
-      const start = new Date(a.fecha_inicio);
-      const end = a.fecha_fin_desconocida ? new Date('2099-12-31') : a.fecha_fin ? new Date(a.fecha_fin) : new Date('2099-12-31');
-      if (start <= now && end >= now) activeAbsenceEmpIds.add(a.employee_id);
-    });
-    const activeAbsences = activeAbsenceEmpIds.size;
+      // Replica la lógica de presenceStatus de Control de Presencia
+      const nowMins = now.getHours() * 60 + now.getMinutes();
+      let absentCount = 0;
+      for (const emp of expectedData.employees) {
+        const rawCode = emp.employee_id ? String(emp.employee_id).trim() : null;
+        const isValidCode = rawCode && rawCode !== "0" && rawCode !== "null" && rawCode !== "undefined";
+        const hasEntry = isValidCode && fichajeMap[rawCode];
+        const absence = confirmedAbsMap[emp.employee_db_id];
+        const isAutoAbsence = absence && absence.estado_aprobacion === "Pendiente" &&
+          (absence.tipo === "Ausencia No Justificada" || absence.notas?.includes("[SISTEMA]") || absence.notas?.includes("[shiftAudit]"));
+        const effectiveAbsence = (hasEntry && isAutoAbsence) ? null : absence;
+
+        // Turno cerrado o activo >60min sin fichar → ausente
+        const shiftEnd = emp.hora_salida;
+        const shiftStart = emp.hora_entrada;
+        const parseMins = (hhmm) => { if (!hhmm) return null; const [h, m] = hhmm.split(':').map(Number); return h * 60 + m; };
+        const startMins = parseMins(shiftStart);
+        const endMins = parseMins(shiftEnd);
+        const shiftClosed = endMins !== null && nowMins >= endMins;
+        const shiftBefore = startMins !== null && nowMins < startMins;
+
+        if (shiftBefore) continue; // turno no empezó → no cuenta
+
+        if (hasEntry) continue; // fichó → presente
+
+        if (effectiveAbsence) { absentCount++; continue; }
+
+        if (shiftClosed) { absentCount++; continue; }
+
+        // Turno activo >60min desde hora esperada → ausente
+        if (startMins !== null && (nowMins - startMins) >= 60) { absentCount++; continue; }
+      }
+      activeAbsences = absentCount;
+    } else {
+      // Fallback mientras carga expectedData
+      activeAbsences = absences.filter(a => {
+        if (!activeEmployeeIds.has(a.employee_id)) return false;
+        if (a.estado_aprobacion === "Rechazada" || a.estado_aprobacion === "Cancelada") return false;
+        const start = new Date(a.fecha_inicio);
+        const end = a.fecha_fin_desconocida ? new Date('2099-12-31') : a.fecha_fin ? new Date(a.fecha_fin) : new Date('2099-12-31');
+        return start <= now && end >= now;
+      }).length;
+    }
 
     // Pendientes de aprobación (excluye auto-generadas)
     const isAutoAbs = (a) =>
@@ -117,7 +148,7 @@ export default function Dashboard() {
       return diffDays >= 0 && diffDays <= 7 && m.estado !== "Completado";
     }).length;
     return { totalEmployees: activeEmployeeIds.size, activeAbsences, pendingAbsences, upcomingMaintenance };
-  }, [employees, absences, maintenanceSchedules, ficharonHoySet, codigoToId]);
+  }, [employees, absences, maintenanceSchedules, expectedData, todayRecords, todayStr]);
 
   const quickActions = useMemo(() => {
     const role = isAdmin ? "admin" : "user";
