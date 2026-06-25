@@ -50,27 +50,30 @@ export default function Dashboard() {
 
   const stats = useMemo(() => {
     const now = new Date();
-    // Ausencias formales aprobadas vigentes hoy (excluye auto-detectadas, deduplicadas por empleado)
-    const isAutoAbs = (a) =>
-      a.motivo === 'Ausencia no comunicada - detección automática' ||
-      a.motivo === 'Ausencia detectada automáticamente por análisis de presencia' ||
-      (a.notas && (a.notas.startsWith('[SISTEMA]') || a.notas.startsWith('[shiftAudit]') || a.notas.startsWith('Creado automáticamente')));
+    const todayStr = now.toISOString().split('T')[0];
 
     // Solo empleados en estado Alta
     const activeEmployeeIds = new Set(employees.filter(e => e.estado_empleado === 'Alta').map(e => e.id));
 
+    // Ausentes reales: cualquier ausencia (aprobada, pendiente, auto) activa hoy — excluyendo solo canceladas/rechazadas
+    // Igual que Control de Presencia: si no está → ausente, con o sin justificación
     const activeAbsenceEmpIds = new Set();
     absences.forEach(a => {
       if (!activeEmployeeIds.has(a.employee_id)) return;
-      if (a.estado_aprobacion !== "Aprobada") return;
-      if (isAutoAbs(a)) return;
+      if (a.estado_aprobacion === "Rechazada" || a.estado_aprobacion === "Cancelada") return;
       const start = new Date(a.fecha_inicio);
       const end = a.fecha_fin_desconocida ? new Date('2099-12-31') : a.fecha_fin ? new Date(a.fecha_fin) : new Date('2099-12-31');
       if (start <= now && end >= now) activeAbsenceEmpIds.add(a.employee_id);
     });
     const activeAbsences = activeAbsenceEmpIds.size;
-    // Solo pendientes manuales de empleados en Alta
+
+    // Pendientes de aprobación (excluye auto-generadas)
+    const isAutoAbs = (a) =>
+      a.motivo === 'Ausencia no comunicada - detección automática' ||
+      a.motivo === 'Ausencia detectada automáticamente por análisis de presencia' ||
+      (a.notas && (a.notas.startsWith('[SISTEMA]') || a.notas.startsWith('[shiftAudit]') || a.notas.startsWith('Creado automáticamente')));
     const pendingAbsences = absences.filter(a => activeEmployeeIds.has(a.employee_id) && !isAutoAbs(a) && a.estado_aprobacion === "Pendiente").length;
+
     const todayMidnight = new Date(); todayMidnight.setHours(0, 0, 0, 0);
     const upcomingMaintenance = maintenanceSchedules.filter(m => {
       const scheduled = new Date(m.fecha_programada);

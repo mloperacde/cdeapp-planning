@@ -633,18 +633,13 @@ export default function MasterEmployeeDatabasePage() {
     const activeEmployees = data.filter(e => e.estado_empleado === 'Alta');
     const activeIds = new Set(activeEmployees.map(e => e.id));
 
-    // Ausentes: misma lógica que Dashboard — ausencias formales aprobadas activas hoy, solo empleados en Alta
-    const isAutoAbs = (a) =>
-      a.motivo === 'Ausencia no comunicada - detección automática' ||
-      a.motivo === 'Ausencia detectada automáticamente por análisis de presencia' ||
-      (a.notas && (a.notas.startsWith('[SISTEMA]') || a.notas.startsWith('[shiftAudit]') || a.notas.startsWith('Creado automáticamente')));
-
+    // Ausentes: misma lógica que Dashboard y Control de Presencia
+    // Cualquier ausencia activa hoy que no esté rechazada/cancelada = ausente real
     const now = new Date();
     const absentEmpIds = new Set();
     (allAbsences || []).forEach(a => {
       if (!activeIds.has(a.employee_id)) return;
-      if (a.estado_aprobacion !== 'Aprobada') return;
-      if (isAutoAbs(a)) return;
+      if (a.estado_aprobacion === 'Rechazada' || a.estado_aprobacion === 'Cancelada') return;
       const start = new Date(a.fecha_inicio);
       const end = a.fecha_fin_desconocida ? new Date('2099-12-31') : (a.fecha_fin ? new Date(a.fecha_fin) : new Date('2099-12-31'));
       if (start <= now && now <= end) absentEmpIds.add(a.employee_id);
