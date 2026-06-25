@@ -56,8 +56,12 @@ export default function Dashboard() {
       a.motivo === 'Ausencia detectada automáticamente por análisis de presencia' ||
       (a.notas && (a.notas.startsWith('[SISTEMA]') || a.notas.startsWith('[shiftAudit]') || a.notas.startsWith('Creado automáticamente')));
 
+    // Solo empleados en estado Alta
+    const activeEmployeeIds = new Set(employees.filter(e => e.estado_empleado === 'Alta').map(e => e.id));
+
     const activeAbsenceEmpIds = new Set();
     absences.forEach(a => {
+      if (!activeEmployeeIds.has(a.employee_id)) return;
       if (a.estado_aprobacion !== "Aprobada") return;
       if (isAutoAbs(a)) return;
       const start = new Date(a.fecha_inicio);
@@ -65,15 +69,15 @@ export default function Dashboard() {
       if (start <= now && end >= now) activeAbsenceEmpIds.add(a.employee_id);
     });
     const activeAbsences = activeAbsenceEmpIds.size;
-    // Solo pendientes manuales (no auto-detectadas del sistema)
-    const pendingAbsences = absences.filter(a => !isAutoAbs(a) && a.estado_aprobacion === "Pendiente").length;
+    // Solo pendientes manuales de empleados en Alta
+    const pendingAbsences = absences.filter(a => activeEmployeeIds.has(a.employee_id) && !isAutoAbs(a) && a.estado_aprobacion === "Pendiente").length;
     const todayMidnight = new Date(); todayMidnight.setHours(0, 0, 0, 0);
     const upcomingMaintenance = maintenanceSchedules.filter(m => {
       const scheduled = new Date(m.fecha_programada);
       const diffDays = Math.ceil((scheduled - todayMidnight) / (1000 * 60 * 60 * 24));
       return diffDays >= 0 && diffDays <= 7 && m.estado !== "Completado";
     }).length;
-    return { totalEmployees: employees.length, activeAbsences, pendingAbsences, upcomingMaintenance };
+    return { totalEmployees: activeEmployeeIds.size, activeAbsences, pendingAbsences, upcomingMaintenance };
   }, [employees, absences, maintenanceSchedules]);
 
   const quickActions = useMemo(() => {
