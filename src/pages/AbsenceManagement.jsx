@@ -97,6 +97,32 @@ export default function AbsenceManagementPage() {
     }
   };
 
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  // Fichajes de hoy — para excluir de "Activas" a quien sí fichó entrada
+  const { data: todayRecords = [] } = useQuery({
+    queryKey: ['attendanceRecords', todayStr],
+    queryFn: () => base44.entities.AttendanceRecord.filter({ record_date: todayStr }, 'record_time', 2000),
+    staleTime: 120000,
+  });
+
+  const ficharonHoyIds = useMemo(() => {
+    // Mapa código_empleado → id interno
+    const codigoToId = {};
+    for (const e of employees) {
+      if (e.codigo_empleado) codigoToId[e.codigo_empleado] = e.id;
+      if (e.legacy_employee_id) codigoToId[e.legacy_employee_id] = e.id;
+    }
+    const s = new Set();
+    for (const r of todayRecords) {
+      if (r.direction === 'E') {
+        const empId = codigoToId[r.employee_id];
+        if (empId) s.add(empId);
+      }
+    }
+    return s;
+  }, [todayRecords, employees]);
+
   // Calendario de turnos para excluir turno tarde no iniciado del contador
   const mondayStr = useMemo(() => {
     const d = new Date();
@@ -178,6 +204,7 @@ export default function AbsenceManagementPage() {
     const formalActive = absences.filter(abs => {
       if (isAutoAbsence(abs)) return false;
       if (abs.estado_aprobacion === 'Rechazada' || abs.estado_aprobacion === 'Cancelada') return false;
+      if (ficharonHoyIds.has(abs.employee_id)) return false; // fichó entrada → presente
       const start = new Date(abs.fecha_inicio);
       const end = abs.fecha_fin_desconocida ? new Date('2099-12-31') : new Date(abs.fecha_fin || '2099-12-31');
       return now >= start && now <= end;
@@ -192,7 +219,7 @@ export default function AbsenceManagementPage() {
       formalActive: formalActive.length,
       pendingApproval: pendingApproval.length,
     };
-  }, [absences, employees, teamShiftMap]);
+  }, [absences, employees, teamShiftMap, ficharonHoyIds]);
 
   const tabs = [
     { value: "dashboard", label: "Resumen", icon: LayoutDashboard },
