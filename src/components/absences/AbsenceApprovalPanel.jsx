@@ -24,11 +24,24 @@ export default function AbsenceApprovalPanel({ employees, masterEmployees = [], 
     refetchOnWindowFocus: true,
   });
 
-  // Solo ausencias manuales pendientes (excluir las auto-detectadas)
-  const pendingAbsences = absences.filter(abs => {
-    const isAuto = abs.motivo === 'Ausencia no comunicada - detección automática' ||
-      (abs.notas && (abs.notas.startsWith('[SISTEMA]') || abs.notas.startsWith('[shiftAudit]')));
-    return !isAuto && abs.estado_aprobacion === "Pendiente";
+  // Solo ausencias manuales pendientes (excluir las auto-detectadas) — misma lógica que el resto del módulo
+  const isAutoAbs = (abs) =>
+    abs.motivo === 'Ausencia no comunicada - detección automática' ||
+    abs.motivo === 'Ausencia detectada automáticamente por análisis de presencia' ||
+    (abs.notas && (
+      abs.notas.startsWith('[SISTEMA]') ||
+      abs.notas.startsWith('[shiftAudit]') ||
+      abs.notas.startsWith('Creado automáticamente')
+    ));
+
+  // Deduplicar: si un empleado tiene varias ausencias pendientes con el mismo periodo, mostrar solo la más reciente
+  const pendingRaw = absences.filter(abs => !isAutoAbs(abs) && abs.estado_aprobacion === "Pendiente");
+  const seenKey = new Set();
+  const pendingAbsences = pendingRaw.filter(abs => {
+    const key = `${abs.employee_id}_${abs.fecha_inicio?.slice(0, 10)}_${abs.motivo}`;
+    if (seenKey.has(key)) return false;
+    seenKey.add(key);
+    return true;
   });
 
   const approvalMutation = useMutation({

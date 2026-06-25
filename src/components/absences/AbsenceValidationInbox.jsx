@@ -133,8 +133,9 @@ export default function AbsenceValidationInbox({ employees = EMPTY, absenceTypes
       const absStart = new Date(abs.fecha_inicio);
       if (absStart > now) continue;
       if (filterDate) {
+        // Excluir ausencias con fecha_inicio futura respecto a filterDate
         const absDateStr = abs.fecha_inicio ? abs.fecha_inicio.slice(0, 10) : null;
-        if (absDateStr !== filterDate) continue;
+        if (absDateStr && absDateStr > filterDate) continue;
       }
       const existing = map.get(abs.employee_id);
       if (!existing || abs.created_date > existing.created_date) {
