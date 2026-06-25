@@ -602,6 +602,8 @@ export default function MasterEmployeeDatabasePage() {
     setSelectedIds(newSelected);
   };
 
+  const { absences: allAbsences } = useAppData() || {};
+
   const stats = useMemo(() => {
     const data = filteredEmployees;
     if (!data || data.length === 0) {
@@ -629,16 +631,35 @@ export default function MasterEmployeeDatabasePage() {
       .sort((a, b) => b.count - a.count);
 
     const activeEmployees = data.filter(e => e.estado_empleado === 'Alta');
+    const activeIds = new Set(activeEmployees.map(e => e.id));
+
+    // Ausentes: misma lógica que Dashboard — ausencias formales aprobadas activas hoy, solo empleados en Alta
+    const isAutoAbs = (a) =>
+      a.motivo === 'Ausencia no comunicada - detección automática' ||
+      a.motivo === 'Ausencia detectada automáticamente por análisis de presencia' ||
+      (a.notas && (a.notas.startsWith('[SISTEMA]') || a.notas.startsWith('[shiftAudit]') || a.notas.startsWith('Creado automáticamente')));
+
+    const now = new Date();
+    const absentEmpIds = new Set();
+    (allAbsences || []).forEach(a => {
+      if (!activeIds.has(a.employee_id)) return;
+      if (a.estado_aprobacion !== 'Aprobada') return;
+      if (isAutoAbs(a)) return;
+      const start = new Date(a.fecha_inicio);
+      const end = a.fecha_fin_desconocida ? new Date('2099-12-31') : (a.fecha_fin ? new Date(a.fecha_fin) : new Date('2099-12-31'));
+      if (start <= now && now <= end) absentEmpIds.add(a.employee_id);
+    });
+
     return {
-      total: data.filter(e => e.estado_empleado !== 'Baja').length,
+      total: activeEmployees.length,
       excedencias: data.filter(e => e.estado_empleado === 'Excedencia').length,
       active: activeEmployees.length,
       subjectToControl: activeEmployees.filter(e => e.sujeto_a_control_horario !== false).length,
-      absent: data.filter(e => e.disponibilidad === 'Ausente').length,
+      absent: absentEmpIds.size,
       shiftTypes,
       contractTypes,
     };
-  }, [filteredEmployees]);
+  }, [filteredEmployees, allAbsences]);
 
   const handleAdvancedFilterChange = (newFilters) => {
     if (!newFilters) return;
@@ -699,7 +720,7 @@ export default function MasterEmployeeDatabasePage() {
           <div className="flex items-center gap-4 flex-wrap">
             <div className="flex flex-col">
               <span className="text-3xl font-bold text-slate-900 dark:text-slate-100">{stats.total}</span>
-              <span className="text-[10px] text-slate-500">Total</span>
+              <span className="text-[10px] text-slate-500">En Alta</span>
             </div>
             <div className="w-px h-8 bg-slate-200 dark:bg-slate-700" />
             <div className="flex flex-col">
