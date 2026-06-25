@@ -19,25 +19,37 @@ export default function LongAbsenceAlert({ employees, absences, masterEmployees 
 
   const longAbsences = useMemo(() => {
     const today = new Date();
-    
-    return absences.filter(abs => {
+
+    const isAutoAbs = (abs) =>
+      abs.motivo === 'Ausencia no comunicada - detección automática' ||
+      abs.motivo === 'Ausencia detectada automáticamente por análisis de presencia' ||
+      (abs.notas && (abs.notas.startsWith('[SISTEMA]') || abs.notas.startsWith('[shiftAudit]') || abs.notas.startsWith('Creado automáticamente')));
+
+    // Filtrar candidatas: formales, activas, >30 días
+    const candidates = absences.filter(abs => {
       if (!abs.fecha_inicio) return false;
-      
+      if (isAutoAbs(abs)) return false;
+      if (abs.estado_aprobacion === 'Rechazada' || abs.estado_aprobacion === 'Cancelada') return false;
       try {
         const start = new Date(abs.fecha_inicio);
         if (isNaN(start.getTime())) return false;
-        
         const end = abs.fecha_fin_desconocida ? today : (abs.fecha_fin ? new Date(abs.fecha_fin) : today);
         if (isNaN(end.getTime())) return false;
-        
         const days = differenceInDays(today, start);
-        
-        const isActive = today >= start && today <= end;
-        return isActive && days > 30;
-      } catch {
-        return false;
+        return today >= start && today <= end && days > 30;
+      } catch { return false; }
+    });
+
+    // Deduplicar: por empleado quedarse con la ausencia más reciente (fecha_inicio mayor)
+    const byEmp = {};
+    candidates.forEach(abs => {
+      const prev = byEmp[abs.employee_id];
+      if (!prev || new Date(abs.fecha_inicio) > new Date(prev.fecha_inicio)) {
+        byEmp[abs.employee_id] = abs;
       }
-    }).map(abs => {
+    });
+
+    return Object.values(byEmp).map(abs => {
       const employee = employees.find(e => e.id === abs.employee_id) || masterEmployees.find(e => e.id === abs.employee_id);
       const locker = lockerAssignments.find(la => la.employee_id === abs.employee_id);
       const hasLocker = locker?.numero_taquilla_actual?.replace(/['"]/g, '').trim();

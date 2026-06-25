@@ -50,11 +50,18 @@ export default function AbsenceDashboard({ absences: propsAbsences, employees: p
     refetchOnWindowFocus: false,
   });
 
+  const isAutoAbs = (abs) =>
+    abs.motivo === 'Ausencia no comunicada - detección automática' ||
+    abs.motivo === 'Ausencia detectada automáticamente por análisis de presencia' ||
+    (abs.notas && (abs.notas.startsWith('[SISTEMA]') || abs.notas.startsWith('[shiftAudit]') || abs.notas.startsWith('Creado automáticamente')));
+
   const yearAbsences = useMemo(() => {
     const now = new Date();
     const yearStart = startOfYear(now);
     const yearEnd = endOfYear(now);
     return absences.filter(abs => {
+      if (isAutoAbs(abs)) return false;
+      if (abs.estado_aprobacion === 'Rechazada' || abs.estado_aprobacion === 'Cancelada') return false;
       const start = new Date(abs.fecha_inicio);
       const end = abs.fecha_fin_desconocida ? now : new Date(abs.fecha_fin);
       return start <= yearEnd && end >= yearStart;
