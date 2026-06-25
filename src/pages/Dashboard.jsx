@@ -1,4 +1,6 @@
 import { useMemo, lazy, Suspense, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { base44 } from "@/api/base44Client";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Users, CalendarDays, Wrench, Settings, LayoutDashboard, AlertCircle,
@@ -48,19 +50,53 @@ export default function Dashboard() {
   const showNotifications = searchParams.get("notifications") === "true";
   const [calendarYear, setCalendarYear] = useState(new Date().getFullYear());
 
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  // Fichajes de hoy — para excluir de ausentes a quienes sí ficharon entrada
+  const { data: todayRecords = [] } = useQuery({
+    queryKey: ["attendanceRecords", todayStr],
+    queryFn: () => base44.entities.AttendanceRecord.filter({ record_date: todayStr }, "record_time", 2000),
+    staleTime: 120000,
+  });
+
+  // Set de employee_id (código Cuco) que ficharon entrada hoy
+  const ficharonHoySet = useMemo(() => {
+    const s = new Set();
+    for (const r of todayRecords) {
+      if (r.direction === "E") s.add(r.employee_id);
+    }
+    return s;
+  }, [todayRecords]);
+
+  // Mapa código_empleado → id de empleado (para cruzar fichaje con ausencia)
+  const codigoToId = useMemo(() => {
+    const m = {};
+    for (const e of employees) {
+      if (e.codigo_empleado) m[e.codigo_empleado] = e.id;
+      if (e.legacy_employee_id) m[e.legacy_employee_id] = e.id;
+    }
+    return m;
+  }, [employees]);
+
   const stats = useMemo(() => {
     const now = new Date();
-    const todayStr = now.toISOString().split('T')[0];
 
     // Solo empleados en estado Alta
     const activeEmployeeIds = new Set(employees.filter(e => e.estado_empleado === 'Alta').map(e => e.id));
 
-    // Ausentes reales: cualquier ausencia (aprobada, pendiente, auto) activa hoy — excluyendo solo canceladas/rechazadas
-    // Igual que Control de Presencia: si no está → ausente, con o sin justificación
+    // Set de IDs internos de empleados que ficharon hoy
+    const ficharonIds = new Set();
+    for (const cucoId of ficharonHoySet) {
+      const empId = codigoToId[cucoId];
+      if (empId) ficharonIds.add(empId);
+    }
+
+    // Ausentes reales: tienen ausencia activa hoy (no cancelada/rechazada) Y no ficharon entrada hoy
     const activeAbsenceEmpIds = new Set();
     absences.forEach(a => {
       if (!activeEmployeeIds.has(a.employee_id)) return;
       if (a.estado_aprobacion === "Rechazada" || a.estado_aprobacion === "Cancelada") return;
+      if (ficharonIds.has(a.employee_id)) return; // fichó entrada → presente
       const start = new Date(a.fecha_inicio);
       const end = a.fecha_fin_desconocida ? new Date('2099-12-31') : a.fecha_fin ? new Date(a.fecha_fin) : new Date('2099-12-31');
       if (start <= now && end >= now) activeAbsenceEmpIds.add(a.employee_id);
@@ -81,7 +117,7 @@ export default function Dashboard() {
       return diffDays >= 0 && diffDays <= 7 && m.estado !== "Completado";
     }).length;
     return { totalEmployees: activeEmployeeIds.size, activeAbsences, pendingAbsences, upcomingMaintenance };
-  }, [employees, absences, maintenanceSchedules]);
+  }, [employees, absences, maintenanceSchedules, ficharonHoySet, codigoToId]);
 
   const quickActions = useMemo(() => {
     const role = isAdmin ? "admin" : "user";
