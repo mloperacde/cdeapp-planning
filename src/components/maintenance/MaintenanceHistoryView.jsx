@@ -23,30 +23,44 @@ export default function MaintenanceHistoryView({ machines = EMPTY_ARRAY, employe
   const { data: records = EMPTY_ARRAY, isLoading: loadingRecords } = useQuery({
     queryKey: ["maintenanceRecords"],
     queryFn: async () => {
-      const records = await base44.entities.MaintenanceRecord.list("-fecha_fin", 500);
-      const schedules = await base44.entities.MaintenanceSchedule.filter({ estado: 'Completado' }, "-fecha_finalizacion", 500);
-      
-      // Convertir MaintenanceSchedule a formato compatible
-      const schedulesFormatted = (schedules || []).map(s => ({
-        id: s.id,
-        numero_registro: s.numero_orden,
-        machine_id: s.machine_id,
-        machine_name: s.machine_name,
-        machine_codigo: s.machine_codigo,
-        maintenance_plan_nombre: s.nombre_plan,
-        tipo: s.tipo,
-        fecha_fin: s.fecha_finalizacion || s.fecha_fin,
-        fecha_inicio: s.fecha_inicio,
-        duracion_minutos: s.duracion_real ? Math.round(s.duracion_real * 60) : null,
-        tecnico_nombre: s.tecnico_nombre,
-        estado: s.estado,
-        prioridad: s.prioridad,
-        descripcion: s.descripcion
-      }));
-      
-      return [...records, ...schedulesFormatted].sort((a, b) => 
-        new Date(b.fecha_fin || 0) - new Date(a.fecha_fin || 0)
-      );
+      try {
+        // Query MaintenanceSchedule con estado completado
+        const completedSchedules = await base44.entities.MaintenanceSchedule.filter(
+          { estado: 'Completado' }, 
+          "-fecha_finalizacion", 
+          500
+        );
+        
+        // Consultar empleados para mapear IDs a nombres
+        const allEmployees = employees.length > 0 ? employees : await base44.entities.EmployeeMasterDatabase.list();
+        const employeeMap = new Map(allEmployees.map(e => [e.id, e.nombre]));
+        
+        // Mapear a formato de tabla con datos reales de MaintenanceSchedule
+        const records = (completedSchedules || []).map(s => ({
+          id: s.id,
+          numero_registro: s.numero_orden || s.id.slice(0, 8),
+          machine_id: s.machine_id,
+          machine_name: s.machine_name || 'Desconocida',
+          machine_codigo: s.machine_codigo || '—',
+          maintenance_plan_nombre: s.maintenance_type_id ? 'Plan Activo' : '—',
+          tipo: s.tipo || 'Preventivo',
+          fecha_fin: s.fecha_finalizacion,
+          fecha_inicio: s.fecha_inicio,
+          duracion_minutos: s.duracion_real ? Math.round(s.duracion_real * 60) : null,
+          tecnico_nombre: s.tecnico_asignado ? employeeMap.get(s.tecnico_asignado) || 'Sin asignar' : '—',
+          estado: 'Completado',
+          prioridad: s.prioridad || 'Media',
+          descripcion: s.descripcion
+        })).sort((a, b) => 
+          new Date(b.fecha_fin || 0) - new Date(a.fecha_fin || 0)
+        );
+        
+        console.log(`Historial cargado: ${records.length} registros completados`);
+        return records;
+      } catch (error) {
+        console.error('Error loading maintenance records:', error);
+        return [];
+      }
     },
     initialData: EMPTY_ARRAY,
   });
