@@ -217,7 +217,7 @@ export default function MaintenanceTypeManager({ open, onOpenChange }) {
   if (showForm) {
     return (
       <Dialog open={true} onOpenChange={handleCloseForm}>
-        <DialogContent className="max-w-6xl max-h-[92vh] overflow-y-auto">
+        <DialogContent style={{ width: "min(95vw, 1000px)", maxWidth: "none", maxHeight: "90vh", overflowY: "auto" }} className="overflow-x-hidden">
           <DialogHeader>
             <DialogTitle>
               {editingType ? 'Editar Tipo de Mantenimiento' : 'Nuevo Tipo de Mantenimiento'}
@@ -394,7 +394,7 @@ export default function MaintenanceTypeManager({ open, onOpenChange }) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[92vh] overflow-y-auto">
+      <DialogContent style={{ width: "min(95vw, 980px)", maxWidth: "none", maxHeight: "90vh", overflowY: "auto" }} className="overflow-x-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             <span>Tipos de Mantenimiento</span>

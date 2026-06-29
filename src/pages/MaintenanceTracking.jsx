@@ -25,11 +25,11 @@ import MaintenanceWorkOrder from "../components/maintenance/MaintenanceWorkOrder
 import PredictiveMaintenance from "../components/maintenance/PredictiveMaintenance";
 import KanbanView from "../components/maintenance/KanbanView";
 import AdvancedSearch from "../components/common/AdvancedSearch";
-import MachineInventory from "../components/maintenance/MachineInventory";
-import MaintenancePlanManager from "../components/maintenance/MaintenancePlanManager";
 import MaintenanceSchedulingCalendar from "../components/maintenance/MaintenanceSchedulingCalendar";
 import MaintenanceHistoryView from "../components/maintenance/MaintenanceHistoryView";
 import EquipmentInventory from "../components/maintenance/EquipmentInventory";
+import GmaoMachinePanel from "../components/maintenance/GmaoMachinePanel";
+import GmaoPlansPanel from "../components/maintenance/GmaoPlansPanel";
 
 const EMPTY_ARRAY = [];
 
@@ -404,37 +404,39 @@ export default function MaintenanceTrackingPage() {
           </TabsContent>
 
           <TabsContent value="gmao">
-            <div className="grid grid-cols-4 gap-6 h-full min-h-[600px]">
-              {/* Inventario de máquinas */}
-              <Card className="col-span-1 flex flex-col shadow-lg border-0 bg-white/80 dark:bg-card/80 backdrop-blur-sm">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm">Inventario de Máquinas</CardTitle>
+            <div className="grid grid-cols-4 gap-4 min-h-[620px]">
+              {/* Col 1: Inventario de Máquinas — misma fuente que pestaña Inventario */}
+              <Card className="col-span-1 flex flex-col shadow-sm border bg-white dark:bg-card">
+                <CardHeader className="pb-2 px-4 pt-3">
+                  <CardTitle className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Equipos</CardTitle>
                 </CardHeader>
-                <CardContent className="flex-1 p-4 overflow-hidden">
-                  <MachineInventory 
-                    machines={machines}
-                    onSelectMachine={handleSelectMachine}
+                <CardContent className="flex-1 p-3 pt-0 overflow-hidden">
+                  <GmaoMachinePanel
                     selectedMachineId={selectedMachineId}
+                    onSelectMachine={handleSelectMachine}
                   />
                 </CardContent>
               </Card>
 
-              {/* Planes de mantenimiento */}
-              <Card className="col-span-2 flex flex-col shadow-lg border-0 bg-white/80 dark:bg-card/80 backdrop-blur-sm">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm">Planes de Mantenimiento</CardTitle>
+              {/* Col 2-3: Planes de Mantenimiento */}
+              <Card className="col-span-2 flex flex-col shadow-sm border bg-white dark:bg-card">
+                <CardHeader className="pb-2 px-4 pt-3">
+                  <CardTitle className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
+                    Planes de Mantenimiento
+                    {selectedMachine && <span className="ml-2 font-normal text-slate-400">— {selectedMachine.nombre}</span>}
+                  </CardTitle>
                 </CardHeader>
-                <CardContent className="flex-1 p-6 overflow-hidden">
-                  <MaintenancePlanManager machine={selectedMachine} />
+                <CardContent className="flex-1 p-3 pt-0 overflow-hidden">
+                  <GmaoPlansPanel machine={selectedMachine} />
                 </CardContent>
               </Card>
 
-              {/* Calendario y planificación */}
-              <Card className="col-span-1 flex flex-col shadow-lg border-0 bg-white/80 dark:bg-card/80 backdrop-blur-sm">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm">Calendario</CardTitle>
+              {/* Col 4: Calendario */}
+              <Card className="col-span-1 flex flex-col shadow-sm border bg-white dark:bg-card">
+                <CardHeader className="pb-2 px-4 pt-3">
+                  <CardTitle className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Calendario</CardTitle>
                 </CardHeader>
-                <CardContent className="flex-1 p-4 overflow-hidden">
+                <CardContent className="flex-1 p-3 pt-0 overflow-hidden">
                   <MaintenanceSchedulingCalendar machine={selectedMachine} />
                 </CardContent>
               </Card>
