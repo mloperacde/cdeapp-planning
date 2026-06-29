@@ -34,7 +34,7 @@ const STATUS_COLORS = {
 
 // ─── Equipment Detail Dialog ──────────────────────────────────────────────────
 function EquipmentDetailDialog({ equipment, plans, onClose, onAssignPlan }) {
-  const equipPlans = plans.filter(p => p.machine_id === equipment.id);
+  const equipPlans = plans; // already filtered by plansByMachine resolver
 
   return (
     <Dialog open onOpenChange={onClose}>
@@ -506,7 +506,7 @@ export default function EquipmentInventory() {
       {selectedEquipment && !showAssignPlan && (
         <EquipmentDetailDialog
           equipment={selectedEquipment}
-          plans={plans}
+          plans={plansByMachine.get(selectedEquipment.id) || []}
           onClose={() => setSelectedEquipment(null)}
           onAssignPlan={() => setShowAssignPlan(true)}
         />
