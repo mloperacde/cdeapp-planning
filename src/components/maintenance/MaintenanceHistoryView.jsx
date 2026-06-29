@@ -20,11 +20,38 @@ export default function MaintenanceHistoryView({ machines = EMPTY_ARRAY, employe
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [filterMachine, setFilterMachine] = useState("all");
 
-  const { data: records = EMPTY_ARRAY, isLoading } = useQuery({
+  const { data: records = EMPTY_ARRAY, isLoading: loadingRecords } = useQuery({
     queryKey: ["maintenanceRecords"],
-    queryFn: () => base44.entities.MaintenanceRecord.list("-fecha_fin", 500),
+    queryFn: async () => {
+      const records = await base44.entities.MaintenanceRecord.list("-fecha_fin", 500);
+      const schedules = await base44.entities.MaintenanceSchedule.filter({ estado: 'Completado' }, "-fecha_finalizacion", 500);
+      
+      // Convertir MaintenanceSchedule a formato compatible
+      const schedulesFormatted = (schedules || []).map(s => ({
+        id: s.id,
+        numero_registro: s.numero_orden,
+        machine_id: s.machine_id,
+        machine_name: s.machine_name,
+        machine_codigo: s.machine_codigo,
+        maintenance_plan_nombre: s.nombre_plan,
+        tipo: s.tipo,
+        fecha_fin: s.fecha_finalizacion || s.fecha_fin,
+        fecha_inicio: s.fecha_inicio,
+        duracion_minutos: s.duracion_real ? Math.round(s.duracion_real * 60) : null,
+        tecnico_nombre: s.tecnico_nombre,
+        estado: s.estado,
+        prioridad: s.prioridad,
+        descripcion: s.descripcion
+      }));
+      
+      return [...records, ...schedulesFormatted].sort((a, b) => 
+        new Date(b.fecha_fin || 0) - new Date(a.fecha_fin || 0)
+      );
+    },
     initialData: EMPTY_ARRAY,
   });
+  
+  const isLoading = loadingRecords;
 
   const filtered = records.filter(r => {
     const matchSearch = !search ||
