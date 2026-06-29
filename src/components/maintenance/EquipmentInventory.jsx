@@ -364,12 +364,10 @@ export default function EquipmentInventory() {
               <TableHeader>
                 <TableRow className="bg-slate-50 dark:bg-slate-800/50">
                   <TableHead className="text-xs font-semibold">Código</TableHead>
-                  <TableHead className="text-xs font-semibold">Descripción</TableHead>
+                  <TableHead className="text-xs font-semibold w-[35%]">Descripción</TableHead>
                   <TableHead className="text-xs font-semibold">Fabricante</TableHead>
-                  <TableHead className="text-xs font-semibold">Modelo</TableHead>
                   <TableHead className="text-xs font-semibold">Tipo</TableHead>
                   <TableHead className="text-xs font-semibold">Área / Ubicación</TableHead>
-                  <TableHead className="text-xs font-semibold">F. Compra</TableHead>
                   <TableHead className="text-xs font-semibold">Plan</TableHead>
                   <TableHead className="text-xs font-semibold text-right">Acciones</TableHead>
                 </TableRow>
@@ -377,7 +375,7 @@ export default function EquipmentInventory() {
               <TableBody>
                 {filtered.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-12 text-slate-400">
+                    <TableCell colSpan={7} className="text-center py-12 text-slate-400">
                       No hay equipos con los filtros seleccionados
                     </TableCell>
                   </TableRow>
@@ -391,11 +389,10 @@ export default function EquipmentInventory() {
                           {eq.codigo}
                         </span>
                       </TableCell>
-                      <TableCell className="text-sm text-slate-600 dark:text-slate-400 max-w-[220px]">
-                       <span className="truncate block">{eq.descripcion || "—"}</span>
+                      <TableCell className="text-sm text-slate-600 dark:text-slate-400">
+                       <span className="line-clamp-2">{eq.descripcion || "—"}</span>
                       </TableCell>
                       <TableCell className="text-sm text-slate-600 dark:text-slate-400">{eq.marca || "—"}</TableCell>
-                      <TableCell className="text-sm text-slate-600 dark:text-slate-400">{eq.modelo || "—"}</TableCell>
                       <TableCell>
                         {eq.tipo ? (
                           <Badge variant="outline" className="text-xs">{eq.tipo}</Badge>
@@ -403,9 +400,6 @@ export default function EquipmentInventory() {
                       </TableCell>
                       <TableCell className="text-xs text-slate-500 max-w-[180px]">
                         <span className="truncate block">{parseArea(eq.ubicacion)}</span>
-                      </TableCell>
-                      <TableCell className="text-xs text-slate-500">
-                        {eq.fecha_compra ? format(new Date(eq.fecha_compra), "dd/MM/yyyy", { locale: es }) : "—"}
                       </TableCell>
                       <TableCell>
                         <Badge className={`text-xs border ${STATUS_COLORS[st]}`}>
