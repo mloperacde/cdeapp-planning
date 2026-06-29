@@ -52,13 +52,13 @@ Deno.serve(async (req) => {
     for (const plan of plans) {
       const diasIntervalo = plan.dias_intervalo;
 
-      // Punto de partida: proxima_fecha ya calculada (puede ser pasada o futura)
-      let cursor = new Date(plan.proxima_fecha);
+      // Punto de partida: proxima_fecha ya calculada → ajustar al sábado más próximo
+      let cursor = nextSaturday(new Date(plan.proxima_fecha));
       cursor.setHours(8, 0, 0, 0); // hora de inicio estándar
 
-      // Retroceder si la proxima_fecha es muy en el pasado (más de 1 año): arrancar desde hoy
+      // Si la fecha de partida es muy en el pasado (más de 1 año): arrancar desde hoy (sábado próximo)
       const onYearAgo = addDays(today, -365);
-      if (cursor < onYearAgo) cursor = new Date(today);
+      if (cursor < onYearAgo) cursor = nextSaturday(new Date(today));
 
       // Extraer tareas del tipo de mantenimiento
       let tareasOrden = [];
@@ -122,15 +122,16 @@ Deno.serve(async (req) => {
           skipped.push(`${plan.nombre_plan} @ ${dayKey}`);
         }
 
-        cursor = addDays(cursor, diasIntervalo);
+        // Avanzar según intervalo y fijar al sábado más cercano
+        cursor = nextSaturday(addDays(cursor, diasIntervalo));
       }
 
       // Actualizar proxima_fecha del plan a la siguiente fecha tras hoy
       if (generatedCount > 0 || cursor > today) {
-        let newProxima = new Date(plan.proxima_fecha);
+        let newProxima = nextSaturday(new Date(plan.proxima_fecha));
         newProxima.setHours(0, 0, 0, 0);
         while (newProxima <= today) {
-          newProxima = addDays(newProxima, diasIntervalo);
+          newProxima = nextSaturday(addDays(newProxima, diasIntervalo));
         }
         try {
           await base44.asServiceRole.entities.MaintenancePlan.update(plan.id, {
@@ -160,5 +161,15 @@ Deno.serve(async (req) => {
 function addDays(date, days) {
   const result = new Date(date);
   result.setDate(result.getDate() + days);
+  return result;
+}
+
+// Desplaza la fecha al próximo sábado (día 6). Si ya es sábado, no mueve.
+function nextSaturday(date) {
+  const result = new Date(date);
+  const day = result.getDay(); // 0=Dom, 6=Sab
+  if (day !== 6) {
+    result.setDate(result.getDate() + ((6 - day + 7) % 7));
+  }
   return result;
 }
