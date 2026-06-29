@@ -565,7 +565,134 @@ export default function MaintenanceWorkOrder({ maintenance, onClose, onUpdate })
   };
 
   const handleDownloadPDF = () => {
-    window.print();
+    const pdfContent = document.getElementById("maintenance-pdf-content");
+    if (!pdfContent) return;
+
+    const printWindow = window.open('', '_blank', 'width=900,height=700');
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html lang="es">
+      <head>
+        <meta charset="UTF-8" />
+        <title>Orden de Trabajo - ${machine?.nombre || 'Mantenimiento'}</title>
+        <style>
+          *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+          body { font-family: Arial, sans-serif; background: white; color: #1e293b; }
+          @page { size: A4; margin: 15mm; }
+          @media print {
+            body { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+          }
+          /* Tailwind-equivalent base styles for print */
+          .bg-white { background-color: #ffffff !important; }
+          .bg-blue-900 { background-color: #1e3a8a !important; }
+          .bg-blue-50 { background-color: #eff6ff !important; }
+          .bg-slate-50 { background-color: #f8fafc !important; }
+          .bg-green-100 { background-color: #dcfce7 !important; }
+          .bg-blue-100 { background-color: #dbeafe !important; }
+          .bg-amber-100 { background-color: #fef3c7 !important; }
+          .bg-red-100 { background-color: #fee2e2 !important; }
+          .bg-orange-100 { background-color: #ffedd5 !important; }
+          .text-white { color: #ffffff !important; }
+          .text-blue-900 { color: #1e3a8a !important; }
+          .text-blue-700 { color: #1d4ed8 !important; }
+          .text-green-800 { color: #166534 !important; }
+          .text-blue-800 { color: #1e40af !important; }
+          .text-amber-800 { color: #92400e !important; }
+          .text-red-800 { color: #991b1b !important; }
+          .text-orange-800 { color: #9a3412 !important; }
+          .text-slate-600 { color: #475569 !important; }
+          .text-slate-400 { color: #94a3b8 !important; }
+          .text-slate-500 { color: #64748b !important; }
+          .text-blue-900 { color: #1e3a8a !important; }
+          .text-blue-200 { color: #bfdbfe !important; }
+          .font-bold { font-weight: 700; }
+          .font-semibold { font-weight: 600; }
+          .font-mono { font-family: monospace; }
+          .text-3xl { font-size: 1.875rem; line-height: 2.25rem; }
+          .text-lg { font-size: 1.125rem; line-height: 1.75rem; }
+          .text-base { font-size: 1rem; line-height: 1.5rem; }
+          .text-sm { font-size: 0.875rem; line-height: 1.25rem; }
+          .text-xs { font-size: 0.75rem; line-height: 1rem; }
+          .p-8 { padding: 2rem; }
+          .p-6 { padding: 1.5rem; }
+          .p-4 { padding: 1rem; }
+          .p-3 { padding: 0.75rem; }
+          .p-2 { padding: 0.5rem; }
+          .px-2 { padding-left: 0.5rem; padding-right: 0.5rem; }
+          .py-1 { padding-top: 0.25rem; padding-bottom: 0.25rem; }
+          .py-4 { padding-top: 1rem; padding-bottom: 1rem; }
+          .pt-4 { padding-top: 1rem; }
+          .mb-2 { margin-bottom: 0.5rem; }
+          .mb-4 { margin-bottom: 1rem; }
+          .mb-6 { margin-bottom: 1.5rem; }
+          .mt-1 { margin-top: 0.25rem; }
+          .mt-2 { margin-top: 0.5rem; }
+          .mt-8 { margin-top: 2rem; }
+          .ml-2 { margin-left: 0.5rem; }
+          .ml-8 { margin-left: 2rem; }
+          .mx-auto { margin-left: auto; margin-right: auto; }
+          .border-4 { border: 4px solid; }
+          .border-2 { border: 2px solid; }
+          .border { border: 1px solid; }
+          .border-t-4 { border-top: 4px solid; }
+          .border-t-2 { border-top: 2px solid; }
+          .border-l-2 { border-left: 2px solid; }
+          .border-blue-900 { border-color: #1e3a8a !important; }
+          .border-blue-200 { border-color: #bfdbfe !important; }
+          .border-slate-300 { border-color: #cbd5e1 !important; }
+          .border-slate-200 { border-color: #e2e8f0 !important; }
+          .border-blue-200 { border-color: #bfdbfe !important; }
+          .border-dashed { border-style: dashed !important; }
+          .rounded { border-radius: 0.25rem; }
+          .flex { display: flex; }
+          .grid { display: grid; }
+          .grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+          .grid-cols-1 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+          .gap-4 { gap: 1rem; }
+          .gap-2 { gap: 0.5rem; }
+          .gap-3 { gap: 0.75rem; }
+          .gap-6 { gap: 1.5rem; }
+          .col-span-2 { grid-column: span 2 / span 2; }
+          .items-start { align-items: flex-start; }
+          .items-center { align-items: center; }
+          .justify-between { justify-content: space-between; }
+          .justify-center { justify-content: center; }
+          .justify-end { justify-content: flex-end; }
+          .flex-1 { flex: 1 1 0%; }
+          .flex-shrink-0 { flex-shrink: 0; }
+          .space-y-2 > * + * { margin-top: 0.5rem; }
+          .space-y-4 > * + * { margin-top: 1rem; }
+          .space-y-1\\.5 > * + * { margin-top: 0.375rem; }
+          .space-y-6 > * + * { margin-top: 1.5rem; }
+          .text-center { text-align: center; }
+          .text-right { text-align: right; }
+          .w-5 { width: 1.25rem; }
+          .h-5 { height: 1.25rem; }
+          .w-4 { width: 1rem; }
+          .h-4 { height: 1rem; }
+          .h-24 { height: 6rem; }
+          .w-full { width: 100%; }
+          .max-h-24 { max-height: 6rem; }
+          .object-contain { object-fit: contain; }
+          .whitespace-pre-wrap { white-space: pre-wrap; }
+          .pl-4 { padding-left: 1rem; }
+          .max-w-\\[210mm\\] { max-width: 210mm; }
+          .page-break-inside-avoid { page-break-inside: avoid; }
+          .page-break-before { page-break-before: always; }
+          /* Signature box size */
+          .border-dashed.h-24 { min-height: 6rem; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 0.75rem; }
+        </style>
+      </head>
+      <body>
+        ${pdfContent.innerHTML}
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+    }, 500);
   };
 
   return (
@@ -749,54 +876,7 @@ export default function MaintenanceWorkOrder({ maintenance, onClose, onUpdate })
           </Button>
         </div>
 
-        <style>{`
-          @media print {
-            body {
-              visibility: hidden;
-            }
-            #maintenance-pdf-content,
-            #maintenance-pdf-content * {
-              visibility: visible;
-            }
-            #maintenance-pdf-content {
-              position: absolute;
-              left: 0;
-              top: 0;
-              width: 100%;
-              margin: 0; /* Remove any default margins */
-              padding: 0; /* Remove any default padding */
-            }
-            @page {
-              size: A4;
-              margin: 15mm;
-            }
-            body {
-              print-color-adjust: exact;
-              -webkit-print-color-adjust: exact;
-            }
 
-            .print\\:hidden {
-              display: none !important;
-            }
-            
-            /* Ensure colors and backgrounds are printed */
-            .bg-blue-900, .bg-green-100, .bg-red-100, .bg-amber-100, .bg-orange-100, .bg-blue-100, .bg-slate-50, .bg-blue-50 {
-              print-color-adjust: exact;
-              -webkit-print-color-adjust: exact;
-            }
-            .border-4, .border-2, .border {
-              border-width: 1px !important; /* Ensure borders are visible */
-              border-style: solid !important;
-              border-color: inherit !important; /* Use inherited color or set a default */
-            }
-            /* Specific border colors for PDF */
-            #maintenance-pdf-content .border-blue-900 { border-color: #1e3a8a !important; }
-            #maintenance-pdf-content .border-blue-200 { border-color: #bfdbfe !important; }
-            #maintenance-pdf-content .border-slate-300 { border-color: #cbd5e1 !important; }
-            #maintenance-pdf-content .border-slate-200 { border-color: #e2e8f0 !important; }
-            #maintenance-pdf-content .border-dashed { border-style: dashed !important; }
-          }
-        `}</style>
       </DialogContent>
     </Dialog>
   );
