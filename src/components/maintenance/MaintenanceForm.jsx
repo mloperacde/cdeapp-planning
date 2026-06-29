@@ -145,7 +145,7 @@ export default function MaintenanceForm({ maintenance, machines, employees, main
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[92vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {maintenance ? 'Editar Mantenimiento' : 'Nuevo Mantenimiento'}

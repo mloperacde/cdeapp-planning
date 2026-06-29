@@ -198,7 +198,7 @@ export default function AssignPlanDialog({ equipment, onClose }) {
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-sm flex items-center gap-2">
             <Wrench className="w-4 h-4 text-blue-600" />
@@ -223,7 +223,7 @@ export default function AssignPlanDialog({ equipment, onClose }) {
                 Todos los planes activos ya están asignados
               </div>
             ) : (
-              <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+              <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
                 {availableTypes.map(type => (
                   <PlanCard key={type.id} type={type} selected={selectedTypeId === type.id} onSelect={setSelectedTypeId} />
                 ))}

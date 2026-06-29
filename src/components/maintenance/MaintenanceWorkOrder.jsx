@@ -570,7 +570,7 @@ export default function MaintenanceWorkOrder({ maintenance, onClose, onUpdate })
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="max-w-5xl max-h-[95vh] overflow-y-auto">
+      <DialogContent className="max-w-6xl max-h-[95vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center justify-between print:hidden">
             <DialogTitle>Orden de Trabajo - {machine?.nombre || 'Máquina'}</DialogTitle>

@@ -217,7 +217,7 @@ export default function MaintenanceTypeManager({ open, onOpenChange }) {
   if (showForm) {
     return (
       <Dialog open={true} onOpenChange={handleCloseForm}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-6xl max-h-[92vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editingType ? 'Editar Tipo de Mantenimiento' : 'Nuevo Tipo de Mantenimiento'}
@@ -248,7 +248,7 @@ export default function MaintenanceTypeManager({ open, onOpenChange }) {
 
               <div className="space-y-2">
                 <Label>Máquinas a las que Aplica</Label>
-                <div className="border rounded-lg p-4 max-h-48 overflow-y-auto">
+                <div className="border rounded-lg p-4 max-h-64 overflow-y-auto">
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                     {machines.map((machine) => (
                       <div key={machine.id} className="flex items-center space-x-2">
@@ -394,7 +394,7 @@ export default function MaintenanceTypeManager({ open, onOpenChange }) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-5xl max-h-[92vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             <span>Tipos de Mantenimiento</span>

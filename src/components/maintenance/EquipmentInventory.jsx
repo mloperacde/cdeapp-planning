@@ -39,7 +39,7 @@ function EquipmentDetailDialog({ equipment, plans, onClose, onAssignPlan }) {
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base">
             <Package className="w-5 h-5 text-blue-600" />
