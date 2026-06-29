@@ -132,14 +132,19 @@ export default function MaintenanceTrackingPage() {
       result = [...result].sort((a, b) => {
         let aVal = a[filters.sortField];
         let bVal = b[filters.sortField];
-        
-        // Handle derived fields if needed
-        
         if (!aVal) return 1;
         if (!bVal) return -1;
-        
         const comparison = String(aVal).localeCompare(String(bVal));
         return filters.sortDirection === 'desc' ? -comparison : comparison;
+      });
+    } else {
+      // Default: sort by machine name asc, then by fecha_programada asc (oldest first)
+      result = [...result].sort((a, b) => {
+        const machineA = getMachineName(a.machine_id, a);
+        const machineB = getMachineName(b.machine_id, b);
+        const machineCmp = machineA.localeCompare(machineB, 'es');
+        if (machineCmp !== 0) return machineCmp;
+        return new Date(a.fecha_programada) - new Date(b.fecha_programada);
       });
     }
     
