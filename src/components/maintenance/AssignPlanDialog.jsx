@@ -198,7 +198,7 @@ export default function AssignPlanDialog({ equipment, onClose }) {
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-5xl w-full max-h-[90vh] overflow-y-auto overflow-x-hidden">
+      <DialogContent className="w-[90vw] max-w-4xl max-h-[90vh] overflow-y-auto overflow-x-hidden">
         <DialogHeader>
           <DialogTitle className="text-sm flex items-center gap-2">
             <Wrench className="w-4 h-4 text-blue-600" />
@@ -299,13 +299,13 @@ export default function AssignPlanDialog({ equipment, onClose }) {
               </div>
             )}
 
-            <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" size="sm" onClick={onClose}>Cancelar</Button>
+            <div className="flex justify-end gap-2 flex-wrap">
+              <Button type="button" variant="outline" size="sm" onClick={onClose} className="whitespace-nowrap">Cancelar</Button>
               <Button
                 size="sm"
                 disabled={!selectedTypeId || isPending}
                 onClick={handleAssignExisting}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
+                className="bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap"
               >
                 {isPending ? "Procesando..." : generateOrder ? "Asignar y generar OT" : "Asignar plan"}
               </Button>
@@ -378,9 +378,9 @@ export default function AssignPlanDialog({ equipment, onClose }) {
                 )}
               </div>
 
-              <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" size="sm" onClick={onClose}>Cancelar</Button>
-                <Button type="submit" size="sm" disabled={isPending} className="bg-blue-600 hover:bg-blue-700 text-white">
+              <div className="flex justify-end gap-2 flex-wrap">
+                <Button type="button" variant="outline" size="sm" onClick={onClose} className="whitespace-nowrap">Cancelar</Button>
+                <Button type="submit" size="sm" disabled={isPending} className="bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap">
                   {isPending ? "Procesando..." : generateOrder ? "Crear y generar OT" : "Crear plan"}
                 </Button>
               </div>
