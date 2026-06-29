@@ -66,11 +66,7 @@ export default function MaintenanceTrackingPage() {
 
   const { data: machines = EMPTY_ARRAY } = useQuery({
     queryKey: ['machines'],
-    queryFn: async () => {
-      const data = await base44.entities.MachineMasterDatabase.list(undefined, 500);
-      return (Array.isArray(data) ? data : [])
-        .sort((a, b) => (a.orden_visualizacion || 999) - (b.orden_visualizacion || 999));
-    },
+    queryFn: () => base44.entities.Machine.list("codigo", 500),
     staleTime: 15 * 60 * 1000,
     initialData: EMPTY_ARRAY,
   });
@@ -558,7 +554,6 @@ export default function MaintenanceTrackingPage() {
         <MaintenanceTypeManager
           open={showTypeManager}
           onOpenChange={setShowTypeManager}
-          machines={machines}
         />
       )}
 

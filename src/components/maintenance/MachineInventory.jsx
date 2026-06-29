@@ -18,9 +18,9 @@ export default function MachineInventory({ machines = [], onSelectMachine, selec
   const filteredOperativeMachines = machines.filter(m => m.estado_operativo !== 'Retirada');
 
   const createMachineMutation = useMutation({
-    mutationFn: (data) => base44.entities.MachineMasterDatabase.create(data),
+    mutationFn: (data) => base44.entities.Machine.create(data),
     onSuccess: (newMachine) => {
-      queryClient.invalidateQueries({ queryKey: ['machines-inventory'] });
+      queryClient.invalidateQueries({ queryKey: ['machines'] });
       onSelectMachine(newMachine);
     }
   });
