@@ -23,7 +23,7 @@ const COLUMNS = [
   { id: "Cancelado", title: "Cancelado", icon: AlertTriangle, color: "red" },
 ];
 
-export default function KanbanView({ maintenances, machines, employees, onOpenWorkOrder }) {
+export default function KanbanView({ maintenances, machines, employees, maintenancePlans = [], onOpenWorkOrder }) {
   const [editingCard, setEditingCard] = useState(null);
   const [quickEditData, setQuickEditData] = useState({});
   const queryClient = useQueryClient();
@@ -71,9 +71,15 @@ export default function KanbanView({ maintenances, machines, employees, onOpenWo
     updateStatusMutation.mutate({ id: draggableId, estado: newStatus });
   };
 
-  const getMachineName = (machineId) => {
+  const getMachineName = (machineId, maintenance) => {
     const machine = machines.find(m => m.id === machineId);
-    return machine ? getMachineAlias(machine) : "Máquina";
+    if (machine) return getMachineAlias(machine);
+    // fallback via related plan's stored machine_name
+    if (maintenance?.maintenance_plan_id) {
+      const plan = maintenancePlans.find(p => p.id === maintenance.maintenance_plan_id);
+      if (plan?.machine_name) return plan.machine_name;
+    }
+    return "Desconocida";
   };
 
   const getEmployeeName = (employeeId) => {
@@ -164,7 +170,7 @@ export default function KanbanView({ maintenances, machines, employees, onOpenWo
                                     <div className="flex items-start justify-between gap-2">
                                       <div className="flex-1">
                                         <h4 className="font-semibold text-sm text-slate-900 line-clamp-1">
-                                          {getMachineName(maintenance.machine_id)}
+                                          {getMachineName(maintenance.machine_id, maintenance)}
                                         </h4>
                                         <p className="text-xs text-slate-600 line-clamp-1">
                                           {maintenance.tipo}
@@ -243,7 +249,7 @@ export default function KanbanView({ maintenances, machines, employees, onOpenWo
 
             <div className="space-y-4">
               <div>
-                <h3 className="font-semibold text-slate-900">{getMachineName(editingCard.machine_id)}</h3>
+                <h3 className="font-semibold text-slate-900">{getMachineName(editingCard.machine_id, editingCard)}</h3>
                 <p className="text-sm text-slate-600">{editingCard.tipo}</p>
               </div>
 

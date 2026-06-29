@@ -27,7 +27,8 @@ export default function GmaoMachinePanel({ selectedMachineId, onSelectMachine })
   const { data: plans = [] } = useQuery({
     queryKey: ["maintenance-plans"],
     queryFn: () => base44.entities.MaintenancePlan.list(undefined, 500),
-    staleTime: 5 * 60 * 1000,
+    staleTime: 0,
+    refetchOnMount: true,
   });
 
   const { data: maintenanceTypes = [] } = useQuery({
@@ -37,9 +38,11 @@ export default function GmaoMachinePanel({ selectedMachineId, onSelectMachine })
   });
 
   const getStatus = (machineId) => {
+    // Consider a machine as "with plan" if it has MaintenanceType assignments OR direct MaintenancePlan records
     const assignedTypes = maintenanceTypes.filter(mt => mt.machine_ids?.includes(machineId));
-    const machinePlans = plans.filter(p => p.machine_id === machineId && p.activo);
-    if (assignedTypes.length === 0) return "sin-plan";
+    const machinePlans = plans.filter(p => p.machine_id === machineId && p.activo !== false);
+    const hasPlan = assignedTypes.length > 0 || machinePlans.length > 0;
+    if (!hasPlan) return "sin-plan";
     const overdue = machinePlans.some(p => p.proxima_fecha && new Date(p.proxima_fecha) < new Date());
     if (overdue) return "vencido";
     return "activo";
@@ -93,7 +96,8 @@ export default function GmaoMachinePanel({ selectedMachineId, onSelectMachine })
           const cfg = statusConfig[st];
           const Icon = cfg.icon;
           const isSelected = selectedMachineId === machine.id;
-          const assignedCount = maintenanceTypes.filter(mt => mt.machine_ids?.includes(machine.id)).length;
+          const assignedCount = maintenanceTypes.filter(mt => mt.machine_ids?.includes(machine.id)).length
+            + plans.filter(p => p.machine_id === machine.id && p.activo !== false && !maintenanceTypes.some(mt => mt.machine_ids?.includes(machine.id))).length;
 
           return (
             <button

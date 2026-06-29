@@ -83,8 +83,8 @@ export default function MaintenanceTrackingPage() {
   const { data: machines = EMPTY_ARRAY } = useQuery({
     queryKey: ['machines'],
     queryFn: () => base44.entities.Machine.list("codigo", 500),
-    staleTime: 15 * 60 * 1000,
-    initialData: EMPTY_ARRAY,
+    staleTime: 0,
+    refetchOnMount: true,
   });
 
   const { data: employees = EMPTY_ARRAY } = useQuery({
@@ -96,6 +96,13 @@ export default function MaintenanceTrackingPage() {
   const { data: maintenanceTypes = EMPTY_ARRAY } = useQuery({
     queryKey: ['maintenanceTypes'],
     queryFn: () => base44.entities.MaintenanceType.list(),
+    initialData: EMPTY_ARRAY,
+  });
+
+  const { data: maintenancePlans = EMPTY_ARRAY } = useQuery({
+    queryKey: ['maintenance-plans'],
+    queryFn: () => base44.entities.MaintenancePlan.list(undefined, 500),
+    staleTime: 5 * 60 * 1000,
     initialData: EMPTY_ARRAY,
   });
 
@@ -111,7 +118,7 @@ export default function MaintenanceTrackingPage() {
       const searchTerm = filters.searchTerm || "";
       const matchesSearch = !searchTerm || 
         m.tipo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        getMachineName(m.machine_id).toLowerCase().includes(searchTerm.toLowerCase()) ||
+        getMachineName(m.machine_id, m).toLowerCase().includes(searchTerm.toLowerCase()) ||
         getEmployeeName(m.tecnico_asignado).toLowerCase().includes(searchTerm.toLowerCase());
       
       const matchesType = !filters.tipo || filters.tipo === 'all' || m.tipo === filters.tipo;
@@ -176,9 +183,15 @@ export default function MaintenanceTrackingPage() {
     setShowWorkOrder(maintenance);
   };
 
-  const getMachineName = (machineId) => {
+  const getMachineName = (machineId, maintenance) => {
     const machine = machines.find(m => m.id === machineId);
-    return machine ? getMachineAlias(machine) : "Desconocida";
+    if (machine) return getMachineAlias(machine);
+    // fallback: check stored machine_name in the related plan
+    if (maintenance?.maintenance_plan_id) {
+      const plan = maintenancePlans.find(p => p.id === maintenance.maintenance_plan_id);
+      if (plan?.machine_name) return plan.machine_name;
+    }
+    return "Desconocida";
   };
 
   const getEmployeeName = (employeeId) => {
@@ -248,7 +261,7 @@ export default function MaintenanceTrackingPage() {
         <TableBody>
           {maintenanceList.map((maintenance) => (
             <TableRow key={maintenance.id} className="hover:bg-slate-50 dark:bg-slate-800/50">
-              <TableCell className="font-medium">{getMachineName(maintenance.machine_id)}</TableCell>
+              <TableCell className="font-medium">{getMachineName(maintenance.machine_id, maintenance)}</TableCell>
               <TableCell>{maintenance.tipo}</TableCell>
               <TableCell>
                 {format(new Date(maintenance.fecha_programada), "dd/MM/yyyy HH:mm", { locale: es })}
@@ -475,6 +488,7 @@ export default function MaintenanceTrackingPage() {
               maintenances={maintenances}
               machines={machines}
               employees={employees}
+              maintenancePlans={maintenancePlans}
               onOpenWorkOrder={setShowWorkOrder}
             />
           </TabsContent>
