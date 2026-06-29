@@ -22,6 +22,8 @@ export default function MaintenanceHistoryView({ machines = EMPTY_ARRAY, employe
 
   const { data: records = EMPTY_ARRAY, isLoading: loadingRecords } = useQuery({
     queryKey: ["maintenanceRecords"],
+    staleTime: Infinity,
+    gcTime: 30 * 60 * 1000,
     queryFn: async () => {
       try {
         // Query MaintenanceSchedule con estado completado
@@ -31,12 +33,17 @@ export default function MaintenanceHistoryView({ machines = EMPTY_ARRAY, employe
           500
         );
         
-        // Consultar empleados para mapear IDs a nombres
-        const allEmployees = employees.length > 0 ? employees : await base44.entities.EmployeeMasterDatabase.list();
+        if (!completedSchedules || completedSchedules.length === 0) {
+          console.log('No completed maintenance schedules found');
+          return [];
+        }
+        
+        // Consultar empleados una sola vez
+        const allEmployees = await base44.entities.EmployeeMasterDatabase.list();
         const employeeMap = new Map(allEmployees.map(e => [e.id, e.nombre]));
         
         // Mapear a formato de tabla con datos reales de MaintenanceSchedule
-        const records = (completedSchedules || []).map(s => ({
+        const records = completedSchedules.map(s => ({
           id: s.id,
           numero_registro: s.numero_orden || s.id.slice(0, 8),
           machine_id: s.machine_id,
@@ -62,7 +69,6 @@ export default function MaintenanceHistoryView({ machines = EMPTY_ARRAY, employe
         return [];
       }
     },
-    initialData: EMPTY_ARRAY,
   });
   
   const isLoading = loadingRecords;
