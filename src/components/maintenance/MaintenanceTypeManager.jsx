@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -26,7 +26,7 @@ import { getMachineAlias } from "@/utils/machineAlias";
 import MaintenancePlanTemplatesLibrary from "./MaintenancePlanTemplatesLibrary";
 import MaintenancePlanTemplateAIGenerator from "./MaintenancePlanTemplateAIGenerator";
 
-export default function MaintenanceTypeManager({ open, onOpenChange, machines }) {
+export default function MaintenanceTypeManager({ open, onOpenChange, machines: machinesProp }) {
   const [showForm, setShowForm] = useState(false);
   const [editingType, setEditingType] = useState(null);
   const [showTemplatesLibrary, setShowTemplatesLibrary] = useState(false);
@@ -84,6 +84,20 @@ export default function MaintenanceTypeManager({ open, onOpenChange, machines })
     tarea_5: createEmptyTask(),
     tarea_6: createEmptyTask(),
   });
+
+  // Merge MachineMasterDatabase (passed as prop) + Machine inventory entity
+  const { data: inventoryMachines = [] } = useQuery({
+    queryKey: ["equipment-inventory"],
+    queryFn: () => base44.entities.Machine.list("codigo", 500),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Combine both sources, deduplicated by id
+  const machines = useMemo(() => {
+    const combined = [...(machinesProp || []), ...inventoryMachines];
+    const seen = new Set();
+    return combined.filter(m => { if (seen.has(m.id)) return false; seen.add(m.id); return true; });
+  }, [machinesProp, inventoryMachines]);
 
   const { data: maintenanceTypes } = useQuery({
     queryKey: ['maintenanceTypes'],
