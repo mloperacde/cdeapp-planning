@@ -1,11 +1,10 @@
 import { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useQuery } from "@tanstack/react-query";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -19,7 +18,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { toast } from "sonner";
+import AssignPlanDialog from "@/components/maintenance/AssignPlanDialog";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 const parseArea = (ubicacion) => {
@@ -139,205 +138,7 @@ function EquipmentDetailDialog({ equipment, plans, onClose, onAssignPlan }) {
   );
 }
 
-// ─── Assign Plan Dialog ───────────────────────────────────────────────────────
-function AssignPlanDialog({ equipment, onClose }) {
-  const queryClient = useQueryClient();
-  const [tab, setTab] = useState("existing"); // existing | new
-  const [selectedTypeId, setSelectedTypeId] = useState("");
 
-  const { data: maintenanceTypes = [] } = useQuery({
-    queryKey: ["maintenanceTypes"],
-    queryFn: () => base44.entities.MaintenanceType.list(),
-    staleTime: 5 * 60 * 1000,
-  });
-
-  // Types already assigned to this machine
-  const assignedTypeIds = new Set(
-    maintenanceTypes
-      .filter(t => t.machine_ids?.includes(equipment.id))
-      .map(t => t.id)
-  );
-
-  const assignExistingMutation = useMutation({
-    mutationFn: async (typeId) => {
-      const type = maintenanceTypes.find(t => t.id === typeId);
-      const updatedIds = Array.from(new Set([...(type.machine_ids || []), equipment.id]));
-      await base44.entities.MaintenanceType.update(typeId, { machine_ids: updatedIds });
-      // Sync plans
-      await base44.functions.invoke("syncMaintenancePlansWithMachines", {});
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["maintenanceTypes"] });
-      queryClient.invalidateQueries({ queryKey: ["maintenancePlans"] });
-      toast.success("Plan asignado al equipo");
-      onClose();
-    },
-    onError: (e) => toast.error("Error: " + e.message),
-  });
-
-  const [newForm, setNewForm] = useState({
-    nombre_plan: "",
-    tipo: "Preventivo",
-    periodicidad: "Mensual",
-  });
-
-  const createPlanMutation = useMutation({
-    mutationFn: (data) => base44.entities.MaintenancePlan.create(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["maintenancePlans"] });
-      toast.success("Plan creado y asignado");
-      onClose();
-    },
-    onError: (e) => toast.error("Error: " + e.message),
-  });
-
-  const handleAssignExisting = () => {
-    if (!selectedTypeId) return;
-    assignExistingMutation.mutate(selectedTypeId);
-  };
-
-  const handleCreateNew = (e) => {
-    e.preventDefault();
-    createPlanMutation.mutate({
-      machine_id: equipment.id,
-      machine_name: equipment.nombre,
-      ...newForm,
-      activo: true,
-    });
-  };
-
-  const availableTypes = maintenanceTypes.filter(t => !assignedTypeIds.has(t.id) && t.activo !== false);
-
-  return (
-    <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="text-sm flex items-center gap-2">
-            <Wrench className="w-4 h-4 text-blue-600" />
-            Asignar Plan de Mantenimiento
-          </DialogTitle>
-          <p className="text-xs text-slate-500">{equipment.nombre} · <span className="font-mono">{equipment.codigo}</span></p>
-        </DialogHeader>
-
-        <Tabs value={tab} onValueChange={setTab} className="mt-2">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="existing" className="text-xs">Usar plan existente</TabsTrigger>
-            <TabsTrigger value="new" className="text-xs">Crear plan nuevo</TabsTrigger>
-          </TabsList>
-
-          {/* Assign existing MaintenanceType */}
-          <TabsContent value="existing" className="space-y-4 mt-4">
-            {availableTypes.length === 0 ? (
-              <div className="text-center py-8 text-slate-400 text-sm">
-                <CheckCircle2 className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                Todos los planes activos ya están asignados a este equipo
-              </div>
-            ) : (
-              <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
-                {availableTypes.map(type => (
-                  <label
-                    key={type.id}
-                    className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                      selectedTypeId === type.id
-                        ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
-                        : "border-slate-200 dark:border-slate-700 hover:border-slate-300"
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="plan-type"
-                      className="mt-0.5"
-                      checked={selectedTypeId === type.id}
-                      onChange={() => setSelectedTypeId(type.id)}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm text-slate-900 dark:text-slate-100">{type.nombre}</p>
-                      {type.descripcion && (
-                        <p className="text-xs text-slate-500 truncate">{type.descripcion}</p>
-                      )}
-                      <p className="text-xs text-slate-400 mt-0.5">
-                        {type.machine_ids?.length || 0} equipo(s) asignado(s)
-                      </p>
-                    </div>
-                  </label>
-                ))}
-              </div>
-            )}
-
-            {/* Already assigned */}
-            {assignedTypeIds.size > 0 && (
-              <div>
-                <p className="text-xs text-slate-500 mb-1 font-medium">Ya asignados:</p>
-                <div className="flex flex-wrap gap-1">
-                  {maintenanceTypes.filter(t => assignedTypeIds.has(t.id)).map(t => (
-                    <Badge key={t.id} className="text-xs bg-green-100 text-green-700">{t.nombre}</Badge>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className="flex justify-end gap-2 pt-2">
-              <Button type="button" variant="outline" size="sm" onClick={onClose}>Cancelar</Button>
-              <Button
-                size="sm"
-                disabled={!selectedTypeId || assignExistingMutation.isPending}
-                onClick={handleAssignExisting}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
-              >
-                {assignExistingMutation.isPending ? "Asignando..." : "Asignar Plan"}
-              </Button>
-            </div>
-          </TabsContent>
-
-          {/* Create brand-new MaintenancePlan record */}
-          <TabsContent value="new">
-            <form onSubmit={handleCreateNew} className="space-y-4 mt-4">
-              <div>
-                <Label className="text-xs">Nombre del plan *</Label>
-                <Input
-                  value={newForm.nombre_plan}
-                  onChange={e => setNewForm(f => ({ ...f, nombre_plan: e.target.value }))}
-                  placeholder="Ej: Mantenimiento Preventivo Mensual"
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label className="text-xs">Tipo</Label>
-                  <Select value={newForm.tipo} onValueChange={v => setNewForm(f => ({ ...f, tipo: v }))}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {["Preventivo", "Correctivo", "Predictivo", "Mixto"].map(t => (
-                        <SelectItem key={t} value={t}>{t}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="text-xs">Periodicidad</Label>
-                  <Select value={newForm.periodicidad} onValueChange={v => setNewForm(f => ({ ...f, periodicidad: v }))}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {["Diaria", "Semanal", "Quincenal", "Mensual", "Trimestral", "Semestral", "Anual"].map(p => (
-                        <SelectItem key={p} value={p}>{p}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="flex justify-end gap-2 pt-2">
-                <Button type="button" variant="outline" size="sm" onClick={onClose}>Cancelar</Button>
-                <Button type="submit" size="sm" disabled={createPlanMutation.isPending} className="bg-blue-600 hover:bg-blue-700 text-white">
-                  {createPlanMutation.isPending ? "Creando..." : "Crear y Asignar"}
-                </Button>
-              </div>
-            </form>
-          </TabsContent>
-        </Tabs>
-      </DialogContent>
-    </Dialog>
-  );
-}
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function EquipmentInventory() {
