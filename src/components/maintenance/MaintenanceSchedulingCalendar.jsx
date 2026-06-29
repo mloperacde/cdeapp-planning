@@ -216,7 +216,7 @@ export default function MaintenanceSchedulingCalendar({ machine }) {
                       <p className="font-medium text-xs truncate">{plan.nombre_plan}</p>
                       {plan.ultima_ejecucion && (
                         <p className="text-xs text-green-600">
-                          ✓ {format(new Date(plan.ultima_ejecucion), 'dd/MM/yy', { locale: es })}
+                          ✓ {format(new Date(plan.ultima_ejecucion), 'dd/MM/yyyy', { locale: es })}
                         </p>
                       )}
                       {plan.proxima_fecha && (

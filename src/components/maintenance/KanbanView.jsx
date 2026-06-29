@@ -183,7 +183,7 @@ export default function KanbanView({ maintenances, machines, employees, maintena
 
                                     <div className="flex items-center gap-1 text-xs text-slate-600">
                                       <Calendar className="w-3 h-3" />
-                                      {format(new Date(maintenance.fecha_programada), "dd/MM HH:mm", { locale: es })}
+                                      {format(new Date(maintenance.fecha_programada), "dd/MM/yyyy", { locale: es })}
                                     </div>
 
                                     <div className="flex items-center gap-1 text-xs text-slate-600">
