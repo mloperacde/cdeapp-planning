@@ -13,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table.jsx";
-import { Plus, Edit, Trash2, CheckCircle2, AlertTriangle, Clock, Wrench, FileText, Play, Brain, Settings, Columns } from "lucide-react";
+import { Plus, Edit, Trash2, CheckCircle2, AlertTriangle, Clock, Wrench, FileText, Play, Brain, Settings, Columns, Package } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { getMachineAlias } from "@/utils/machineAlias";
@@ -29,6 +29,7 @@ import MachineInventory from "../components/maintenance/MachineInventory";
 import MaintenancePlanManager from "../components/maintenance/MaintenancePlanManager";
 import MaintenanceSchedulingCalendar from "../components/maintenance/MaintenanceSchedulingCalendar";
 import MaintenanceHistoryView from "../components/maintenance/MaintenanceHistoryView";
+import EquipmentInventory from "../components/maintenance/EquipmentInventory";
 
 const EMPTY_ARRAY = [];
 
@@ -378,21 +379,33 @@ export default function MaintenanceTrackingPage() {
         </div>
 
         <Tabs value={currentTab} onValueChange={handleTabChange} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-7">
-            <TabsTrigger value="gmao">GMAO</TabsTrigger>
-            <TabsTrigger value="kanban">
-              <Columns className="w-4 h-4 mr-2" />
+          <TabsList className="grid w-full grid-cols-8">
+            <TabsTrigger value="inventory" className="text-xs">
+              <Package className="w-3.5 h-3.5 mr-1" />
+              Inventario
+            </TabsTrigger>
+            <TabsTrigger value="gmao" className="text-xs">GMAO</TabsTrigger>
+            <TabsTrigger value="kanban" className="text-xs">
+              <Columns className="w-4 h-4 mr-1" />
               Kanban
             </TabsTrigger>
-            <TabsTrigger value="all">Todos</TabsTrigger>
-            <TabsTrigger value="upcoming">Próximos</TabsTrigger>
-            <TabsTrigger value="alerts">Alertas</TabsTrigger>
-            <TabsTrigger value="history">Historial</TabsTrigger>
-            <TabsTrigger value="predictive">
-              <Brain className="w-4 h-4 mr-2" />
+            <TabsTrigger value="all" className="text-xs">Todos</TabsTrigger>
+            <TabsTrigger value="upcoming" className="text-xs">Próximos</TabsTrigger>
+            <TabsTrigger value="alerts" className="text-xs">Alertas</TabsTrigger>
+            <TabsTrigger value="history" className="text-xs">Historial</TabsTrigger>
+            <TabsTrigger value="predictive" className="text-xs">
+              <Brain className="w-3.5 h-3.5 mr-1" />
               Predictivo
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="inventory">
+            <Card className="shadow-lg border-0 bg-white/80 dark:bg-card/80 backdrop-blur-sm">
+              <CardContent className="p-6">
+                <EquipmentInventory />
+              </CardContent>
+            </Card>
+          </TabsContent>
 
           <TabsContent value="gmao">
             <div className="grid grid-cols-4 gap-6 h-full min-h-[600px]">
