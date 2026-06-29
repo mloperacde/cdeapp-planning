@@ -198,7 +198,7 @@ export default function AssignPlanDialog({ equipment, onClose }) {
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl w-full max-h-[90vh] overflow-y-auto overflow-x-hidden">
+      <DialogContent className="max-w-5xl w-full max-h-[90vh] overflow-y-auto overflow-x-hidden">
         <DialogHeader>
           <DialogTitle className="text-sm flex items-center gap-2">
             <Wrench className="w-4 h-4 text-blue-600" />
