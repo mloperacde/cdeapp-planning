@@ -13,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table.jsx";
-import { Plus, Edit, Trash2, CheckCircle2, AlertTriangle, Clock, Wrench, FileText, Play, Brain, Settings, Columns, Package } from "lucide-react";
+import { Plus, Edit, Trash2, CheckCircle2, AlertTriangle, Clock, Wrench, FileText, Play, Brain, Settings, Columns, Package, Zap, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { getMachineAlias } from "@/utils/machineAlias";
@@ -45,7 +45,23 @@ export default function MaintenanceTrackingPage() {
   const [filters, setFilters] = useState({});
   const [showTypeManager, setShowTypeManager] = useState(false);
   const [showWorkOrder, setShowWorkOrder] = useState(null);
+  const [generatingAll, setGeneratingAll] = useState(false);
   const queryClient = useQueryClient();
+
+  const handleBulkGenerateAll = async () => {
+    setGeneratingAll(true);
+    try {
+      const res = await base44.functions.invoke("bulkGenerateWorkOrders", { horizon_days: 365 });
+      const data = res?.data || res;
+      queryClient.invalidateQueries({ queryKey: ['maintenances'] });
+      queryClient.invalidateQueries({ queryKey: ['maintenance-plans'] });
+      alert(`✅ Generación completada:\n• ${data.orders_created} órdenes creadas\n• ${data.orders_skipped} ya existían\n• ${data.total_plans_processed} planes procesados${data.errors > 0 ? `\n• ⚠️ ${data.errors} errores` : ''}`);
+    } catch (err) {
+      alert("Error al generar órdenes: " + (err?.message || "desconocido"));
+    } finally {
+      setGeneratingAll(false);
+    }
+  };
 
   const handleTabChange = (tab) => {
     setCurrentTab(tab);
@@ -302,6 +318,17 @@ export default function MaintenanceTrackingPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+            <Button
+              onClick={handleBulkGenerateAll}
+              variant="outline"
+              size="sm"
+              disabled={generatingAll}
+              className="h-8 gap-2 border-green-300 hover:bg-green-50 text-green-700 dark:text-green-300 dark:bg-green-900/20 dark:border-green-800"
+              title="Generar todas las órdenes de trabajo para todos los planes activos (1 año)"
+            >
+              {generatingAll ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+              <span className="hidden sm:inline">{generatingAll ? "Generando..." : "Generar OTs"}</span>
+            </Button>
             <Button
               onClick={() => setShowTypeManager(true)}
               variant="outline"

@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   AlertCircle, CheckCircle, Clock, AlertTriangle, Play, CalendarPlus,
-  ChevronDown, ChevronUp, Settings, Save, X, Plus, Wrench
+  ChevronDown, ChevronUp, Settings, Save, X, Plus, Wrench, Zap, RefreshCw
 } from "lucide-react";
 import { format, differenceInDays, isPast, addDays } from "date-fns";
 import { es } from "date-fns/locale";
@@ -26,6 +26,8 @@ export default function GmaoPlansPanel({ machine }) {
   const [configuringTypeId, setConfiguringTypeId] = useState(null);
   const [configForm, setConfigForm] = useState({});
   const [showAssign, setShowAssign] = useState(false);
+  const [generatingOrders, setGeneratingOrders] = useState(false);
+  const [generationResult, setGenerationResult] = useState(null);
   const queryClient = useQueryClient();
 
   const { data: maintenanceTypes = [] } = useQuery({
@@ -93,6 +95,27 @@ export default function GmaoPlansPanel({ machine }) {
     onError: () => toast.error("Error al programar"),
   });
 
+  const handleBulkGenerate = async () => {
+    setGeneratingOrders(true);
+    setGenerationResult(null);
+    try {
+      const payload = machine ? { machine_id: machine.id, horizon_days: 365 } : { horizon_days: 365 };
+      const res = await base44.functions.invoke("bulkGenerateWorkOrders", payload);
+      const data = res?.data || res;
+      setGenerationResult(data);
+      invalidateAll();
+      if (data.orders_created > 0) {
+        toast.success(`${data.orders_created} órdenes de trabajo generadas`);
+      } else {
+        toast.info("No se generaron órdenes nuevas — todas ya existían");
+      }
+    } catch (err) {
+      toast.error("Error al generar órdenes: " + (err?.message || "desconocido"));
+    } finally {
+      setGeneratingOrders(false);
+    }
+  };
+
   if (!machine) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-2">
@@ -145,21 +168,50 @@ export default function GmaoPlansPanel({ machine }) {
   return (
     <div className="flex flex-col h-full gap-3">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between gap-2">
         <div>
           <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">{machine.nombre}</p>
           <p className="text-[10px] text-slate-400">{assignedTypes.length} plan(es) asignado(s)</p>
         </div>
-        <Button
-          size="sm"
-          variant="outline"
-          className="h-7 text-xs gap-1 border-blue-300 text-blue-700 hover:bg-blue-50"
-          onClick={() => setShowAssign(true)}
-        >
-          <Plus className="w-3 h-3" />
-          Asignar
-        </Button>
+        <div className="flex gap-1 flex-shrink-0">
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 text-xs gap-1 border-green-300 text-green-700 hover:bg-green-50"
+            onClick={handleBulkGenerate}
+            disabled={generatingOrders || assignedTypes.length === 0}
+            title="Generar todas las órdenes de trabajo según periodicidad"
+          >
+            {generatingOrders ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3" />}
+            {generatingOrders ? "Generando..." : "Generar OTs"}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 text-xs gap-1 border-blue-300 text-blue-700 hover:bg-blue-50"
+            onClick={() => setShowAssign(true)}
+          >
+            <Plus className="w-3 h-3" />
+            Asignar
+          </Button>
+        </div>
       </div>
+
+      {/* Generation result */}
+      {generationResult && (
+        <div className={`text-[10px] rounded-lg p-2 border flex items-start gap-1.5 ${generationResult.orders_created > 0 ? "bg-green-50 border-green-200 text-green-800" : "bg-slate-50 border-slate-200 text-slate-600"}`}>
+          {generationResult.orders_created > 0
+            ? <CheckCircle className="w-3 h-3 mt-0.5 flex-shrink-0 text-green-600" />
+            : <AlertCircle className="w-3 h-3 mt-0.5 flex-shrink-0" />}
+          <span>
+            <strong>{generationResult.orders_created}</strong> nueva(s) orden(es) creada(s) •{" "}
+            <strong>{generationResult.orders_skipped}</strong> ya existían •{" "}
+            {generationResult.total_plans_processed} plan(es) procesado(s)
+            {generationResult.errors > 0 && <span className="text-red-600 ml-1">• {generationResult.errors} error(es)</span>}
+          </span>
+          <button onClick={() => setGenerationResult(null)} className="ml-auto flex-shrink-0"><X className="w-3 h-3" /></button>
+        </div>
+      )}
 
       {/* Plans list */}
       <div className="flex-1 overflow-y-auto space-y-2 pr-1">
