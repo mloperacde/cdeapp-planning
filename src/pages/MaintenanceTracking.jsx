@@ -112,6 +112,23 @@ export default function MaintenanceTrackingPage() {
     return machines.find(m => m.id === selectedMachineId) || null;
   }, [selectedMachineId, machines]);
 
+  const getMachineName = (machineId, maintenance) => {
+    const machine = machines.find(m => m.id === machineId);
+    if (machine) return getMachineAlias(machine);
+    // fallback: check stored machine_name in the related plan
+    if (maintenance?.maintenance_plan_id) {
+      const plan = maintenancePlans.find(p => p.id === maintenance.maintenance_plan_id);
+      if (plan?.machine_name) return plan.machine_name;
+    }
+    return "Desconocida";
+  };
+
+  const getEmployeeName = (employeeId) => {
+    if (!employeeId) return "Sin asignar";
+    const emp = employees.find(e => e.id === employeeId);
+    return emp?.nombre || "Sin asignar";
+  };
+
   // Filtered maintenances
   const filteredMaintenances = React.useMemo(() => {
     let result = maintenances.filter(m => {
@@ -186,23 +203,6 @@ export default function MaintenanceTrackingPage() {
 
   const handleOpenWorkOrder = (maintenance) => {
     setShowWorkOrder(maintenance);
-  };
-
-  const getMachineName = (machineId, maintenance) => {
-    const machine = machines.find(m => m.id === machineId);
-    if (machine) return getMachineAlias(machine);
-    // fallback: check stored machine_name in the related plan
-    if (maintenance?.maintenance_plan_id) {
-      const plan = maintenancePlans.find(p => p.id === maintenance.maintenance_plan_id);
-      if (plan?.machine_name) return plan.machine_name;
-    }
-    return "Desconocida";
-  };
-
-  const getEmployeeName = (employeeId) => {
-    if (!employeeId) return "Sin asignar";
-    const emp = employees.find(e => e.id === employeeId);
-    return emp?.nombre || "Sin asignar";
   };
 
   const getStatusBadge = (estado) => {
