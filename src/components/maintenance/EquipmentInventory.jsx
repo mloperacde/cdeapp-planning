@@ -158,19 +158,58 @@ export default function EquipmentInventory() {
 
   const { data: plans = [] } = useQuery({
     queryKey: ["maintenancePlans"],
-    queryFn: () => base44.entities.MaintenancePlan.list(),
+    queryFn: () => base44.entities.MaintenancePlan.list(undefined, 500),
     staleTime: 5 * 60 * 1000,
   });
+
+  // Also load MachineMasterDatabase to cross-reference plans by name
+  const { data: legacyMachines = [] } = useQuery({
+    queryKey: ["machineMasterDatabase-all"],
+    queryFn: () => base44.entities.MachineMasterDatabase.list(undefined, 500),
+    staleTime: 10 * 60 * 1000,
+  });
+
+  // Normalize a machine name for fuzzy matching: lowercase, remove spaces/dots/hyphens
+  const normalizeName = (name) => (name || "").toLowerCase().replace(/[\s.\-_]+/g, "");
 
   // Build lookup: machine_id → plans
   const plansByMachine = useMemo(() => {
     const map = new Map();
+
+    // Direct ID match (plans whose machine_id is a Machine entity id)
     plans.forEach(p => {
+      if (!p.machine_id) return;
       if (!map.has(p.machine_id)) map.set(p.machine_id, []);
       map.get(p.machine_id).push(p);
     });
+
+    // Build fuzzy name lookup for plans referencing MachineMasterDatabase IDs
+    const legacyIdToName = new Map(legacyMachines.map(m => [m.id, m.nombre || ""]));
+    // Inventory: normalized name → machine id (allow multiple with same normalized name)
+    const inventoryNormMap = new Map();
+    equipment.forEach(m => {
+      const norm = normalizeName(m.nombre);
+      if (!inventoryNormMap.has(norm)) inventoryNormMap.set(norm, m.id);
+    });
+
+    plans.forEach(p => {
+      if (!p.machine_id) return;
+      if (equipment.some(e => e.id === p.machine_id)) return; // already resolved via direct ID
+      // Get name from legacy map or plan itself
+      const rawName = legacyIdToName.get(p.machine_id) || p.machine_name || "";
+      const norm = normalizeName(rawName);
+      if (!norm) return;
+      const inventoryId = inventoryNormMap.get(norm);
+      if (inventoryId) {
+        if (!map.has(inventoryId)) map.set(inventoryId, []);
+        if (!map.get(inventoryId).some(x => x.id === p.id)) {
+          map.get(inventoryId).push(p);
+        }
+      }
+    });
+
     return map;
-  }, [plans]);
+  }, [plans, equipment, legacyMachines]);
 
   const getStatus = (machineId) => {
     const mp = plansByMachine.get(machineId) || [];
