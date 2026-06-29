@@ -364,7 +364,7 @@ export default function EquipmentInventory() {
               <TableHeader>
                 <TableRow className="bg-slate-50 dark:bg-slate-800/50">
                   <TableHead className="text-xs font-semibold">Código</TableHead>
-                  <TableHead className="text-xs font-semibold">Nombre</TableHead>
+                  <TableHead className="text-xs font-semibold">Descripción</TableHead>
                   <TableHead className="text-xs font-semibold">Fabricante</TableHead>
                   <TableHead className="text-xs font-semibold">Modelo</TableHead>
                   <TableHead className="text-xs font-semibold">Tipo</TableHead>
@@ -391,8 +391,8 @@ export default function EquipmentInventory() {
                           {eq.codigo}
                         </span>
                       </TableCell>
-                      <TableCell className="font-medium text-sm max-w-[200px]">
-                        <span className="truncate block">{eq.nombre}</span>
+                      <TableCell className="text-sm text-slate-600 dark:text-slate-400 max-w-[220px]">
+                       <span className="truncate block">{eq.descripcion || "—"}</span>
                       </TableCell>
                       <TableCell className="text-sm text-slate-600 dark:text-slate-400">{eq.marca || "—"}</TableCell>
                       <TableCell className="text-sm text-slate-600 dark:text-slate-400">{eq.modelo || "—"}</TableCell>
