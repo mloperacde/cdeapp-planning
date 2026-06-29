@@ -7,6 +7,11 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Search, ChevronRight, AlertCircle, Plus } from 'lucide-react';
 import { getMachineAlias } from '@/utils/machineAlias';
+
+const parseArea = (ubicacion) => {
+  if (!ubicacion) return "";
+  return ubicacion.split("/")[0].trim();
+};
 import NewMachineDialog from './NewMachineDialog';
 
 export default function MachineInventory({ machines = [], onSelectMachine, selectedMachineId }) {
@@ -33,7 +38,7 @@ export default function MachineInventory({ machines = [], onSelectMachine, selec
 
   const filteredMachines = filteredOperativeMachines.filter(m => 
     getMachineAlias(m).toLowerCase().includes(searchTerm.toLowerCase()) ||
-    m.area_name?.toLowerCase().includes(searchTerm.toLowerCase())
+    parseArea(m.ubicacion).toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const { data: maintenanceTypes = [] } = useQuery({
@@ -109,7 +114,7 @@ export default function MachineInventory({ machines = [], onSelectMachine, selec
                       {getMachineAlias(machine)}
                     </h3>
                     <p className="text-xs text-slate-500 dark:text-slate-400">
-                      {machine.area_name} • {machine.tipo || 'General'}
+                      {parseArea(machine.ubicacion) || machine.ubicacion || 'Sin área'} • {machine.tipo || 'General'}
                     </p>
                     <div className="flex gap-1 mt-2 flex-wrap">
                        {getMachineStatus(machine.id).show && (

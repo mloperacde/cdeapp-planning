@@ -23,7 +23,8 @@ import AssignPlanDialog from "@/components/maintenance/AssignPlanDialog";
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 const parseArea = (ubicacion) => {
   if (!ubicacion) return "Sin área";
-  return ubicacion.split(">")[0].trim();
+  // Format: "ÁREA PRINCIPAL/ sublocation" — extract main area before "/"
+  return ubicacion.split("/")[0].trim();
 };
 
 const STATUS_COLORS = {
