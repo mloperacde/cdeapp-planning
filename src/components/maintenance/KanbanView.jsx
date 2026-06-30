@@ -35,6 +35,7 @@ export default function KanbanView({ maintenances, machines, employees, maintena
     }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['maintenances'] });
+      queryClient.invalidateQueries({ queryKey: ['maintenanceSchedules'] });
       toast.success("Estado actualizado");
     },
   });
@@ -43,6 +44,7 @@ export default function KanbanView({ maintenances, machines, employees, maintena
     mutationFn: ({ id, data }) => base44.entities.MaintenanceSchedule.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['maintenances'] });
+      queryClient.invalidateQueries({ queryKey: ['maintenanceSchedules'] });
       setEditingCard(null);
       toast.success("Mantenimiento actualizado");
     },

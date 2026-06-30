@@ -452,6 +452,24 @@ export default function MaintenanceWorkOrder({ maintenance, onClose, onUpdate })
     firma_verificado: maintenance.firma_verificado || ""
   });
 
+  // Sincronizar estado local cuando el prop maintenance se actualice tras un guardado
+  const prevMaintenanceId = useRef(maintenance.id);
+  useEffect(() => {
+    if (prevMaintenanceId.current !== maintenance.id) {
+      prevMaintenanceId.current = maintenance.id;
+      setWorkOrder({
+        fecha_inicio: maintenance.fecha_inicio || "",
+        fecha_finalizacion: maintenance.fecha_finalizacion || "",
+        duracion_real: maintenance.duracion_real || 0,
+        tareas: maintenance.tareas || [],
+        notas: maintenance.notas || "",
+        firma_tecnico: maintenance.firma_tecnico || "",
+        firma_revisado: maintenance.firma_revisado || "",
+        firma_verificado: maintenance.firma_verificado || ""
+      });
+    }
+  }, [maintenance]);
+
   const queryClient = useQueryClient();
 
   const { data: employees } = useQuery({
@@ -507,7 +525,9 @@ export default function MaintenanceWorkOrder({ maintenance, onClose, onUpdate })
   const updateMutation = useMutation({
     mutationFn: (data) => base44.entities.MaintenanceSchedule.update(maintenance.id, data),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['maintenances'] });
       queryClient.invalidateQueries({ queryKey: ['maintenanceSchedules'] });
+      queryClient.invalidateQueries({ queryKey: ['maintenanceRecords'] });
       toast.success("Orden de trabajo actualizada");
       if (onUpdate) onUpdate();
     },
@@ -519,7 +539,9 @@ export default function MaintenanceWorkOrder({ maintenance, onClose, onUpdate })
       estado: "Completado"
     }),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['maintenances'] });
       queryClient.invalidateQueries({ queryKey: ['maintenanceSchedules'] });
+      queryClient.invalidateQueries({ queryKey: ['maintenanceRecords'] });
       toast.success("Mantenimiento completado");
       onClose();
     },

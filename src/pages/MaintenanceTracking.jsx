@@ -607,11 +607,12 @@ export default function MaintenanceTrackingPage() {
 
       {showWorkOrder && (
         <MaintenanceWorkOrder
-          maintenance={showWorkOrder}
+          maintenance={maintenances.find(m => m.id === showWorkOrder.id) || showWorkOrder}
           machines={machines}
           employees={employees}
           maintenanceTypes={maintenanceTypes}
           onClose={() => setShowWorkOrder(null)}
+          onUpdate={() => queryClient.invalidateQueries({ queryKey: ['maintenances'] })}
         />
       )}
     </div>
