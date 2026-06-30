@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { useAppData } from "../data/DataProvider";
@@ -24,7 +24,98 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { User, Briefcase, Clock, Home, FileText, Calendar, Wrench, AlertCircle, TrendingDown, ArrowLeft, Flame, Loader2 } from "lucide-react";
+import { User, Briefcase, Clock, Home, FileText, Calendar, Wrench, AlertCircle, TrendingDown, ArrowLeft, Flame, Loader2, ChevronDown, X } from "lucide-react";
+
+const NACIONALIDADES = [
+  "Española","Alemana","Francesa","Italiana","Portuguesa","Rumana","Marroquí","Ecuatoriana",
+  "Colombiana","Boliviana","Peruana","Venezolana","Dominicana","Argentina","Brasileña",
+  "Chilena","Mexicana","Hondureña","Salvadoreña","Guatemalteca","Paraguaya","Uruguaya",
+  "Cubana","Estadounidense","China","Paquistaní","Senegalesa","Nigeriana","Ghanesa",
+  "Ucraniana","Polaca","Búlgara","Lituana","Letona","Eslovaca","Húngara","Checa",
+  "Belga","Neerlandesa","Suiza","Austriaca","Inglesa","Irlandesa","Danesa","Sueca","Finlandesa",
+  "Noruega","Griega","Turca","Siria","Argelina","Tunecina","Filipina","Bangladesí","India",
+];
+
+function NacionalidadCombobox({ value, onChange }) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const [customMode, setCustomMode] = useState(false);
+  const containerRef = useRef(null);
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    if (value && !NACIONALIDADES.some(n => n.toUpperCase() === (value || "").toUpperCase())) {
+      setCustomMode(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const filtered = NACIONALIDADES.filter(n => n.toLowerCase().includes(search.toLowerCase()));
+
+  if (customMode) {
+    return (
+      <div className="flex gap-2">
+        <Input
+          value={value || ""}
+          onChange={e => onChange(e.target.value)}
+          placeholder="Escribe la nacionalidad..."
+          className="flex-1"
+        />
+        <Button type="button" variant="outline" size="sm" onClick={() => { setCustomMode(false); onChange(""); }} title="Volver a la lista">
+          <X className="w-4 h-4" />
+        </Button>
+      </div>
+    );
+  }
+
+  const displayValue = NACIONALIDADES.find(n => n.toUpperCase() === (value || "").toUpperCase()) || value;
+
+  return (
+    <div ref={containerRef} className="relative">
+      <button
+        type="button"
+        onClick={() => { setOpen(o => !o); setSearch(""); setTimeout(() => inputRef.current?.focus(), 50); }}
+        className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+      >
+        <span className={displayValue ? "text-foreground" : "text-muted-foreground"}>
+          {displayValue || "Seleccionar o escribir..."}
+        </span>
+        <ChevronDown className="w-4 h-4 opacity-50" />
+      </button>
+      {open && (
+        <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover shadow-lg">
+          <div className="p-2 border-b">
+            <Input ref={inputRef} value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar nacionalidad..." className="h-8 text-sm" />
+          </div>
+          <div className="max-h-48 overflow-y-auto">
+            {filtered.map(n => (
+              <button key={n} type="button"
+                className={`w-full text-left px-3 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground ${displayValue === n ? "bg-accent font-medium" : ""}`}
+                onClick={() => { onChange(n); setOpen(false); setSearch(""); }}>
+                {n}
+              </button>
+            ))}
+            {filtered.length === 0 && <p className="px-3 py-2 text-sm text-muted-foreground">No encontrada</p>}
+          </div>
+          <div className="p-2 border-t">
+            <button type="button"
+              className="w-full text-left px-3 py-1.5 text-sm text-blue-600 hover:bg-accent rounded"
+              onClick={() => { setCustomMode(true); onChange(search); setOpen(false); }}>
+              ✏️ Escribir manualmente{search ? `: "${search}"` : ""}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 import { toast } from "sonner";
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
@@ -725,28 +816,10 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
 
                 <div className="space-y-2">
                   <Label>Nacionalidad</Label>
-                  <Select
+                  <NacionalidadCombobox
                     value={formData.nacionalidad || ""}
-                    onValueChange={(value) => setFormData({ ...formData, nacionalidad: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar nacionalidad" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ESPAÑOLA">ESPAÑOLA</SelectItem>
-                      <SelectItem value="RUMANA">RUMANA</SelectItem>
-                      <SelectItem value="VENEZOLANA">VENEZOLANA</SelectItem>
-                      <SelectItem value="COLOMBIANA">COLOMBIANA</SelectItem>
-                      <SelectItem value="BULGARA">BÚLGARA</SelectItem>
-                      <SelectItem value="CUBANA">CUBANA</SelectItem>
-                      <SelectItem value="ARGENTINA">ARGENTINA</SelectItem>
-                      <SelectItem value="SALVADOREÑA">SALVADOREÑA</SelectItem>
-                      <SelectItem value="BRASILEÑA">BRASILEÑA</SelectItem>
-                      <SelectItem value="POLACA">POLACA</SelectItem>
-                      <SelectItem value="PORTUGUESA">PORTUGUESA</SelectItem>
-                      <SelectItem value="UCRANIANA">UCRANIANA</SelectItem>
-                    </SelectContent>
-                  </Select>
+                    onChange={(val) => setFormData({ ...formData, nacionalidad: val })}
+                  />
                 </div>
 
                 <div className="space-y-2 md:col-span-2">
