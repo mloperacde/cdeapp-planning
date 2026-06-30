@@ -107,9 +107,14 @@ export default function KanbanView({ maintenances, machines, employees, maintena
   };
 
   const handleSaveQuickEdit = () => {
+    const dataToSave = {
+      ...quickEditData,
+      tecnico_asignado: quickEditData.tecnico_asignado === "none" ? null : quickEditData.tecnico_asignado || null,
+      fecha_programada: quickEditData.fecha_programada ? new Date(quickEditData.fecha_programada).toISOString() : undefined,
+    };
     updateMaintenance.mutate({
       id: editingCard.id,
-      data: quickEditData
+      data: dataToSave
     });
   };
 
@@ -263,7 +268,7 @@ export default function KanbanView({ maintenances, machines, employees, maintena
                     <SelectValue placeholder="Seleccionar técnico" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={null}>Sin asignar</SelectItem>
+                    <SelectItem value="none">Sin asignar</SelectItem>
                     {maintenanceTechnicians.map((emp) => (
                       <SelectItem key={emp.id} value={emp.id}>
                         {emp.nombre}
