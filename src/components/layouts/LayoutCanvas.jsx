@@ -62,7 +62,7 @@ function LayoutElement({ el, selected, multiSelected, onPointerDown, onResize })
 }
 
 /** Room floor surface — rendered BELOW all elements, selectable/movable */
-function RoomFloor({ points, isDrawing, currentPoint, floorColor, snapToClose, selected, onPointerDown }) {
+function RoomFloor({ points, isDrawing, currentPoint, floorColor, snapToClose, selected, onPointerDown, onVertexDrag }) {
   if (points.length === 0 && !isDrawing) return null;
   const ptStr = points.map(p => `${p.x},${p.y}`).join(' ');
   const allPts = currentPoint ? [...points, currentPoint] : points;
@@ -72,8 +72,8 @@ function RoomFloor({ points, isDrawing, currentPoint, floorColor, snapToClose, s
 
   // Bounding box for selection handle
   const xs = points.map(p => p.x), ys = points.map(p => p.y);
-  const bbX = Math.min(...xs), bbY = Math.min(...ys);
-  const bbW = Math.max(...xs) - bbX, bbH = Math.max(...ys) - bbY;
+  const bbX = xs.length ? Math.min(...xs) : 0, bbY = ys.length ? Math.min(...ys) : 0;
+  const bbW = xs.length ? Math.max(...xs) - bbX : 0, bbH = ys.length ? Math.max(...ys) - bbY : 0;
 
   return (
     <g>
@@ -85,7 +85,6 @@ function RoomFloor({ points, isDrawing, currentPoint, floorColor, snapToClose, s
             onMouseDown={!isDrawing ? (e) => onPointerDown?.(e, '__room_floor__') : undefined}
           />
           <polygon points={ptStr} fill="none" stroke={wallColor} strokeWidth={4} strokeLinejoin="round" pointerEvents="none" />
-          {/* Selection outline */}
           {selected && !isDrawing && (
             <polygon points={ptStr} fill="none" stroke="#2563EB" strokeWidth={2.5} strokeDasharray="8 4" strokeLinejoin="round" pointerEvents="none" />
           )}
@@ -96,16 +95,24 @@ function RoomFloor({ points, isDrawing, currentPoint, floorColor, snapToClose, s
       {isDrawing && allPts.length > 1 && (
         <polyline points={allStr} fill="none" stroke={wallColor} strokeWidth={2} strokeDasharray="8 5" strokeLinecap="round" pointerEvents="none" />
       )}
-      {/* Preview fill while drawing */}
       {isDrawing && allPts.length > 2 && (
         <polygon points={allStr} fill={fill} fillOpacity={0.35} stroke="none" pointerEvents="none" />
       )}
 
-      {/* Vertex handles */}
+      {/* Vertex handles — draggable when not drawing */}
       {points.map((p, i) => (
-        <g key={i} pointerEvents="none">
-          <circle cx={p.x} cy={p.y} r={6} fill={wallColor} stroke="#fff" strokeWidth={2} />
-          <text x={p.x + 9} y={p.y - 6} fontSize={9} fill={wallColor} fontWeight="bold">{i + 1}</text>
+        <g key={i}>
+          {/* Larger invisible hit area */}
+          <circle cx={p.x} cy={p.y} r={isDrawing ? 6 : 10}
+            fill="transparent"
+            style={{ cursor: isDrawing ? 'default' : 'grab' }}
+            onMouseDown={!isDrawing ? (e) => { e.stopPropagation(); onVertexDrag?.(e, i); } : undefined}
+          />
+          <circle cx={p.x} cy={p.y} r={isDrawing ? 5 : 7}
+            fill={selected && !isDrawing ? '#2563EB' : wallColor}
+            stroke="#fff" strokeWidth={2}
+            pointerEvents="none" />
+          <text x={p.x + 10} y={p.y - 7} fontSize={9} fill={wallColor} fontWeight="bold" pointerEvents="none">{i + 1}</text>
         </g>
       ))}
 
@@ -125,9 +132,9 @@ function RoomFloor({ points, isDrawing, currentPoint, floorColor, snapToClose, s
         </text>
       )}
 
-      {/* Move handle label when selected */}
+      {/* Label when selected */}
       {selected && !isDrawing && points.length > 2 && (
-        <text x={bbX + bbW / 2} y={bbY - 8} textAnchor="middle" fontSize={9} fill="#2563EB" fontWeight="bold" pointerEvents="none">
+        <text x={bbX + bbW / 2} y={bbY - 10} textAnchor="middle" fontSize={9} fill="#2563EB" fontWeight="bold" pointerEvents="none">
           Suelo de Sala
         </text>
       )}
@@ -145,6 +152,7 @@ export default function LayoutCanvas({
   onGroupSelected,
   roomPolygon = [],
   onRoomPolygonChange,
+  onFinishDrawingRoom,
   drawingRoom = false,
   floorColor,
   width = 1200,
@@ -209,6 +217,33 @@ export default function LayoutCanvas({
     }
     setGuides({ x: gx, y: gy });
   }, [elements, zoom]);
+
+  // ── Drag single vertex of room polygon ───────────────────────────────────
+  const startVertexDrag = useCallback((e, vertexIdx) => {
+    e.stopPropagation();
+    onSelect('__room_floor__');
+    onMultiSelect?.([]);
+
+    const origPoints = roomPolygon.map(p => ({ ...p }));
+    const startX = e.clientX / zoom;
+    const startY = e.clientY / zoom;
+    const origPt = origPoints[vertexIdx];
+
+    const onMv = (me) => {
+      const dx = me.clientX / zoom - startX;
+      const dy = me.clientY / zoom - startY;
+      const updated = origPoints.map((p, i) =>
+        i === vertexIdx ? { x: snap(origPt.x + dx), y: snap(origPt.y + dy) } : p
+      );
+      onRoomPolygonChange?.(updated);
+    };
+    const onUp = () => {
+      window.removeEventListener('mousemove', onMv);
+      window.removeEventListener('mouseup', onUp);
+    };
+    window.addEventListener('mousemove', onMv);
+    window.addEventListener('mouseup', onUp);
+  }, [roomPolygon, onRoomPolygonChange, onSelect, onMultiSelect, zoom]);
 
   // ── Move floor polygon (all points offset) ───────────────────────────────
   const startMoveFloor = useCallback((e) => {
@@ -308,7 +343,7 @@ export default function LayoutCanvas({
       }
       // Close polygon if clicking near start
       if (isNearFirstPoint(e.clientX, e.clientY)) {
-        onRoomPolygonChange?.([...roomPolygon]); // signal close (already has >=2 pts)
+        onFinishDrawingRoom?.(); // close + exit drawing mode
         return;
       }
       const { x, y } = getSVGCoords(e);
@@ -352,7 +387,7 @@ export default function LayoutCanvas({
   const handleDblClick = (e) => {
     if (!drawingRoom || roomPolygon.length < 3) return;
     e.preventDefault();
-    onRoomPolygonChange?.([...roomPolygon]);
+    onFinishDrawingRoom?.();
   };
 
   // Mouse move for room draw cursor + snap detection
@@ -429,6 +464,7 @@ export default function LayoutCanvas({
               snapToClose={snapToClose}
               selected={selectedId === FLOOR_ID}
               onPointerDown={startMove}
+              onVertexDrag={startVertexDrag}
             />
 
             {/* Elements */}

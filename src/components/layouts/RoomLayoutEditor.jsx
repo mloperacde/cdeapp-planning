@@ -205,6 +205,11 @@ export default function RoomLayoutEditor({ layoutId, onBack }) {
     setData(prev => ({ ...prev, room_polygon: pts }));
   };
 
+  const handleFinishDrawingRoom = () => {
+    setDrawingRoom(false);
+    // keep the polygon as-is (already accumulated)
+  };
+
   // ── Keyboard shortcuts ────────────────────────────────────────────────────
   useEffect(() => {
     const onKey = (e) => {
@@ -437,6 +442,7 @@ export default function RoomLayoutEditor({ layoutId, onBack }) {
             onGroupSelected={groupSelected}
             roomPolygon={data.room_polygon || []}
             onRoomPolygonChange={handleRoomPolygonChange}
+            onFinishDrawingRoom={handleFinishDrawingRoom}
             drawingRoom={drawingRoom}
             floorColor={data.floor_color || '#475569'}
             width={data.canvas_width || 1200}
@@ -481,6 +487,7 @@ export default function RoomLayoutEditor({ layoutId, onBack }) {
                   onUpdateFloor={handleFloorUpdate}
                   onDeleteFloor={handleFloorDelete}
                   onRedrawFloor={handleFloorRedraw}
+                  onUpdateRoomPolygon={handleRoomPolygonChange}
                 />
               </div>
             )}

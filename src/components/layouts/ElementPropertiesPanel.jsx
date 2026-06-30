@@ -2,11 +2,12 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Trash2, Plus, X } from 'lucide-react';
+import { Trash2, Plus, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { ELEMENT_TYPES } from './ElementPalette';
 
-export default function ElementPropertiesPanel({ element, machines, onUpdate, onDelete, roomPolygon, floorColor, onUpdateFloor, onDeleteFloor, onRedrawFloor }) {
+export default function ElementPropertiesPanel({ element, machines, onUpdate, onDelete, roomPolygon, floorColor, onUpdateFloor, onDeleteFloor, onRedrawFloor, onUpdateRoomPolygon }) {
   const [newStation, setNewStation] = useState('');
+  const [showVertices, setShowVertices] = useState(false);
 
   // Special panel for room floor
   if (element?.id === '__room_floor__') {
@@ -38,6 +39,58 @@ export default function ElementPropertiesPanel({ element, machines, onUpdate, on
           <div><span className="block text-[10px] text-slate-400">Pos. X</span><span className="font-medium text-slate-700 dark:text-slate-300">{Math.round(bbX)}</span></div>
           <div><span className="block text-[10px] text-slate-400">Pos. Y</span><span className="font-medium text-slate-700 dark:text-slate-300">{Math.round(bbY)}</span></div>
         </div>
+
+        {/* Edición manual de vértices */}
+        {pts.length > 0 && (
+          <div>
+            <button
+              onClick={() => setShowVertices(v => !v)}
+              className="w-full flex items-center justify-between text-xs text-slate-600 dark:text-slate-300 font-medium py-1 px-2 rounded bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+            >
+              <span>Editar vértices ({pts.length})</span>
+              {showVertices ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+            </button>
+            {showVertices && (
+              <div className="mt-1 space-y-1 max-h-48 overflow-y-auto pr-0.5">
+                {pts.map((p, i) => (
+                  <div key={i} className="flex items-center gap-1 bg-slate-50 dark:bg-slate-800 rounded px-1.5 py-1">
+                    <span className="text-[10px] text-slate-400 w-4 font-bold">{i + 1}</span>
+                    <div className="flex items-center gap-1 flex-1">
+                      <span className="text-[10px] text-slate-400">X</span>
+                      <Input
+                        type="number"
+                        value={p.x}
+                        onChange={e => {
+                          const updated = pts.map((pt, j) => j === i ? { ...pt, x: +e.target.value } : pt);
+                          onUpdateRoomPolygon?.(updated);
+                        }}
+                        className="h-5 text-xs px-1 w-16"
+                      />
+                      <span className="text-[10px] text-slate-400">Y</span>
+                      <Input
+                        type="number"
+                        value={p.y}
+                        onChange={e => {
+                          const updated = pts.map((pt, j) => j === i ? { ...pt, y: +e.target.value } : pt);
+                          onUpdateRoomPolygon?.(updated);
+                        }}
+                        className="h-5 text-xs px-1 w-16"
+                      />
+                    </div>
+                    <button
+                      onClick={() => onUpdateRoomPolygon?.(pts.filter((_, j) => j !== i))}
+                      className="text-red-400 hover:text-red-600 flex-shrink-0"
+                      title="Eliminar vértice"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         <Button size="sm" variant="outline" className="w-full h-7 text-xs gap-1" onClick={onRedrawFloor}>
           ✏️ Redibujar contorno
         </Button>
