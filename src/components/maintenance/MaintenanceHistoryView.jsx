@@ -22,8 +22,8 @@ export default function MaintenanceHistoryView({ machines = EMPTY_ARRAY, employe
 
   const { data: records = EMPTY_ARRAY, isLoading: loadingRecords } = useQuery({
     queryKey: ["maintenanceRecords"],
-    staleTime: Infinity,
-    gcTime: 30 * 60 * 1000,
+    staleTime: 0,
+    refetchOnMount: true,
     queryFn: async () => {
       try {
         // Query MaintenanceSchedule con estado completado
@@ -38,17 +38,23 @@ export default function MaintenanceHistoryView({ machines = EMPTY_ARRAY, employe
           return [];
         }
         
-        // Consultar empleados una sola vez
-        const allEmployees = await base44.entities.EmployeeMasterDatabase.list();
+        // Consultar máquinas y empleados en paralelo
+        const [allMachines, allEmployees] = await Promise.all([
+          base44.entities.Machine.list(),
+          base44.entities.EmployeeMasterDatabase.list(),
+        ]);
+        const machineMap = new Map(allMachines.map(m => [m.id, m]));
         const employeeMap = new Map(allEmployees.map(e => [e.id, e.nombre]));
         
         // Mapear a formato de tabla con datos reales de MaintenanceSchedule
-        const records = completedSchedules.map(s => ({
+        const records = completedSchedules.map(s => {
+          const machine = machineMap.get(s.machine_id);
+          return {
           id: s.id,
           numero_registro: s.numero_orden || s.id.slice(0, 8),
           machine_id: s.machine_id,
-          machine_name: s.machine_name || 'Desconocida',
-          machine_codigo: s.machine_codigo || '—',
+          machine_name: machine ? (machine.descripcion || machine.nombre || 'Sin nombre') : 'Desconocida',
+          machine_codigo: machine ? (machine.codigo || '—') : '—',
           maintenance_plan_nombre: s.maintenance_type_id ? 'Plan Activo' : '—',
           tipo: s.tipo || 'Preventivo',
           fecha_fin: s.fecha_finalizacion,
@@ -58,7 +64,7 @@ export default function MaintenanceHistoryView({ machines = EMPTY_ARRAY, employe
           estado: 'Completado',
           prioridad: s.prioridad || 'Media',
           descripcion: s.descripcion
-        })).sort((a, b) => 
+        };}).sort((a, b) => 
           new Date(b.fecha_fin || 0) - new Date(a.fecha_fin || 0)
         );
         
