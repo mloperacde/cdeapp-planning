@@ -422,7 +422,7 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
 
       // Auto-sincronizar team_key cuando cambia el equipo
       if (cleanData.equipo) {
-        const teamConfigs = await base44.asServiceRole.entities.TeamConfig.list();
+        const teamConfigs = await base44.entities.TeamConfig.list();
         const matchedTeam = teamConfigs.find(t => t.team_name === cleanData.equipo);
         if (matchedTeam) {
           cleanData.team_key = matchedTeam.team_key;
