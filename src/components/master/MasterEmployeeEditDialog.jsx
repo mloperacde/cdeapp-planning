@@ -420,6 +420,15 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
       if (cleanData.departamento) cleanData.departamento = cleanData.departamento.toUpperCase();
       if (cleanData.puesto) cleanData.puesto = cleanData.puesto.toUpperCase();
 
+      // Auto-sincronizar team_key cuando cambia el equipo
+      if (cleanData.equipo) {
+        const teamConfigs = await base44.asServiceRole.entities.TeamConfig.list();
+        const matchedTeam = teamConfigs.find(t => t.team_name === cleanData.equipo);
+        if (matchedTeam) {
+          cleanData.team_key = matchedTeam.team_key;
+        }
+      }
+
       // VALIDACIÓN DE DUPLICADOS (CÓDIGO DE EMPLEADO)
       if (cleanData.codigo_empleado) {
         // Verificar si existe otro empleado con el mismo código
