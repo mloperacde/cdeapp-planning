@@ -43,6 +43,18 @@
         "type": "object"
       }
     },
+    "room_polygon": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      },
+      "description": "Puntos del pol\u00edgono de la sala"
+    },
+    "floor_color": {
+      "type": "string",
+      "default": "#475569",
+      "description": "Color del suelo de la sala"
+    },
     "background_image_url": {
       "type": "string"
     },
