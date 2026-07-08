@@ -9,7 +9,19 @@ export default function ArticleLinker({ linkedArticles = [], onChange }) {
 
   const { data: allArticles = [] } = useQuery({
     queryKey: ['Article', 'active', 'code'],
-    queryFn: () => base44.entities.Article.list('code', 1000),
+    queryFn: async () => {
+      // Paginación: el límite por llamada es 5000. Cargar todo el catálogo.
+      const PAGE = 5000;
+      let all = [];
+      let skip = 0;
+      let batch;
+      do {
+        batch = await base44.entities.Article.list('code', PAGE, skip);
+        all = all.concat(batch || []);
+        skip += PAGE;
+      } while (batch && batch.length === PAGE);
+      return all;
+    },
     staleTime: 5 * 60 * 1000,
   });
 
