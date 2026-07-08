@@ -9,7 +9,8 @@ export default function ArticleLinker({ linkedArticles = [], onChange }) {
 
   const { data: allArticles = [] } = useQuery({
     queryKey: ['Article', 'active', 'code'],
-    queryFn: () => base44.entities.Article.list('code'),
+    queryFn: () => base44.entities.Article.list('code', 1000),
+    staleTime: 5 * 60 * 1000,
   });
 
   // Catálogo sincronizado de CDEApp: solo artículos activos
