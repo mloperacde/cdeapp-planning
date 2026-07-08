@@ -117,6 +117,18 @@
           "notes": {
             "type": "string",
             "description": "Notas adicionales sobre este elemento del inventario"
+          },
+          "instance_number": {
+            "type": "number",
+            "description": "N\u00famero de instancia dentro del tipo (1, 2, 3...)"
+          },
+          "marca": {
+            "type": "string",
+            "description": "Marca/n\u00famero de identificaci\u00f3n individual del elemento (ej: MESA-01)"
+          },
+          "source_element_id": {
+            "type": "string",
+            "description": "ID del elemento del layout que origin\u00f3 este item de inventario"
           }
         }
       },
