@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { ArrowLeft, Save, Plus, Trash2, ChevronDown, ChevronUp, User, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 import OperatorCanvas from './OperatorCanvas';
+import ArticleLinker from './ArticleLinker';
 
 const OPERATOR_COLORS = ['#3B82F6','#10B981','#F59E0B','#EF4444','#8B5CF6','#EC4899','#06B6D4','#84CC16'];
 
@@ -163,12 +164,13 @@ export default function ProcessDiagramEditor({ diagramId, layouts, onBack }) {
     process_id: '',
     process_name: '',
     operator_assignments: [],
+    linked_articles: [],
     status: 'Borrador',
     version: 1,
     notes: '',
   });
   const [loaded, setLoaded] = useState(false);
-  const [activeTab, setActiveTab] = useState('operators'); // 'operators' | 'canvas' | 'settings'
+  const [activeTab, setActiveTab] = useState('operators'); // 'operators' | 'canvas' | 'settings' | 'articulos'
 
   const { data: processes = [] } = useQuery({
     queryKey: ['Process'],
@@ -185,7 +187,7 @@ export default function ProcessDiagramEditor({ diagramId, layouts, onBack }) {
     enabled: !isNew && !loaded,
   });
   if (existingDiagram?.[0] && !loaded) {
-    setData(existingDiagram[0]);
+    setData({ ...existingDiagram[0], linked_articles: existingDiagram[0].linked_articles || [] });
     setLoaded(true);
   }
 
@@ -262,7 +264,7 @@ export default function ProcessDiagramEditor({ diagramId, layouts, onBack }) {
 
       {/* Sub-tabs */}
       <div className="flex gap-0 border-b border-slate-200 dark:border-border bg-white dark:bg-card px-4 flex-shrink-0">
-        {[['operators','Operarios y Acciones'],['canvas','Vista en Layout'],['settings','Configuración']].map(([key,label]) => (
+        {[['operators','Operarios y Acciones'],['canvas','Vista en Layout'],['articulos','Artículos'],['settings','Configuración']].map(([key,label]) => (
           <button key={key} onClick={() => setActiveTab(key)}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === key ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
             {label}
@@ -347,6 +349,16 @@ export default function ProcessDiagramEditor({ diagramId, layouts, onBack }) {
             canvasHeight={selectedLayout?.canvas_height || 800}
             onMoveOperator={(id, x, y) => updateOperator(id, { x, y })}
           />
+        )}
+
+        {/* Artículos Tab */}
+        {activeTab === 'articulos' && (
+          <div className="max-w-xl">
+            <ArticleLinker
+              linkedArticles={data.linked_articles || []}
+              onChange={(la) => setData(d => ({ ...d, linked_articles: la }))}
+            />
+          </div>
         )}
       </div>
     </div>

@@ -50,6 +50,31 @@
         "type": "object"
       }
     },
+    "linked_articles": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "article_id": {
+            "type": "string",
+            "description": "ID del art\u00edculo en la BD"
+          },
+          "article_code": {
+            "type": "string",
+            "description": "C\u00f3digo del art\u00edculo"
+          },
+          "article_description": {
+            "type": "string",
+            "description": "Descripci\u00f3n/nombre del art\u00edculo"
+          },
+          "linked_date": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "description": "Art\u00edculos del cat\u00e1logo CDEApp vinculados a este diagrama"
+    },
     "version": {
       "type": "number",
       "default": 1

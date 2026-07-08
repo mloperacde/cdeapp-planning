@@ -7,10 +7,16 @@ export default function ArticleLinker({ linkedArticles = [], onChange }) {
   const [search, setSearch] = useState('');
   const [showSearch, setShowSearch] = useState(false);
 
-  const { data: articles = [] } = useQuery({
-    queryKey: ['Article', 'all'],
-    queryFn: () => base44.entities.Article.list(),
+  const { data: allArticles = [] } = useQuery({
+    queryKey: ['Article', 'active', 'code'],
+    queryFn: () => base44.entities.Article.list('code'),
   });
+
+  // Catálogo sincronizado de CDEApp: solo artículos activos
+  const articles = useMemo(() =>
+    (allArticles || []).filter(a => a.active !== false),
+    [allArticles]
+  );
 
   const filtered = useMemo(() => {
     if (!search.trim()) return articles.slice(0, 50);
@@ -57,7 +63,7 @@ export default function ArticleLinker({ linkedArticles = [], onChange }) {
       </div>
 
       <p className="text-[10px] text-slate-400 leading-tight">
-        Define qué artículos se producen con este layout. Permite variar la configuración según el artículo.
+        Artículos del catálogo CDEApp ({articles.length} activos). Define qué artículos se producen con este layout.
       </p>
 
       {showSearch && (
