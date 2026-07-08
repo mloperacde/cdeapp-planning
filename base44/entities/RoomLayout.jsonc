@@ -66,6 +66,61 @@
         "Archivado"
       ],
       "default": "Borrador"
+    },
+    "linked_articles": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "article_id": {
+            "type": "string",
+            "description": "ID del art\u00edculo en la BD"
+          },
+          "article_code": {
+            "type": "string",
+            "description": "C\u00f3digo del art\u00edculo"
+          },
+          "article_description": {
+            "type": "string",
+            "description": "Descripci\u00f3n/nombre del art\u00edculo"
+          },
+          "linked_date": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "description": "Art\u00edculos vinculados a este layout (var\u00eda seg\u00fan el art\u00edculo a producir)"
+    },
+    "element_inventory": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "element_type": {
+            "type": "string",
+            "description": "Tipo de elemento (machine, conveyor_belt, etc.)"
+          },
+          "label": {
+            "type": "string",
+            "description": "Etiqueta descriptiva del elemento"
+          },
+          "quantity": {
+            "type": "number",
+            "description": "Cantidad necesaria"
+          },
+          "auto_generated": {
+            "type": "boolean",
+            "default": true,
+            "description": "Si fue auto-generado desde el layout"
+          },
+          "notes": {
+            "type": "string",
+            "description": "Notas adicionales sobre este elemento del inventario"
+          }
+        }
+      },
+      "description": "Inventario de elementos necesarios seg\u00fan la configuraci\u00f3n del layout"
     }
   },
   "required": [

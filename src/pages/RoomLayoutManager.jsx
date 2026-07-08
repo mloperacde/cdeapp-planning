@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, LayoutDashboard, GitBranch, Edit, Trash2, Eye, Copy } from 'lucide-react';
+import { Plus, LayoutDashboard, GitBranch, Edit, Trash2, Eye, Copy, Package, ClipboardList } from 'lucide-react';
 import RoomLayoutEditor from '@/components/layouts/RoomLayoutEditor';
 import ProcessDiagramEditor from '@/components/layouts/ProcessDiagramEditor';
 import { toast } from 'sonner';
@@ -35,6 +35,29 @@ export default function RoomLayoutManager() {
   const deleteLayout = useMutation({
     mutationFn: (id) => base44.entities.RoomLayout.delete(id),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['RoomLayout'] }); toast.success('Layout eliminado'); },
+  });
+
+  const duplicateLayout = useMutation({
+    mutationFn: async (id) => {
+      const all = await base44.entities.RoomLayout.list();
+      const src = all.find(l => l.id === id);
+      if (!src) throw new Error('Layout no encontrado');
+      return base44.entities.RoomLayout.create({
+        name: `${src.name} (copia)`,
+        room_name: src.room_name || '',
+        description: src.description || '',
+        canvas_width: src.canvas_width || 1200,
+        canvas_height: src.canvas_height || 800,
+        status: 'Borrador',
+        layout_elements: src.layout_elements || [],
+        room_polygon: src.room_polygon || [],
+        floor_color: src.floor_color || '#475569',
+        background_image_url: src.background_image_url || '',
+        linked_articles: src.linked_articles || [],
+        element_inventory: src.element_inventory || [],
+      });
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['RoomLayout'] }); toast.success('Layout duplicado correctamente'); },
   });
 
   const deleteDiagram = useMutation({
@@ -132,12 +155,27 @@ export default function RoomLayoutManager() {
               {layout.description && (
                 <p className="text-sm text-slate-600 dark:text-slate-300 mb-3 line-clamp-2">{layout.description}</p>
               )}
-              <div className="text-xs text-slate-400 mb-3">
-                {(layout.layout_elements || []).length} elementos · {layout.canvas_width || 1200}×{layout.canvas_height || 800}px
+              <div className="text-xs text-slate-400 mb-3 space-y-0.5">
+                <div>{(layout.layout_elements || []).length} elementos · {layout.canvas_width || 1200}×{layout.canvas_height || 800}px</div>
+                {(layout.linked_articles || []).length > 0 && (
+                  <div className="flex items-center gap-1 text-blue-500">
+                    <Package className="w-3 h-3" />
+                    {(layout.linked_articles || []).length} artículo(s) vinculado(s)
+                  </div>
+                )}
+                {(layout.element_inventory || []).length > 0 && (
+                  <div className="flex items-center gap-1 text-emerald-500">
+                    <ClipboardList className="w-3 h-3" />
+                    {(layout.element_inventory || []).length} item(s) en inventario
+                  </div>
+                )}
               </div>
               <div className="flex gap-2">
                 <Button size="sm" variant="outline" className="flex-1 gap-1" onClick={() => setEditingLayout(layout.id)}>
                   <Edit className="w-3 h-3" /> Editar
+                </Button>
+                <Button size="sm" variant="ghost" className="text-slate-500 hover:text-blue-600" onClick={() => duplicateLayout.mutate(layout.id)} title="Duplicar layout">
+                  <Copy className="w-4 h-4" />
                 </Button>
                 <Button size="sm" variant="ghost" className="text-red-500 hover:text-red-700" onClick={() => deleteLayout.mutate(layout.id)}>
                   <Trash2 className="w-4 h-4" />

@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
   ArrowLeft, Save, Settings, Layers, Library, Copy, Ungroup, Trash2,
-  GitBranch, Clipboard, Box, FileDown
+  GitBranch, Clipboard, Box, FileDown, Link2, ClipboardList
 } from 'lucide-react';
 import { toast } from 'sonner';
 import ElementPalette from './ElementPalette';
@@ -16,6 +16,8 @@ import LayoutTemplateLibrary from './LayoutTemplateLibrary';
 import InlineProcessPanel from './InlineProcessPanel';
 import Layout3DView from './Layout3DView';
 import LayoutPDFExport from './LayoutPDFExport';
+import ArticleLinker from './ArticleLinker';
+import ElementInventoryPanel from './ElementInventoryPanel';
 
 export default function RoomLayoutEditor({ layoutId, onBack }) {
   const qc = useQueryClient();
@@ -31,6 +33,8 @@ export default function RoomLayoutEditor({ layoutId, onBack }) {
     layout_elements: [],
     room_polygon: [],
     floor_color: '#475569',
+    linked_articles: [],
+    element_inventory: [],
   });
   const [selectedId, setSelectedId] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
@@ -69,6 +73,8 @@ export default function RoomLayoutEditor({ layoutId, onBack }) {
         room_polygon: existingLayout.room_polygon || [],
         floor_color: existingLayout.floor_color || '#475569',
         background_image_url: existingLayout.background_image_url || '',
+        linked_articles: existingLayout.linked_articles || [],
+        element_inventory: existingLayout.element_inventory || [],
       });
       setLoaded(true);
     }
@@ -259,9 +265,11 @@ export default function RoomLayoutEditor({ layoutId, onBack }) {
   };
 
   const LEFT_TABS = [
-    { key: 'palette',   label: 'Elementos', Icon: Layers },
-    { key: 'templates', label: 'Plantillas', Icon: Library },
-    { key: 'settings',  label: 'Config',    Icon: Settings },
+    { key: 'palette',    label: 'Elementos',  Icon: Layers },
+    { key: 'templates',  label: 'Plantillas',  Icon: Library },
+    { key: 'articulos',  label: 'Artículos',   Icon: Link2 },
+    { key: 'inventario', label: 'Inventario',  Icon: ClipboardList },
+    { key: 'settings',   label: 'Config',      Icon: Settings },
   ];
 
   return (
@@ -368,6 +376,21 @@ export default function RoomLayoutEditor({ layoutId, onBack }) {
               <LayoutTemplateLibrary
                 selectedElements={(data.layout_elements || []).filter(e => selectedIds.includes(e.id) || e.id === selectedId)}
                 onInsertTemplate={insertTemplate}
+              />
+            )}
+
+            {sidePanel === 'articulos' && (
+              <ArticleLinker
+                linkedArticles={data.linked_articles || []}
+                onChange={(la) => setData(d => ({ ...d, linked_articles: la }))}
+              />
+            )}
+
+            {sidePanel === 'inventario' && (
+              <ElementInventoryPanel
+                layoutElements={data.layout_elements || []}
+                inventory={data.element_inventory || []}
+                onChange={(inv) => setData(d => ({ ...d, element_inventory: inv }))}
               />
             )}
 
