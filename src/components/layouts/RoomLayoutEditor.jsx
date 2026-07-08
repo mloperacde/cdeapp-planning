@@ -347,7 +347,7 @@ export default function RoomLayoutEditor({ layoutId, onBack }) {
 
       <div className="flex flex-1 overflow-hidden">
         {/* LEFT SIDEBAR */}
-        <div className="w-48 flex-shrink-0 p-2 border-r border-slate-200 dark:border-border bg-white dark:bg-card space-y-1 overflow-hidden flex flex-col">
+        <div className="w-64 flex-shrink-0 p-2 border-r border-slate-200 dark:border-border bg-white dark:bg-card space-y-1 overflow-hidden flex flex-col">
           <div className="flex gap-0.5 flex-shrink-0">
             {LEFT_TABS.map(({ key, label, Icon }) => (
               <button key={key} onClick={() => setSidePanel(key)}
