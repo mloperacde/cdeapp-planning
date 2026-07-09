@@ -122,8 +122,8 @@ export default function DepartmentPresenceBlock({ employees, isCurrentShift, isA
               </Badge>
             </div>
 
-            {/* Motivo ausencia si aplica */}
-            {emp.confirmedAbsence && (
+            {/* Motivo ausencia si aplica — solo cuando realmente está ausente */}
+            {emp.confirmedAbsence && emp.presenceStatus === "absent_confirmed" && (
               <div className="flex-shrink-0 max-w-[80px]">
                 <p className="text-[10px] text-red-500 dark:text-red-400 truncate" title={emp.confirmedAbsence.motivo}>
                   {emp.confirmedAbsence.motivo || "Ausencia"}
