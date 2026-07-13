@@ -1,20 +1,25 @@
 import { useMemo, useState } from 'react';
 import { getElementConfig } from './ElementPalette';
-import { Plus, X, RefreshCw, ClipboardList, ChevronDown, ChevronRight } from 'lucide-react';
+import { Plus, X, RefreshCw, ClipboardList, ChevronDown, ChevronRight, Hash } from 'lucide-react';
 
 // Genera un prefijo corto para la marca a partir del tipo o etiqueta
 const typePrefix = (type, label) => {
   const cfg = getElementConfig(type);
   const base = (label || cfg?.label || type || 'EL').toUpperCase();
-  // Tomar las 3-4 primeras letras alfanuméricas
   const clean = base.replace(/[^A-Z0-9]/g, '').slice(0, 4) || 'EL';
   return clean;
 };
 
-export default function ElementInventoryPanel({ layoutElements = [], inventory = [], onChange }) {
+export default function ElementInventoryPanel({
+  layoutElements = [],
+  inventory = [],
+  onChange,
+  onHighlightElement,   // (elementId | null) => void — hover sync with canvas
+}) {
   const [collapsedGroups, setCollapsedGroups] = useState({});
+  const [hoveredId, setHoveredId] = useState(null);
 
-  // Inventario detallado: una entrada por cada elemento del layout, numerada por tipo
+  // One inventory entry per layout element, numbered per type
   const autoInventory = useMemo(() => {
     const counters = {};
     return (layoutElements || []).map(el => {
@@ -36,7 +41,7 @@ export default function ElementInventoryPanel({ layoutElements = [], inventory =
     });
   }, [layoutElements]);
 
-  // Resumen por tipo (para mostrar totales agrupados)
+  // Summary by type
   const typeSummary = useMemo(() => {
     const map = {};
     autoInventory.forEach(item => {
@@ -48,10 +53,9 @@ export default function ElementInventoryPanel({ layoutElements = [], inventory =
     return Object.values(map).sort((a, b) => b.count - a.count);
   }, [autoInventory]);
 
-  // Mergear: items auto (con overrides de marca/notes persistidos) + items manuales
+  // Merge: auto items with persisted overrides + manual items
   const mergedInventory = useMemo(() => {
     const manualItems = (inventory || []).filter(item => !item.auto_generated && !item.source_element_id);
-    // Overrides guardados para items auto (marcas/notas editadas por el usuario)
     const overrides = {};
     (inventory || []).forEach(item => {
       if (item.auto_generated && item.source_element_id) {
@@ -67,9 +71,7 @@ export default function ElementInventoryPanel({ layoutElements = [], inventory =
 
   const totalElements = autoInventory.length + mergedInventory.filter(i => !i.auto_generated).length;
 
-  const syncFromLayout = () => {
-    onChange(mergedInventory);
-  };
+  const syncFromLayout = () => onChange(mergedInventory);
 
   const addManualItem = () => {
     onChange([...(inventory || []), {
@@ -99,7 +101,17 @@ export default function ElementInventoryPanel({ layoutElements = [], inventory =
     setCollapsedGroups(prev => ({ ...prev, [type]: !prev[type] }));
   };
 
-  // Agrupar items auto por tipo para mostrar, manuales al final sueltos
+  const handleHover = (elementId) => {
+    setHoveredId(elementId);
+    onHighlightElement?.(elementId);
+  };
+
+  const handleHoverEnd = () => {
+    setHoveredId(null);
+    onHighlightElement?.(null);
+  };
+
+  // Group auto items by type
   const autoItems = mergedInventory.filter(i => i.auto_generated);
   const manualItems = mergedInventory.filter(i => !i.auto_generated);
   const autoByType = {};
@@ -109,12 +121,13 @@ export default function ElementInventoryPanel({ layoutElements = [], inventory =
   });
   const autoGroups = Object.entries(autoByType);
 
-  // Índice global para updateItem: hay que mapear al índice en mergedInventory
-  // Usamos source_element_id y label+marca para localizar
   const findIndex = (item) => mergedInventory.findIndex(m =>
     (item.source_element_id && m.source_element_id === item.source_element_id && m.auto_generated)
     || (!item.auto_generated && !m.auto_generated && m.label === item.label && m.marca === item.marca)
   );
+
+  // Validate code: alphanumeric + hyphens/underscores only
+  const validateCode = (val) => val.replace(/[^A-Za-z0-9\-_]/g, '').toUpperCase();
 
   return (
     <div className="space-y-2 pt-1">
@@ -140,7 +153,7 @@ export default function ElementInventoryPanel({ layoutElements = [], inventory =
       </div>
 
       <p className="text-[10px] text-slate-400 leading-tight">
-        Cada elemento del layout se lista individualmente con su marca única (ej: MESA-01). Edita la marca para diferenciarlos.
+        Pasa el ratón sobre un elemento para resaltarlo en el canvas. El código (ej: <span className="font-mono">MESA-01</span>) se muestra sobre el gráfico.
       </p>
 
       <div className="text-[10px] text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50 rounded px-2 py-1">
@@ -156,7 +169,7 @@ export default function ElementInventoryPanel({ layoutElements = [], inventory =
           </div>
         )}
 
-        {/* Grupos auto por tipo */}
+        {/* Auto groups by type */}
         {autoGroups.map(([type, group]) => {
           const cfg = getElementConfig(type);
           const collapsed = collapsedGroups[type];
@@ -177,21 +190,38 @@ export default function ElementInventoryPanel({ layoutElements = [], inventory =
                 <div className="px-1.5 pb-1.5 space-y-1">
                   {group.items.map((item) => {
                     const globalIdx = findIndex(item);
+                    const isHovered = hoveredId === item.source_element_id;
                     return (
-                      <div key={item.source_element_id || item.label}
-                        className="flex items-center gap-1 bg-white dark:bg-slate-800/60 rounded border border-slate-100 dark:border-slate-700 px-1.5 py-1">
+                      <div
+                        key={item.source_element_id || item.label}
+                        className={`flex items-center gap-1 rounded border px-1.5 py-1 cursor-pointer transition-colors ${
+                          isHovered
+                            ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700'
+                            : 'bg-white dark:bg-slate-800/60 border-slate-100 dark:border-slate-700'
+                        }`}
+                        onMouseEnter={() => handleHover(item.source_element_id)}
+                        onMouseLeave={handleHoverEnd}
+                        onClick={() => handleHover(isHovered ? null : item.source_element_id)}
+                      >
                         <span className="text-[10px] font-mono text-slate-400 w-5 flex-shrink-0">#{item.instance_number}</span>
-                        <input
-                          value={item.marca || ''}
-                          onChange={e => updateItem(globalIdx, { marca: e.target.value })}
-                          placeholder="Marca"
-                          className="flex-1 min-w-0 text-[11px] font-mono font-semibold border border-emerald-200 dark:border-emerald-800/40 rounded px-1 py-0.5 bg-white dark:bg-slate-800 text-emerald-700 dark:text-emerald-300 outline-none focus:border-emerald-400"
-                        />
+                        {/* Code field — alphanumeric only */}
+                        <div className="flex items-center gap-0.5 flex-1 min-w-0">
+                          <Hash className="w-2.5 h-2.5 text-emerald-400 flex-shrink-0" />
+                          <input
+                            value={item.marca || ''}
+                            onChange={e => updateItem(globalIdx, { marca: validateCode(e.target.value) })}
+                            onClick={e => e.stopPropagation()}
+                            placeholder="COD-01"
+                            maxLength={12}
+                            className="flex-1 min-w-0 text-[11px] font-mono font-semibold border border-emerald-200 dark:border-emerald-800/40 rounded px-1 py-0.5 bg-white dark:bg-slate-800 text-emerald-700 dark:text-emerald-300 outline-none focus:border-emerald-400 uppercase"
+                          />
+                        </div>
                         <input
                           value={item.notes || ''}
                           onChange={e => updateItem(globalIdx, { notes: e.target.value })}
+                          onClick={e => e.stopPropagation()}
                           placeholder="Notas"
-                          className="flex-1 min-w-0 text-[10px] bg-transparent border-0 border-b border-dashed border-slate-200 dark:border-slate-600 outline-none text-slate-500 dark:text-slate-400 placeholder:text-slate-300"
+                          className="w-16 min-w-0 text-[10px] bg-transparent border-0 border-b border-dashed border-slate-200 dark:border-slate-600 outline-none text-slate-500 dark:text-slate-400 placeholder:text-slate-300"
                         />
                       </div>
                     );
@@ -202,7 +232,7 @@ export default function ElementInventoryPanel({ layoutElements = [], inventory =
           );
         })}
 
-        {/* Items manuales */}
+        {/* Manual items */}
         {manualItems.map((item, idx) => {
           const cfg = getElementConfig(item.element_type);
           const globalIdx = mergedInventory.findIndex(m => !m.auto_generated && m === item);
@@ -229,12 +259,16 @@ export default function ElementInventoryPanel({ layoutElements = [], inventory =
                   <X className="w-3 h-3" />
                 </button>
               </div>
-              <input
-                value={item.marca || ''}
-                onChange={e => updateItem(globalIdx, { marca: e.target.value })}
-                placeholder="Marca individual (ej: CARRET-01)"
-                className="w-full text-[10px] font-mono mt-1 bg-transparent border-0 border-b border-dashed border-slate-200 dark:border-slate-600 outline-none text-slate-500 dark:text-slate-400 placeholder:text-slate-300"
-              />
+              <div className="flex items-center gap-0.5 mt-1">
+                <Hash className="w-2.5 h-2.5 text-amber-400 flex-shrink-0" />
+                <input
+                  value={item.marca || ''}
+                  onChange={e => updateItem(globalIdx, { marca: validateCode(e.target.value) })}
+                  placeholder="COD-01"
+                  maxLength={12}
+                  className="flex-1 text-[10px] font-mono uppercase bg-transparent border-0 border-b border-dashed border-amber-200 dark:border-amber-700 outline-none text-amber-700 dark:text-amber-400 placeholder:text-slate-300"
+                />
+              </div>
               <input
                 value={item.notes || ''}
                 onChange={e => updateItem(globalIdx, { notes: e.target.value })}

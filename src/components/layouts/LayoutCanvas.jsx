@@ -212,6 +212,8 @@ export default function LayoutCanvas({
   width = 1200,
   height = 800,
   svgRef: externalSvgRef,
+  inventory = [],
+  highlightedElementId = null,
 }) {
   const FLOOR_ID = '__room_floor__';
   const internalSvgRef = useRef(null);
@@ -486,16 +488,58 @@ export default function LayoutCanvas({
             />
 
             {/* Elements */}
-            {[...bottomEls, ...topEls].map(el => (
-              <LayoutElement
-                key={el.id}
-                el={el}
-                selected={selectedId === el.id}
-                multiSelected={selectedIds.includes(el.id)}
-                onPointerDown={startMove}
-                onResize={handleResize}
-              />
-            ))}
+            {[...bottomEls, ...topEls].map(el => {
+              // Find the inventory code/marca for this element
+              const invItem = inventory.find(i => i.source_element_id === el.id);
+              const marca = invItem?.marca || '';
+              const isHighlighted = highlightedElementId === el.id;
+              return (
+                <g key={el.id}>
+                  <LayoutElement
+                    el={el}
+                    selected={selectedId === el.id}
+                    multiSelected={selectedIds.includes(el.id) || isHighlighted}
+                    onPointerDown={startMove}
+                    onResize={handleResize}
+                  />
+                  {/* Inventory code badge — shown when element has a marca assigned */}
+                  {marca && (
+                    <g transform={`translate(${el.x},${el.y}) rotate(${el.rotation || 0} ${el.width / 2} ${el.height / 2})`} pointerEvents="none">
+                      <rect
+                        x={el.width / 2 - (marca.length * 3.5 + 4)}
+                        y={el.height - 14}
+                        width={marca.length * 7 + 8}
+                        height={13}
+                        rx={3}
+                        fill={isHighlighted ? '#2563EB' : 'rgba(15,23,42,0.75)'}
+                        stroke={isHighlighted ? '#93C5FD' : 'rgba(255,255,255,0.2)'}
+                        strokeWidth={0.8}
+                      />
+                      <text
+                        x={el.width / 2}
+                        y={el.height - 5}
+                        textAnchor="middle"
+                        fontSize={7.5}
+                        fontFamily="monospace"
+                        fontWeight="700"
+                        fill="#FFFFFF"
+                        letterSpacing={0.5}
+                      >{marca}</text>
+                    </g>
+                  )}
+                  {/* Inventory highlight ring */}
+                  {isHighlighted && (
+                    <rect
+                      x={el.x - 3} y={el.y - 3}
+                      width={el.width + 6} height={el.height + 6}
+                      rx={7} fill="none"
+                      stroke="#2563EB" strokeWidth={2} strokeDasharray="6 3"
+                      pointerEvents="none"
+                    />
+                  )}
+                </g>
+              );
+            })}
 
             {/* Selection rect */}
             {selRect && (
