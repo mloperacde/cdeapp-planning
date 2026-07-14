@@ -361,7 +361,7 @@ export default function RoomLayoutEditor({ layoutId, onBack }) {
             ))}
           </div>
 
-          <div className="flex-1 overflow-y-auto overflow-x-hidden">
+          <div className={`flex-1 overflow-x-hidden ${sidePanel === 'inventario' ? 'overflow-hidden flex flex-col' : 'overflow-y-auto'}`}>
             {sidePanel === 'palette' && (
               <ElementPalette
                 onAdd={addElement}
@@ -388,12 +388,14 @@ export default function RoomLayoutEditor({ layoutId, onBack }) {
             )}
 
             {sidePanel === 'inventario' && (
-              <ElementInventoryPanel
-                layoutElements={data.layout_elements || []}
-                inventory={data.element_inventory || []}
-                onChange={(inv) => setData(d => ({ ...d, element_inventory: inv }))}
-                onHighlightElement={setHighlightedElementId}
-              />
+              <div className="flex-1 min-h-0">
+                <ElementInventoryPanel
+                  layoutElements={data.layout_elements || []}
+                  inventory={data.element_inventory || []}
+                  onChange={(inv) => setData(d => ({ ...d, element_inventory: inv }))}
+                  onHighlightElement={setHighlightedElementId}
+                />
+              </div>
             )}
 
             {sidePanel === 'settings' && (

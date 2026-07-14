@@ -489,9 +489,16 @@ export default function LayoutCanvas({
 
             {/* Elements */}
             {[...bottomEls, ...topEls].map(el => {
-              // Find the inventory code/marca for this element
+              // Compute inventory code: auto-generated from element type, overridden by persisted inventory
+              const cfg = getElementConfig(el.type) || {};
+              const baseLabel = (el.label || cfg.label || el.type || 'EL').toUpperCase();
+              const prefix = (baseLabel.replace(/[^A-Z0-9]/g, '').slice(0, 4) || 'EL');
+              // Count instance number among same-type elements (stable order)
+              const sameTypeEls = elements.filter(e => e.type === el.type);
+              const instanceNum = sameTypeEls.indexOf(el) + 1;
+              const autoMarca = `${prefix}-${String(instanceNum).padStart(2, '0')}`;
               const invItem = inventory.find(i => i.source_element_id === el.id);
-              const marca = invItem?.marca || '';
+              const marca = invItem?.marca || autoMarca;
               const isHighlighted = highlightedElementId === el.id;
               return (
                 <g key={el.id}>
