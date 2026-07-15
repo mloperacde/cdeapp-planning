@@ -32,11 +32,13 @@ export default function MachineOrderManager() {
 
   const updateOrderMutation = useMutation({
     mutationFn: async (orderedMachines) => {
-      for (let i = 0; i < orderedMachines.length; i++) {
-        await base44.entities.MachineMasterDatabase.update(orderedMachines[i].id, { 
-          orden_visualizacion: i + 1 
-        });
-      }
+      const updates = orderedMachines.map((m, i) => ({
+        id: m.id,
+        orden_visualizacion: i + 1
+      }));
+      // bulkUpdate envía una única petición por lotes (hasta 500 registros) en lugar
+      // de N peticiones individuales secuenciales que disparan el rate limit.
+      await base44.entities.MachineMasterDatabase.bulkUpdate(updates);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['machineMasterDatabase'] });
