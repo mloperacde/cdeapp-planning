@@ -5,8 +5,29 @@ import { getMachineAlias } from "@/utils/machineAlias";
 import { addDays, format, isSameDay, isWeekend, isValid } from "date-fns";
 import { parseDateES } from "@/utils/parseDateES";
 import { es } from "date-fns/locale";
-import { AlertCircle, CalendarClock } from "lucide-react";
+import { AlertCircle, CalendarClock, Users } from "lucide-react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
+
+// Devuelve el nº de operarios requeridos para una orden:
+// prioriza la configuración granular por actividad (personal_requerido),
+// luego operadores_requeridos, finalmente null si no hay info.
+const getRequiredOperators = (order) => {
+  if (Array.isArray(order.personal_requerido) && order.personal_requerido.length > 0) {
+    return order.personal_requerido.reduce((s, r) => s + (Number(r.cantidad_operarios) || 0), 0);
+  }
+  if (order.operadores_requeridos && order.operadores_requeridos > 0) return order.operadores_requeridos;
+  return null;
+};
+
+// Lista detallada de actividades/personel para el tooltip
+const getStaffDetail = (order) => {
+  if (Array.isArray(order.personal_requerido) && order.personal_requerido.length > 0) {
+    return order.personal_requerido
+      .map(r => `${r.actividad || 'Actividad'}: ${r.cantidad_operarios || 0}`)
+      .join(', ');
+  }
+  return null;
+};
 
 const ZOOM_CONFIG = {
   compact:  { dayWidth: 96,  rowHeight: 60 },
@@ -180,9 +201,17 @@ export default function PlanningGantt({ orders = [], machines = [], dateRange, o
                                       {order.product_article_code || '—'}
                                     </div>
                                     {order.product_name && <div className="truncate text-[8px] text-slate-500 italic">{order.product_name}</div>}
-                                    {(order.quantity || order.multi_qty) && (
-                                      <div className="text-[8px] text-slate-500 mt-0.5">{order.multi_qty || order.quantity} uds</div>
-                                    )}
+                                    <div className="flex items-center gap-1 text-[8px] text-slate-500 mt-0.5">
+                                      {(order.quantity || order.multi_qty) && <span>{order.multi_qty || order.quantity} uds</span>}
+                                      {(() => {
+                                        const ops = getRequiredOperators(order);
+                                        return ops !== null && (
+                                          <span className="flex items-center gap-0.5 text-blue-600 font-medium">
+                                            <Users className="w-2 h-2" />{ops}
+                                          </span>
+                                        );
+                                      })()}
+                                    </div>
                                   </div>
                                 )}
                               </Draggable>
@@ -252,12 +281,17 @@ export default function PlanningGantt({ orders = [], machines = [], dateRange, o
                         const isLate = (endStr) && new Date(endStr) < new Date();
                         const qty = order.multi_qty || order.quantity || '';
 
+                        const requiredOps = getRequiredOperators(order);
+                        const staffDetail = getStaffDetail(order);
                         const tooltipText = [
                           `Nº ${order.order_number} | ${order.priority === 0 ? 'Sin Pry' : `Pry ${order.priority}`}`,
                           `Artículo: ${order.product_article_code || '-'} — ${order.product_name || '-'}`,
                           `Cliente: ${order.client_name || '-'}`,
                           `Cantidad: ${qty || '-'}`,
                           `Inicio: ${startStr} | Entrega: ${endStr || '-'}`,
+                          requiredOps !== null
+                            ? `Operarios req.: ${requiredOps}${staffDetail ? ` (${staffDetail})` : ''}`
+                            : 'Operarios req.: no configurado',
                         ].join('\n');
 
                         return (
@@ -292,9 +326,14 @@ export default function PlanningGantt({ orders = [], machines = [], dateRange, o
                                 {order.product_name}
                               </div>
                             )}
-                            {/* Row 3: qty + dates */}
+                            {/* Row 3: qty + operators + dates */}
                             <div className="flex items-center gap-1 min-w-0 w-full text-[8px] opacity-80 border-t border-white/10 pt-0.5 mt-0.5">
                               {qty && <span className="bg-black/20 rounded px-1 shrink-0">{qty} uds</span>}
+                              {requiredOps !== null && (
+                                <span className="bg-black/25 rounded px-1 shrink-0 flex items-center gap-0.5">
+                                  <Users className="w-2 h-2" />{requiredOps}
+                                </span>
+                              )}
                               {startStr && <span>▶ {format(startDate, 'dd/MM')}</span>}
                               {endStr && endDate && (
                                 <span className={isLate ? 'text-yellow-300 font-semibold' : ''}>✓ {format(endDate, 'dd/MM')}</span>
