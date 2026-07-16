@@ -278,199 +278,155 @@ export default function WorkOrderForm({ open, onClose, orderToEdit, machines, pr
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>{orderToEdit ? "Editar Orden de Trabajo" : "Nueva Orden de Trabajo"}</DialogTitle>
+      <DialogContent className="!w-[min(95vw,1100px)] !max-w-none p-5">
+        <DialogHeader className="pb-1">
+          <DialogTitle className="text-base">{orderToEdit ? "Editar Orden de Trabajo" : "Nueva Orden de Trabajo"}</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Número Orden *</Label>
-              <Input 
-                value={formData.order_number}
-                onChange={(e) => setFormData({...formData, order_number: e.target.value})}
-                required
-              />
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-2 gap-x-6 gap-y-3">
+          {/* Columna izquierda: Planificación */}
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Número Orden *</Label>
+                <Input className="h-8 text-sm" value={formData.order_number} onChange={(e) => setFormData({...formData, order_number: e.target.value})} required />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Prioridad *</Label>
+                <Select value={formData.priority} onValueChange={(val) => setFormData({...formData, priority: val})}>
+                  <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {[1,2,3,4,5].map(p => (
+                      <SelectItem key={p} value={p.toString()}>{p} - {p === 1 ? "Máxima" : p === 5 ? "Mínima" : "Normal"}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label>Prioridad (1-5) *</Label>
-              <Select value={formData.priority} onValueChange={(val) => setFormData({...formData, priority: val})}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
+
+            <div className="space-y-1">
+              <Label className="text-xs">Máquina *</Label>
+              <Select value={formData.machine_id} onValueChange={(val) => setFormData(prev => ({...prev, machine_id: val}))}>
+                <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Seleccionar máquina" /></SelectTrigger>
                 <SelectContent>
-                  {[1,2,3,4,5].map(p => (
-                    <SelectItem key={p} value={p.toString()}>
-                      {p} - {p === 1 ? "Máxima" : p === 5 ? "Mínima" : "Normal"}
-                    </SelectItem>
-                  ))}
+                  {availableMachines.map(m => (<SelectItem key={m.id} value={m.id}>{m.alias || m.nombre}</SelectItem>))}
                 </SelectContent>
               </Select>
             </div>
-          </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Máquina *</Label>
-              <Select 
-                value={formData.machine_id} 
-                onValueChange={(val) => setFormData(prev => ({...prev, machine_id: val}))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar máquina" />
-                </SelectTrigger>
+            <div className="space-y-1">
+              <Label className="text-xs">Proceso *</Label>
+              <Select value={formData.process_id} onValueChange={(val) => setFormData(prev => ({...prev, process_id: val}))}>
+                <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Seleccionar proceso" /></SelectTrigger>
                 <SelectContent>
-                  {availableMachines.map(m => (
-                    <SelectItem key={m.id} value={m.id}>{m.alias || m.nombre}</SelectItem>
-                  ))}
+                  {availableProcesses.map(p => (<SelectItem key={p.id} value={p.id}>{p.nombre}</SelectItem>))}
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label>Proceso *</Label>
-              <Select 
-                value={formData.process_id} 
-                onValueChange={(val) => setFormData(prev => ({...prev, process_id: val}))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar proceso" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableProcesses.map(p => (
-                    <SelectItem key={p.id} value={p.id}>{p.nombre}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
 
-          {currentOperators && (
-             <div className="flex justify-end">
-               <Badge variant="outline" className="bg-blue-50 text-blue-700">
-                  Requiere: {currentOperators} operador(es)
-               </Badge>
-             </div>
-          )}
+            {currentOperators && (
+              <div className="flex justify-end -mt-1">
+                <Badge variant="outline" className="bg-blue-50 text-blue-700 text-[10px] py-0">Requiere: {currentOperators} operador(es)</Badge>
+              </div>
+            )}
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label className="flex justify-between items-center">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs flex justify-between items-center">
                   Fecha Inicio *
-                  <Button 
-                    type="button" 
-                    variant="ghost" 
-                    size="sm" 
-                    className="h-5 text-[10px] text-blue-600 px-1 hover:bg-blue-50"
-                    onClick={calculateJITStartDate}
-                    title="Calcular fecha de inicio basada en fecha de entrega y cadencia (Asprova Backward Scheduling)"
-                  >
-                    <Calculator className="w-3 h-3 mr-1" />
-                    Calc. JIT
+                  <Button type="button" variant="ghost" size="sm" className="h-5 text-[10px] text-blue-600 px-1 hover:bg-blue-50" onClick={calculateJITStartDate} title="Backward Scheduling (Asprova)">
+                    <Calculator className="w-3 h-3 mr-1" />Calc. JIT
                   </Button>
-              </Label>
-              <Input 
-                type="date"
-                value={formData.start_date}
-                onChange={(e) => setFormData({...formData, start_date: e.target.value})}
-                required
-              />
+                </Label>
+                <Input type="date" className="h-8 text-sm" value={formData.start_date} onChange={(e) => setFormData({...formData, start_date: e.target.value})} required />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Fecha Entrega *</Label>
+                <Input type="date" className="h-8 text-sm" value={formData.committed_delivery_date} onChange={(e) => setFormData({...formData, committed_delivery_date: e.target.value})} required />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label>Fecha Entrega Comprometida *</Label>
-              <Input 
-                type="date"
-                value={formData.committed_delivery_date}
-                onChange={(e) => setFormData({...formData, committed_delivery_date: e.target.value})}
-                required
-              />
-            </div>
-          </div>
 
-          <div className="border-t pt-4 mt-4">
-            <h4 className="text-sm font-medium mb-3">Detalles Adicionales</h4>
-            <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                    <Label>Cliente</Label>
-                    <Input value={formData.client_name} onChange={(e) => setFormData({...formData, client_name: e.target.value})} />
-                </div>
-                <div className="space-y-2">
-                    <Label>Artículo / Referencia</Label>
-                    <Input value={formData.product_article_code} onChange={(e) => setFormData({...formData, product_article_code: e.target.value})} />
-                </div>
-                <div className="space-y-2">
-                    <Label>Cantidad</Label>
-                    <Input type="number" value={formData.quantity} onChange={(e) => setFormData({...formData, quantity: e.target.value})} />
-                </div>
-                <div className="space-y-2">
-                    <Label>Descripción / Nombre</Label>
-                    <Input value={formData.product_name} onChange={(e) => setFormData({...formData, product_name: e.target.value})} />
-                </div>
-                <div className="space-y-2">
-                    <Label>Estado Artículo (se agregará a notas)</Label>
-                    <Input value={formData.part_status} onChange={(e) => setFormData({...formData, part_status: e.target.value})} />
-                </div>
-                <div className="space-y-2">
-                    <Label>Material</Label>
-                    <Input value={formData.material_type} onChange={(e) => setFormData({...formData, material_type: e.target.value})} />
-                </div>
-                <div className="space-y-2">
-                    <Label>Producto</Label>
-                    <Input value={formData.product_category} onChange={(e) => setFormData({...formData, product_category: e.target.value})} />
-                </div>
-                <div className="space-y-2">
-                    <Label>Cadencia</Label>
-                    <Input value={formData.production_cadence} onChange={(e) => setFormData({...formData, production_cadence: e.target.value})} />
-                </div>
-                <div className="space-y-2">
-                    <Label>Fecha Fin</Label>
-                    <Input type="date" value={formData.planned_end_date} onChange={(e) => setFormData({...formData, planned_end_date: e.target.value})} />
-                </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Fecha Fin</Label>
+                <Input type="date" className="h-8 text-sm" value={formData.planned_end_date} onChange={(e) => setFormData({...formData, planned_end_date: e.target.value})} />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Cadencia</Label>
+                <Input type="number" className="h-8 text-sm" value={formData.production_cadence} onChange={(e) => setFormData({...formData, production_cadence: e.target.value})} />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs">Estado</Label>
+              <Select value={formData.status} onValueChange={(val) => setFormData({...formData, status: val})}>
+                <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Pendiente">Pendiente</SelectItem>
+                  <SelectItem value="En Progreso">En Progreso</SelectItem>
+                  <SelectItem value="Completada">Completada</SelectItem>
+                  <SelectItem value="Retrasada">Retrasada</SelectItem>
+                  <SelectItem value="Cancelada">Cancelada</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
-          <StaffRequirementEditor
-            value={formData.personal_requerido}
-            onChange={(val) => setFormData(prev => ({ ...prev, personal_requerido: val }))}
-          />
+          {/* Columna derecha: Detalles + Personal */}
+          <div className="space-y-3">
+            <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Detalles del Producto</h4>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Cliente</Label>
+                <Input className="h-8 text-sm" value={formData.client_name} onChange={(e) => setFormData({...formData, client_name: e.target.value})} />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Artículo / Referencia</Label>
+                <Input className="h-8 text-sm" value={formData.product_article_code} onChange={(e) => setFormData({...formData, product_article_code: e.target.value})} />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Cantidad</Label>
+                <Input type="number" className="h-8 text-sm" value={formData.quantity} onChange={(e) => setFormData({...formData, quantity: e.target.value})} />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Descripción / Nombre</Label>
+                <Input className="h-8 text-sm" value={formData.product_name} onChange={(e) => setFormData({...formData, product_name: e.target.value})} />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Material</Label>
+                <Input className="h-8 text-sm" value={formData.material_type} onChange={(e) => setFormData({...formData, material_type: e.target.value})} />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Producto</Label>
+                <Input className="h-8 text-sm" value={formData.product_category} onChange={(e) => setFormData({...formData, product_category: e.target.value})} />
+              </div>
+              <div className="space-y-1 col-span-2">
+                <Label className="text-xs">Estado Artículo (se agrega a notas)</Label>
+                <Input className="h-8 text-sm" value={formData.part_status} onChange={(e) => setFormData({...formData, part_status: e.target.value})} />
+              </div>
+            </div>
 
-          <div className="space-y-2">
-            <Label>Estado</Label>
-            <Select value={formData.status} onValueChange={(val) => setFormData({...formData, status: val})}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Pendiente">Pendiente</SelectItem>
-                <SelectItem value="En Progreso">En Progreso</SelectItem>
-                <SelectItem value="Completada">Completada</SelectItem>
-                <SelectItem value="Retrasada">Retrasada</SelectItem>
-                <SelectItem value="Cancelada">Cancelada</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Notas</Label>
-            <Textarea 
-              value={formData.notes}
-              onChange={(e) => setFormData({...formData, notes: e.target.value})}
-              rows={3}
+            <StaffRequirementEditor
+              value={formData.personal_requerido}
+              onChange={(val) => setFormData(prev => ({ ...prev, personal_requerido: val }))}
             />
           </div>
 
-          <div className="flex justify-between pt-4">
-            {orderToEdit ? (
-              <Button type="button" variant="destructive" onClick={handleDelete}>
-                Eliminar
-              </Button>
-            ) : <div />}
-            <div className="flex gap-2">
-              <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
-              <Button type="submit" className="bg-blue-600 hover:bg-blue-700">Guardar</Button>
+          {/* Fila inferior completa: Notas + acciones */}
+          <div className="lg:col-span-2 grid grid-cols-2 gap-x-6 gap-y-3 pt-2 border-t">
+            <div className="space-y-1">
+              <Label className="text-xs">Notas</Label>
+              <Textarea className="text-sm min-h-[60px]" value={formData.notes} onChange={(e) => setFormData({...formData, notes: e.target.value})} rows={2} />
+            </div>
+            <div className="flex justify-end items-end gap-2">
+              {orderToEdit && (
+                <Button type="button" variant="destructive" className="h-8" onClick={handleDelete}>Eliminar</Button>
+              )}
+              <Button type="button" variant="outline" className="h-8" onClick={onClose}>Cancelar</Button>
+              <Button type="submit" className="h-8 bg-blue-600 hover:bg-blue-700">Guardar</Button>
             </div>
           </div>
         </form>
       </DialogContent>
     </Dialog>
   );
-}
+  }
