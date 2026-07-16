@@ -50,26 +50,42 @@ export default function ResourceForecast({ orders, employees, machines = [], sel
       const dayStart = new Date(day); dayStart.setHours(0, 0, 0, 0);
       const dayEnd = new Date(day); dayEnd.setHours(23, 59, 59, 999);
 
-      // --- DEMANDA: máquinas únicas activas ese día × 6 operarios ---
+      // --- DEMANDA: por cada máquina activa ese día, operarios requeridos de su orden ---
+      // Cada orden define su propia necesidad de personal (personal_requerido).
+      // Una máquina = un equipo; si hay varias órdenes activas el mismo día en la misma
+      // máquina (capacidad finita evita solapes reales), se toma el máximo.
+      // Si la orden no tiene configuración, se usa el fallback histórico (OPERARIOS_POR_MAQUINA).
       const activeMachineIds = new Set();
-      
+      const machineDemand = {}; // machine_id -> nº operarios requeridos
+
       orders.forEach(order => {
         if (!order.start_date || !order.machine_id) return;
 
         const oStart = parseDateES(order.start_date);
         const oEnd = parseDateES(order.planned_end_date) || parseDateES(order.committed_delivery_date);
-          
+
         if (isNaN(oStart.getTime())) return;
-        
+
         if (oStart <= dayEnd && oEnd >= dayStart) {
           activeMachineIds.add(order.machine_id);
+          const hasConfig = Array.isArray(order.personal_requerido) && order.personal_requerido.length > 0;
+          const ops = hasConfig
+            ? order.personal_requerido.reduce((s, r) => s + (Number(r.cantidad_operarios) || 0), 0)
+            : (order.operadores_requeridos && order.operadores_requeridos > 0
+                ? order.operadores_requeridos
+                : OPERARIOS_POR_MAQUINA);
+          if (!machineDemand[order.machine_id] || ops > machineDemand[order.machine_id]) {
+            machineDemand[order.machine_id] = ops;
+          }
         }
       });
-      
+
+      const demandByConfig = Object.values(machineDemand).reduce((s, v) => s + v, 0);
+
       // Si no hay filtro de equipo → día completo = 2 turnos → demanda doble
       // Si hay filtro (Mañana/Tarde/Noche) → demanda simple
       const turnos = selectedTeam === "all" ? 2 : 1;
-      const demand = activeMachineIds.size * OPERARIOS_POR_MAQUINA * turnos;
+      const demand = demandByConfig * turnos;
 
       return {
         date: day,
@@ -95,7 +111,7 @@ export default function ResourceForecast({ orders, employees, machines = [], sel
             <Users className="w-4 h-4" />
             Previsión de Recursos Humanos
             <span className="text-xs font-normal text-slate-500 ml-1">
-              ({totalAssignable} operarios / {OPERARIOS_POR_MAQUINA} por máquina)
+              ({totalAssignable} operarios / demanda por orden)
             </span>
           </div>
           <Badge variant={Number(avgBalance) >= 0 ? "outline" : "destructive"}>

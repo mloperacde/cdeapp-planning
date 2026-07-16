@@ -100,6 +100,31 @@
     "planned_end_date": {
       "type": "string",
       "format": "date"
+    },
+    "personal_requerido": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "actividad": {
+            "type": "string",
+            "description": "Nombre de la actividad/etapa (ej: Llenado, Etiquetado, Proceso Completo)"
+          },
+          "cantidad_operarios": {
+            "type": "number",
+            "description": "N\u00famero de operarios necesarios para esta actividad"
+          },
+          "notas": {
+            "type": "string",
+            "description": "Notas adicionales sobre la necesidad de personal"
+          }
+        }
+      },
+      "description": "Configuraci\u00f3n de operarios necesarios por orden de trabajo (definida por orden, no por art\u00edculo)"
+    },
+    "operadores_requeridos": {
+      "type": "number",
+      "description": "Total de operarios requeridos para esta orden (suma de personal_requerido o valor manual)"
     }
   },
   "required": [

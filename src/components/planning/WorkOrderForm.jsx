@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Calculator, ArrowLeft } from "lucide-react";
 import { getEligibleProcessesForMachine, getEligibleMachinesForProcess } from "@/lib/domain/planning";
 import { addDays, subDays, format, isWeekend, parseISO } from "date-fns";
+import StaffRequirementEditor from "./StaffRequirementEditor";
 
 export default function WorkOrderForm({ open, onClose, orderToEdit, machines, processes, machineProcesses, existingOrders = [] }) {
   const queryClient = useQueryClient();
@@ -37,7 +38,8 @@ export default function WorkOrderForm({ open, onClose, orderToEdit, machines, pr
     material_type: "",
     product_category: "",
     production_cadence: "",
-    planned_end_date: ""
+    planned_end_date: "",
+    personal_requerido: []
   });
 
   useEffect(() => {
@@ -60,7 +62,8 @@ export default function WorkOrderForm({ open, onClose, orderToEdit, machines, pr
         material_type: orderToEdit.material_type || orderToEdit.material || "",
         product_category: orderToEdit.product_category || orderToEdit.product || "",
         production_cadence: orderToEdit.production_cadence || orderToEdit.cadence || "",
-        planned_end_date: orderToEdit.planned_end_date || orderToEdit.end_date || ""
+        planned_end_date: orderToEdit.planned_end_date || orderToEdit.end_date || "",
+        personal_requerido: Array.isArray(orderToEdit.personal_requerido) ? orderToEdit.personal_requerido : []
       });
     } else {
       setFormData({
@@ -79,7 +82,8 @@ export default function WorkOrderForm({ open, onClose, orderToEdit, machines, pr
         material_type: "",
         product_category: "",
         production_cadence: "",
-        planned_end_date: ""
+        planned_end_date: "",
+        personal_requerido: []
       });
     }
   }, [orderToEdit, open]);
@@ -185,6 +189,12 @@ export default function WorkOrderForm({ open, onClose, orderToEdit, machines, pr
         material_type: data.material_type,
         product_category: data.product_category,
         production_cadence: data.production_cadence ? parseFloat(data.production_cadence) : null,
+
+        // Personal requerido por orden de trabajo
+        personal_requerido: Array.isArray(data.personal_requerido) ? data.personal_requerido : [],
+        operadores_requeridos: Array.isArray(data.personal_requerido)
+          ? data.personal_requerido.reduce((s, r) => s + (Number(r.cantidad_operarios) || 0), 0)
+          : null,
 
         // Clear overrides to ensure manual edit takes precedence
         modified_start_date: null,
@@ -417,6 +427,11 @@ export default function WorkOrderForm({ open, onClose, orderToEdit, machines, pr
                 </div>
             </div>
           </div>
+
+          <StaffRequirementEditor
+            value={formData.personal_requerido}
+            onChange={(val) => setFormData(prev => ({ ...prev, personal_requerido: val }))}
+          />
 
           <div className="space-y-2">
             <Label>Estado</Label>
