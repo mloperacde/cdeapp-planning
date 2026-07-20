@@ -101,7 +101,35 @@ Deno.serve(async (req) => {
     }
     const unassignedMachine = machinesAll.find(m => m.codigo_maquina === 'ZZ-UNASSIGNED');
 
-    // 3. Map & deduplicate incoming orders by order_number
+    // 3. Preservar la configuración de personal (personal_requerido / operadores_requeridos)
+    // de las órdenes existentes antes de borrarlas, y recopilar IDs para el borrado posterior.
+    const staffByOrderNumber = new Map();
+    let skipDel = 0;
+    const allExistingIds = [];
+    while (true) {
+      const page = await retry(() =>
+        base44.asServiceRole.entities.WorkOrder.list('-created_date', 500, skipDel)
+      );
+      const items = Array.isArray(page) ? page : (page?.items || []);
+      for (const o of items) {
+        allExistingIds.push(o.id);
+        const key = String(o.order_number || o.id);
+        const hasStaff = (Array.isArray(o.personal_requerido) && o.personal_requerido.length > 0)
+          || (o.operadores_requeridos && o.operadores_requeridos > 0);
+        if (hasStaff && !staffByOrderNumber.has(key)) {
+          staffByOrderNumber.set(key, {
+            personal_requerido: Array.isArray(o.personal_requerido) ? o.personal_requerido : [],
+            operadores_requeridos: o.operadores_requeridos ?? null,
+          });
+        }
+      }
+      if (items.length < 500) break;
+      skipDel += 500;
+      await sleep(200);
+    }
+    console.log(`[scheduledOrderSync] ${allExistingIds.length} registros existentes; ${staffByOrderNumber.size} con personal configurado`);
+
+    // 4. Map & deduplicate incoming orders by order_number
     const newOrders = [];
     const seen = new Set();
     for (const raw of rawOrders) {
@@ -139,27 +167,21 @@ Deno.serve(async (req) => {
         planned_end_date: raw['Fecha Fin'] || null,
         notes: raw['Observación'] || '',
       });
+
+      // Restaurar la configuración de personal conservada de la orden previa
+      const preservedStaff = staffByOrderNumber.get(orderNumber);
+      if (preservedStaff) {
+        newOrders[newOrders.length - 1].personal_requerido = preservedStaff.personal_requerido;
+        newOrders[newOrders.length - 1].operadores_requeridos = preservedStaff.operadores_requeridos
+          ?? (Array.isArray(preservedStaff.personal_requerido)
+            ? preservedStaff.personal_requerido.reduce((s, r) => s + (Number(r.cantidad_operarios) || 0), 0)
+            : null);
+      }
     }
     console.log(`[scheduledOrderSync] ${newOrders.length} órdenes únicas a importar`);
 
-    // 4. Delete ALL existing records using bulkDelete by order_number batches
-    // Fetch all existing IDs first (light query — only need IDs)
+    // 5. Delete existing records (IDs recopilados en el paso 3) in parallel batches
     let deleted = 0;
-    let skipDel = 0;
-    const allExistingIds = [];
-    while (true) {
-      const page = await retry(() =>
-        base44.asServiceRole.entities.WorkOrder.list('-created_date', 500, skipDel)
-      );
-      const items = Array.isArray(page) ? page : (page?.items || []);
-      for (const o of items) allExistingIds.push(o.id);
-      if (items.length < 500) break;
-      skipDel += 500;
-      await sleep(200);
-    }
-    console.log(`[scheduledOrderSync] ${allExistingIds.length} registros a eliminar`);
-
-    // Delete in parallel batches of 50 with 800ms between batches
     const DEL_BATCH = 50;
     for (let i = 0; i < allExistingIds.length; i += DEL_BATCH) {
       const chunk = allExistingIds.slice(i, i + DEL_BATCH);

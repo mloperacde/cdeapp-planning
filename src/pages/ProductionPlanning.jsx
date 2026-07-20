@@ -383,6 +383,19 @@ export default function ProductionPlanningPage() {
           if (m.id) machineMap.set(String(m.id), m.id);
       });
 
+      // 4. Preservar la configuración de personal (personal_requerido / operadores_requeridos)
+      // antes de limpiar las órdenes existentes, para restaurarla al re-importar.
+      const staffByOrderNumber = new Map();
+      for (const o of workOrders) {
+        const key = String(o.order_number || o.id);
+        if ((Array.isArray(o.personal_requerido) && o.personal_requerido.length > 0) || o.operadores_requeridos) {
+          staffByOrderNumber.set(key, {
+            personal_requerido: Array.isArray(o.personal_requerido) ? o.personal_requerido : [],
+            operadores_requeridos: o.operadores_requeridos ?? null,
+          });
+        }
+      }
+
       // 4. Limpiar órdenes existentes antes de insertar nuevas (Estrategia "Full Refresh")
       // Esto elimina duplicados, órdenes obsoletas y conflictos de prioridad.
       
@@ -626,7 +639,17 @@ export default function ProductionPlanningPage() {
             planned_end_date: parseImportDate(row['Fecha Fin'] || row['planned_end_date'] || row['end_date']),
             production_cadence: parseFloat(row['Cadencia'] || row['production_cadence'] || row['cadence']) || 0,
             notes: row['Observación'] || row['notes'] || ''
-          };
+            };
+
+            // Restaurar la configuración de personal conservada de la orden previa
+            const preservedStaff = staffByOrderNumber.get(String(orderNumber));
+            if (preservedStaff) {
+            payload.personal_requerido = preservedStaff.personal_requerido;
+            payload.operadores_requeridos = preservedStaff.operadores_requeridos
+             ?? (Array.isArray(preservedStaff.personal_requerido)
+               ? preservedStaff.personal_requerido.reduce((s, r) => s + (Number(r.cantidad_operarios) || 0), 0)
+               : null);
+            }
 
           // Debug payload for first few items to check dates
           if (created < 3) {
