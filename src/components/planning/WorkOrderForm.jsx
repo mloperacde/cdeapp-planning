@@ -254,16 +254,18 @@ export default function WorkOrderForm({ open, onClose, orderToEdit, machines, pr
                 ? new Date(o.planned_end_date) 
                 : (o.committed_delivery_date ? new Date(o.committed_delivery_date) : oStart);
             
-            // Check overlap: StartA <= EndB && EndA >= StartB
-            return newStart <= oEnd && newEnd >= oStart;
-         });
+            // Check overlap (strict): se permite back-to-back el mismo día,
+            // es decir, si una orden termina el día X, otra puede empezar el día X.
+            // newStart < oEnd && newEnd > oStart  → solapamiento real (comparten >1 día)
+            return newStart < oEnd && newEnd > oStart;
+            });
 
-         if (conflict) {
+            if (conflict) {
              toast.error(`Conflicto de capacidad: Solapa con orden ${conflict.order_number}`, {
-                 description: "Principio de Capacidad Finita (Asprova): Una máquina no puede procesar dos órdenes simultáneamente."
+                 description: "Una máquina no puede procesar dos órdenes a la vez. Se permite encadenar el mismo día de fin/inicio."
              });
              return; 
-         }
+            }
       }
     }
 
