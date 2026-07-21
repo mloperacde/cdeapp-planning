@@ -51,13 +51,14 @@ export default function ResourceForecast({ orders, employees, machines = [], sel
     return emp?.team_key || null;
   }, [employees, selectedTeam]);
 
-  // Oferta: presentes por turno (Mañana/Tarde). "Todos" = suma de ambos turnos
-  // (operarios presentes en el día). Un equipo concreto = su turno esa semana.
+  // Oferta: media de operarios presentes por turno (Mañana/Tarde). La demanda
+  // se calcula para un solo turno, así que "Todos" = media de ambos turnos para
+  // poder comparar. Un equipo concreto = su turno esa semana.
   const supply = useMemo(() => {
     if (selectedTeam !== "all" && teamKeyForName) {
       return teamPresent[teamKeyForName] || 0;
     }
-    return teamPresent.team_1 + teamPresent.team_2;
+    return Math.round((teamPresent.team_1 + teamPresent.team_2) / 2);
   }, [selectedTeam, teamKeyForName, teamPresent]);
 
   // Forecast por día
@@ -105,8 +106,6 @@ export default function ResourceForecast({ orders, employees, machines = [], sel
     ? (forecast.reduce((s, d) => s + d.balance, 0) / forecast.length).toFixed(1)
     : 0;
 
-  const totalAssignable = teamPresent.team_1 + teamPresent.team_2;
-
   return (
     <Card className="shadow-md h-full flex flex-col">
       <CardHeader className="py-3 border-b bg-slate-50 dark:bg-slate-800">
@@ -115,7 +114,7 @@ export default function ResourceForecast({ orders, employees, machines = [], sel
             <Users className="w-4 h-4" />
             Previsión de Recursos Humanos
             <span className="text-xs font-normal text-slate-500 ml-1">
-              (Oferta = presentes por turno · Mañana:{teamPresent.team_1} Tarde:{teamPresent.team_2})
+              (Oferta = media de turnos · Mañana:{teamPresent.team_1} Tarde:{teamPresent.team_2})
             </span>
           </div>
           <Badge variant={Number(avgBalance) >= 0 ? "outline" : "destructive"}>
