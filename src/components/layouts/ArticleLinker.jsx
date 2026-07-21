@@ -25,20 +25,17 @@ export default function ArticleLinker({ linkedArticles = [], onChange }) {
     staleTime: 5 * 60 * 1000,
   });
 
-  // Catálogo sincronizado de CDEApp: solo artículos activos
-  const articles = useMemo(() =>
-    (allArticles || []).filter(a => a.active !== false),
-    [allArticles]
-  );
+  // Catálogo completo de artículos: cualquier artículo (activo o inactivo) puede vincularse
+  const articles = useMemo(() => allArticles || [], [allArticles]);
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return articles.slice(0, 50);
+    if (!search.trim()) return articles.slice(0, 100);
     const q = search.toLowerCase();
     return articles.filter(a =>
       (a.code || '').toLowerCase().includes(q) ||
       (a.name || '').toLowerCase().includes(q) ||
       (a.description || '').toLowerCase().includes(q)
-    ).slice(0, 50);
+    ).slice(0, 100);
   }, [articles, search]);
 
   const linkedIds = new Set(linkedArticles.map(la => la.article_id));
@@ -76,7 +73,7 @@ export default function ArticleLinker({ linkedArticles = [], onChange }) {
       </div>
 
       <p className="text-[10px] text-slate-400 leading-tight">
-        Artículos del catálogo CDEApp ({articles.length} activos). Define qué artículos se producen con este layout.
+        Catálogo de artículos ({articles.length} totales). Define qué artículos se producen con este layout.
       </p>
 
       {showSearch && (
@@ -105,9 +102,14 @@ export default function ArticleLinker({ linkedArticles = [], onChange }) {
                 className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-left hover:bg-blue-50 dark:hover:bg-blue-900/20 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
                 <Package className="w-3 h-3 text-slate-400 flex-shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-slate-700 dark:text-slate-300 truncate">
-                    {art.code || 'Sin código'}
-                  </p>
+                  <div className="flex items-center gap-1">
+                    <p className="text-xs font-medium text-slate-700 dark:text-slate-300 truncate">
+                      {art.code || 'Sin código'}
+                    </p>
+                    {art.active === false && (
+                      <span className="text-[9px] text-amber-600 bg-amber-50 dark:bg-amber-900/20 px-1 rounded flex-shrink-0">inactivo</span>
+                    )}
+                  </div>
                   <p className="text-[10px] text-slate-400 truncate">
                     {art.name || art.description || 'Sin descripción'}
                   </p>
