@@ -32,7 +32,7 @@ export default function ResourceForecast({ orders, employees, machines = [], sel
   const [teamPresent, setTeamPresent] = useState({ team_1: 0, team_2: 0 });
   useEffect(() => {
     let cancelled = false;
-    base44.functions.getTeamPresentAverage({ days: 14 })
+    base44.functions.invoke('getTeamPresentAverage', { days: 14 })
       .then((res) => {
         if (!cancelled && res && typeof res.team_1 === "number") {
           setTeamPresent({ team_1: res.team_1, team_2: res.team_2 });
