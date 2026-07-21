@@ -26,23 +26,34 @@ export default function ResourceForecast({ orders, employees, machines = [], sel
     return dayList;
   }, [dateRange]);
 
-  // Empleados de Producción asignables (misma lógica que Jefes de Turno)
-  const employeesAssignable = useMemo(() => {
-    return (employees || []).filter(e => {
-      if (!isProductionOperator(e)) return false;
-      
-      if (selectedTeam !== "all") {
-        const empTeam = normalize(e.equipo);
-        const target = normalize(selectedTeam);
-        if (empTeam !== target) return false;
-      }
-      return true;
+  // Operarios de Producción disponibles (Disponible), agrupados por equipo.
+  // La oferta se calcula como el PROMEDIO de efectivos de cada equipo del
+  // departamento de producción (un equipo por turno/día), no como el total.
+  const teamCounts = useMemo(() => {
+    const groups = {}; // team_key -> nº operarios disponibles
+    (employees || []).forEach(e => {
+      if (!isProductionOperator(e)) return;
+      if ((e.disponibilidad || "Disponible") !== "Disponible") return;
+      const tk = e.team_key || "_sin_equipo";
+      groups[tk] = (groups[tk] || 0) + 1;
     });
-  }, [employees, selectedTeam]);
+    return groups;
+  }, [employees]);
 
-
-  // Oferta: número fijo de operarios asignables (proyección estática, sin datos futuros de ausencias)
-  const supply = employeesAssignable.length;
+  // Oferta: promedio de operarios por equipo (cuando "Todos"), o el equipo concreto filtrado
+  const supply = useMemo(() => {
+    if (selectedTeam !== "all") {
+      return (employees || []).filter(e => {
+        if (!isProductionOperator(e)) return false;
+        if ((e.disponibilidad || "Disponible") !== "Disponible") return false;
+        return normalize(e.equipo) === normalize(selectedTeam);
+      }).length;
+    }
+    const teamKeys = Object.keys(teamCounts).filter(k => k !== "_sin_equipo");
+    if (teamKeys.length === 0) return 0;
+    const total = teamKeys.reduce((s, k) => s + teamCounts[k], 0);
+    return Math.round(total / teamKeys.length);
+  }, [employees, selectedTeam, teamCounts]);
 
   // Forecast por día
   const forecast = useMemo(() => {
@@ -80,12 +91,10 @@ export default function ResourceForecast({ orders, employees, machines = [], sel
         }
       });
 
-      const demandByConfig = Object.values(machineDemand).reduce((s, v) => s + v, 0);
-
-      // Si no hay filtro de equipo → día completo = 2 turnos → demanda doble
-      // Si hay filtro (Mañana/Tarde/Noche) → demanda simple
-      const turnos = selectedTeam === "all" ? 2 : 1;
-      const demand = demandByConfig * turnos;
+      // Demanda: suma de operarios requeridos por las máquinas activas del día.
+      // La oferta es el promedio por equipo (un equipo por turno), así que la
+      // demanda no se multiplica por turnos.
+      const demand = Object.values(machineDemand).reduce((s, v) => s + v, 0);
 
       return {
         date: day,
@@ -101,7 +110,9 @@ export default function ResourceForecast({ orders, employees, machines = [], sel
     ? (forecast.reduce((s, d) => s + d.balance, 0) / forecast.length).toFixed(1)
     : 0;
 
-  const totalAssignable = employeesAssignable.length;
+  const totalAssignable = Object.entries(teamCounts)
+    .filter(([k]) => k !== "_sin_equipo")
+    .reduce((s, [, v]) => s + v, 0);
 
   return (
     <Card className="shadow-md h-full flex flex-col">
@@ -111,7 +122,7 @@ export default function ResourceForecast({ orders, employees, machines = [], sel
             <Users className="w-4 h-4" />
             Previsión de Recursos Humanos
             <span className="text-xs font-normal text-slate-500 ml-1">
-              ({totalAssignable} operarios / demanda por orden)
+              (Oferta = media por equipo · {totalAssignable} disponibles)
             </span>
           </div>
           <Badge variant={Number(avgBalance) >= 0 ? "outline" : "destructive"}>
