@@ -113,7 +113,7 @@ Deno.serve(async (req) => {
       const items = Array.isArray(page) ? page : (page?.items || []);
       for (const o of items) {
         allExistingIds.push(o.id);
-        const key = String(o.order_number || o.id);
+        const key = String(o.order_number || o.id).trim().toUpperCase().replace(/\s+/g, ' ');
         const hasStaff = (Array.isArray(o.personal_requerido) && o.personal_requerido.length > 0)
           || (o.operadores_requeridos && o.operadores_requeridos > 0);
         if (hasStaff && !staffByOrderNumber.has(key)) {
@@ -133,7 +133,7 @@ Deno.serve(async (req) => {
     const newOrders = [];
     const seen = new Set();
     for (const raw of rawOrders) {
-      const orderNumber = String(raw['Orden'] || raw['orden'] || '').trim();
+      const orderNumber = String(raw['Orden'] || raw['orden'] || '').trim().toUpperCase().replace(/\s+/g, ' ');
       if (!orderNumber || orderNumber === '0' || seen.has(orderNumber)) continue;
       seen.add(orderNumber);
 
@@ -180,18 +180,60 @@ Deno.serve(async (req) => {
     }
     console.log(`[scheduledOrderSync] ${newOrders.length} órdenes únicas a importar`);
 
-    // 5. Delete existing records (IDs recopilados en el paso 3) in parallel batches
+    // 5. Delete existing records (IDs recopilados en el paso 3) in parallel batches.
+    // Se verifica cada resultado de allSettled y se reintenta los fallidos, porque un
+    // borrado fallido (500/transitorio) dejaría el registro vivo y generaría duplicados
+    // al recrear la orden en el siguiente paso.
     let deleted = 0;
+    let failedIds = [...allExistingIds];
     const DEL_BATCH = 50;
-    for (let i = 0; i < allExistingIds.length; i += DEL_BATCH) {
-      const chunk = allExistingIds.slice(i, i + DEL_BATCH);
-      await Promise.allSettled(
-        chunk.map(id => retry(() => base44.asServiceRole.entities.WorkOrder.delete(id), 3, 800))
-      );
-      deleted += chunk.length;
-      await sleep(800);
+    for (let attempt = 0; attempt < 4 && failedIds.length > 0; attempt++) {
+      const nextFailed = [];
+      for (let i = 0; i < failedIds.length; i += DEL_BATCH) {
+        const chunk = failedIds.slice(i, i + DEL_BATCH);
+        const results = await Promise.allSettled(
+          chunk.map(id => retry(() => base44.asServiceRole.entities.WorkOrder.delete(id), 4, 800))
+        );
+        results.forEach((r, idx) => {
+          if (r.status === 'fulfilled') deleted += 1;
+          else nextFailed.push(chunk[idx]);
+        });
+        await sleep(800);
+      }
+      failedIds = nextFailed;
+      if (failedIds.length > 0) {
+        console.log(`[scheduledOrderSync] ${failedIds.length} borrados fallidos; reintentando (intento ${attempt + 1})...`);
+        await sleep(1500);
+      }
     }
-    console.log(`[scheduledOrderSync] ${deleted} eliminados. Iniciando creación...`);
+    console.log(`[scheduledOrderSync] ${deleted} eliminados, ${failedIds.length} fallidos definitivos.`);
+
+    // Verificación: re-consultar órdenes restantes y eliminarlas para garantizar
+    // un estado limpio antes de crear (evita duplicados por borrados fallidos).
+    let verifySkip = 0;
+    let leftover = [];
+    while (true) {
+      const page = await retry(() =>
+        base44.asServiceRole.entities.WorkOrder.list('-created_date', 500, verifySkip)
+      );
+      const items = Array.isArray(page) ? page : (page?.items || []);
+      leftover.push(...items);
+      if (items.length < 500) break;
+      verifySkip += 500;
+      await sleep(200);
+    }
+    if (leftover.length > 0) {
+      console.log(`[scheduledOrderSync] ${leftover.length} registros persisten tras borrado; forzando eliminación.`);
+      for (let i = 0; i < leftover.length; i += DEL_BATCH) {
+        const chunk = leftover.slice(i, i + DEL_BATCH);
+        await Promise.allSettled(
+          chunk.map(o => retry(() => base44.asServiceRole.entities.WorkOrder.delete(o.id), 4, 800))
+        );
+        deleted += chunk.length;
+        await sleep(800);
+      }
+    }
+    console.log(`[scheduledOrderSync] Estado limpio. Iniciando creación...`);
     if (deleted > 0) await sleep(500);
 
     // 5. BulkCreate all new orders in chunks of 200
