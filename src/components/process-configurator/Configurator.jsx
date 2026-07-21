@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { localDataService } from "./services/localDataService";
 import ArticleComponentsPanel from "./ArticleComponentsPanel";
+import ProcessBuilder from "./ProcessBuilder";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -683,7 +684,7 @@ export default function Configurator() {
                     )}
                   </CardTitle>
                   <CardDescription className="mt-1">
-                    Selecciona un proceso predefinido o elige las actividades manualmente
+                    Compón el proceso eligiendo actividades del catálogo o creando nuevas con su capacidad (uds/min)
                   </CardDescription>
                 </div>
                 {/* Botón IA integrado */}
@@ -938,7 +939,7 @@ export default function Configurator() {
                   )}
                 </div>
 
-                {/* Activity List */}
+                {/* Activity List — Herramienta completa de composición del proceso */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <Label>Actividades del Proceso</Label>
@@ -946,51 +947,17 @@ export default function Configurator() {
                       {formData.selected_activities.length} seleccionadas
                     </Badge>
                   </div>
-                  
-                  {activities.length === 0 ? (
-                    <div className="py-6 text-center text-sm text-muted-foreground border-2 border-dashed rounded-lg">
-                      <AlertCircle className="h-10 w-10 text-muted-foreground/40 mx-auto mb-2" />
-                      <p>No hay actividades Excel cargadas.</p>
-                      <p className="text-xs mt-1">Sube un archivo Excel en <strong>Datos Excel</strong> o usa las actividades del catálogo mediante <strong>Sugerir con IA</strong>.</p>
-                    </div>
-                  ) : (
-                    <ScrollArea className="h-[400px] border rounded-md p-4">
-                      <div className="space-y-2">
-                        {activities.map((activity) => {
-                          const isSelected = formData.selected_activities.includes(activity.id);
-                          return (
-                            <div
-                              key={activity.id}
-                              className={`flex items-center gap-3 p-3 rounded-sm border transition-colors ${
-                                isSelected ? 'border-primary bg-primary/5' : 'hover:bg-accent'
-                              }`}
-                              data-testid={`activity-${activity.id}`}
-                            >
-                              <Checkbox
-                                id={activity.id}
-                                checked={isSelected}
-                                onCheckedChange={() => handleActivityToggle(activity.id)}
-                                data-testid={`activity-checkbox-${activity.id}`}
-                              />
-                              <label htmlFor={activity.id} className="flex-1 cursor-pointer select-none">
-                                <div className="flex items-center justify-between gap-2">
-                                  <div className="flex items-center gap-2 min-w-0">
-                                    <span className="font-mono text-xs text-primary bg-primary/10 px-1.5 py-0.5 rounded">
-                                      {activity.number}
-                                    </span>
-                                    <span className="font-medium text-sm">{activity.name}</span>
-                                  </div>
-                                  <Badge variant="outline" className="shrink-0 font-mono text-xs">
-                                    {activity.time_seconds}s
-                                  </Badge>
-                                </div>
-                              </label>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </ScrollArea>
-                  )}
+                  <ProcessBuilder
+                    selectedIds={formData.selected_activities}
+                    onChange={(ids) => {
+                      setFormData(prev => ({ ...prev, selected_activities: ids }));
+                      setNeedsProcess(false);
+                    }}
+                    onDetailsChange={({ totalTime, activities }) => {
+                      setCalculatedTime(totalTime);
+                      setSelectedActivitiesDetail(activities);
+                    }}
+                  />
                 </div>
               </div>
             </CardContent>
