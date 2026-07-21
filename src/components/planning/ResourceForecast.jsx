@@ -35,8 +35,9 @@ export default function ResourceForecast({ orders, employees, machines = [], sel
     let cancelled = false;
     base44.functions.invoke('getTeamPresentAverage', { days: 14 })
       .then((res) => {
-        if (!cancelled && res && typeof res.team_1 === "number") {
-          setTeamPresent({ team_1: res.team_1, team_2: res.team_2 });
+        const data = res?.data ?? res;
+        if (!cancelled && data && typeof data.team_1 === "number") {
+          setTeamPresent({ team_1: data.team_1, team_2: data.team_2 });
         }
       })
       .catch(() => {});
