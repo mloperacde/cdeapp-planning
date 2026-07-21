@@ -16,7 +16,7 @@ function LayoutElement({ el, selected, multiSelected, onPointerDown, onResize })
     <g
       transform={`translate(${el.x},${el.y}) rotate(${el.rotation || 0} ${el.width / 2} ${el.height / 2})`}
       onMouseDown={(e) => onPointerDown(e, el.id)}
-      style={{ cursor: 'move', userSelect: 'none' }}
+      style={{ cursor: el.locked ? 'default' : 'move', userSelect: 'none' }}
       filter={selected ? 'url(#el-selected-shadow)' : 'url(#el-shadow)'}
     >
       {renderShape(el.type, {
@@ -26,6 +26,14 @@ function LayoutElement({ el, selected, multiSelected, onPointerDown, onResize })
         label: el.label || cfg.label,
         selected: selected || multiSelected,
       })}
+
+      {/* Indicador de anclaje al fondo */}
+      {el.locked && (
+        <g pointerEvents="none">
+          <rect x={3} y={3} width={13} height={11} rx={2} fill="rgba(15,23,42,0.72)" />
+          <text x={9.5} y={11} textAnchor="middle" fontSize={8} pointerEvents="none">🔒</text>
+        </g>
+      )}
 
       {(el.stations || []).map(st => (
         <g key={st.id} transform={`translate(${st.x_offset || 0},${st.y_offset || 0})`}>
@@ -38,7 +46,7 @@ function LayoutElement({ el, selected, multiSelected, onPointerDown, onResize })
       ))}
 
       {/* Resize handle — bottom-right corner */}
-      {selected && (
+      {selected && !el.locked && (
         <g>
           <rect
             x={el.width - 12} y={el.height - 12}
@@ -214,6 +222,7 @@ export default function LayoutCanvas({
   svgRef: externalSvgRef,
   inventory = [],
   highlightedElementId = null,
+  floorLocked = false,
 }) {
   const FLOOR_ID = '__room_floor__';
   const internalSvgRef = useRef(null);
@@ -289,6 +298,7 @@ export default function LayoutCanvas({
     e.stopPropagation();
     onSelect(FLOOR_ID);
     onMultiSelect?.([]);
+    if (floorLocked) return; // anclado: sólo seleccionar, no arrastrar
     const startX = e.clientX / zoom, startY = e.clientY / zoom;
     const origPoints = roomPolygon.map(p => ({ ...p }));
     const onMv = (me) => {
@@ -298,11 +308,22 @@ export default function LayoutCanvas({
     const onUp = () => { window.removeEventListener('mousemove', onMv); window.removeEventListener('mouseup', onUp); };
     window.addEventListener('mousemove', onMv);
     window.addEventListener('mouseup', onUp);
-  }, [roomPolygon, onRoomPolygonChange, onSelect, onMultiSelect, zoom]);
+  }, [roomPolygon, onRoomPolygonChange, onSelect, onMultiSelect, zoom, floorLocked]);
 
   const startMove = useCallback((e, id) => {
     e.stopPropagation();
     if (id === FLOOR_ID) { startMoveFloor(e); return; }
+    // Elemento anclado: sólo seleccionar, no arrastrar
+    const targetEl = elements.find(el => el.id === id);
+    if (targetEl?.locked) {
+      if (e.shiftKey) {
+        const next = selectedIds.includes(id) ? selectedIds.filter(x => x !== id) : [...selectedIds, id];
+        onMultiSelect?.(next); onSelect(null);
+      } else {
+        onSelect(id); onMultiSelect?.([]);
+      }
+      return;
+    }
     if (e.shiftKey) {
       const next = selectedIds.includes(id) ? selectedIds.filter(x => x !== id) : [...selectedIds, id];
       onMultiSelect?.(next); onSelect(null); return;

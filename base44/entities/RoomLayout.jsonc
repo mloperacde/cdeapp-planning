@@ -58,6 +58,16 @@
     "background_image_url": {
       "type": "string"
     },
+    "scale_cm_to_px": {
+      "type": "number",
+      "default": 1.31,
+      "description": "Multiplicador de escala para convertir medidas en cm a p\u00edxeles del layout"
+    },
+    "floor_locked": {
+      "type": "boolean",
+      "default": false,
+      "description": "Si el suelo de la sala est\u00e1 anclado al fondo (no se puede mover accidentalmente)"
+    },
     "status": {
       "type": "string",
       "enum": [

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
-  ArrowLeft, Save, Settings, Layers, Library, Copy, Ungroup, Trash2,
+  ArrowLeft, Save, Settings, Layers, Library, Copy, CopyPlus, Ungroup, Trash2,
   GitBranch, Clipboard, Box, FileDown, Link2, ClipboardList
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -35,6 +35,8 @@ export default function RoomLayoutEditor({ layoutId, onBack }) {
     floor_color: '#475569',
     linked_articles: [],
     element_inventory: [],
+    scale_cm_to_px: 1.31,
+    floor_locked: false,
   });
   const [selectedId, setSelectedId] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
@@ -76,6 +78,8 @@ export default function RoomLayoutEditor({ layoutId, onBack }) {
         background_image_url: existingLayout.background_image_url || '',
         linked_articles: existingLayout.linked_articles || [],
         element_inventory: existingLayout.element_inventory || [],
+        scale_cm_to_px: existingLayout.scale_cm_to_px || 1.31,
+        floor_locked: existingLayout.floor_locked || false,
       });
       setLoaded(true);
     }
@@ -311,6 +315,9 @@ export default function RoomLayoutEditor({ layoutId, onBack }) {
           <button onClick={pasteClipboard} title="Pegar (Ctrl+V)" className="p-1 hover:bg-slate-100 dark:hover:bg-accent/10 rounded text-slate-500 hover:text-slate-700">
             <Clipboard className="w-3.5 h-3.5" />
           </button>
+          <button onClick={duplicateSelected} title="Duplicar (Ctrl+D)" className="p-1 hover:bg-slate-100 dark:hover:bg-accent/10 rounded text-slate-500 hover:text-slate-700">
+            <CopyPlus className="w-3.5 h-3.5" />
+          </button>
           <button onClick={groupSelected} title="Agrupar selección" disabled={activeMultiCount < 2}
             className="p-1 hover:bg-slate-100 dark:hover:bg-accent/10 rounded text-slate-500 hover:text-slate-700 disabled:opacity-30">
             <Ungroup className="w-3.5 h-3.5" />
@@ -440,6 +447,13 @@ export default function RoomLayoutEditor({ layoutId, onBack }) {
                   <p className="text-[10px] text-slate-400 mt-1">{data.canvas_width} × {data.canvas_height} px</p>
                 </div>
                 <div>
+                  <Label className="text-xs">Escala cm → px</Label>
+                  <Input type="number" step="0.01" value={data.scale_cm_to_px || 1.31}
+                    onChange={e => setData(d => ({ ...d, scale_cm_to_px: +(e.target.value) || 1.31 }))}
+                    className="h-7 text-sm" />
+                  <p className="text-[10px] text-slate-400 mt-0.5">Multiplicador: cm × escala = píxeles</p>
+                </div>
+                <div>
                   <Label className="text-xs">Color del suelo</Label>
                   <div className="flex items-center gap-2 mt-1">
                     <input type="color" value={data.floor_color || '#475569'}
@@ -477,9 +491,10 @@ export default function RoomLayoutEditor({ layoutId, onBack }) {
             svgRef={svgRef}
             inventory={data.element_inventory || []}
             highlightedElementId={highlightedElementId}
+            floorLocked={data.floor_locked}
           />
           <p className="text-xs text-slate-400 mt-1 text-center flex-shrink-0 pb-1">
-            Clic=selec · Shift+clic=multi · Arrastrar=rect.selección · Ctrl+scroll=zoom · Ctrl+C/V=copiar/pegar · Del=borrar
+            Clic=selec · Shift+clic=multi · Arrastrar=rect.selección · Ctrl+scroll=zoom · Ctrl+C/V=copiar/pegar · Ctrl+D=duplicar · Del=borrar
           </p>
         </div>
 
@@ -517,6 +532,9 @@ export default function RoomLayoutEditor({ layoutId, onBack }) {
                   onDeleteFloor={handleFloorDelete}
                   onRedrawFloor={handleFloorRedraw}
                   onUpdateRoomPolygon={handleRoomPolygonChange}
+                  scale={data.scale_cm_to_px || 1.31}
+                  floorLocked={data.floor_locked}
+                  onUpdateFloorLock={(v) => setData(d => ({ ...d, floor_locked: v }))}
                 />
               </div>
             )}

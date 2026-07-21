@@ -2,10 +2,11 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Trash2, Plus, X, ChevronDown, ChevronUp } from 'lucide-react';
-import { ELEMENT_TYPES } from './ElementPalette';
+import { Switch } from '@/components/ui/switch';
+import { Trash2, Plus, X, ChevronDown, ChevronUp, Lock, Ruler } from 'lucide-react';
+import { ELEMENT_TYPES, getElementConfig } from './ElementPalette';
 
-export default function ElementPropertiesPanel({ element, machines, onUpdate, onDelete, roomPolygon, floorColor, onUpdateFloor, onDeleteFloor, onRedrawFloor, onUpdateRoomPolygon }) {
+export default function ElementPropertiesPanel({ element, machines, onUpdate, onDelete, roomPolygon, floorColor, onUpdateFloor, onDeleteFloor, onRedrawFloor, onUpdateRoomPolygon, scale = 1.31, floorLocked, onUpdateFloorLock }) {
   const [newStation, setNewStation] = useState('');
   const [showVertices, setShowVertices] = useState(false);
 
@@ -94,6 +95,11 @@ export default function ElementPropertiesPanel({ element, machines, onUpdate, on
         <Button size="sm" variant="outline" className="w-full h-7 text-xs gap-1" onClick={onRedrawFloor}>
           ✏️ Redibujar contorno
         </Button>
+
+        <div className="flex items-center justify-between pt-1">
+          <Label className="text-xs flex items-center gap-1"><Lock className="w-3 h-3" /> Anclar al fondo</Label>
+          <Switch checked={!!floorLocked} onCheckedChange={(v) => onUpdateFloorLock?.(v)} />
+        </div>
       </div>
     );
   }
@@ -107,6 +113,19 @@ export default function ElementPropertiesPanel({ element, machines, onUpdate, on
   }
 
   const update = (field, value) => onUpdate(element.id, { [field]: value });
+
+  const cfg = getElementConfig(element.type);
+
+  // Medidas en cm → px (largo→width, ancho→height, alto sólo informativo)
+  const medidas = element.medidas_cm || {};
+  const setMedida = (field, val) => {
+    const v = val === '' || val == null ? null : Number(val);
+    const newMedidas = { ...medidas, [field]: v };
+    const updates = { medidas_cm: newMedidas };
+    if (field === 'largo' && v != null) updates.width = Math.round(v * scale);
+    if (field === 'ancho' && v != null) updates.height = Math.round(v * scale);
+    onUpdate(element.id, updates);
+  };
 
   const addStation = () => {
     if (!newStation.trim()) return;
@@ -191,6 +210,34 @@ export default function ElementPropertiesPanel({ element, machines, onUpdate, on
           <Input type="number" value={element.rotation || 0} onChange={e => update('rotation', +e.target.value)} className="h-7 text-sm" />
         </div>
       </div>
+
+      {/* Medidas en cm → conversión a px con escala */}
+      <div>
+        <Label className="text-xs flex items-center gap-1"><Ruler className="w-3 h-3" /> Medidas (cm) · escala {scale}</Label>
+        <div className="grid grid-cols-3 gap-1 mt-1">
+          <div>
+            <span className="text-[10px] text-slate-400 block">Largo</span>
+            <Input type="number" value={medidas.largo ?? ''} onChange={e => setMedida('largo', e.target.value)} className="h-7 text-xs" placeholder="cm" />
+          </div>
+          <div>
+            <span className="text-[10px] text-slate-400 block">Ancho</span>
+            <Input type="number" value={medidas.ancho ?? ''} onChange={e => setMedida('ancho', e.target.value)} className="h-7 text-xs" placeholder="cm" />
+          </div>
+          <div>
+            <span className="text-[10px] text-slate-400 block">Alto</span>
+            <Input type="number" value={medidas.alto ?? ''} onChange={e => setMedida('alto', e.target.value)} className="h-7 text-xs" placeholder="cm" />
+          </div>
+        </div>
+        <p className="text-[10px] text-slate-400 mt-0.5">{Math.round(element.width)} × {Math.round(element.height)} px</p>
+      </div>
+
+      {/* Anclaje al fondo para elementos de Estructura */}
+      {cfg?.category === 'Estructura' && (
+        <div className="flex items-center justify-between">
+          <Label className="text-xs flex items-center gap-1"><Lock className="w-3 h-3" /> Anclar al fondo</Label>
+          <Switch checked={!!element.locked} onCheckedChange={(v) => update('locked', v)} />
+        </div>
+      )}
 
       {/* Stations */}
       <div>
