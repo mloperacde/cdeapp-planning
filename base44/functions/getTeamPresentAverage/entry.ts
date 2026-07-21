@@ -1,13 +1,18 @@
 /**
  * getTeamPresentAverage
- * Calcula la mediana de operarios de Producción presentes por equipo
- * (team_1 / team_2) a partir del histórico de fichajes (AttendanceRecord,
- * direction "E") de los últimos N días (excluyendo hoy).
+ * Calcula la mediana de operarios de Producción PRESENTES (fichaje "E")
+ * por TURNO (Mañana / Tarde) a partir del histórico de los últimos N días
+ * (excluyendo hoy), replicando la lógica del Control de Presencia:
+ *   - Fijo Mañana → Mañana
+ *   - Fijo Tarde  → Tarde
+ *   - Turno Partido → Mañana
+ *   - Rotativo → según TeamWeekSchedule de esa semana (team_key → turno)
  *
- * Payload: { days?: number }  // por defecto 14
- * Respuesta: { team_1: number, team_2: number, daysUsed: number, perDay: {...} }
+ * Respuesta: { team_1: <mediana mañana>, team_2: <mediana tarde>,
+ *              daysUsed, perDay: { 'YYYY-MM-DD': { team_1, team_2 } } }
  *
- * Se usa la mediana (robusta) para evitar días atípicos con fichaje incompleto.
+ * team_1 = turno Mañana, team_2 = turno Tarde (nombres mantenidos por
+ * compatibilidad con el frontend; representan turnos, no equipos rotativos).
  */
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
@@ -33,6 +38,16 @@ function median(arr) {
   return s.length % 2 ? s[m] : Math.round((s[m - 1] + s[m]) / 2);
 }
 
+// Lunes (00:00) de la semana de una fecha dada
+function mondayOf(date) {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  const day = d.getDay(); // 0=Dom..6=Sáb
+  const diff = (day === 0) ? -6 : 1 - day;
+  d.setDate(d.getDate() + diff);
+  return d;
+}
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -44,7 +59,7 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const HISTORY_DAYS = Math.max(2, Math.min(30, Number(body.days) || 14));
 
-    // 1) Empleados de producción → mapa codigo_empleado → team_key
+    // 1) Empleados de producción → mapa codigo_empleado → { tipo_turno, team_key }
     const allEmployees = [];
     let skip = 0;
     while (skip < 4000) {
@@ -55,20 +70,47 @@ Deno.serve(async (req) => {
       skip += 1000;
     }
 
-    const codeToTeam = {};
+    const operators = {}; // codigo_empleado -> { tipo_turno, team_key }
     for (const e of allEmployees) {
-      if (!isProductionOperator(e)) continue;
-      if (!e.codigo_empleado) continue;
-      codeToTeam[e.codigo_empleado] = e.team_key || '_sin_equipo';
+      if (!isProductionOperator(e) || !e.codigo_empleado) continue;
+      operators[e.codigo_empleado] = {
+        tipo_turno: e.tipo_turno || '',
+        team_key: e.team_key || '',
+      };
     }
 
-    // 2) Fichajes "E" de los últimos HISTORY_DAYS (excluyendo hoy)
+    // 2) TeamWeekSchedule (histórico de rotación) — fetch amplio y filtrado en memoria
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const from = new Date(today);
     from.setDate(from.getDate() - HISTORY_DAYS);
+    const to = new Date(today.getTime() - 86400000); // ayer
+
+    const allSchedules = [];
+    let skipW = 0;
+    while (skipW < 2000) {
+      const page = await base44.asServiceRole.entities.TeamWeekSchedule.list(
+        '-fecha_inicio_semana', 1000, skipW
+      );
+      const items = Array.isArray(page) ? page : (page?.items || []);
+      allSchedules.push(...items);
+      if (items.length < 1000) break;
+      skipW += 1000;
+    }
+
+    // mondayISO -> { team_key: 'Mañana'|'Tarde' }
+    // Normaliza la clave a 'YYYY-MM-DD' por si viene como datetime ISO
+    const weekShiftMap = {};
+    for (const ws of allSchedules) {
+      if (!ws.fecha_inicio_semana || !ws.team_key || !ws.turno) continue;
+      const key = String(ws.fecha_inicio_semana).split('T')[0];
+      if (!weekShiftMap[key]) weekShiftMap[key] = {};
+      weekShiftMap[key][ws.team_key] = ws.turno;
+    }
+
+    // 3) Fichajes "E" del rango
     const fromISO = from.toISOString().split('T')[0];
-    const toISO = new Date(today.getTime() - 86400000).toISOString().split('T')[0];
+    const toISO = to.toISOString().split('T')[0];
 
     const att = [];
     let skipA = 0;
@@ -85,27 +127,48 @@ Deno.serve(async (req) => {
       skipA += 1000;
     }
 
-    // 3) Por día, presentes distintos por equipo
-    const daily = {}; // 'YYYY-MM-DD' -> { team_key -> Set(codigo) }
+    // 4) Por día, presentes distintos por turno
+    //    codigo -> turno ese día ('manana' | 'tarde' | null)
+    function shiftFor(code, dateStr) {
+      const op = operators[code];
+      if (!op) return null;
+      const tt = op.tipo_turno;
+      if (tt === 'Fijo Mañana') return 'manana';
+      if (tt === 'Fijo Tarde') return 'tarde';
+      if (tt === 'Turno Partido') return 'manana';
+      if (tt === 'Rotativo' && op.team_key) {
+        const m = mondayOf(new Date(dateStr)).toISOString().split('T')[0];
+        const map = weekShiftMap[m];
+        if (!map) return null;
+        const t = map[op.team_key];
+        if (t === 'Mañana') return 'manana';
+        if (t === 'Tarde') return 'tarde';
+        return null;
+      }
+      return null;
+    }
+
+    const daily = {}; // 'YYYY-MM-DD' -> { manana: Set, tarde: Set }
     for (const r of att) {
-      if (!r.record_date) continue;
-      const tk = codeToTeam[r.employee_id];
-      if (!tk || tk === '_sin_equipo') continue;
-      if (!daily[r.record_date]) daily[r.record_date] = {};
-      if (!daily[r.record_date][tk]) daily[r.record_date][tk] = new Set();
-      daily[r.record_date][tk].add(r.employee_id);
+      if (!r.record_date || !r.employee_id) continue;
+      const op = operators[r.employee_id];
+      if (!op) continue; // no es operario de producción
+      const shift = shiftFor(r.employee_id, r.record_date);
+      if (!shift) continue;
+      if (!daily[r.record_date]) daily[r.record_date] = { manana: new Set(), tarde: new Set() };
+      daily[r.record_date][shift].add(r.employee_id);
     }
 
     const dayKeys = Object.keys(daily).sort();
-    const t1 = dayKeys.map((d) => daily[d].team_1?.size || 0);
-    const t2 = dayKeys.map((d) => daily[d].team_2?.size || 0);
+    const manana = dayKeys.map((d) => daily[d].manana.size);
+    const tarde = dayKeys.map((d) => daily[d].tarde.size);
 
     const result = {
-      team_1: median(t1),
-      team_2: median(t2),
+      team_1: median(manana), // Mediana presentes turno Mañana
+      team_2: median(tarde),   // Mediana presentes turno Tarde
       daysUsed: dayKeys.length,
       perDay: dayKeys.reduce((acc, d) => {
-        acc[d] = { team_1: daily[d].team_1?.size || 0, team_2: daily[d].team_2?.size || 0 };
+        acc[d] = { team_1: daily[d].manana.size, team_2: daily[d].tarde.size };
         return acc;
       }, {}),
     };
