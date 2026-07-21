@@ -347,6 +347,18 @@ export default function RoomLayoutEditor({ layoutId, onBack }) {
           className="h-7 text-xs border border-input rounded-md px-2 bg-background">
           {['Borrador', 'Aprobado', 'Archivado'].map(s => <option key={s}>{s}</option>)}
         </select>
+        <button onClick={() => setSidePanel('articulos')}
+          title="Artículos vinculados a este layout"
+          className={`h-7 flex items-center gap-1.5 text-xs font-medium border rounded-md px-2 transition-colors ${
+            (data.linked_articles || []).length > 0
+              ? 'border-blue-300 bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800'
+              : 'border-amber-300 bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-800'
+          }`}>
+          <Link2 className="w-3.5 h-3.5" />
+          {(data.linked_articles || []).length > 0
+            ? `${(data.linked_articles || []).length} artícul${(data.linked_articles || []).length === 1 ? 'o' : 'os'}`
+            : 'Sin artículo'}
+        </button>
         <Button size="sm" onClick={() => saveMutation.mutate(data)} disabled={saveMutation.isPending}
           className="gap-1 bg-blue-600 hover:bg-blue-700 text-white h-7 text-xs">
           <Save className="w-3.5 h-3.5" /> Guardar
