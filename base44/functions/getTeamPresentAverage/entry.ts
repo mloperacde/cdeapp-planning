@@ -1,14 +1,15 @@
 /**
  * getTeamPresentAverage
- * Calcula la mediana de operarios de Producción PRESENTES (fichaje "E")
- * por TURNO (Mañana / Tarde) a partir del histórico de los últimos N días
- * (excluyendo hoy), replicando la lógica del Control de Presencia:
+ * Calcula el PROMEDIO (media aritmética) de operarios de Producción
+ * PRESENTES (fichaje "E") por TURNO (Mañana / Tarde) a partir del histórico
+ * de los últimos N días (excluyendo hoy), replicando la lógica del Control
+ * de Presencia:
  *   - Fijo Mañana → Mañana
  *   - Fijo Tarde  → Tarde
  *   - Turno Partido → Mañana
  *   - Rotativo → según TeamWeekSchedule de esa semana (team_key → turno)
  *
- * Respuesta: { team_1: <mediana mañana>, team_2: <mediana tarde>,
+ * Respuesta: { team_1: <promedio mañana>, team_2: <promedio tarde>,
  *              daysUsed, perDay: { 'YYYY-MM-DD': { team_1, team_2 } } }
  *
  * team_1 = turno Mañana, team_2 = turno Tarde (nombres mantenidos por
@@ -31,11 +32,10 @@ function isProductionOperator(e) {
   return true;
 }
 
-function median(arr) {
+function mean(arr) {
   if (!arr.length) return 0;
-  const s = [...arr].sort((a, b) => a - b);
-  const m = Math.floor(s.length / 2);
-  return s.length % 2 ? s[m] : Math.round((s[m - 1] + s[m]) / 2);
+  const sum = arr.reduce((a, b) => a + b, 0);
+  return Math.round((sum / arr.length) * 10) / 10; // 1 decimal
 }
 
 // Lunes (00:00) de la semana de una fecha dada
@@ -164,8 +164,8 @@ Deno.serve(async (req) => {
     const tarde = dayKeys.map((d) => daily[d].tarde.size);
 
     const result = {
-      team_1: median(manana), // Mediana presentes turno Mañana
-      team_2: median(tarde),   // Mediana presentes turno Tarde
+      team_1: mean(manana), // Promedio presentes turno Mañana
+      team_2: mean(tarde),   // Promedio presentes turno Tarde
       daysUsed: dayKeys.length,
       perDay: dayKeys.reduce((acc, d) => {
         acc[d] = { team_1: daily[d].manana.size, team_2: daily[d].tarde.size };

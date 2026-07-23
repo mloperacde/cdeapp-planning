@@ -27,7 +27,7 @@ export default function ResourceForecast({ orders, employees, machines = [], sel
     return dayList;
   }, [dateRange]);
 
-  // Oferta: mediana de operarios de Producción presentes por turno (Mañana/Tarde)
+  // Oferta: promedio de operarios de Producción presentes por turno (Mañana/Tarde)
   // a partir del histórico de fichajes (últimos 14 días). Mismo criterio que el
   // Control de Presencia (rotativos por TeamWeekSchedule + fijos + partidos).
   const [teamPresent, setTeamPresent] = useState({ team_1: 0, team_2: 0 });
