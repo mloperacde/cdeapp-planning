@@ -13,6 +13,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+} from "@/components/ui/tabs";
 import { 
   Users, 
   Phone,
@@ -21,9 +27,15 @@ import {
   ChevronRight,
   Columns,
   IdCard,
-  AlertTriangle
+  AlertTriangle,
+  Download,
+  UserCheck,
+  UserX,
+  Sun,
+  Moon
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,6 +45,45 @@ import {
  
 import AdvancedSearch from "../components/common/AdvancedSearch";
 import MasterEmployeeEditDialog from "../components/master/MasterEmployeeEditDialog";
+import PresenceControl from "./PresenceControl";
+
+// Columnas exportables (NO sensibles: sin DNI, NUSS, IBAN, salario, fecha nacimiento, dirección)
+const EXPORT_COLUMNS = [
+  { key: "codigo_empleado", label: "Código" },
+  { key: "nombre", label: "Empleado" },
+  { key: "puesto", label: "Puesto" },
+  { key: "equipo", label: "Equipo" },
+  { key: "tipo_turno", label: "Turno" },
+  { key: "estado_empleado", label: "Estado" },
+  { key: "disponibilidad", label: "Disponibilidad" },
+  { key: "estado_presencia", label: "Presencia" },
+  { key: "telefono_movil", label: "Teléfono" },
+  { key: "email", label: "Email" },
+];
+
+function exportToCSV(employees, teamLabel) {
+  const headers = EXPORT_COLUMNS.map(c => c.label);
+  const escape = (val) => {
+    const s = val == null ? "" : String(val);
+    if (s.includes(",") || s.includes('"') || s.includes("\n")) {
+      return `"${s.replace(/"/g, '""')}"`;
+    }
+    return s;
+  };
+  const rows = employees.map(e => EXPORT_COLUMNS.map(c => escape(e[c.key])).join(","));
+  const csv = "\uFEFF" + [headers.map(escape).join(","), ...rows].join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  const date = new Date().toISOString().split("T")[0];
+  link.href = url;
+  link.download = `Personal_Produccion${teamLabel ? "_" + teamLabel : ""}_${date}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+  toast.success(`Exportados ${employees.length} empleados a Excel`);
+}
 
 
 const EMPTY_ARRAY = [];
@@ -250,7 +301,19 @@ export default function EmployeesShiftManagerPage() {
       return diffDays >= 0 && diffDays <= 30;
     }).length;
 
-    return { total, activos, disponibles, upcomingContractExpirations };
+    // Presencia hoy (estado_presencia actualizado por el monitor de presencia)
+    const presentes = base.filter(e => e.estado_presencia === "Presente" || e.estado_presencia === "Retraso").length;
+    const ausentesHoy = base.filter(e =>
+      e.estado_presencia === "Ausente" || e.estado_presencia === "Ausente Auto" || e.estado_presencia === "Potencialmente Ausente"
+    ).length;
+    const computables = presentes + ausentesHoy;
+    const tasaAbsentismo = computables > 0 ? ((ausentesHoy / computables) * 100) : 0;
+
+    // Por turno
+    const turnoManana = base.filter(e => e.tipo_turno === "Fijo Mañana" || (e.tipo_turno === "Rotativo" && e.team_key === "team_1")).length;
+    const turnoTarde = base.filter(e => e.tipo_turno === "Fijo Tarde" || (e.tipo_turno === "Rotativo" && e.team_key === "team_2")).length;
+
+    return { total, activos, disponibles, upcomingContractExpirations, presentes, ausentesHoy, tasaAbsentismo, turnoManana, turnoTarde };
   }, [effectiveEmployees, filters.equipo, shiftFromUrl]);
 
   const currentEquipoFilter =
@@ -284,32 +347,64 @@ export default function EmployeesShiftManagerPage() {
           </div>
         </div>
 
-        {/* Dashboard Cards - Shift Manager View */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+      <Tabs defaultValue="personal" className="w-full">
+        <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsTrigger value="personal" className="gap-1.5 text-xs">
+            <Users className="w-3.5 h-3.5" /> Personal
+          </TabsTrigger>
+          <TabsTrigger value="presencia" className="gap-1.5 text-xs">
+            <UserCheck className="w-3.5 h-3.5" /> Control de Presencia
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="personal" className="mt-4 space-y-6">
+        {/* Dashboard Cards - Producción */}
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
           <Card className="bg-white dark:bg-slate-800 border-l-4 border-l-blue-500 shadow-sm">
-            <CardContent className="p-4">
-              <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Total Producción</p>
-              <div className="mt-2 flex items-baseline gap-2">
-                <span className="text-2xl font-bold text-slate-900 dark:text-slate-100">{stats.total}</span>
+            <CardContent className="p-3">
+              <div className="flex items-center gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">
+                <Users className="w-3.5 h-3.5" /> Total
               </div>
+              <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-1">{stats.total}</p>
+              <p className="text-[10px] text-slate-400">{stats.activos} activos</p>
             </CardContent>
           </Card>
-          <Card className="bg-white dark:bg-slate-800 border-l-4 border-l-green-500 shadow-sm">
-            <CardContent className="p-4">
-              <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Disponibles</p>
-              <div className="mt-2 flex items-baseline gap-2">
-                <span className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.disponibles}</span>
-                <span className="text-xs text-slate-500">para turno</span>
+          <Card className="bg-white dark:bg-slate-800 border-l-4 border-l-emerald-500 shadow-sm">
+            <CardContent className="p-3">
+              <div className="flex items-center gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">
+                <UserCheck className="w-3.5 h-3.5" /> Presentes hoy
               </div>
+              <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">{stats.presentes}</p>
+              <p className="text-[10px] text-slate-400">en planta</p>
+            </CardContent>
+          </Card>
+          <Card className="bg-white dark:bg-slate-800 border-l-4 border-l-red-500 shadow-sm">
+            <CardContent className="p-3">
+              <div className="flex items-center gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">
+                <UserX className="w-3.5 h-3.5" /> Ausentes hoy
+              </div>
+              <p className="text-2xl font-bold text-red-600 dark:text-red-400 mt-1">{stats.ausentesHoy}</p>
+              <p className="text-[10px] text-slate-400">{stats.tasaAbsentismo.toFixed(1)}% absentismo</p>
             </CardContent>
           </Card>
           <Card className="bg-white dark:bg-slate-800 border-l-4 border-l-amber-500 shadow-sm">
-            <CardContent className="p-4">
-              <p className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Vencimientos Próximos</p>
-              <div className="mt-2 flex items-baseline gap-2">
-                <span className="text-2xl font-bold text-amber-600 dark:text-amber-400">{stats.upcomingContractExpirations}</span>
-                <span className="text-xs text-slate-500">contratos</span>
+            <CardContent className="p-3">
+              <div className="flex items-center gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">
+                <Sun className="w-3.5 h-3.5" /> Mañana
               </div>
+              <p className="text-2xl font-bold text-amber-600 dark:text-amber-400 mt-1">{stats.turnoManana}</p>
+              <p className="text-[10px] text-slate-400 flex items-center gap-1">
+                <Moon className="w-3 h-3" /> {stats.turnoTarde} tarde
+              </p>
+            </CardContent>
+          </Card>
+          <Card className="bg-white dark:bg-slate-800 border-l-4 border-l-slate-400 shadow-sm">
+            <CardContent className="p-3">
+              <div className="flex items-center gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">
+                <AlertTriangle className="w-3.5 h-3.5" /> Vencimientos
+              </div>
+              <p className="text-2xl font-bold text-slate-700 dark:text-slate-300 mt-1">{stats.upcomingContractExpirations}</p>
+              <p className="text-[10px] text-slate-400">contratos 30 días</p>
             </CardContent>
           </Card>
         </div>
@@ -334,25 +429,31 @@ export default function EmployeesShiftManagerPage() {
           <CardHeader className="border-b border-slate-100 dark:border-slate-800 py-4">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg">Empleados Personal de Producción</CardTitle>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="ml-auto">
-                    <Columns className="w-4 h-4 mr-2" />
-                    Columnas
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  {Object.keys(ALL_COLUMNS).map((key) => (
-                    <DropdownMenuCheckboxItem
-                      key={key}
-                      checked={visibleColumns[key]}
-                      onCheckedChange={(checked) => setVisibleColumns(prev => ({ ...prev, [key]: checked }))}
-                    >
-                      {ALL_COLUMNS[key].label}
-                    </DropdownMenuCheckboxItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => exportToCSV(filteredEmployees, currentEquipoFilter)} title="Exportar a Excel (sin datos sensibles)">
+                  <Download className="w-4 h-4 mr-2" />
+                  Exportar Excel
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <Columns className="w-4 h-4 mr-2" />
+                      Columnas
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {Object.keys(ALL_COLUMNS).map((key) => (
+                      <DropdownMenuCheckboxItem
+                        key={key}
+                        checked={visibleColumns[key]}
+                        onCheckedChange={(checked) => setVisibleColumns(prev => ({ ...prev, [key]: checked }))}
+                      >
+                        {ALL_COLUMNS[key].label}
+                      </DropdownMenuCheckboxItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
           </CardHeader>
           <CardContent className="p-0">
@@ -495,6 +596,14 @@ export default function EmployeesShiftManagerPage() {
             </div>
           </div>
         </Card>
+        </TabsContent>
+
+        <TabsContent value="presencia" className="mt-4">
+          <div className="border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden h-[calc(100vh-200px)] min-h-[600px]">
+            <PresenceControl departmentFilter="PRODUCCIÓN" titleOverride="Control de Presencia - Producción" />
+          </div>
+        </TabsContent>
+      </Tabs>
 
       {editDialogOpen && (
         <MasterEmployeeEditDialog

@@ -41,7 +41,7 @@ function getShiftLifecycle(timeRange, nowMins) {
   return "active";
 }
 
-export default function PresenceControl() {
+export default function PresenceControl({ departmentFilter, titleOverride }) {
   const queryClient = useQueryClient();
   const { absences = [] } = useAppData();
   const [analysisDate, setAnalysisDate] = useState(new Date().toISOString().split("T")[0]);
@@ -293,22 +293,29 @@ export default function PresenceControl() {
     });
   }, [expectedData, todayEntriesMap, confirmedAbsencesMap, absentYesterdaySet]);
 
+  // Filtrado por departamento (vista departamental, ej. solo PRODUCCIÓN)
+  const deptFilteredEmployees = useMemo(() => {
+    if (!departmentFilter) return enrichedEmployees;
+    const q = departmentFilter.trim().toUpperCase();
+    return enrichedEmployees.filter(e => (e.departamento || "").trim().toUpperCase() === q);
+  }, [enrichedEmployees, departmentFilter]);
+
   // Filtrado por búsqueda
   const filteredEmployees = useMemo(() => {
-    if (!searchQuery.trim()) return enrichedEmployees;
+    if (!searchQuery.trim()) return deptFilteredEmployees;
     const q = searchQuery.toLowerCase().trim();
-    return enrichedEmployees.filter(e =>
+    return deptFilteredEmployees.filter(e =>
       e.nombre?.toLowerCase().includes(q) ||
       e.departamento?.toLowerCase().includes(q)
     );
-  }, [enrichedEmployees, searchQuery]);
+  }, [deptFilteredEmployees, searchQuery]);
 
   const morningEmployees = useMemo(() => filteredEmployees.filter(e => e.expectedShift === "manana"), [filteredEmployees]);
   const afternoonEmployees = useMemo(() => filteredEmployees.filter(e => e.expectedShift === "tarde"), [filteredEmployees]);
 
   // Totales globales — incluye absent_no_record como ausente confirmado
   const globalTotals = useMemo(() => {
-    const all = enrichedEmployees;
+    const all = deptFilteredEmployees;
     const todayStr = analysisDate;
     // Ausencias automáticas pendientes de validar hoy (empleados únicos)
     const autoPendingIds = new Set();
@@ -329,7 +336,7 @@ export default function PresenceControl() {
       pending: all.filter(e => e.presenceStatus === "pending").length,
       autoPendingValidation: autoPendingIds.size,
     };
-  }, [enrichedEmployees, absences, analysisDate]);
+  }, [deptFilteredEmployees, enrichedEmployees, absences, analysisDate]);
 
   const todayDisplay = format(new Date(analysisDate + "T12:00:00"), "EEEE d 'de' MMMM yyyy", { locale: es });
   const isLoading = loadingExpected || loadingRecords;
@@ -340,11 +347,11 @@ export default function PresenceControl() {
       <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-3 flex-shrink-0">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="text-base font-bold text-slate-900 dark:text-slate-100">Control de Presencia</h1>
+            <h1 className="text-base font-bold text-slate-900 dark:text-slate-100">{titleOverride || "Control de Presencia"}</h1>
             <p className="text-xs text-slate-400 capitalize">{todayDisplay}</p>
             {expectedData && (
               <p className="text-[10px] text-slate-400 mt-0.5">
-                Semana del {expectedData.week_start} · {expectedData.total} empleados esperados
+                Semana del {expectedData.week_start} · {deptFilteredEmployees.length} empleados{departmentFilter ? ` · ${departmentFilter}` : " esperados"}
               </p>
             )}
             {lastUpdated && (
