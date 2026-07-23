@@ -67,11 +67,15 @@ export default function ResourceForecast({ orders, employees, machines = [], sel
       const dayStart = new Date(day); dayStart.setHours(0, 0, 0, 0);
       const dayEnd = new Date(day); dayEnd.setHours(23, 59, 59, 999);
 
-      // --- DEMANDA: solo órdenes CON prioridad asignada (sin prioridad = faltan
-      // componentes, la máquina no está activa). Una máquina ejecuta UNA orden a
-      // la vez → la necesidad de operarios por máquina = MÁXIMO entre sus órdenes
-      // activas ese día (no la suma). Luego se suma el máximo de cada máquina. ---
-      const machineMaxOps = {}; // machine_id -> máximo operarios de sus órdenes del día
+      // --- DEMANDA: pico concurrente real a lo largo del día.
+      // Una máquina ejecuta UNA orden a la vez. Si una orden termina el día X y
+      // la siguiente empieza ese mismo día en la misma máquina, es el MISMO
+      // personal que continúa → no se cuenta dos veces. El operario necesario en
+      // un instante t = suma, por máquina, del MÁXIMO de sus órdenes activas en
+      // t (solapa = anomalía de datos → se toma el máximo, no la suma). La
+      // demanda del día = pico de ese total a lo largo del día. ---
+      const machineActiveIds = new Set();
+      const events = []; // {t, type:'start'|'end', mid, ops}
 
       orders.forEach(order => {
         if (!order.start_date || !order.machine_id) return;
@@ -83,19 +87,43 @@ export default function ResourceForecast({ orders, employees, machines = [], sel
         if (!oEnd || isNaN(oEnd.getTime())) return;
 
         if (oStart <= dayEnd && oEnd >= dayStart) {
+          machineActiveIds.add(order.machine_id);
           const hasConfig = Array.isArray(order.personal_requerido) && order.personal_requerido.length > 0;
           const ops = hasConfig
             ? order.personal_requerido.reduce((s, r) => s + (Number(r.cantidad_operarios) || 0), 0)
             : (order.operadores_requeridos && order.operadores_requeridos > 0
                 ? order.operadores_requeridos
                 : OPERARIOS_POR_MAQUINA);
-          const prev = machineMaxOps[order.machine_id] || 0;
-          if (ops > prev) machineMaxOps[order.machine_id] = ops;
+          const s = oStart < dayStart ? dayStart : oStart;
+          const e = oEnd > dayEnd ? dayEnd : oEnd;
+          if (s < e) {
+            events.push({ t: s.getTime(), type: 'start', mid: order.machine_id, ops });
+            events.push({ t: e.getTime(), type: 'end', mid: order.machine_id, ops });
+          }
         }
       });
 
-      const activeMachineIds = Object.keys(machineMaxOps);
-      const demand = activeMachineIds.reduce((s, m) => s + machineMaxOps[m], 0);
+      // Sweep line: en cada evento recalcular el total concurrente y guardar el pico
+      events.sort((a, b) => a.t - b.t);
+      const activeByMachine = {};
+      let demand = 0;
+      for (const ev of events) {
+        if (ev.type === 'start') {
+          (activeByMachine[ev.mid] ||= []).push(ev.ops);
+        } else {
+          const arr = activeByMachine[ev.mid];
+          if (arr) {
+            const idx = arr.indexOf(ev.ops);
+            if (idx >= 0) arr.splice(idx, 1);
+            if (!arr.length) delete activeByMachine[ev.mid];
+          }
+        }
+        let total = 0;
+        for (const mid in activeByMachine) total += Math.max(...activeByMachine[mid]);
+        if (total > demand) demand = total;
+      }
+
+      const activeMachineIds = [...machineActiveIds];
 
       return {
         date: day,
