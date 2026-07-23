@@ -68,9 +68,10 @@ export default function ResourceForecast({ orders, employees, machines = [], sel
       const dayEnd = new Date(day); dayEnd.setHours(23, 59, 59, 999);
 
       // --- DEMANDA: solo órdenes CON prioridad asignada (sin prioridad = faltan
-      // componentes, la máquina no está activa). Se suman los operarios requeridos. ---
-      const activeMachineIds = new Set();
-      let demand = 0;
+      // componentes, la máquina no está activa). Una máquina ejecuta UNA orden a
+      // la vez → la necesidad de operarios por máquina = MÁXIMO entre sus órdenes
+      // activas ese día (no la suma). Luego se suma el máximo de cada máquina. ---
+      const machineMaxOps = {}; // machine_id -> máximo operarios de sus órdenes del día
 
       orders.forEach(order => {
         if (!order.start_date || !order.machine_id) return;
@@ -78,25 +79,29 @@ export default function ResourceForecast({ orders, employees, machines = [], sel
 
         const oStart = parseDateES(order.start_date);
         const oEnd = parseDateES(order.planned_end_date) || parseDateES(order.committed_delivery_date);
-        if (isNaN(oStart.getTime())) return;
+        if (!oStart || isNaN(oStart.getTime())) return;
+        if (!oEnd || isNaN(oEnd.getTime())) return;
 
         if (oStart <= dayEnd && oEnd >= dayStart) {
-          activeMachineIds.add(order.machine_id);
           const hasConfig = Array.isArray(order.personal_requerido) && order.personal_requerido.length > 0;
           const ops = hasConfig
             ? order.personal_requerido.reduce((s, r) => s + (Number(r.cantidad_operarios) || 0), 0)
             : (order.operadores_requeridos && order.operadores_requeridos > 0
                 ? order.operadores_requeridos
                 : OPERARIOS_POR_MAQUINA);
-          demand += ops;
+          const prev = machineMaxOps[order.machine_id] || 0;
+          if (ops > prev) machineMaxOps[order.machine_id] = ops;
         }
       });
 
+      const activeMachineIds = Object.keys(machineMaxOps);
+      const demand = activeMachineIds.reduce((s, m) => s + machineMaxOps[m], 0);
+
       return {
         date: day,
-        machines: activeMachineIds.size,
+        machines: activeMachineIds.length,
         demand,
-        supply, 
+        supply,
         balance: supply - demand,
       };
     });
