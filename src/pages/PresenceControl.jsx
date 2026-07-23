@@ -13,7 +13,7 @@ import { format, subDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, Zap, Calendar, AlertCircle, CheckCircle2, Search, X, AlertTriangle } from "lucide-react";
+import { RefreshCw, Zap, Calendar, AlertCircle, CheckCircle2, Search, X, AlertTriangle, FileSpreadsheet } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -341,6 +341,68 @@ export default function PresenceControl({ departmentFilter, titleOverride }) {
   const todayDisplay = format(new Date(analysisDate + "T12:00:00"), "EEEE d 'de' MMMM yyyy", { locale: es });
   const isLoading = loadingExpected || loadingRecords;
 
+  const presenceStatusLabel = (status) => {
+    switch (status) {
+      case "present": return "Presente";
+      case "late": return "Retraso";
+      case "absent_confirmed": return "Ausente (justificada)";
+      case "absent_no_record": return "Ausente (sin registro)";
+      case "absent_predicted": return "Ausente (predicha)";
+      case "pending": return "Pendiente";
+      default: return status || "—";
+    }
+  };
+
+  const handleExportPresence = () => {
+    const rows = filteredEmployees;
+    if (!rows.length) {
+      toast.info("No hay empleados para exportar");
+      return;
+    }
+    const headers = [
+      "Código", "Nombre", "Departamento", "Tipo Turno", "Turno Esperado",
+      "Hora Entrada Esperada", "Hora Salida Esperada", "Primera Entrada",
+      "Última Salida", "Estado Presencia", "Motivo Ausencia", "Ausencia Predicha"
+    ];
+    const esc = (v) => {
+      const s = v == null ? "" : String(v);
+      return /[;"\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const lines = [headers.join(";")];
+    for (const e of rows) {
+      const firstEntry = e.attendance?.entries?.length ? [...e.attendance.entries].sort()[0] : "";
+      const lastExit = e.attendance?.exits?.length ? [...e.attendance.exits].sort().slice(-1)[0] : "";
+      lines.push([
+        e.employee_id || "",
+        e.nombre || "",
+        e.departamento || "",
+        e.tipo_turno || "",
+        e.turno || "",
+        e.expectedTime || "",
+        e.hora_salida || "",
+        firstEntry,
+        lastExit,
+        presenceStatusLabel(e.presenceStatus),
+        e.confirmedAbsence?.motivo || e.confirmedAbsence?.tipo || "",
+        e.predictedAbsent ? "Sí" : "No"
+      ].map(esc).join(";"));
+    }
+    // BOM UTF-8 para que Excel respete tildes
+    const csv = "\uFEFF" + lines.join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const safeDate = analysisDate.replace(/-/g, "");
+    const deptTag = departmentFilter ? `_${departmentFilter.replace(/\s+/g, "")}` : "";
+    a.href = url;
+    a.download = `presencia_${safeDate}${deptTag}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success(`Exportados ${rows.length} empleados`);
+  };
+
   return (
     <div className="h-full flex flex-col overflow-hidden bg-slate-50 dark:bg-slate-950">
       {/* Header */}
@@ -393,6 +455,10 @@ export default function PresenceControl({ departmentFilter, titleOverride }) {
             <Button size="sm" variant="outline" onClick={handleRefresh} className="gap-1.5 h-8 text-xs">
               <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? "animate-spin" : ""}`} />
               Actualizar
+            </Button>
+            <Button size="sm" variant="outline" onClick={handleExportPresence} className="gap-1.5 h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600">
+              <FileSpreadsheet className="w-3.5 h-3.5" />
+              Excel
             </Button>
             <Button size="sm" onClick={handleSync} disabled={isSyncing} className="gap-1.5 h-8 text-xs bg-indigo-600 hover:bg-indigo-700">
               <Zap className={`w-3.5 h-3.5 ${isSyncing ? "animate-spin" : ""}`} />
