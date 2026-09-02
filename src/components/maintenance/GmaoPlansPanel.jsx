@@ -53,7 +53,9 @@ export default function GmaoPlansPanel({ machine }) {
     mutationFn: async ({ type, relatedPlan, form }) => {
       const diasIntervalo = PERIODICIDADES[form.periodicidad] || parseInt(form.dias_intervalo) || 30;
       const ultimaEjecucion = form.ultima_ejecucion ? new Date(form.ultima_ejecucion) : new Date();
-      const proximaFecha = addDays(ultimaEjecucion, diasIntervalo);
+      const proximaFecha = form.proxima_fecha
+        ? new Date(form.proxima_fecha)
+        : addDays(ultimaEjecucion, diasIntervalo);
       const data = {
         periodicidad: form.periodicidad,
         dias_intervalo: diasIntervalo,
@@ -78,7 +80,9 @@ export default function GmaoPlansPanel({ machine }) {
       invalidateAll();
       setConfiguringTypeId(null);
       setConfigForm({});
-      toast.success("Configuración guardada");
+      toast.success("Configuración guardada", {
+        description: "Pulsa 'Generar OTs' para crear las órdenes con la nueva programación.",
+      });
     },
     onError: () => toast.error("Error al guardar"),
   });
@@ -155,13 +159,19 @@ export default function GmaoPlansPanel({ machine }) {
   };
 
   const openConfig = (type, relatedPlan) => {
+    const diasIntervalo = PERIODICIDADES[relatedPlan?.periodicidad] || relatedPlan?.dias_intervalo || 30;
+    const ultimaEjecucion = relatedPlan?.ultima_ejecucion
+      ? new Date(relatedPlan.ultima_ejecucion)
+      : new Date();
+    const proximaFecha = relatedPlan?.proxima_fecha
+      ? new Date(relatedPlan.proxima_fecha)
+      : addDays(ultimaEjecucion, diasIntervalo);
     setConfiguringTypeId(type.id);
     setConfigForm({
       periodicidad: relatedPlan?.periodicidad || "Mensual",
-      dias_intervalo: relatedPlan?.dias_intervalo || 30,
-      ultima_ejecucion: relatedPlan?.ultima_ejecucion
-        ? new Date(relatedPlan.ultima_ejecucion).toISOString().split("T")[0]
-        : new Date().toISOString().split("T")[0],
+      dias_intervalo: diasIntervalo,
+      ultima_ejecucion: ultimaEjecucion.toISOString().split("T")[0],
+      proxima_fecha: proximaFecha.toISOString().split("T")[0],
     });
   };
 
@@ -245,25 +255,38 @@ export default function GmaoPlansPanel({ machine }) {
                         {planStatus.label}
                       </Badge>
                     )}
-                    <button
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-6 text-[10px] gap-1 px-2"
                       onClick={() => isConfiguring ? setConfiguringTypeId(null) : openConfig(type, relatedPlan)}
-                      className="p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600"
                     >
                       {isConfiguring ? <X className="w-3 h-3" /> : <Settings className="w-3 h-3" />}
-                    </button>
+                      {isConfiguring ? "Cerrar" : "Editar"}
+                    </Button>
                   </div>
                 </div>
 
                 {/* Config panel */}
                 {isConfiguring && (
                   <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 rounded-lg p-2.5 space-y-2">
-                    <p className="text-[10px] font-semibold text-blue-700">Configurar periodicidad</p>
+                    <p className="text-[10px] font-semibold text-blue-700">Configurar periodicidad y fechas</p>
                     <div className="grid grid-cols-2 gap-2">
                       <div className="space-y-0.5">
                         <Label className="text-[10px]">Periodicidad</Label>
                         <Select
                           value={configForm.periodicidad}
-                          onValueChange={v => setConfigForm(f => ({ ...f, periodicidad: v, dias_intervalo: PERIODICIDADES[v] || f.dias_intervalo }))}
+                          onValueChange={v => {
+                            const newInterval = PERIODICIDADES[v] || configForm.dias_intervalo;
+                            const ultima = configForm.ultima_ejecucion ? new Date(configForm.ultima_ejecucion) : new Date();
+                            const newProxima = addDays(ultima, newInterval);
+                            setConfigForm(f => ({
+                              ...f,
+                              periodicidad: v,
+                              dias_intervalo: newInterval,
+                              proxima_fecha: newProxima.toISOString().split("T")[0],
+                            }));
+                          }}
                         >
                           <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
                           <SelectContent>
@@ -277,8 +300,28 @@ export default function GmaoPlansPanel({ machine }) {
                           type="date"
                           className="h-7 text-xs"
                           value={configForm.ultima_ejecucion}
-                          onChange={e => setConfigForm(f => ({ ...f, ultima_ejecucion: e.target.value }))}
+                          onChange={e => {
+                            const newUltima = e.target.value ? new Date(e.target.value) : new Date();
+                            const newProxima = addDays(newUltima, configForm.dias_intervalo || 30);
+                            setConfigForm(f => ({
+                              ...f,
+                              ultima_ejecucion: e.target.value,
+                              proxima_fecha: newProxima.toISOString().split("T")[0],
+                            }));
+                          }}
                         />
+                      </div>
+                      <div className="space-y-0.5 col-span-2">
+                        <Label className="text-[10px]">Próxima fecha (inicio del ciclo)</Label>
+                        <Input
+                          type="date"
+                          className="h-7 text-xs"
+                          value={configForm.proxima_fecha}
+                          onChange={e => setConfigForm(f => ({ ...f, proxima_fecha: e.target.value }))}
+                        />
+                        <p className="text-[9px] text-blue-600 dark:text-blue-400">
+                          Edita esta fecha para reprogramar el inicio. Al generar OTs, las órdenes se crearán desde esta fecha según la periodicidad.
+                        </p>
                       </div>
                     </div>
                     <Button
