@@ -24,6 +24,14 @@
       "type": "string",
       "description": "ID de la m\u00e1quina"
     },
+    "machine_nombre": {
+      "type": "string",
+      "description": "Nombre de la m\u00e1quina (desnormalizado)"
+    },
+    "machine_codigo": {
+      "type": "string",
+      "description": "C\u00f3digo de la m\u00e1quina (desnormalizado)"
+    },
     "process_id": {
       "type": "string",
       "description": "ID del proceso seleccionado"
@@ -35,6 +43,10 @@
         "team_2"
       ],
       "description": "Equipo para el que se planifica"
+    },
+    "turno": {
+      "type": "string",
+      "description": "Turno de la planificaci\u00f3n (Ma\u00f1ana o Tarde)"
     },
     "fecha_planificacion": {
       "type": "string",
@@ -49,6 +61,15 @@
     "operadores_necesarios": {
       "type": "number",
       "description": "N\u00famero de operadores necesarios para este proceso"
+    },
+    "auto_suggested": {
+      "type": "boolean",
+      "default": false,
+      "description": "Si fue sugerida autom\u00e1ticamente desde el Gantt"
+    },
+    "product_name": {
+      "type": "string",
+      "description": "Nombre del producto asociado (desde Gantt)"
     },
     "fecha_actualizacion": {
       "type": "string",
