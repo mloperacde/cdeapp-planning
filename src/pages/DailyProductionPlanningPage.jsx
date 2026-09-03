@@ -153,24 +153,32 @@ export default function DailyProductionPlanningPage() {
   );
 
   const manufacturingConfig = useMemo(() => {
-    if (!manufacturingConfigRecord) return { areas: [] };
+    if (!manufacturingConfigRecord) return { areas: [], machine_assignments: {} };
     try {
       const raw = manufacturingConfigRecord.value || manufacturingConfigRecord.description || null;
-      if (!raw) return { areas: [] };
+      if (!raw) return { areas: [], machine_assignments: {} };
       const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
-      return { areas: Array.isArray(parsed.areas) ? parsed.areas : [] };
-    } catch { return { areas: [] }; }
+      return {
+        areas: Array.isArray(parsed.areas) ? parsed.areas : [],
+        machine_assignments: parsed.machine_assignments || {}
+      };
+    } catch { return { areas: [], machine_assignments: {} }; }
   }, [manufacturingConfigRecord]);
 
   const areasWithMachines = useMemo(() => {
     const allMachines = machines || [];
     const areasConfig = manufacturingConfig?.areas || [];
+    const machineAssignments = manufacturingConfig?.machine_assignments || {};
     const usedMachineIds = new Set();
     const result = [];
 
     areasConfig.forEach(area => {
       const areaIdStr = String(area.id);
       const machinesInArea = allMachines.filter(m => {
+        const asgn = machineAssignments[m.id] || {};
+        // Primero buscar en machine_assignments del config
+        if (asgn.area_id && String(asgn.area_id) === areaIdStr) return true;
+        // Fallback: campos legacy en la entidad MachineMasterDatabase
         const mAreaId = m.area_id ? String(m.area_id) : null;
         if (mAreaId && mAreaId === areaIdStr) return true;
         if (!mAreaId && m.area_name && area.name && String(m.area_name).trim() === String(area.name).trim()) return true;
