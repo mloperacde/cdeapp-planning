@@ -169,27 +169,17 @@ export default function DailyProductionPlanningPage() {
     const allMachines = machines || [];
     const areasConfig = manufacturingConfig?.areas || [];
     const machineAssignments = manufacturingConfig?.machine_assignments || {};
-    const usedMachineIds = new Set();
     const result = [];
 
     areasConfig.forEach(area => {
       const areaIdStr = String(area.id);
       const machinesInArea = allMachines.filter(m => {
-        const asgn = machineAssignments[m.id] || {};
-        // Primero buscar en machine_assignments del config
-        if (asgn.area_id && String(asgn.area_id) === areaIdStr) return true;
-        // Fallback: campos legacy en la entidad MachineMasterDatabase
-        const mAreaId = m.area_id ? String(m.area_id) : null;
-        if (mAreaId && mAreaId === areaIdStr) return true;
-        if (!mAreaId && m.area_name && area.name && String(m.area_name).trim() === String(area.name).trim()) return true;
-        return false;
+        const asgn = machineAssignments[m.id];
+        return asgn && asgn.area_id && String(asgn.area_id) === areaIdStr;
       });
-      machinesInArea.forEach(m => usedMachineIds.add(String(m.id)));
       result.push({ areaId: area.id, areaName: area.name, machines: machinesInArea });
     });
 
-    const leftover = allMachines.filter(m => !usedMachineIds.has(String(m.id)));
-    if (leftover.length) result.push({ areaId: "unassigned", areaName: "Sin Área", machines: leftover });
     return result;
   }, [machines, manufacturingConfig]);
 
