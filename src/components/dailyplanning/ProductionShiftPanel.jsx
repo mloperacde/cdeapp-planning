@@ -213,7 +213,7 @@ export default function ProductionShiftPanel({
                             <div className="flex flex-col flex-1 min-w-0">
                               <label
                                 htmlFor={`machine-${shift}-${group.areaId}-${machine.id}`}
-                                className="text-[11px] font-medium text-slate-800 truncate cursor-pointer"
+                                className="text-[11px] font-medium text-slate-800 cursor-pointer leading-tight"
                                 title={getMachineAlias(machine)}
                               >
                                 {getMachineAlias(machine)}

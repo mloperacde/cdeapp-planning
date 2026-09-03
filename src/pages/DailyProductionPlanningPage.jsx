@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/components/ui/use-toast";
 import { Calendar as CalendarIcon, Copy, Repeat, Filter, Sparkles, Trash2 } from "lucide-react";
 import { format, subDays } from "date-fns";
+import { parseDateES } from "@/utils/parseDateES";
 import ThemeToggle from "../components/common/ThemeToggle";
 import ProductionShiftPanel from "@/components/dailyplanning/ProductionShiftPanel";
 import {
@@ -184,41 +185,50 @@ export default function DailyProductionPlanningPage() {
   }, [machines, manufacturingConfig]);
 
   // --- Gantt suggestions: máquinas con órdenes activas para la fecha ---
+  // Usa la misma lógica de fechas y operadores que el PlanningGantt para que
+  // las sugerencias coincidan exactamente con lo que se ve en el Gantt.
   const ganttSuggestions = useMemo(() => {
     const suggestions = new Map();
     if (!workOrders || workOrders.length === 0) return suggestions;
 
-    const selectedDateObj = new Date(selectedDate);
-    selectedDateObj.setHours(12, 0, 0, 0);
+    const DAY_MS = 86400000;
+    const selectedDateObj = new Date(selectedDate + "T12:00:00");
+    if (Number.isNaN(selectedDateObj.getTime())) return suggestions;
+
+    const EXCLUDED_STATUS = new Set(["Completada", "Cancelada"]);
 
     workOrders.forEach(order => {
-      let extra = {};
-      if (order.notes && typeof order.notes === "string") {
-        try { const parsed = JSON.parse(order.notes); if (parsed && typeof parsed === "object") extra = parsed; } catch { 0; }
-      }
-      const merged = { ...order, ...extra };
+      // Solo órdenes con fecha de inicio (las que aparecen en el timeline del Gantt)
+      if (!order.start_date || !order.machine_id) return;
+      if (EXCLUDED_STATUS.has(order.status)) return;
 
-      const effectiveStart = normalizeOrderDate(
-        extra["Fecha Inicio Modificada"] || extra.modified_start_date || extra["Fecha Inicio Limite"] || extra.start_date || order.start_date || ""
-      );
-      const effectiveEnd = normalizeOrderDate(
-        extra["Fecha Fin"] || extra["end_date_simple"] || extra.planned_end_date || order.planned_end_date || ""
-      );
-      if (!effectiveStart) return;
+      const start = parseDateES(order.start_date);
+      if (!start) return;
 
-      const start = new Date(effectiveStart);
-      if (Number.isNaN(start.getTime())) return;
-      const end = effectiveEnd ? new Date(effectiveEnd) : start;
-      if (Number.isNaN(end.getTime())) return;
+      const endStr = order.planned_end_date || order.committed_delivery_date;
+      const end = parseDateES(endStr) || start;
+      const startTs = start.getTime();
+      const endTs = Math.max(end.getTime(), startTs + DAY_MS);
 
-      const startDay = new Date(start); startDay.setHours(0, 0, 0, 0);
-      const endDay = new Date(end); endDay.setHours(23, 59, 59, 999);
+      const startDay = new Date(startTs); startDay.setHours(0, 0, 0, 0);
+      const endDay = new Date(endTs); endDay.setHours(23, 59, 59, 999);
 
-      if (selectedDateObj >= startDay && selectedDateObj <= endDay && order.machine_id) {
+      if (selectedDateObj >= startDay && selectedDateObj <= endDay) {
         const key = String(order.machine_id);
-        const operators = Number(merged.operadores_requeridos) || 1;
-        const productName = extra.product_name || extra["Nombre"] || order.product_name || "";
-        if (!suggestions.has(key)) {
+        // Mismo cálculo de operadores que el Gantt (getRequiredOperators)
+        let operators = null;
+        if (Array.isArray(order.personal_requerido) && order.personal_requerido.length > 0) {
+          operators = order.personal_requerido.reduce((s, r) => s + (Number(r.cantidad_operarios) || 0), 0);
+        }
+        if (!operators || operators <= 0) {
+          operators = Number(order.operadores_requeridos) || 0;
+        }
+        if (!operators || operators <= 0) operators = 1;
+
+        const productName = order.product_name || "";
+        const existing = suggestions.get(key);
+        // Si ya hay sugerencia, quedamos con el máximo de operadores (pico de demanda)
+        if (!existing || operators > existing.operators) {
           suggestions.set(key, { operators, productName });
         }
       }
