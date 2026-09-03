@@ -12,6 +12,7 @@ import { format, subDays } from "date-fns";
 import { parseDateES } from "@/utils/parseDateES";
 import ThemeToggle from "../components/common/ThemeToggle";
 import ProductionShiftPanel from "@/components/dailyplanning/ProductionShiftPanel";
+import UnifiedShiftPanel from "@/components/dailyplanning/UnifiedShiftPanel";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
@@ -595,12 +596,11 @@ export default function DailyProductionPlanningPage() {
       )}
 
       {/* Shift panels */}
-      <div className={isParallel ? "flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-2 gap-3" : "flex-1 min-h-0"}>
-        {renderShifts.map(shift => (
-          <Card key={shift} className="flex flex-col h-full border-slate-200 shadow-sm overflow-hidden min-h-0">
+      {isParallel ? (
+        <div className="flex-1 min-h-0">
+          <Card className="flex flex-col h-full border-slate-200 shadow-sm overflow-hidden min-h-0">
             <CardContent className="flex-1 min-h-0 p-3">
-              <ProductionShiftPanel
-                shift={shift}
+              <UnifiedShiftPanel
                 selectedDate={selectedDate}
                 selectedTeam={selectedTeam}
                 machines={machines}
@@ -616,8 +616,32 @@ export default function DailyProductionPlanningPage() {
               />
             </CardContent>
           </Card>
-        ))}
-      </div>
+        </div>
+      ) : (
+        <div className="flex-1 min-h-0">
+          {renderShifts.map(shift => (
+            <Card key={shift} className="flex flex-col h-full border-slate-200 shadow-sm overflow-hidden min-h-0">
+              <CardContent className="flex-1 min-h-0 p-3">
+                <ProductionShiftPanel
+                  shift={shift}
+                  selectedDate={selectedDate}
+                  selectedTeam={selectedTeam}
+                  machines={machines}
+                  areasWithMachines={areasWithMachines}
+                  ganttSuggestions={ganttSuggestions}
+                  plannings={plannings}
+                  employees={employees}
+                  teams={teams}
+                  dailyPlansHistory={dailyPlansHistory}
+                  onAddMachine={handleAddMachine}
+                  onDeletePlanning={handleDeletePlanning}
+                  onOperatorChange={handleOperatorChange}
+                />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
