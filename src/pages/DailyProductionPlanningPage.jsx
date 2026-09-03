@@ -309,44 +309,71 @@ export default function DailyProductionPlanningPage() {
 
   const importMutation = useMutation({
     mutationFn: async ({ sourceDate, sourceTeam }) => {
-      const sourcePlannings = await base44.entities.MachinePlanning.filter({ fecha_planificacion: sourceDate, team_key: sourceTeam });
-      if (!sourcePlannings || sourcePlannings.length === 0) throw new Error("No hay planificación en la fecha/equipo seleccionados.");
+      if (!sourceDate || !sourceTeam) throw new Error("Debe seleccionar una fecha y equipo de origen.");
+      if (!selectedDate || !selectedTeam) throw new Error("Debe seleccionar una fecha y equipo de destino.");
 
-      const existingIds = new Set(plannings.map(p => String(p.machine_id) + "|" + (p.turno || "")));
-      const promises = [];
+      // Fetch fresco: no depender del closure plannings (puede estar stale)
+      const [sourcePlannings, destPlannings] = await Promise.all([
+        base44.entities.MachinePlanning.filter({ fecha_planificacion: sourceDate, team_key: sourceTeam }),
+        base44.entities.MachinePlanning.filter({ fecha_planificacion: selectedDate, team_key: selectedTeam }),
+      ]);
+
+      if (!sourcePlannings || sourcePlannings.length === 0) {
+        throw new Error("No hay planificación en la fecha/equipo de origen seleccionados.");
+      }
+
+      // Claves existentes en destino: machine_id|turno
+      const existingKeys = new Set(
+        (destPlannings || []).map(p => String(p.machine_id) + "|" + (p.turno || "Mañana"))
+      );
+
+      let created = 0;
+      let skipped = 0;
+      const errors = [];
 
       for (const p of sourcePlannings) {
-        const key = String(p.machine_id) + "|" + (p.turno || "");
-        if (existingIds.has(key)) continue;
+        if (!p.machine_id) { skipped++; continue; }
+        const turno = p.turno || "Mañana";
+        const key = String(p.machine_id) + "|" + turno;
+        if (existingKeys.has(key)) { skipped++; continue; }
+
         const currentMachine = machines.find(m => String(m.id) === String(p.machine_id));
         const freshAlias = currentMachine ? getMachineAlias(currentMachine) : p.machine_nombre;
-        promises.push(() => base44.entities.MachinePlanning.create({
-          machine_id: p.machine_id,
-          machine_nombre: freshAlias,
-          machine_codigo: p.machine_codigo,
-          fecha_planificacion: selectedDate,
-          team_key: selectedTeam,
-          operadores_necesarios: p.operadores_necesarios,
-          activa_planning: true,
-          turno: p.turno || "Mañana",
-          auto_suggested: false,
-          process_id: p.process_id,
-        }));
+
+        try {
+          await base44.entities.MachinePlanning.create({
+            machine_id: p.machine_id,
+            machine_nombre: freshAlias,
+            machine_codigo: p.machine_codigo,
+            fecha_planificacion: selectedDate,
+            team_key: selectedTeam,
+            operadores_necesarios: p.operadores_necesarios,
+            activa_planning: true,
+            turno: turno,
+            auto_suggested: false,
+            process_id: p.process_id,
+          });
+          existingKeys.add(key);
+          created++;
+          await new Promise(r => setTimeout(r, 50));
+        } catch (err) {
+          errors.push(`${freshAlias || p.machine_id}: ${err.message || "error desconocido"}`);
+        }
       }
 
-      if (promises.length === 0) throw new Error("Todas las máquinas de origen ya están en la planificación actual.");
-      for (let i = 0; i < promises.length; i++) {
-        await promises[i]();
-        await new Promise(r => setTimeout(r, 50));
+      if (created === 0 && errors.length > 0) {
+        throw new Error("No se pudo importar ninguna máquina: " + errors.join("; "));
       }
-      return promises.length;
+
+      return { created, skipped, errors: errors.length };
     },
     onMutate: async () => {
       await queryClient.cancelQueries(['machinePlannings', selectedDate, selectedTeam]);
       setIsImportDialogOpen(false);
     },
-    onSuccess: (count) => {
-      toast({ title: "Importación Exitosa", description: `Se han importado ${count} máquinas.`, className: "bg-green-600 text-white", duration: 3000 });
+    onSuccess: ({ created, skipped, errors }) => {
+      const desc = `Importadas: ${created}${skipped ? ` · Omitidas: ${skipped}` : ""}${errors ? ` · Errores: ${errors}` : ""}`;
+      toast({ title: "Importación Completada", description: desc, className: "bg-green-600 text-white", duration: 4000 });
       queryClient.invalidateQueries(['machinePlannings', selectedDate, selectedTeam]);
     },
     onError: (err) => toast({ title: "Error al importar", description: err.message, variant: "destructive", duration: 5000 }),

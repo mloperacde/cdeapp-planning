@@ -206,7 +206,22 @@ export default function UnifiedShiftPanel({
                     No hay máquinas asignadas a esta área.
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-1.5">
+                  <div className="space-y-1">
+                    {/* Cabecera de columnas */}
+                    <div className="hidden md:flex items-center gap-2 px-2 pb-1 border-b border-slate-100">
+                      <div className="flex-1 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                        Máquina
+                      </div>
+                      <div className="flex items-center gap-1.5 flex-shrink-0 w-[88px]">
+                        <Sun className="w-3.5 h-3.5 text-amber-500" />
+                        <span className="text-[10px] font-bold uppercase tracking-wide text-amber-600">Mañana</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 flex-shrink-0 w-[88px]">
+                        <Moon className="w-3.5 h-3.5 text-violet-500" />
+                        <span className="text-[10px] font-bold uppercase tracking-wide text-violet-600">Tarde</span>
+                      </div>
+                    </div>
+
                     {group.machines.map(machine => {
                       const idStr = String(machine.id);
                       const planningM = planningsByShift.Mañana.get(idStr);
@@ -232,16 +247,16 @@ export default function UnifiedShiftPanel({
                         <div
                           key={machine.id}
                           className={cn(
-                            "flex items-center gap-2 rounded-md border px-2 py-1.5 bg-white transition-colors",
+                            "flex items-stretch gap-1.5 rounded-md border overflow-hidden transition-colors",
                             isAnyActive
-                              ? "border-green-400 bg-green-50/40"
+                              ? "border-slate-300 bg-white"
                               : hasGantt
-                                ? "border-amber-300 bg-amber-50/40"
-                                : "border-slate-200"
+                                ? "border-amber-300 bg-amber-50/30"
+                                : "border-slate-200 bg-white"
                           )}
                         >
                           {/* Nombre y código */}
-                          <div className="flex flex-col flex-1 min-w-0">
+                          <div className="flex flex-col justify-center flex-1 min-w-0 px-2 py-1.5">
                             <span
                               className="text-[11px] font-medium text-slate-800 leading-tight"
                               title={getMachineAlias(machine)}
@@ -271,49 +286,61 @@ export default function UnifiedShiftPanel({
                             )}
                           </div>
 
-                          {/* Input Mañana */}
-                          <div className="flex flex-col items-center gap-0.5 flex-shrink-0">
-                            <div className="flex items-center gap-1">
-                              <Sun className={cn("w-3 h-3", isActiveM ? "text-amber-500" : "text-slate-300")} />
-                              <Input
-                                type="number"
-                                min="0"
-                                placeholder="0"
-                                className={cn(
-                                  "h-7 w-14 px-1 text-center text-[11px] font-semibold border-slate-200 focus:border-amber-400 focus:ring-1 focus:ring-amber-400",
-                                  isActiveM ? "bg-amber-50 border-amber-300" : "bg-slate-50"
-                                )}
-                                value={opsM}
-                                onChange={e => handleSetOperators(machine, "Mañana", planningM, e.target.value)}
-                              />
-                            </div>
+                          {/* Celda Mañana */}
+                          <div
+                            className={cn(
+                              "flex flex-col items-center justify-center gap-0.5 flex-shrink-0 w-[88px] px-1 border-l-2",
+                              isActiveM
+                                ? "bg-amber-50 border-amber-400"
+                                : "bg-slate-50/50 border-slate-200"
+                            )}
+                          >
+                            <Input
+                              type="number"
+                              min="0"
+                              placeholder="0"
+                              className={cn(
+                                "h-8 w-full px-1 text-center text-sm font-bold border focus:ring-1",
+                                isActiveM
+                                  ? "bg-white border-amber-400 text-amber-700 focus:border-amber-500 focus:ring-amber-400"
+                                  : "bg-white border-slate-200 text-slate-400 focus:border-amber-400 focus:ring-amber-400"
+                              )}
+                              value={opsM}
+                              onChange={e => handleSetOperators(machine, "Mañana", planningM, e.target.value)}
+                            />
                             {avgMDisplay && (
-                              <span className="text-[8px] text-slate-400" title="Media histórica Mañana">
-                avg {avgMDisplay}
-              </span>
+                              <span className="text-[8px] text-amber-400" title="Media histórica Mañana">
+                                avg {avgMDisplay}
+                              </span>
                             )}
                           </div>
 
-                          {/* Input Tarde */}
-                          <div className="flex flex-col items-center gap-0.5 flex-shrink-0">
-                            <div className="flex items-center gap-1">
-                              <Moon className={cn("w-3 h-3", isActiveT ? "text-violet-500" : "text-slate-300")} />
-                              <Input
-                                type="number"
-                                min="0"
-                                placeholder="0"
-                                className={cn(
-                                  "h-7 w-14 px-1 text-center text-[11px] font-semibold border-slate-200 focus:border-violet-400 focus:ring-1 focus:ring-violet-400",
-                                  isActiveT ? "bg-violet-50 border-violet-300" : "bg-slate-50"
-                                )}
-                                value={opsT}
-                                onChange={e => handleSetOperators(machine, "Tarde", planningT, e.target.value)}
-                              />
-                            </div>
+                          {/* Celda Tarde */}
+                          <div
+                            className={cn(
+                              "flex flex-col items-center justify-center gap-0.5 flex-shrink-0 w-[88px] px-1 border-l-2",
+                              isActiveT
+                                ? "bg-violet-50 border-violet-400"
+                                : "bg-slate-50/50 border-slate-200"
+                            )}
+                          >
+                            <Input
+                              type="number"
+                              min="0"
+                              placeholder="0"
+                              className={cn(
+                                "h-8 w-full px-1 text-center text-sm font-bold border focus:ring-1",
+                                isActiveT
+                                  ? "bg-white border-violet-400 text-violet-700 focus:border-violet-500 focus:ring-violet-400"
+                                  : "bg-white border-slate-200 text-slate-400 focus:border-violet-400 focus:ring-violet-400"
+                              )}
+                              value={opsT}
+                              onChange={e => handleSetOperators(machine, "Tarde", planningT, e.target.value)}
+                            />
                             {avgTDisplay && (
-                              <span className="text-[8px] text-slate-400" title="Media histórica Tarde">
-                avg {avgTDisplay}
-              </span>
+                              <span className="text-[8px] text-violet-400" title="Media histórica Tarde">
+                                avg {avgTDisplay}
+                              </span>
                             )}
                           </div>
                         </div>
