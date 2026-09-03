@@ -1,115 +1,89 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
-import { createPageUrl } from "@/utils";
 import { getMachineAlias } from "@/utils/machineAlias";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
-import { Factory, Users, Calendar as CalendarIcon, AlertTriangle, Trash2, Plus, Search, Save, Copy, Repeat, ArrowLeft, Filter, Sparkles } from "lucide-react";
-import { format, startOfWeek, subDays } from "date-fns";
-import { cn } from "@/lib/utils";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import * as ReactWindow from 'react-window';
-import { AutoSizer } from "react-virtualized-auto-sizer";
+import { Calendar as CalendarIcon, Copy, Repeat, Filter, Sparkles, Trash2 } from "lucide-react";
+import { format, subDays } from "date-fns";
 import ThemeToggle from "../components/common/ThemeToggle";
-import { Checkbox } from "@/components/ui/checkbox";
-
-const List = ReactWindow.FixedSizeList || ReactWindow.default?.FixedSizeList;
-
+import ProductionShiftPanel from "@/components/dailyplanning/ProductionShiftPanel";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 
+const SHIFTS = ["Mañana", "Tarde"];
 
-import { normalize, isProductionOperator } from "@/utils/employeeFilters";
+// Normaliza fechas de WorkOrder (formatos diversos) a yyyy-MM-dd
+function normalizeOrderDate(val) {
+  if (!val || typeof val !== "string") return null;
+  if (/^\d{4}-/.test(val)) return val.split("T")[0];
+  if (val.includes("/")) {
+    const parts = val.split(" ");
+    const datePart = parts[0];
+    const timePart = parts[1];
+    const dmy = datePart.split("/");
+    if (dmy.length === 3) {
+      const [d, m, y] = dmy;
+      if (!isNaN(d) && !isNaN(m) && !isNaN(y)) {
+        const dateStr = `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+        return timePart ? `${dateStr}T${timePart}:00` : dateStr;
+      }
+    }
+  }
+  return val;
+}
 
 export default function DailyProductionPlanningPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // --- Local State ---
+  // --- State ---
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
-  const [selectedShift, setSelectedShift] = useState("Mañana");
-  const [selectedTeam, setSelectedTeam] = useState(""); 
-  const [configMode, setConfigMode] = useState("manual");
-  const [isLoading, setIsLoading] = useState(false);
-  
-  // Import Dialog State
+  const [selectedShift, setSelectedShift] = useState("Ambos");
+  const [selectedTeam, setSelectedTeam] = useState("");
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [importDate, setImportDate] = useState("");
   const [importTeam, setImportTeam] = useState("");
 
-  // Update import defaults when main selection changes
   React.useEffect(() => {
     if (isImportDialogOpen) {
-        if (!importDate) setImportDate(format(subDays(new Date(selectedDate), 1), 'yyyy-MM-dd'));
-        if (!importTeam) setImportTeam(selectedTeam);
+      if (!importDate) setImportDate(format(subDays(new Date(selectedDate), 1), 'yyyy-MM-dd'));
+      if (!importTeam) setImportTeam(selectedTeam);
     }
   }, [isImportDialogOpen, selectedDate, selectedTeam]);
 
   // --- Queries ---
-
-  // 1. Fetch Teams
   const { data: teams = [] } = useQuery({
     queryKey: ['teamConfigs'],
     queryFn: () => base44.entities.TeamConfig.list(),
-    staleTime: Infinity,
-    gcTime: Infinity,
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
+    staleTime: Infinity, gcTime: Infinity, refetchOnMount: false, refetchOnWindowFocus: false, refetchOnReconnect: false,
   });
 
-  // 2. Fetch Machines (STRICT DEDUPLICATION)
   const { data: machines = [] } = useQuery({
     queryKey: ['machines', 'strict_dedup'],
     queryFn: async () => {
       const rawMachines = await base44.entities.MachineMasterDatabase.list(undefined, 2000);
-      
-      // Strict Deduplication by ID
       const uniqueMap = new Map();
       rawMachines.forEach(m => {
         if (!m.id) return;
         const id = String(m.id);
-        if (!uniqueMap.has(id)) {
-          uniqueMap.set(id, { ...m });
-        }
+        if (!uniqueMap.has(id)) uniqueMap.set(id, { ...m });
       });
-      
       return Array.from(uniqueMap.values()).sort((a, b) => (a.orden_visualizacion || 999) - (b.orden_visualizacion || 999));
     },
-    staleTime: Infinity,
-    gcTime: Infinity,
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
-    retry: 3,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    staleTime: Infinity, gcTime: Infinity, refetchOnMount: false, refetchOnWindowFocus: false, refetchOnReconnect: false,
+    retry: 3, retryDelay: (i) => Math.min(1000 * 2 ** i, 30000),
   });
 
-  // 3. Fetch Plannings for Date/Team
   const { data: plannings = [] } = useQuery({
     queryKey: ['machinePlannings', selectedDate, selectedTeam],
-    queryFn: () => base44.entities.MachinePlanning.filter({ 
-      fecha_planificacion: selectedDate, 
-      team_key: selectedTeam 
-    }),
-    enabled: !!selectedDate && !!selectedTeam && machines.length > 0, // Stagger: Wait for Machines
-    staleTime: 5 * 60 * 1000,
-    retry: 3,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    queryFn: () => base44.entities.MachinePlanning.filter({ fecha_planificacion: selectedDate, team_key: selectedTeam }),
+    enabled: !!selectedDate && !!selectedTeam && machines.length > 0,
+    staleTime: 5 * 60 * 1000, retry: 3, retryDelay: (i) => Math.min(1000 * 2 ** i, 30000),
   });
 
   const { data: dailyPlansHistory = [] } = useQuery({
@@ -119,35 +93,30 @@ export default function DailyProductionPlanningPage() {
       const data = await base44.entities.DailyMachinePlanning.list('', 2000);
       return Array.isArray(data) ? data : [];
     },
-    staleTime: 5 * 60 * 1000,
-    retry: 3,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    staleTime: 5 * 60 * 1000, retry: 3, retryDelay: (i) => Math.min(1000 * 2 ** i, 30000),
   });
 
-  // 4. Fetch Shift Schedule to determine Shift
   const { data: shiftSchedule } = useQuery({
     queryKey: ['teamWeekSchedules', selectedDate],
-    queryFn: async () => {
-      const allSchedules = await base44.entities.TeamWeekSchedule.list(undefined, 2000);
-      return allSchedules;
-    },
-    enabled: teams.length > 0, // Stagger: Wait for Teams
-    staleTime: Infinity,
-    gcTime: Infinity,
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
+    queryFn: async () => base44.entities.TeamWeekSchedule.list(undefined, 2000),
+    enabled: teams.length > 0,
+    staleTime: Infinity, gcTime: Infinity, refetchOnMount: false, refetchOnWindowFocus: false, refetchOnReconnect: false,
   });
 
-  // 5. Fetch Employees for Availability
   const { data: employees = [] } = useQuery({
     queryKey: ['employeeMasterDatabase'],
     queryFn: () => base44.entities.EmployeeMasterDatabase.list('nombre', 1000),
-    enabled: machines.length > 0, // Stagger: Wait for Machines (Splitting heavy loads)
-    staleTime: 60 * 60 * 1000,
-    refetchOnWindowFocus: false,
-    retry: 3,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    enabled: machines.length > 0,
+    staleTime: 60 * 60 * 1000, refetchOnWindowFocus: false,
+    retry: 3, retryDelay: (i) => Math.min(1000 * 2 ** i, 30000),
+  });
+
+  const { data: workOrders = [] } = useQuery({
+    queryKey: ['workOrders', selectedDate],
+    queryFn: () => base44.entities.WorkOrder.list(undefined, 2000),
+    enabled: machines.length > 0,
+    staleTime: 2 * 60 * 1000, refetchOnWindowFocus: false,
+    retry: 3, retryDelay: (i) => Math.min(1000 * 2 ** i, 30000),
   });
 
   const { data: manufacturingConfigRecord } = useQuery({
@@ -157,105 +126,41 @@ export default function DailyProductionPlanningPage() {
       return configs[0] || null;
     },
     enabled: machines.length > 0,
-    staleTime: 5 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    staleTime: 5 * 60 * 1000, refetchOnWindowFocus: false,
   });
 
-  // --- Derived State ---
-
-  const selectedTeamObj = useMemo(() => {
-    return (teams || []).find(t => t.team_key === selectedTeam) || null;
-  }, [teams, selectedTeam]);
-
+  // --- Auto-select team from shift schedule ---
   React.useEffect(() => {
-    if (!shiftSchedule || !selectedDate || !selectedShift) return;
-
-    const [year, month, day] = selectedDate.split('-').map(Number);
-    const dateObj = new Date(year, month - 1, day);
-    const weekStart = startOfWeek(dateObj, { weekStartsOn: 1 });
-    const weekStartStr = format(weekStart, 'yyyy-MM-dd');
-
-    const normalize = (str) => str ? str.toString().trim().toLowerCase() : "";
-    const targetShift = normalize(selectedShift);
-
-    const schedule = shiftSchedule.find(s => {
-      if (s.fecha_inicio_semana !== weekStartStr) return false;
-      const turno = normalize(s.turno);
-      if (targetShift.includes("mañana")) {
-        return turno.includes("mañana") || turno.includes("t1");
-      }
-      if (targetShift.includes("tarde")) {
-        return turno.includes("tarde") || turno.includes("t2");
-      }
-      return false;
-    });
-
-    if (schedule && schedule.team_key) {
-      if (schedule.team_key !== selectedTeam) {
-        setSelectedTeam(schedule.team_key);
-      }
+    if (!shiftSchedule || !selectedDate || !selectedTeam) {
+      if (!selectedTeam && teams.length > 0) setSelectedTeam(teams[0].team_key);
       return;
     }
-
-    if (!selectedTeam && teams.length > 0) {
-      setSelectedTeam(teams[0].team_key);
+    const [y, m, d] = selectedDate.split('-').map(Number);
+    const dateObj = new Date(y, m - 1, d);
+    const weekStart = new Date(dateObj);
+    weekStart.setDate(dateObj.getDate() - ((dateObj.getDay() + 6) % 7));
+    const weekStartStr = format(weekStart, 'yyyy-MM-dd');
+    const schedule = shiftSchedule.find(s => s.fecha_inicio_semana === weekStartStr);
+    if (schedule?.team_key && schedule.team_key !== selectedTeam) {
+      setSelectedTeam(schedule.team_key);
     }
-  }, [shiftSchedule, selectedDate, selectedShift, teams, selectedTeam]);
+  }, [shiftSchedule, selectedDate, teams, selectedTeam]);
 
-  const currentShift = useMemo(() => {
-    return selectedShift || "Sin Asignar";
-  }, [selectedShift]);
+  // --- Derived ---
+  const selectedTeamObj = useMemo(
+    () => (teams || []).find(t => t.team_key === selectedTeam) || null,
+    [teams, selectedTeam]
+  );
 
   const manufacturingConfig = useMemo(() => {
-    if (!manufacturingConfigRecord) {
-      return { areas: [] };
-    }
+    if (!manufacturingConfigRecord) return { areas: [] };
     try {
-      const raw = manufacturingConfigRecord.value || manufacturingConfigRecord.description || manufacturingConfigRecord.app_subtitle || null;
+      const raw = manufacturingConfigRecord.value || manufacturingConfigRecord.description || null;
       if (!raw) return { areas: [] };
       const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
-      return {
-        areas: Array.isArray(parsed.areas) ? parsed.areas : [],
-      };
-    } catch {
-      return { areas: [] };
-    }
+      return { areas: Array.isArray(parsed.areas) ? parsed.areas : [] };
+    } catch { return { areas: [] }; }
   }, [manufacturingConfigRecord]);
-
-  const activePlanningsMap = useMemo(() => {
-    const map = new Map();
-    plannings.forEach(p => {
-        if (p.team_key === selectedTeam && p.fecha_planificacion === selectedDate) {
-            map.set(String(p.machine_id), p);
-        }
-    });
-    return map;
-  }, [plannings, selectedTeam, selectedDate]);
-
-  const plannedMachines = useMemo(() => {
-    const list = [];
-    activePlanningsMap.forEach(planning => {
-        // Solo contar como "planificada" la parte manual (no sugerida)
-        if (planning.auto_suggested) return;
-        const machine = machines.find(m => String(m.id) === String(planning.machine_id));
-        if (machine) {
-            list.push({ ...machine, planning });
-        } else {
-          const alias = getMachineAlias({
-              machine_name: planning.machine_nombre,
-              codigo_maquina: planning.machine_codigo,
-              ubicacion: planning.machine_ubicacion
-            });
-            list.push({ 
-                id: planning.machine_id, 
-                alias: alias || planning.machine_nombre || "Desconocida",
-                codigo_maquina: planning.machine_codigo || "N/A", 
-                planning 
-            });
-        }
-    });
-    return list.sort((a, b) => (a.orden_visualizacion || 999) - (b.orden_visualizacion || 999));
-  }, [activePlanningsMap, machines]);
 
   const areasWithMachines = useMemo(() => {
     const allMachines = machines || [];
@@ -272,1100 +177,438 @@ export default function DailyProductionPlanningPage() {
         return false;
       });
       machinesInArea.forEach(m => usedMachineIds.add(String(m.id)));
-      result.push({
-        areaId: area.id,
-        areaName: area.name,
-        machines: machinesInArea,
-      });
+      result.push({ areaId: area.id, areaName: area.name, machines: machinesInArea });
     });
 
     const leftover = allMachines.filter(m => !usedMachineIds.has(String(m.id)));
-    if (leftover.length) {
-      result.push({
-        areaId: "unassigned",
-        areaName: "Sin Área",
-        machines: leftover,
-      });
-    }
-
+    if (leftover.length) result.push({ areaId: "unassigned", areaName: "Sin Área", machines: leftover });
     return result;
   }, [machines, manufacturingConfig]);
 
-  const avgOperatorsByMachine = useMemo(() => {
-    const sums = new Map();
-    const counts = new Map();
-    const norm = (s) => s ? s.toString().trim().toLowerCase() : '';
-    const targetShift = norm(currentShift);
+  // --- Gantt suggestions: máquinas con órdenes activas para la fecha ---
+  const ganttSuggestions = useMemo(() => {
+    const suggestions = new Map();
+    if (!workOrders || workOrders.length === 0) return suggestions;
 
-    (dailyPlansHistory || []).forEach(r => {
-      if (!r || r.team_key !== selectedTeam) return;
-      const recordShift = norm(r.turno || r.shift);
-      if (recordShift && recordShift !== targetShift) return;
-      if (!r.machine_id) return;
-      const mid = String(r.machine_id);
-      const op = Number(r.operadores_necesarios) || 0;
-      sums.set(mid, (sums.get(mid) || 0) + op);
-      counts.set(mid, (counts.get(mid) || 0) + 1);
-    });
+    const selectedDateObj = new Date(selectedDate);
+    selectedDateObj.setHours(12, 0, 0, 0);
 
-    const avg = new Map();
-    sums.forEach((sum, mid) => {
-      const c = counts.get(mid) || 1;
-      avg.set(mid, sum / c);
-    });
-    return avg;
-  }, [dailyPlansHistory, selectedTeam, currentShift]);
+    workOrders.forEach(order => {
+      let extra = {};
+      if (order.notes && typeof order.notes === "string") {
+        try { const parsed = JSON.parse(order.notes); if (parsed && typeof parsed === "object") extra = parsed; } catch { 0; }
+      }
+      const merged = { ...order, ...extra };
 
-  const availableOperators = useMemo(() => {
-    const teamObj = (teams || []).find(t => t.team_key === selectedTeam);
-    if (!teamObj) return 0;
-    
-    // Normalization helper for robust comparison
-    const targetTeam = normalize(teamObj.team_name);
-    const shift = normalize(currentShift);
-    const isMorningShift = shift.includes("mañana") || shift.includes("t1") || shift === "manana";
-    const isAfternoonShift = shift.includes("tarde") || shift.includes("t2");
+      const effectiveStart = normalizeOrderDate(
+        extra["Fecha Inicio Modificada"] || extra.modified_start_date || extra["Fecha Inicio Limite"] || extra.start_date || order.start_date || ""
+      );
+      const effectiveEnd = normalizeOrderDate(
+        extra["Fecha Fin"] || extra["end_date_simple"] || extra.planned_end_date || order.planned_end_date || ""
+      );
+      if (!effectiveStart) return;
 
-    return (employees || []).filter(e => {
-        // 1. Team Match (Robust with team_id support) + include fixed shift employees
-        //    Logic: Employee belongs to team OR has Fixed Shift corresponding to current shift
-        const isTeamById = e.team_id && String(e.team_id) === String(teamObj.id);
-        const isTeamByName = normalize(e.equipo) === targetTeam;
-        const tipoTurno = normalize(e.tipo_turno);
-        
-        // Fixed shift employees are available regardless of team, IF they match the shift
-        // Robust check for "Fijo Mañana" / "Turno Fijo Mañana" / "Fijo Tarde"
-        const isFixed = tipoTurno.includes("fijo");
-        const isMorningType = tipoTurno.includes("manana") || tipoTurno.includes("mañana") || tipoTurno.includes("t1");
-        const isAfternoonType = tipoTurno.includes("tarde") || tipoTurno.includes("t2");
+      const start = new Date(effectiveStart);
+      if (Number.isNaN(start.getTime())) return;
+      const end = effectiveEnd ? new Date(effectiveEnd) : start;
+      if (Number.isNaN(end.getTime())) return;
 
-        const isFixedMorning = isFixed && isMorningType;
-        const isFixedAfternoon = isFixed && isAfternoonType;
+      const startDay = new Date(start); startDay.setHours(0, 0, 0, 0);
+      const endDay = new Date(end); endDay.setHours(23, 59, 59, 999);
 
-        // Determine if employee matches the requested shift context (Fixed Shift)
-        const matchesShiftContext = 
-          (isMorningShift && isFixedMorning) ||
-          (isAfternoonShift && isFixedAfternoon);
-
-        // Inclusion Logic:
-        // A. If employee is Fixed Shift matching the Current Planning Shift -> INCLUDE
-        // B. If employee is in the Rotative Team -> INCLUDE, UNLESS they have a Fixed Shift for the OTHER shift
-        
-        let shouldInclude = false;
-        if (matchesShiftContext) {
-            shouldInclude = true;
-        } else if (isTeamById || isTeamByName) {
-            // Check for conflict: Team member but Fixed for OPPOSITE shift
-            if (isMorningShift && isFixedAfternoon) shouldInclude = false;
-            else if (isAfternoonShift && isFixedMorning) shouldInclude = false;
-            else shouldInclude = true;
+      if (selectedDateObj >= startDay && selectedDateObj <= endDay && order.machine_id) {
+        const key = String(order.machine_id);
+        const operators = Number(merged.operadores_requeridos) || 1;
+        const productName = extra.product_name || extra["Nombre"] || order.product_name || "";
+        if (!suggestions.has(key)) {
+          suggestions.set(key, { operators, productName });
         }
-
-        if (!shouldInclude) return false;
-
-        // 2. Availability (Must be "Disponible" - Robust)
-        if (normalize(e.disponibilidad) !== "disponible") return false;
-
-        // 3. Role Exclusion (Jefe de Turno / Equipo)
-        // Explicitly exclude Leadership roles as per requirement
-        const role = normalize(e.puesto);
-        if (role.includes("jefe") && role.includes("turno")) return false;
-        if (role.includes("jefe") && role.includes("equipo")) return false;
-
-        // 4. General Operator Check
-        if (!isProductionOperator(e)) return false;
-
-        // 5. Absence Check (Robust)
-        if (e.ausencia_inicio) {
-            const checkDate = new Date(selectedDate);
-            checkDate.setHours(12, 0, 0, 0); 
-            const checkTime = checkDate.getTime();
-            
-            const startDate = new Date(e.ausencia_inicio);
-            startDate.setHours(0, 0, 0, 0);
-            const startTime = startDate.getTime();
-
-            if (e.ausencia_fin) {
-                const endDate = new Date(e.ausencia_fin);
-                endDate.setHours(23, 59, 59, 999);
-                const endTime = endDate.getTime();
-                
-                if (checkTime >= startTime && checkTime <= endTime) return false;
-            } else {
-                if (checkTime >= startTime) return false;
-            }
-        }
-
-        return true;
-    }).length;
-  }, [employees, teams, selectedTeam, selectedDate, currentShift]);
-
-  const totalRequiredOperators = useMemo(() => {
-    let total = 0;
-    activePlanningsMap.forEach(p => {
-        if (p.auto_suggested) return;
-        
-        // Ensure machine exists in the current machine list to avoid ghost counts
-        const machineExists = machines.some(m => String(m.id) === String(p.machine_id));
-        if (!machineExists) return;
-
-        total += (Number(p.operadores_necesarios) || 0);
+      }
     });
-    return total;
-  }, [activePlanningsMap, machines]);
+
+    return suggestions;
+  }, [workOrders, selectedDate]);
 
   // --- Mutations ---
-
-  const autoProposalMutation = useMutation({
-    mutationFn: async () => {
-      if (!selectedDate || !selectedTeam) {
-        throw new Error("Debe seleccionar un día y turno antes de proponer planificación.");
-      }
-
-      if (!base44.entities.WorkOrder) {
-        throw new Error("Entidad WorkOrder no disponible en este entorno.");
-      }
-
-      const raw = await base44.entities.WorkOrder.list(undefined, 2000);
-      if (!Array.isArray(raw) || raw.length === 0) {
-        throw new Error("No hay órdenes planificadas en el Gantt.");
-      }
-
-      const orders = raw.map(order => {
-        let extra = {};
-        if (order.notes && typeof order.notes === "string") {
-          try {
-            const parsed = JSON.parse(order.notes);
-            if (parsed && typeof parsed === "object") extra = parsed;
-          } catch {
-            0;
-          }
-        }
-
-        const normDate = (val) => {
-          if (!val) return null;
-          if (typeof val !== "string") return val;
-          if (/^\d{4}-/.test(val)) return val;
-          if (val.includes("/")) {
-            const parts = val.split(" ");
-            const datePart = parts[0];
-            const timePart = parts[1];
-            const dmy = datePart.split("/");
-            if (dmy.length === 3) {
-              const d = dmy[0];
-              const m = dmy[1];
-              const y = dmy[2];
-              if (!isNaN(d) && !isNaN(m) && !isNaN(y)) {
-                const dateStr = `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
-                return timePart ? `${dateStr}T${timePart}:00` : dateStr;
-              }
-            }
-          }
-          return val;
-        };
-
-        const merged = { ...order, ...extra };
-
-        const effectiveStart = (() => {
-          const modStart = normDate(extra["Fecha Inicio Modificada"] || extra.modified_start_date || "");
-          const startLimit = normDate(extra["Fecha Inicio Limite"] || extra.start_date || order.start_date || "");
-          const result = modStart && !String(modStart).startsWith("0000") && String(modStart).length > 0 ? modStart : startLimit;
-          return result || null;
-        })();
-
-        const effectiveEnd = normDate(
-          extra["Fecha Fin"] || extra["end_date_simple"] || extra.planned_end_date || order.planned_end_date || ""
-        );
-
-        return {
-          id: order.id,
-          machine_id: order.machine_id,
-          effective_start_date: effectiveStart,
-          effective_delivery_date: effectiveEnd,
-          product_name: extra.product_name || extra["Nombre"] || order.product_name || ""
-        };
-      });
-
-      const selectedDateObj = new Date(selectedDate);
-      selectedDateObj.setHours(12, 0, 0, 0);
-
-      const machinesForDay = new Map();
-
-      orders.forEach(o => {
-        if (!o.effective_start_date) return;
-        const start = new Date(o.effective_start_date);
-        if (Number.isNaN(start.getTime())) return;
-        const end = o.effective_delivery_date ? new Date(o.effective_delivery_date) : start;
-        if (Number.isNaN(end.getTime())) return;
-        const startDay = new Date(start);
-        startDay.setHours(0, 0, 0, 0);
-        const endDay = new Date(end);
-        endDay.setHours(23, 59, 59, 999);
-        if (selectedDateObj >= startDay && selectedDateObj <= endDay && o.machine_id) {
-          const key = String(o.machine_id);
-          if (!machinesForDay.has(key)) {
-            machinesForDay.set(key, o);
-          }
-        }
-      });
-
-      if (machinesForDay.size === 0) {
-        throw new Error("No hay máquinas con órdenes programadas en el Gantt para este día.");
-      }
-
-      const candidateMachines = (machines || []).filter(m => machinesForDay.has(String(m.id)));
-      const toCreate = candidateMachines.filter(m => !activePlanningsMap.has(String(m.id)));
-
-      if (toCreate.length === 0) {
-        throw new Error("Todas las máquinas del Gantt ya están en la planificación diaria.");
-      }
-
-      for (const machine of toCreate) {
-        const orderForMachine = machinesForDay.get(String(machine.id));
-        await base44.entities.MachinePlanning.create({
-          machine_id: machine.id,
-          machine_nombre: machine.alias,
-          machine_codigo: machine.codigo_maquina,
-          fecha_planificacion: selectedDate,
-          team_key: selectedTeam,
-          operadores_necesarios: 1,
-          activa_planning: true,
-          turno: currentShift,
-          auto_suggested: true,
-          process_id: null,
-          product_name: orderForMachine?.product_name || null
-        });
-        await new Promise(resolve => setTimeout(resolve, 50));
-      }
-
-      return toCreate.length;
-    },
-    onMutate: async () => {
-      await queryClient.cancelQueries(["machinePlannings", selectedDate, selectedTeam]);
-    },
-    onSuccess: (count) => {
-      toast({
-        title: "Propuesta generada",
-        description: `Se han añadido ${count} máquinas desde el Gantt de órdenes.`,
-        className: "bg-blue-600 text-white border-blue-700",
-        duration: 3000
-      });
-      queryClient.invalidateQueries(["machinePlannings", selectedDate, selectedTeam]);
-      setConfigMode("suggested");
-    },
-    onError: (err) => {
-      toast({
-        title: "Error al proponer planificación",
-        description: err.message,
-        variant: "destructive",
-        duration: 5000
-      });
-    }
-  });
-
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.MachinePlanning.create(data),
     onMutate: async (newData) => {
-        await queryClient.cancelQueries(['machinePlannings', selectedDate, selectedTeam]);
-        const previousPlannings = queryClient.getQueryData(['machinePlannings', selectedDate, selectedTeam]);
-
-        const tempId = 'temp-' + Date.now();
-        queryClient.setQueryData(['machinePlannings', selectedDate, selectedTeam], (old = []) => {
-            return [...old, { ...newData, id: tempId }];
-        });
-
-        return { previousPlannings, tempId };
+      await queryClient.cancelQueries(['machinePlannings', selectedDate, selectedTeam]);
+      const previous = queryClient.getQueryData(['machinePlannings', selectedDate, selectedTeam]);
+      const tempId = 'temp-' + Date.now();
+      queryClient.setQueryData(['machinePlannings', selectedDate, selectedTeam], (old = []) => [...old, { ...newData, id: tempId }]);
+      return { previous, tempId };
     },
-    onError: (err, newData, context) => {
-        queryClient.setQueryData(['machinePlannings', selectedDate, selectedTeam], context.previousPlannings);
-        toast({
-            title: "Error al crear",
-            description: err.message,
-            variant: "destructive"
-        });
+    onError: (err, newData, ctx) => {
+      queryClient.setQueryData(['machinePlannings', selectedDate, selectedTeam], ctx.previous);
+      toast({ title: "Error al crear", description: err.message, variant: "destructive" });
     },
-    onSuccess: (newPlanning, variables, context) => {
-        // Replace temp item with real item
-        queryClient.setQueryData(['machinePlannings', selectedDate, selectedTeam], (old = []) => {
-            return old.map(p => p.id === context.tempId ? newPlanning : p);
-        });
-    }
+    onSuccess: (newPlanning, variables, ctx) => {
+      queryClient.setQueryData(['machinePlannings', selectedDate, selectedTeam], (old = []) =>
+        old.map(p => p.id === ctx.tempId ? newPlanning : p)
+      );
+    },
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.MachinePlanning.delete(id),
     onMutate: async (id) => {
-        await queryClient.cancelQueries(['machinePlannings', selectedDate, selectedTeam]);
-        const previousPlannings = queryClient.getQueryData(['machinePlannings', selectedDate, selectedTeam]);
-
-        queryClient.setQueryData(['machinePlannings', selectedDate, selectedTeam], (old = []) => {
-            return old.filter(p => p.id !== id);
-        });
-
-        return { previousPlannings };
+      await queryClient.cancelQueries(['machinePlannings', selectedDate, selectedTeam]);
+      const previous = queryClient.getQueryData(['machinePlannings', selectedDate, selectedTeam]);
+      queryClient.setQueryData(['machinePlannings', selectedDate, selectedTeam], (old = []) => old.filter(p => p.id !== id));
+      return { previous };
     },
-    onError: (err, id, context) => {
-        queryClient.setQueryData(['machinePlannings', selectedDate, selectedTeam], context.previousPlannings);
-        toast({ title: "Error", description: "No se pudo eliminar la máquina", variant: "destructive" });
-    }
+    onError: (err, id, ctx) => {
+      queryClient.setQueryData(['machinePlannings', selectedDate, selectedTeam], ctx.previous);
+      toast({ title: "Error", description: "No se pudo eliminar la máquina", variant: "destructive" });
+    },
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({id, data}) => base44.entities.MachinePlanning.update(id, data),
-    onMutate: async ({id, data}) => {
-        await queryClient.cancelQueries(['machinePlannings', selectedDate, selectedTeam]);
-        const previousPlannings = queryClient.getQueryData(['machinePlannings', selectedDate, selectedTeam]);
-
-        queryClient.setQueryData(['machinePlannings', selectedDate, selectedTeam], (old = []) => {
-            return old.map(p => p.id === id ? { ...p, ...data } : p);
-        });
-
-        return { previousPlannings };
+    mutationFn: ({ id, data }) => base44.entities.MachinePlanning.update(id, data),
+    onMutate: async ({ id, data }) => {
+      await queryClient.cancelQueries(['machinePlannings', selectedDate, selectedTeam]);
+      const previous = queryClient.getQueryData(['machinePlannings', selectedDate, selectedTeam]);
+      queryClient.setQueryData(['machinePlannings', selectedDate, selectedTeam], (old = []) =>
+        old.map(p => p.id === id ? { ...p, ...data } : p)
+      );
+      return { previous };
     },
-    onError: (err, vars, context) => {
-        queryClient.setQueryData(['machinePlannings', selectedDate, selectedTeam], context.previousPlannings);
-        toast({ title: "Error", description: "No se pudo actualizar", variant: "destructive" });
-    }
+    onError: (err, vars, ctx) => {
+      queryClient.setQueryData(['machinePlannings', selectedDate, selectedTeam], ctx.previous);
+      toast({ title: "Error", description: "No se pudo actualizar", variant: "destructive" });
+    },
   });
 
   const clearMutation = useMutation({
     mutationFn: async () => {
-        const promises = plannings.map(p => base44.entities.MachinePlanning.delete(p.id));
-        await Promise.all(promises);
+      const promises = plannings.map(p => base44.entities.MachinePlanning.delete(p.id));
+      await Promise.all(promises);
     },
     onMutate: async () => {
-        await queryClient.cancelQueries(['machinePlannings', selectedDate, selectedTeam]);
-        const previousPlannings = queryClient.getQueryData(['machinePlannings', selectedDate, selectedTeam]);
-
-        queryClient.setQueryData(['machinePlannings', selectedDate, selectedTeam], []);
-
-        return { previousPlannings };
+      await queryClient.cancelQueries(['machinePlannings', selectedDate, selectedTeam]);
+      const previous = queryClient.getQueryData(['machinePlannings', selectedDate, selectedTeam]);
+      queryClient.setQueryData(['machinePlannings', selectedDate, selectedTeam], []);
+      return { previous };
     },
-    onError: (err, _, context) => {
-        queryClient.setQueryData(['machinePlannings', selectedDate, selectedTeam], context.previousPlannings);
-        toast({ title: "Error", description: "No se pudo limpiar la planificación", variant: "destructive" });
+    onError: (err, _, ctx) => {
+      queryClient.setQueryData(['machinePlannings', selectedDate, selectedTeam], ctx.previous);
+      toast({ title: "Error", description: "No se pudo limpiar la planificación", variant: "destructive" });
     },
-    onSettled: () => {
-         queryClient.invalidateQueries(['machinePlannings', selectedDate, selectedTeam]);
-    }
+    onSettled: () => queryClient.invalidateQueries(['machinePlannings', selectedDate, selectedTeam]),
   });
 
   const importMutation = useMutation({
     mutationFn: async ({ sourceDate, sourceTeam }) => {
-        // 1. Fetch Source Plannings
-        const sourcePlannings = await base44.entities.MachinePlanning.filter({ 
-            fecha_planificacion: sourceDate, 
-            team_key: sourceTeam 
-        });
+      const sourcePlannings = await base44.entities.MachinePlanning.filter({ fecha_planificacion: sourceDate, team_key: sourceTeam });
+      if (!sourcePlannings || sourcePlannings.length === 0) throw new Error("No hay planificación en la fecha/equipo seleccionados.");
 
-        if (!sourcePlannings || sourcePlannings.length === 0) {
-            throw new Error("No hay planificación en la fecha/equipo seleccionados.");
-        }
+      const existingIds = new Set(plannings.map(p => String(p.machine_id) + "|" + (p.turno || "")));
+      const promises = [];
 
-        // 2. Filter out duplicates (already present in current planning)
-        // We use activePlanningsMap from closure, but for safety in async, we should probably fetch current or trust the user knows.
-        // We will skip machines that are already planned for the TARGET date/team.
-        
-        const addedCount = 0;
-        const promises = [];
+      for (const p of sourcePlannings) {
+        const key = String(p.machine_id) + "|" + (p.turno || "");
+        if (existingIds.has(key)) continue;
+        const currentMachine = machines.find(m => String(m.id) === String(p.machine_id));
+        const freshAlias = currentMachine ? getMachineAlias(currentMachine) : p.machine_nombre;
+        promises.push(() => base44.entities.MachinePlanning.create({
+          machine_id: p.machine_id,
+          machine_nombre: freshAlias,
+          machine_codigo: p.machine_codigo,
+          fecha_planificacion: selectedDate,
+          team_key: selectedTeam,
+          operadores_necesarios: p.operadores_necesarios,
+          activa_planning: true,
+          turno: p.turno || "Mañana",
+          auto_suggested: false,
+          process_id: p.process_id,
+        }));
+      }
 
-        for (const p of sourcePlannings) {
-            // Check if machine is already planned in current view
-            // Note: We access the latest 'activePlanningsMap' via closure or queryClient, 
-            // but simpler is to check against the Set of IDs we know are currently loaded.
-            const isAlreadyPlanned = activePlanningsMap.has(String(p.machine_id));
-            
-            if (!isAlreadyPlanned) {
-                // Create new planning
-                // Try to get fresh alias from loaded machines if possible
-                const currentMachine = machines.find(m => String(m.id) === String(p.machine_id));
-                const freshAlias = currentMachine ? getMachineAlias(currentMachine) : p.machine_nombre;
-
-                const newPlanning = {
-                    machine_id: p.machine_id,
-                    machine_nombre: freshAlias,
-                    machine_codigo: p.machine_codigo,
-                    fecha_planificacion: selectedDate, // Target Date
-                    team_key: selectedTeam,            // Target Team
-                    operadores_necesarios: p.operadores_necesarios,
-                    activa_planning: true,
-                    turno: currentShift,               // Target Shift
-                    process_id: p.process_id
-                };
-                
-                // Add to promise list (sequential or batched is better for rate limits, but let's try parallel with small delay if needed)
-                // To be safe against 429, we'll await them sequentially or in small chunks.
-                promises.push(() => base44.entities.MachinePlanning.create(newPlanning));
-            }
-        }
-
-        if (promises.length === 0) {
-            throw new Error("Todas las máquinas de origen ya están en la planificación actual.");
-        }
-
-        // Execute sequentially to avoid 429
-        for (const createFn of promises) {
-            await createFn();
-            await new Promise(resolve => setTimeout(resolve, 50)); // 50ms delay
-        }
-
-        return promises.length;
+      if (promises.length === 0) throw new Error("Todas las máquinas de origen ya están en la planificación actual.");
+      for (let i = 0; i < promises.length; i++) {
+        await promises[i]();
+        await new Promise(r => setTimeout(r, 50));
+      }
+      return promises.length;
     },
     onMutate: async () => {
-        await queryClient.cancelQueries(['machinePlannings', selectedDate, selectedTeam]);
-        setIsImportDialogOpen(false); // Close dialog immediately
+      await queryClient.cancelQueries(['machinePlannings', selectedDate, selectedTeam]);
+      setIsImportDialogOpen(false);
     },
     onSuccess: (count) => {
-        toast({
-            title: "Importación Exitosa",
-            description: `Se han importado ${count} máquinas correctamente.`,
-            className: "bg-green-600 text-white border-green-700",
-            duration: 3000
-        });
-        queryClient.invalidateQueries(['machinePlannings', selectedDate, selectedTeam]);
+      toast({ title: "Importación Exitosa", description: `Se han importado ${count} máquinas.`, className: "bg-green-600 text-white", duration: 3000 });
+      queryClient.invalidateQueries(['machinePlannings', selectedDate, selectedTeam]);
     },
-    onError: (err) => {
-        toast({
-            title: "Error al importar",
-            description: err.message,
-            variant: "destructive",
-            duration: 5000
-        });
-    }
+    onError: (err) => toast({ title: "Error al importar", description: err.message, variant: "destructive", duration: 5000 }),
   });
 
-  const saveSnapshotMutation = useMutation({
+  const autoProposalMutation = useMutation({
     mutationFn: async () => {
-      if (!selectedDate || !selectedTeam) {
-        throw new Error("Debe seleccionar un día y equipo antes de guardar.");
-      }
-      if (!base44.entities.DailyMachinePlanning) {
-        throw new Error("Entidad DailyMachinePlanning no disponible en este entorno.");
-      }
+      if (!selectedDate || !selectedTeam) throw new Error("Debe seleccionar un día y equipo.");
+      const targetShifts = selectedShift === "Ambos" ? SHIFTS : [selectedShift];
+      let created = 0;
 
-      const manualPlannings = [];
-      activePlanningsMap.forEach(p => {
-        if (p.auto_suggested) return;
-        manualPlannings.push(p);
-      });
-
-      if (manualPlannings.length === 0) {
-        throw new Error("No hay ninguna máquina planificada en modo manual para guardar.");
+      for (const shift of targetShifts) {
+        const existingForShift = new Set(
+          (plannings || []).filter(p => p.turno === shift).map(p => String(p.machine_id))
+        );
+        for (const [machineIdStr, suggestion] of ganttSuggestions) {
+          if (existingForShift.has(machineIdStr)) continue;
+          const machine = machines.find(m => String(m.id) === machineIdStr);
+          if (!machine) continue;
+          await base44.entities.MachinePlanning.create({
+            machine_id: machine.id,
+            machine_nombre: getMachineAlias(machine),
+            machine_codigo: machine.codigo_maquina,
+            fecha_planificacion: selectedDate,
+            team_key: selectedTeam,
+            operadores_necesarios: suggestion.operators,
+            activa_planning: true,
+            turno: shift,
+            auto_suggested: false,
+            process_id: null,
+            product_name: suggestion.productName || null,
+          });
+          await new Promise(r => setTimeout(r, 50));
+          created++;
+        }
       }
-
-      for (const p of manualPlannings) {
-        await base44.entities.DailyMachinePlanning.create({
-          date: selectedDate,
-          shift: currentShift,
-          fecha: selectedDate,
-          turno: currentShift,
-          team_key: selectedTeam,
-          machine_id: p.machine_id,
-          process_id: p.process_id || null,
-          activa: p.activa_planning !== false,
-          operadores_necesarios: Number(p.operadores_necesarios) || 0,
-        });
-        await new Promise(resolve => setTimeout(resolve, 25));
-      }
+      return created;
     },
-    onSuccess: () => {
-      toast({
-        title: "Planificación Guardada",
-        description: "La configuración de producción ha sido confirmada correctamente.",
-        className: "bg-green-600 text-white border-green-700",
-        duration: 3000
-      });
+    onMutate: async () => { await queryClient.cancelQueries(["machinePlannings", selectedDate, selectedTeam]); },
+    onSuccess: (count) => {
+      toast({ title: "Propuesta aplicada", description: `Se han activado ${count} máquinas desde el Gantt.`, className: "bg-blue-600 text-white", duration: 3000 });
+      queryClient.invalidateQueries(["machinePlannings", selectedDate, selectedTeam]);
     },
-    onError: (err) => {
-      toast({
-        title: "Error al guardar planificación",
-        description: err.message,
-        variant: "destructive",
-        duration: 5000
-      });
-    }
+    onError: (err) => toast({ title: "Error al proponer", description: err.message, variant: "destructive", duration: 5000 }),
   });
 
   // --- Handlers ---
-
-  const handleAddMachine = (machine) => {
+  const handleAddMachine = useCallback((machine, shift, suggestedOps = 1) => {
     const machineIdStr = String(machine.id);
-    if (activePlanningsMap.has(machineIdStr)) return;
-
+    const existing = (plannings || []).find(p => String(p.machine_id) === machineIdStr && p.turno === shift);
+    if (existing) return;
     createMutation.mutate({
-        machine_id: machine.id,
-        machine_nombre: machine.alias,
-        machine_codigo: machine.codigo_maquina,
-        fecha_planificacion: selectedDate,
-        team_key: selectedTeam,
-        operadores_necesarios: 1,
-        activa_planning: true,
-        turno: currentShift,
-        auto_suggested: false,
-        process_id: null
+      machine_id: machine.id,
+      machine_nombre: getMachineAlias(machine),
+      machine_codigo: machine.codigo_maquina,
+      fecha_planificacion: selectedDate,
+      team_key: selectedTeam,
+      operadores_necesarios: suggestedOps || 1,
+      activa_planning: true,
+      turno: shift,
+      auto_suggested: false,
+      process_id: null,
     });
-  };
+  }, [plannings, selectedDate, selectedTeam, createMutation]);
 
-  const handleDeletePlanning = (planningId) => {
+  const handleDeletePlanning = useCallback((planningId) => {
     deleteMutation.mutate(planningId);
-  };
+  }, [deleteMutation]);
 
-  const handleOperatorChange = (planningId, val) => {
-    // Treat empty string as 0 for real-time updates
+  const handleOperatorChange = useCallback((planningId, val) => {
     const num = val === "" ? 0 : parseInt(val);
-    if (!isNaN(num) && num >= 0) { 
-        updateMutation.mutate({
-            id: planningId,
-            data: { operadores_necesarios: num }
-        });
+    if (!isNaN(num) && num >= 0) {
+      updateMutation.mutate({ id: planningId, data: { operadores_necesarios: num } });
     }
-  };
+  }, [updateMutation]);
 
   const handleClearAll = async () => {
-    if (confirm("¿Estás seguro de que deseas borrar TODA la planificación para este día y equipo? Esta acción no se puede deshacer.")) {
-        setIsLoading(true); // Using correct state setter
-        try {
-            // 1. Obtener lista fresca de la base de datos para asegurar limpieza total
-            const freshPlannings = await base44.entities.MachinePlanning.filter({ 
-                fecha_planificacion: selectedDate, 
-                team_key: selectedTeam 
-            });
-            
-            if (freshPlannings && freshPlannings.length > 0) {
-                // 2. Borrado secuencial con pequeño delay para evitar 429 y asegurar persistencia
-                for (const p of freshPlannings) {
-                    await base44.entities.MachinePlanning.delete(p.id);
-                    await new Promise(r => setTimeout(r, 30));
-                }
-            }
-            
-            toast({
-                title: "Limpieza Completada",
-                description: "Se han eliminado todos los registros de planificación.",
-                className: "bg-green-600 text-white border-green-700"
-            });
-        } catch (error) {
-            console.error("Error en limpieza total:", error);
-            toast({
-                title: "Error",
-                description: "No se pudo completar la limpieza total.",
-                variant: "destructive"
-            });
-        } finally {
-            queryClient.invalidateQueries(['machinePlannings', selectedDate, selectedTeam]);
-            setIsLoading(false);
+    if (confirm("¿Estás seguro de que deseas borrar TODA la planificación para este día y equipo?")) {
+      try {
+        const fresh = await base44.entities.MachinePlanning.filter({ fecha_planificacion: selectedDate, team_key: selectedTeam });
+        if (fresh?.length > 0) {
+          for (const p of fresh) {
+            await base44.entities.MachinePlanning.delete(p.id);
+            await new Promise(r => setTimeout(r, 30));
+          }
         }
-    }
-  };
-
-  const handleSavePlanning = () => {
-      const deficit = totalRequiredOperators - availableOperators;
-      if (deficit > 0) {
-          toast({
-              title: "Bloqueo de Planificación",
-              description: `No se puede guardar la configuración: Faltan ${deficit} operadores para cubrir la demanda.`,
-              variant: "destructive",
-              duration: 5000
-          });
-          return;
+        toast({ title: "Limpieza Completada", description: "Se han eliminado todos los registros.", className: "bg-green-600 text-white" });
+      } catch (error) {
+        toast({ title: "Error", description: "No se pudo completar la limpieza.", variant: "destructive" });
+      } finally {
+        queryClient.invalidateQueries(['machinePlannings', selectedDate, selectedTeam]);
       }
-      
-      saveSnapshotMutation.mutate();
+    }
   };
 
   const handleCopyPreviousDay = () => {
-      const prevDate = format(subDays(new Date(selectedDate), 1), 'yyyy-MM-dd');
-      importMutation.mutate({ sourceDate: prevDate, sourceTeam: selectedTeam });
+    const prevDate = format(subDays(new Date(selectedDate), 1), 'yyyy-MM-dd');
+    importMutation.mutate({ sourceDate: prevDate, sourceTeam: selectedTeam });
   };
 
   const handleImportCustom = () => {
-      if (!importDate || !importTeam) return;
-      importMutation.mutate({ sourceDate: importDate, sourceTeam: importTeam });
+    if (!importDate || !importTeam) return;
+    importMutation.mutate({ sourceDate: importDate, sourceTeam: importTeam });
   };
 
-  // --- Render Helpers ---
-
-  const MachineRow = ({ index, style, data }) => {
-    const { machines, onAdd } = data;
-    const machine = machines[index];
-    
-    return (
-      <div style={style} className="px-3 py-1">
-        <div className="group flex items-center justify-between p-3 rounded-lg border bg-white hover:border-blue-300 hover:shadow-sm transition-all duration-200 h-full">
-            <div className="flex flex-col overflow-hidden mr-2 gap-0.5">
-                <span className="font-medium text-sm text-slate-700 truncate" title={getMachineAlias(machine)}>
-                    {getMachineAlias(machine)}
-                </span>
-            </div>
-            <Button 
-                size="icon" 
-                variant="ghost"
-                onClick={() => onAdd(machine)}
-                className="h-8 w-8 text-blue-600 bg-blue-50 hover:bg-blue-100 hover:text-blue-700 rounded-full"
-                title="Añadir a planificación"
-            >
-                <Plus className="h-4 w-4" />
-            </Button>
-        </div>
-      </div>
-    );
-  };
-
-  // --- Render ---
+  // --- Shifts to render ---
+  const renderShifts = selectedShift === "Ambos" ? SHIFTS : [selectedShift];
+  const isParallel = renderShifts.length > 1;
 
   return (
-    <div className="h-full flex flex-col p-6 gap-6 bg-slate-50 dark:bg-slate-950 overflow-hidden">
-      
-      {/* Fixed Header Section */}
-      <div className="flex-none space-y-4 z-10">
-        {/* Header Compacto */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 bg-white dark:bg-slate-900 p-2 px-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                <CalendarIcon className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-              </div>
-              <div>
-                <h1 className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-tight">
-                  Planificación Diaria de Producción
-                </h1>
-                <p className="text-[10px] text-slate-500 dark:text-slate-400 hidden sm:block">
-                  Configure la planificación de máquinas y operadores para el día seleccionado.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-               <ThemeToggle />
-            </div>
-        </div>
-
-        {/* Toolbar Unificada */}
-        <div className="flex flex-col xl:flex-row gap-4 justify-between items-start xl:items-center">
-          {/* Left: Filters */}
-          <div className="flex flex-col sm:flex-row items-center gap-2 w-full xl:w-auto">
-              <div className="flex flex-col sm:flex-row items-center gap-2 bg-white dark:bg-slate-900 p-1 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm w-full xl:w-auto">
-                  <div className="flex items-center px-2 border-r border-slate-200 dark:border-slate-800">
-                      <Filter className="w-4 h-4 text-slate-500 mr-2" />
-                      <span className="text-sm font-medium text-slate-700">Filtros</span>
-                  </div>
-                  
-                  <Input 
-                      type="date" 
-                      value={selectedDate} 
-                      onChange={(e) => setSelectedDate(e.target.value)}
-                      className="border-0 shadow-none focus-visible:ring-0 w-full sm:w-auto h-8"
-                  />
-                  
-                  <div className="h-6 w-px bg-slate-200 hidden sm:block" />
-                  
-                  <Select value={selectedShift} onValueChange={setSelectedShift}>
-                      <SelectTrigger className="w-full sm:w-[200px] border-0 shadow-none focus:ring-0 h-8">
-                          <SelectValue placeholder="Seleccionar turno" />
-                      </SelectTrigger>
-                      <SelectContent>
-                          <SelectItem value="Mañana">Mañana</SelectItem>
-                          <SelectItem value="Tarde">Tarde</SelectItem>
-                      </SelectContent>
-                  </Select>
-
-                  <div className="h-6 w-px bg-slate-200 hidden sm:block" />
-
-                  <div className="px-3 text-sm font-medium text-slate-600 whitespace-nowrap flex items-center gap-2">
-                      Equipo: <span className="text-slate-900 bg-slate-100 px-2 py-0.5 rounded text-xs">
-                        {selectedTeamObj?.team_name || "Sin equipo asignado"}
-                      </span>
-                  </div>
-              </div>
+    <div className="h-full flex flex-col p-4 gap-3 bg-slate-50 dark:bg-slate-950 overflow-hidden">
+      {/* Header */}
+      <div className="flex-none flex flex-col md:flex-row md:items-center justify-between gap-2 bg-white dark:bg-slate-900 p-2 px-3 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm z-10">
+        <div className="flex items-center gap-3">
+          <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+            <CalendarIcon className="w-4 h-4 text-blue-600 dark:text-blue-400" />
           </div>
-
-          {/* Right: Actions */}
-          <div className="flex flex-wrap gap-2 w-full xl:w-auto justify-end">
-              <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => autoProposalMutation.mutate()}
-                  disabled={autoProposalMutation.isPending || !selectedDate || !selectedTeam}
-                  className="h-9 gap-2 border-blue-600 text-blue-700 hover:bg-blue-50 bg-white"
-              >
-                  <Sparkles className="w-4 h-4" />
-                  {autoProposalMutation.isPending ? "Generando propuesta..." : "Propuesta desde Gantt"}
-              </Button>
-
-              <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
-                  <DialogTrigger asChild>
-                       <Button variant="outline" size="sm" className="h-9 gap-2 bg-white border-slate-200">
-                          <Copy className="w-4 h-4" />
-                          <span className="hidden md:inline">Importar</span>
-                       </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-[425px]">
-                      <DialogHeader>
-                          <DialogTitle>Importar Planificación</DialogTitle>
-                          <DialogDescription>
-                              Copie la configuración de máquinas de otro día o equipo.
-                              Las máquinas se añadirán a la planificación actual.
-                          </DialogDescription>
-                      </DialogHeader>
-                      <div className="grid gap-4 py-4">
-                           <Button 
-                              variant="secondary" 
-                              className="w-full justify-start gap-3" 
-                              onClick={handleCopyPreviousDay}
-                              disabled={importMutation.isPending}
-                          >
-                              <Repeat className="w-4 h-4" />
-                              <div className="flex flex-col items-start">
-                                  <span className="font-medium">Repetir Día Anterior</span>
-                                  <span className="text-xs text-slate-500">Mismo equipo, fecha ayer</span>
-                              </div>
-                           </Button>
-                           
-                           <div className="relative">
-                              <div className="absolute inset-0 flex items-center">
-                                  <span className="w-full border-t" />
-                              </div>
-                              <div className="relative flex justify-center text-xs uppercase">
-                                  <span className="bg-background px-2 text-muted-foreground">O personalizar</span>
-                              </div>
-                          </div>
-
-                          <div className="grid gap-2">
-                              <label className="text-sm font-medium">Fecha Origen</label>
-                              <Input 
-                                  type="date" 
-                                  value={importDate}
-                                  onChange={(e) => setImportDate(e.target.value)}
-                              />
-                          </div>
-                          <div className="grid gap-2">
-                              <label className="text-sm font-medium">Equipo Origen</label>
-                              <Select value={importTeam} onValueChange={setImportTeam}>
-                                  <SelectTrigger>
-                                      <SelectValue placeholder="Seleccionar equipo..." />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                      {teams.map(t => (
-                                          <SelectItem key={t.team_key} value={t.team_key}>
-                                              {t.team_name}
-                                          </SelectItem>
-                                      ))}
-                                  </SelectContent>
-                              </Select>
-                          </div>
-                      </div>
-                      <DialogFooter>
-                          <Button 
-                              onClick={handleImportCustom} 
-                              disabled={!importDate || !importTeam || importMutation.isPending}
-                          >
-                              {importMutation.isPending ? "Importando..." : "Importar Selección"}
-                          </Button>
-                      </DialogFooter>
-                  </DialogContent>
-              </Dialog>
-
-              <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={handleSavePlanning}
-                  disabled={saveSnapshotMutation.isPending}
-                  className="h-9 gap-2 border-green-600 text-green-700 hover:bg-green-50 bg-white"
-              >
-                  <Save className="w-4 h-4" />
-                  {saveSnapshotMutation.isPending ? "Guardando..." : "Guardar"}
-              </Button>
-              <Button 
-                  variant="destructive" 
-                  size="sm"
-                  onClick={handleClearAll}
-                  disabled={activePlanningsMap.size === 0 || clearMutation.isPending}
-                  className="h-9"
-              >
-                  {clearMutation.isPending ? "Limpiando..." : "Limpiar"}
-              </Button>
+          <div>
+            <h1 className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-tight">
+              Planificación Diaria de Producción
+            </h1>
+            <p className="text-[10px] text-slate-500 hidden sm:block">
+              Configure máquinas y operadores por zona y turno. Los cambios se guardan automáticamente.
+            </p>
           </div>
         </div>
-
-        {/* Stats Section */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card className="bg-blue-50 border-blue-200 shadow-sm">
-                <CardContent className="p-4 flex items-center justify-between">
-                    <div>
-                        <p className="text-sm text-blue-600 font-medium">Máquinas Planificadas</p>
-                        <p className="text-2xl font-bold text-blue-900">{activePlanningsMap.size}</p>
-                    </div>
-                    <Factory className="w-8 h-8 text-blue-500/50" />
-                </CardContent>
-            </Card>
-            <Card className="bg-orange-50 border-orange-200 shadow-sm">
-                <CardContent className="p-4 flex items-center justify-between">
-                    <div>
-                        <p className="text-sm text-orange-600 font-medium">Operadores Necesarios</p>
-                        <p className="text-2xl font-bold text-orange-900">{totalRequiredOperators}</p>
-                    </div>
-                    <Users className="w-8 h-8 text-orange-500/50" />
-                </CardContent>
-            </Card>
-            <Card className={`shadow-sm transition-colors duration-300 ${availableOperators >= totalRequiredOperators ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
-                <CardContent className="p-4 flex items-center justify-between relative overflow-hidden">
-                    <div>
-                        <div className="flex items-center gap-2 mb-1">
-                                <p className={`text-sm font-medium ${availableOperators >= totalRequiredOperators ? 'text-green-600' : 'text-red-600'}`}>
-                                Operadores Disponibles
-                            </p>
-                            {/* Semáforo Visual */}
-                            <div className={`w-3 h-3 rounded-full shadow-sm border ${
-                                availableOperators >= totalRequiredOperators 
-                                    ? 'bg-green-500 border-green-600 shadow-[0_0_8px_rgba(34,197,94,0.6)]' 
-                                    : 'bg-red-500 border-red-600 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.6)]'
-                            }`} title={availableOperators >= totalRequiredOperators ? "Cobertura Suficiente" : "Déficit de Personal"} />
-                        </div>
-                        <p className={`text-2xl font-bold ${availableOperators >= totalRequiredOperators ? 'text-green-900' : 'text-red-900'}`}>
-                            {availableOperators}
-                        </p>
-                    </div>
-                    {availableOperators >= totalRequiredOperators ? 
-                        <Users className="w-8 h-8 text-green-500/50" /> : 
-                        <AlertTriangle className="w-8 h-8 text-red-500/50" />
-                    }
-                    {/* Background decoration for semaphore effect */}
-                    <div className={`absolute -right-4 -top-4 w-24 h-24 rounded-full blur-3xl opacity-20 pointer-events-none ${
-                        availableOperators >= totalRequiredOperators ? 'bg-green-500' : 'bg-red-500'
-                    }`} />
-                </CardContent>
-            </Card>
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
         </div>
-
-        {/* Deficit Alert */}
-        {availableOperators < totalRequiredOperators && (
-            <Alert variant="destructive" className="shadow-sm bg-red-50 border-red-200">
-                <AlertTriangle className="h-4 w-4 text-red-600" />
-                <AlertTitle className="text-red-800">Déficit de Operadores</AlertTitle>
-                <AlertDescription className="text-red-700">
-                    Se requieren {totalRequiredOperators} operadores pero solo hay {availableOperators} disponibles.
-                    Por favor, revise la asignación de personal.
-                </AlertDescription>
-            </Alert>
-        )}
       </div>
-      
-      {/* Scrollable Main Content */}
-      <div className="flex-1 min-h-0 overflow-hidden">
-        <div className="grid grid-cols-1 lg:grid-cols-1 gap-4 h-full">
 
-          <Card className="flex flex-col h-full border-slate-200 shadow-sm overflow-hidden">
-            <CardHeader className="pb-2 pt-3 px-4 border-b shrink-0">
-              <div className="flex items-center justify-between gap-3">
-                <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                  <div className="bg-blue-100 p-1 rounded">
-                    <Factory className="w-3.5 h-3.5 text-blue-600" />
+      {/* Toolbar */}
+      <div className="flex-none flex flex-col xl:flex-row gap-2 justify-between items-start xl:items-center">
+        <div className="flex flex-col sm:flex-row items-center gap-2 w-full xl:w-auto">
+          <div className="flex flex-col sm:flex-row items-center gap-2 bg-white dark:bg-slate-900 p-1 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm w-full xl:w-auto">
+            <div className="flex items-center px-2 border-r border-slate-200 dark:border-slate-800">
+              <Filter className="w-4 h-4 text-slate-500 mr-2" />
+              <span className="text-sm font-medium text-slate-700">Filtros</span>
+            </div>
+            <Input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="border-0 shadow-none focus-visible:ring-0 w-full sm:w-auto h-8"
+            />
+            <div className="h-6 w-px bg-slate-200 hidden sm:block" />
+            <Select value={selectedShift} onValueChange={setSelectedShift}>
+              <SelectTrigger className="w-full sm:w-[180px] border-0 shadow-none focus:ring-0 h-8">
+                <SelectValue placeholder="Turno" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Mañana">☀️ Mañana</SelectItem>
+                <SelectItem value="Tarde">🌙 Tarde</SelectItem>
+                <SelectItem value="Ambos">☀️🌙 Ambos (paralelo)</SelectItem>
+              </SelectContent>
+            </Select>
+            <div className="h-6 w-px bg-slate-200 hidden sm:block" />
+            <div className="px-3 text-sm font-medium text-slate-600 whitespace-nowrap flex items-center gap-2">
+              Equipo: <span className="text-slate-900 bg-slate-100 px-2 py-0.5 rounded text-xs">
+                {selectedTeamObj?.team_name || "Sin equipo"}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-2 w-full xl:w-auto justify-end">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => autoProposalMutation.mutate()}
+            disabled={autoProposalMutation.isPending || !selectedDate || !selectedTeam || ganttSuggestions.size === 0}
+            className="h-9 gap-2 border-amber-500 text-amber-700 hover:bg-amber-50 bg-white"
+            title="Activa las máquinas sugeridas por el Gantt con sus operadores"
+          >
+            <Sparkles className="w-4 h-4" />
+            {autoProposalMutation.isPending ? "Aplicando..." : "Propuesta Gantt"}
+          </Button>
+
+          <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm" className="h-9 gap-2 bg-white border-slate-200">
+                <Copy className="w-4 h-4" />
+                <span className="hidden md:inline">Importar</span>
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>Importar Planificación</DialogTitle>
+                <DialogDescription>Copie la configuración de máquinas de otro día o equipo.</DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <Button variant="secondary" className="w-full justify-start gap-3" onClick={handleCopyPreviousDay} disabled={importMutation.isPending}>
+                  <Repeat className="w-4 h-4" />
+                  <div className="flex flex-col items-start">
+                    <span className="font-medium">Repetir Día Anterior</span>
+                    <span className="text-xs text-slate-500">Mismo equipo, fecha ayer</span>
                   </div>
-                  Mapa de Áreas y Máquinas
-                  <span className="text-slate-400 font-normal text-xs">
-                    {plannedMachines.length} activas
-                  </span>
-                </CardTitle>
-                <div className="flex items-center gap-3">
-                  <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 p-0.5">
-                    <Button
-                      variant={configMode === "manual" ? "default" : "ghost"}
-                      size="sm"
-                      className={cn(
-                        "h-7 px-3 text-[11px]",
-                        configMode === "manual"
-                          ? "bg-blue-600 text-white hover:bg-blue-700"
-                          : "text-slate-600 hover:bg-slate-100"
-                      )}
-                      onClick={() => setConfigMode("manual")}
-                    >
-                      Config. manual
-                    </Button>
-                    <Button
-                      variant={configMode === "suggested" ? "default" : "ghost"}
-                      size="sm"
-                      className={cn(
-                        "h-7 px-3 text-[11px]",
-                        configMode === "suggested"
-                          ? "bg-emerald-600 text-white hover:bg-emerald-700"
-                          : "text-slate-600 hover:bg-slate-100"
-                      )}
-                      onClick={() => setConfigMode("suggested")}
-                    >
-                      Config. sugerida
-                    </Button>
-                  </div>
-                  <div className="text-[11px] text-slate-500">
-                    {totalRequiredOperators} operarios asignados
-                  </div>
+                </Button>
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
+                  <div className="relative flex justify-center text-xs uppercase"><span className="bg-background px-2 text-muted-foreground">O personalizar</span></div>
+                </div>
+                <div className="grid gap-2">
+                  <label className="text-sm font-medium">Fecha Origen</label>
+                  <Input type="date" value={importDate} onChange={(e) => setImportDate(e.target.value)} />
+                </div>
+                <div className="grid gap-2">
+                  <label className="text-sm font-medium">Equipo Origen</label>
+                  <Select value={importTeam} onValueChange={setImportTeam}>
+                    <SelectTrigger><SelectValue placeholder="Seleccionar equipo..." /></SelectTrigger>
+                    <SelectContent>
+                      {teams.map(t => <SelectItem key={t.team_key} value={t.team_key}>{t.team_name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
-            </CardHeader>
-            <CardContent className="flex-1 overflow-hidden p-0 min-h-0 bg-slate-50/10">
-              <ScrollArea className="h-full w-full">
-                <div className="p-3 space-y-3">
-                  {areasWithMachines.map(group => {
-                    const totalInArea = group.machines.length;
-                    const activeInAreaManual = group.machines.filter(m => {
-                      const planning = activePlanningsMap.get(String(m.id));
-                      return planning && !planning.auto_suggested;
-                    }).length;
-                    const activeInAreaSuggested = group.machines.filter(m => {
-                      const planning = activePlanningsMap.get(String(m.id));
-                      return planning && planning.auto_suggested;
-                    }).length;
-                    const activeInArea =
-                      configMode === "manual" ? activeInAreaManual : activeInAreaSuggested;
+              <DialogFooter>
+                <Button onClick={handleImportCustom} disabled={!importDate || !importTeam || importMutation.isPending}>
+                  {importMutation.isPending ? "Importando..." : "Importar Selección"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
-                    return (
-                      <div
-                        key={group.areaId}
-                        className="border border-slate-200 rounded-lg bg-white/70 overflow-hidden"
-                      >
-                        <div className="px-3 py-2 flex items-center justify-between bg-slate-50 border-b border-slate-200">
-                          <div className="flex items-center gap-2">
-                            <div className="w-6 h-6 rounded bg-blue-50 flex items-center justify-center">
-                              <Factory className="w-3.5 h-3.5 text-blue-600" />
-                            </div>
-                            <div className="flex flex-col">
-                              <span className="text-xs font-semibold text-slate-800">
-                                {group.areaName || "Sin Área"}
-                              </span>
-                              <span className="text-[10px] text-slate-400">
-                                {totalInArea} máquinas
-                              </span>
-                            </div>
-                          </div>
-                          <span className="text-[10px] text-slate-500">
-                            {activeInArea}/{totalInArea} activas
-                          </span>
-                        </div>
-                        <div className="p-2">
-                          {group.machines.length === 0 ? (
-                            <div className="text-[11px] text-slate-400 italic px-1 py-3">
-                              No hay máquinas asignadas a esta área.
-                            </div>
-                          ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-1.5">
-                              {group.machines.map(machine => {
-                                const planning = activePlanningsMap.get(String(machine.id));
-                                const isActiveManual = !!(planning && !planning.auto_suggested);
-                                const isActiveSuggested = !!(planning && planning.auto_suggested);
-                                const isActive =
-                                  configMode === "manual" ? isActiveManual : isActiveSuggested;
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={handleClearAll}
+            disabled={plannings.length === 0 || clearMutation.isPending}
+            className="h-9"
+          >
+            <Trash2 className="w-4 h-4 mr-1" />
+            {clearMutation.isPending ? "Limpiando..." : "Limpiar"}
+          </Button>
+        </div>
+      </div>
 
-                                const operatorsValue =
-                                  planning && (planning.operadores_necesarios !== undefined && planning.operadores_necesarios !== null)
-                                    ? planning.operadores_necesarios
-                                    : "";
-                                const avgVal = avgOperatorsByMachine.get(String(machine.id));
-                                const avgDisplay = typeof avgVal === 'number' ? avgVal.toFixed(1) : null;
-                                const avgRounded = typeof avgVal === 'number' ? Math.max(1, Math.round(avgVal)) : null;
+      {/* Gantt info bar */}
+      {ganttSuggestions.size > 0 && (
+        <div className="flex-none flex items-center gap-2 px-3 py-1.5 rounded-lg bg-amber-50 border border-amber-200 text-[11px] text-amber-700">
+          <Sparkles className="w-3.5 h-3.5 flex-shrink-0" />
+          <span>
+            <strong>{ganttSuggestions.size}</strong> máquina(s) con órdenes en el Gantt para {selectedDate}.
+            Las máquinas sugeridas se muestran con borde ámbar. Pulsa "Propuesta Gantt" para activarlas automáticamente.
+          </span>
+        </div>
+      )}
 
-                                return (
-                                  <div
-                                    key={machine.id}
-                                    className={cn(
-                                      "flex items-center gap-2 rounded-md border px-2 py-1.5 bg-white",
-                                      isActive
-                                        ? "border-emerald-300 bg-emerald-50/60"
-                                        : "border-slate-200 opacity-80"
-                                    )}
-                                  >
-                                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                                      <Checkbox
-                                        id={`machine-${group.areaId}-${machine.id}`}
-                                        checked={isActive}
-                                        disabled={configMode === "suggested"}
-                                        onCheckedChange={checked => {
-                                          if (configMode !== "manual") return;
-                                          if (checked) {
-                                            if (!isActiveManual) {
-                                              handleAddMachine(machine);
-                                            }
-                                          } else if (planning) {
-                                            handleDeletePlanning(planning.id);
-                                          }
-                                        }}
-                                      />
-                                      <div className="flex flex-col flex-1 min-w-0">
-                                        <label
-                                          htmlFor={`machine-${group.areaId}-${machine.id}`}
-                                          className="text-[11px] font-medium text-slate-800 truncate cursor-pointer"
-                                          title={getMachineAlias(machine)}
-                                        >
-                                          {getMachineAlias(machine)}
-                                        </label>
-                                        <div className="flex items-center gap-1 text-[10px] text-slate-400">
-                                          {machine.codigo_maquina && (
-                                            <span className="font-mono bg-slate-50 border border-slate-200 rounded px-1">
-                                              {machine.codigo_maquina}
-                                            </span>
-                                          )}
-                                          {(machine.room_name || machine.ubicacion) && (
-                                            <span className="truncate">
-                                              {machine.room_name || machine.ubicacion}
-                                            </span>
-                                          )}
-                                        </div>
-                                      </div>
-                                    </div>
-                                    <div className="flex items-center gap-1">
-                                      {configMode === "manual" ? (
-                                        <>
-                                          <span className="text-[10px] text-slate-400">Op.</span>
-                                          <Input
-                                            type="number"
-                                            min="0"
-                                            className="h-6 w-12 px-1 text-center text-[11px] font-semibold bg-slate-50 border-slate-200 focus:border-blue-400 focus:ring-1 focus:ring-blue-400"
-                                            disabled={!isActiveManual || !planning}
-                                            value={operatorsValue}
-                                            onChange={e => {
-                                              if (planning) {
-                                                handleOperatorChange(
-                                                  planning.id,
-                                                  e.target.value
-                                                );
-                                              }
-                                            }}
-                                          />
-                                          {avgDisplay && (
-                                            <span className="text-[10px] text-slate-500 ml-1">
-                                              avg {avgDisplay}
-                                            </span>
-                                          )}
-                                          {isActiveManual && planning && avgRounded && Number(operatorsValue || 0) !== avgRounded && (
-                                            <Button
-                                              variant="secondary"
-                                              size="sm"
-                                              className="h-6 text-[10px] px-2 ml-1"
-                                              onClick={() => handleOperatorChange(planning.id, String(avgRounded))}
-                                            >
-                                              Aplicar
-                                            </Button>
-                                          )}
-                                        </>
-                                      ) : (
-                                        planning &&
-                                        planning.auto_suggested && (
-                                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-300">
-                                            Sugerida
-                                          </span>
-                                        )
-                                      )}
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </ScrollArea>
+      {/* Shift panels */}
+      <div className={isParallel ? "flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-2 gap-3" : "flex-1 min-h-0"}>
+        {renderShifts.map(shift => (
+          <Card key={shift} className="flex flex-col h-full border-slate-200 shadow-sm overflow-hidden min-h-0">
+            <CardContent className="flex-1 min-h-0 p-3">
+              <ProductionShiftPanel
+                shift={shift}
+                selectedDate={selectedDate}
+                selectedTeam={selectedTeam}
+                machines={machines}
+                areasWithMachines={areasWithMachines}
+                ganttSuggestions={ganttSuggestions}
+                plannings={plannings}
+                employees={employees}
+                teams={teams}
+                dailyPlansHistory={dailyPlansHistory}
+                onAddMachine={handleAddMachine}
+                onDeletePlanning={handleDeletePlanning}
+                onOperatorChange={handleOperatorChange}
+              />
             </CardContent>
           </Card>
-        </div>
+        ))}
       </div>
     </div>
   );
