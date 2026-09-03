@@ -172,7 +172,7 @@ export default function OrderImport() {
   };
 
   // ─── MAIN SYNC ─────────────────────────────────────────────────────────────────
-  // Fetches productions from CDEApp via the browser (to bypass Cloudflare blocks
+  // Fetches productions from CDEApp via the browser (bypasses Cloudflare blocks
   // on backend server IPs), then sends them to the backend for DB processing.
   const syncAll = async () => {
     setSyncing(true);
