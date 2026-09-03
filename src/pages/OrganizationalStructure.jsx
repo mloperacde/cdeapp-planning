@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Button } from "@/components/ui/button";
@@ -357,15 +357,17 @@ function MaintenanceConfigWrapper() {
   });
 
   const [config, setConfig] = useState({ areas: [], assignments: {}, machine_assignments: {} });
+  const hasLoadedRef = useRef(false);
 
   useEffect(() => {
-    if (!configRecord) return;
+    if (!configRecord || hasLoadedRef.current) return;
     try {
       // Leer de value, app_subtitle o description (por compatibilidad)
       const raw = configRecord.value || configRecord.app_subtitle || configRecord.description || null;
       if (!raw) return;
       const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
       setConfig(prev => ({ ...prev, ...parsed }));
+      hasLoadedRef.current = true;
     } catch (e) {
       console.error("Error parsing maintenance config", e);
     }
@@ -477,14 +479,16 @@ function ManufacturingConfigWrapper() {
     },
     tasks: [] // { id, time, description, role }
   });
+  const hasLoadedRef = useRef(false);
 
   useEffect(() => {
-    if (!configRecord) return;
+    if (!configRecord || hasLoadedRef.current) return;
     try {
       let raw = configRecord.value || configRecord.description || configRecord.app_subtitle || null;
       if (!raw) return;
       const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
       setConfig(prev => ({ ...prev, ...parsed }));
+      hasLoadedRef.current = true;
     } catch (e) {
       console.error("Error parsing manufacturing config", e);
     }

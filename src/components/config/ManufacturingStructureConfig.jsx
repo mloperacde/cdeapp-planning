@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Trash2, Factory, Clock, RefreshCw, GripVertical, Pencil, X, Cog, ClipboardList } from "lucide-react";
+import { Plus, Trash2, Factory, Clock, RefreshCw, GripVertical, Pencil, X, Cog, ClipboardList, Check } from "lucide-react";
 import { cdeApi } from "@/services/cdeApi";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
@@ -285,6 +285,7 @@ export function StructureConfig({ config, setConfig }) {
       areas: prev.areas.map(a => a.id === editingArea.id ? { ...a, name: editingArea.name } : a)
     }));
     setEditingArea(null);
+    toast.info("Nombre actualizado. Recuerda pulsar \"Guardar Cambios\" para persistir.");
   };
 
   const addRoom = (areaId, name) => {
@@ -454,9 +455,13 @@ export function StructureConfig({ config, setConfig }) {
                                   onChange={(e) => setEditingArea({...editingArea, name: e.target.value})}
                                   className="h-8 text-sm"
                                   autoFocus
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') updateAreaName();
+                                    if (e.key === 'Escape') setEditingArea(null);
+                                  }}
                                 />
-                                <Button size="icon" className="h-8 w-8" onClick={updateAreaName}>
-                                  <Plus className="w-4 h-4" />
+                                <Button size="icon" className="h-8 w-8 bg-green-600 hover:bg-green-700" onClick={updateAreaName}>
+                                  <Check className="w-4 h-4" />
                                 </Button>
                               </div>
                             ) : (
