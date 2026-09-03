@@ -183,7 +183,13 @@ export default function OrderImport() {
       // 1. Fetch ALL productions from CDEApp via browser (paginated)
       //    Direct browser fetch bypasses Cloudflare blocks on backend server IPs.
       if (!cdeApp.getApiKey()) {
-        throw new Error('API Key de CDEApp no configurada. Configúrela en: Configuración → Sincronización CDEApp.');
+        setProgressLabel('Obteniendo API Key del servidor...');
+        const keyRes = await base44.functions.invoke('getCdeApiKey', {});
+        const keyData = keyRes?.data || {};
+        if (!keyData.apiKey) {
+          throw new Error('No se pudo obtener la API Key de CDEApp. Contacte al administrador.');
+        }
+        cdeApp.setApiKey(keyData.apiKey);
       }
       const LIMIT = 500;
       let skip = 0;
