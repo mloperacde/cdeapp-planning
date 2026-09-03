@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { base44 } from '../api/base44Client';
+import { cdeApp } from '@/api/cdeAppClient';
 import { buildMachinesMap } from "@/utils/machineResolution";
 import { toast } from 'sonner';
 import { Table as TableIcon, RefreshCw, Loader2, Search, X, Trash2, CheckCircle2, AlertTriangle, Info } from 'lucide-react';
@@ -171,18 +172,36 @@ export default function OrderImport() {
   };
 
   // ─── MAIN SYNC ─────────────────────────────────────────────────────────────────
-  // Delegates entirely to the backend function (scheduledOrderSync) to avoid
-  // frontend rate-limit issues from hundreds of individual API calls.
+  // Fetches productions from CDEApp via the browser (to bypass Cloudflare blocks
+  // on backend server IPs), then sends them to the backend for DB processing.
   const syncAll = async () => {
     setSyncing(true);
     setProgress(0);
-    setProgressLabel('Iniciando sincronización en el servidor...');
+    setProgressLabel('Conectando con CDEApp desde el navegador...');
 
     try {
-      setProgress(10);
-      setProgressLabel('Conectando con CDEApp y procesando órdenes...');
+      // 1. Fetch ALL productions from CDEApp via browser (paginated)
+      //    Direct browser fetch bypasses Cloudflare blocks on backend server IPs.
+      if (!cdeApp.getApiKey()) {
+        throw new Error('API Key de CDEApp no configurada. Configúrela en: Configuración → Sincronización CDEApp.');
+      }
+      const LIMIT = 500;
+      let skip = 0;
+      const allRawOrders = [];
+      while (true) {
+        setProgressLabel(`Descargando órdenes de CDEApp (${allRawOrders.length} recibidas)...`);
+        const page = await cdeApp.syncProductions({ limit: LIMIT, skip });
+        const items = Array.isArray(page) ? page : (page?.data || page?.results || []);
+        allRawOrders.push(...items);
+        if (items.length < LIMIT) break;
+        skip += LIMIT;
+      }
 
-      const res = await base44.functions.invoke('scheduledOrderSync', {});
+      setProgress(40);
+      setProgressLabel(`Procesando ${allRawOrders.length} órdenes en el servidor...`);
+
+      // 2. Send raw orders to backend for DB sync (delete + create)
+      const res = await base44.functions.invoke('scheduledOrderSync', { rawOrders: allRawOrders });
       const data = res?.data || {};
 
       setProgress(100);
@@ -192,7 +211,7 @@ export default function OrderImport() {
         setLastSyncStats(stats);
         toast.success(`Sincronización completa: ${data.created} creadas, ${data.deleted} eliminadas.`);
       } else {
-        toast.error('Error en la sincronización: ' + (data.message || 'Error desconocido'));
+        toast.error('Error en la sincronización: ' + (data.message || data.error || 'Error desconocido'));
       }
 
       await loadLocalOrders();

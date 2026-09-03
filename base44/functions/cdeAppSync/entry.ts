@@ -28,7 +28,8 @@ async function cdeApiFetch(endpoint, apiKey, params = {}, retries = MAX_RETRIES)
         headers: {
           'X-API-Key': apiKey,
           'Content-Type': 'application/json',
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36'
         },
         signal: AbortSignal.timeout(30000) // 30s timeout
       });

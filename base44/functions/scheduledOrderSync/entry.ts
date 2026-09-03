@@ -9,7 +9,12 @@ async function cdeApiFetch(endpoint, apiKey, params = {}) {
   });
   const response = await fetch(url.toString(), {
     method: 'GET',
-    headers: { 'X-API-Key': apiKey, 'Content-Type': 'application/json' }
+    headers: {
+      'X-API-Key': apiKey,
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36'
+    }
   });
   if (!response.ok) {
     const text = await response.text().catch(() => '');
@@ -81,11 +86,17 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'CdeApp secret no configurado' }, { status: 500 });
     }
 
+    // Accept raw orders from the request body (frontend-fetched) to bypass
+    // Cloudflare blocks on backend server IPs. If not provided, fetch from CDEApp.
+    const body = await req.json().catch(() => ({}));
+    let rawOrders = Array.isArray(body.rawOrders) ? body.rawOrders : null;
+
     console.log(`[scheduledOrderSync] Iniciando - ${new Date().toISOString()}`);
 
-    // 1. Fetch ALL productions from CDEApp
-    const rawOrders = await fetchAllProductions(apiKey);
-    console.log(`[scheduledOrderSync] ${rawOrders.length} órdenes recibidas de CDEApp`);
+    if (!rawOrders) {
+      rawOrders = await fetchAllProductions(apiKey);
+    }
+    console.log(`[scheduledOrderSync] ${rawOrders.length} órdenes recibidas${body.rawOrders ? ' (desde frontend)' : ' (desde CDEApp)'}`);
 
     if (rawOrders.length === 0) {
       return Response.json({ success: true, message: 'Sin órdenes que sincronizar', synced: 0 });
