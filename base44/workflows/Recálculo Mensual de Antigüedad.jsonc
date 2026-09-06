@@ -1,0 +1,44 @@
+{
+  "name": "Rec\u00e1lculo Mensual de Antig\u00fcedad",
+  "description": "Recalcula autom\u00e1ticamente los beneficios por antig\u00fcedad cada mes y aplica nuevos pluses seg\u00fan las bandas de antig\u00fcedad configuradas",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "scheduled",
+      "events": [],
+      "schedule_mode": "recurring",
+      "cron_expression": "0 1 1 * *",
+      "one_time_date": null,
+      "timezone": "UTC",
+      "interval_value": null,
+      "interval_unit": null,
+      "interval_anchor": null,
+      "ends_type": "never",
+      "ends_on_date": null,
+      "ends_after_count": null
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "rec_lculo_mensual_de_antig_edad",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "run_function": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "calculateSeniorityBenefits",
+            "args": {}
+          },
+          "then": "end"
+        }
+      }
+    ]
+  },
+  "x-base44-migrated-from-automation": {
+    "legacy_payload_function": "calculateSeniorityBenefits"
+  }
+}

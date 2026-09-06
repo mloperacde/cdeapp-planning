@@ -1,0 +1,46 @@
+{
+  "name": "Auditor\u00eda Turno Ma\u00f1ana - Confirmaci\u00f3n Ausencias (08:00)",
+  "description": "Segundo checkpoint turno ma\u00f1ana: confirma ausencias (\u226530 min sin fichar), crea Absence formal autom\u00e1tica",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "scheduled",
+      "events": [],
+      "schedule_mode": "recurring",
+      "cron_expression": "0 6 * * 1-5",
+      "one_time_date": null,
+      "timezone": "UTC",
+      "interval_value": null,
+      "interval_unit": null,
+      "interval_anchor": null,
+      "ends_type": "never",
+      "ends_on_date": null,
+      "ends_after_count": null
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "auditor_a_turno_ma_ana_confirmaci_n_ausencias_08_00",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "run_function": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "shiftAudit",
+            "args": {
+              "mode": "check_morning"
+            }
+          },
+          "then": "end"
+        }
+      }
+    ]
+  },
+  "x-base44-migrated-from-automation": {
+    "legacy_payload_function": "shiftAudit"
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "name": "Consolidaci\u00f3n Nocturna - L-V 23:30",
+  "description": "Ejecuta consolidaci\u00f3n completa de m\u00e1quinas y empleados cada noche L-V, detecta anomal\u00edas y env\u00eda notificaci\u00f3n email si las hay.",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "scheduled",
+      "events": [],
+      "schedule_mode": "recurring",
+      "cron_expression": "30 21 * * 1-5",
+      "one_time_date": null,
+      "timezone": "UTC",
+      "interval_value": null,
+      "interval_unit": null,
+      "interval_anchor": null,
+      "ends_type": "never",
+      "ends_on_date": null,
+      "ends_after_count": null
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "consolidaci_n_nocturna_l_v_23_30",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "run_function": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "nightlyConsolidationRunner",
+            "args": {}
+          },
+          "then": "end"
+        }
+      }
+    ]
+  },
+  "x-base44-migrated-from-automation": {
+    "legacy_payload_function": "nightlyConsolidationRunner"
+  }
+}

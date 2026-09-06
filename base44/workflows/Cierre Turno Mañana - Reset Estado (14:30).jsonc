@@ -1,0 +1,46 @@
+{
+  "name": "Cierre Turno Ma\u00f1ana - Reset Estado (14:30)",
+  "description": "Reset estado_presencia a 'No Aplica' para empleados de turno ma\u00f1ana. Prepara el sistema para el siguiente turno sin arrastrar estados previos.",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "scheduled",
+      "events": [],
+      "schedule_mode": "recurring",
+      "cron_expression": "30 12 * * 1-5",
+      "one_time_date": null,
+      "timezone": "UTC",
+      "interval_value": null,
+      "interval_unit": null,
+      "interval_anchor": null,
+      "ends_type": "never",
+      "ends_on_date": null,
+      "ends_after_count": null
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "cierre_turno_ma_ana_reset_estado_14_30",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "run_function": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "shiftAudit",
+            "args": {
+              "mode": "close_morning"
+            }
+          },
+          "then": "end"
+        }
+      }
+    ]
+  },
+  "x-base44-migrated-from-automation": {
+    "legacy_payload_function": "shiftAudit"
+  }
+}

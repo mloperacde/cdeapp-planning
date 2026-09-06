@@ -1,0 +1,46 @@
+{
+  "name": "Auditor\u00eda Turno Tarde - Check (15:30 Madrid)",
+  "description": "Primer checkpoint turno tarde: corre a las 15:30 Madrid, DESPU\u00c9S del sync de las 15:00. Detecta presentes, retrasos y potencialmente ausentes. Acepta fichajes desde 30 min antes del turno.",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "scheduled",
+      "events": [],
+      "schedule_mode": "recurring",
+      "cron_expression": "30 13 * * 1-5",
+      "one_time_date": null,
+      "timezone": "UTC",
+      "interval_value": null,
+      "interval_unit": null,
+      "interval_anchor": null,
+      "ends_type": "never",
+      "ends_on_date": null,
+      "ends_after_count": null
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "auditor_a_turno_tarde_check_15_30_madrid",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "run_function": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "shiftAudit",
+            "args": {
+              "mode": "check_afternoon"
+            }
+          },
+          "then": "end"
+        }
+      }
+    ]
+  },
+  "x-base44-migrated-from-automation": {
+    "legacy_payload_function": "shiftAudit"
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "name": "Rec\u00e1lculo Antig\u00fcedad - L-V 23:45",
+  "description": "Recalcula y aplica beneficios de antig\u00fcedad a todos los empleados activos. Corre de lunes a viernes a las 23:45 hora Madrid (21:45 UTC).",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "scheduled",
+      "events": [],
+      "schedule_mode": "recurring",
+      "cron_expression": "45 21 * * 1-5",
+      "one_time_date": null,
+      "timezone": "UTC",
+      "interval_value": null,
+      "interval_unit": null,
+      "interval_anchor": null,
+      "ends_type": "never",
+      "ends_on_date": null,
+      "ends_after_count": null
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "rec_lculo_antig_edad_l_v_23_45",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "run_function": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "calculateSeniorityBenefits",
+            "args": {}
+          },
+          "then": "end"
+        }
+      }
+    ]
+  },
+  "x-base44-migrated-from-automation": {
+    "legacy_payload_function": "calculateSeniorityBenefits"
+  }
+}
