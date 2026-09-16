@@ -8,9 +8,18 @@ import { AlertTriangle, CheckCircle2, ExternalLink, Users, Database, Trash2 } fr
 import { base44 } from "@/api/base44Client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { usePersistentAppConfig } from "@/hooks/usePersistentAppConfig";
 
 export default function LockerAudit({ employees, lockerAssignments }) {
   const queryClient = useQueryClient();
+
+  const { data: config = { mode: "all", departments: {} } } = usePersistentAppConfig(
+    "locker_requirement_config",
+    { mode: "all", departments: {} },
+    "lockerRequirementConfig",
+    false,
+    { enabled: true }
+  );
 
   const auditResults = useMemo(() => {
     const results = {
@@ -21,21 +30,41 @@ export default function LockerAudit({ employees, lockerAssignments }) {
       stats: {
         totalActive: 0,
         totalInactive: 0,
-        totalAssignments: 0
+        totalAssignments: 0,
+        totalRequireLocker: 0
       }
     };
 
-    const isActive = (emp) => !emp.estado_empleado || emp.estado_empleado === "Alta";
+    const isActive = (emp) => (emp.estado_empleado || "Alta") === "Alta";
+
+    // Mismo criterio que la pestaña "Sin Taquilla": derecho según configuración
+    const requiresLocker = (emp) => {
+      if (!isActive(emp)) return false;
+      if (config.mode !== "config") return true;
+      const deptConfig = config.departments?.[emp.departamento];
+      if (!deptConfig || !deptConfig.enabled) return false;
+      if (deptConfig.allPositions) return true;
+      return (deptConfig.positions || []).includes(emp.puesto);
+    };
+
+    // Mismo criterio que la pestaña "Sin Taquilla": tiene taquilla realmente asignada
+    const hasAssignedLocker = (emp) => {
+      const assignment = lockerAssignments.find(la => String(la.employee_id) === String(emp.id));
+      if (!assignment) return false;
+      if (assignment.requiere_taquilla === false) return false;
+      return assignment.numero_taquilla_actual && cleanLockerNumber(assignment.numero_taquilla_actual) !== "";
+    };
 
     const activeEmployees = employees.filter(isActive);
     results.stats.totalActive = activeEmployees.length;
     results.stats.totalInactive = employees.length - activeEmployees.length;
     results.stats.totalAssignments = lockerAssignments.length;
+    results.stats.totalRequireLocker = employees.filter(requiresLocker).length;
 
-    // Empleados activos sin registro de asignación (los inactivos no son problema)
-    activeEmployees.forEach(emp => {
-      const hasAssignment = lockerAssignments.find(la => String(la.employee_id) === String(emp.id));
-      if (!hasAssignment) {
+    // Empleados con derecho a taquilla pero SIN taquilla asignada (coincide con pestaña Sin Taquilla)
+    employees.forEach(emp => {
+      if (!requiresLocker(emp)) return;
+      if (!hasAssignedLocker(emp)) {
         results.employeesWithoutAssignment.push(emp);
       }
     });
@@ -81,7 +110,7 @@ export default function LockerAudit({ employees, lockerAssignments }) {
     });
 
     return results;
-  }, [employees, lockerAssignments]);
+  }, [employees, lockerAssignments, config]);
 
   const deleteDuplicatesMutation = useMutation({
     mutationFn: async (duplicates) => {
@@ -168,13 +197,21 @@ export default function LockerAudit({ employees, lockerAssignments }) {
           </div>
         </CardHeader>
         <CardContent className="p-6">
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6">
             <div className="p-4 rounded-lg border-2 bg-blue-50 border-blue-200">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium text-slate-700">Activos</span>
                 <Badge className="bg-blue-600">{auditResults.stats.totalActive}</Badge>
               </div>
               <p className="text-xs text-slate-600">Empleados en alta</p>
+            </div>
+
+            <div className="p-4 rounded-lg border-2 bg-indigo-50 border-indigo-200">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-slate-700">Con derecho</span>
+                <Badge className="bg-indigo-600">{auditResults.stats.totalRequireLocker}</Badge>
+              </div>
+              <p className="text-xs text-slate-600">Requieren taquilla (según config)</p>
             </div>
 
             <div className="p-4 rounded-lg border-2 bg-slate-50 border-slate-200">
@@ -191,12 +228,12 @@ export default function LockerAudit({ employees, lockerAssignments }) {
                 : 'bg-green-100 border-green-300'
             }`}>
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-slate-700">Sin Registro</span>
+                <span className="text-sm font-medium text-slate-700">Sin Taquilla</span>
                 <Badge className={auditResults.employeesWithoutAssignment.length > 0 ? 'bg-amber-600' : 'bg-green-600'}>
                   {auditResults.employeesWithoutAssignment.length}
                 </Badge>
               </div>
-              <p className="text-xs text-slate-600">Activos sin asignación creada</p>
+              <p className="text-xs text-slate-600">Con derecho pero sin taquilla asignada</p>
             </div>
 
             <div className={`p-4 rounded-lg border-2 ${
@@ -240,7 +277,7 @@ export default function LockerAudit({ employees, lockerAssignments }) {
                 <div className="border-2 border-amber-300 rounded-lg p-4 bg-amber-50">
                   <h3 className="font-semibold text-amber-900 mb-3 flex items-center gap-2">
                     <Users className="w-4 h-4" />
-                    Empleados sin Registro de Asignación ({auditResults.employeesWithoutAssignment.length})
+                    Empleados con derecho a taquilla sin asignar ({auditResults.employeesWithoutAssignment.length})
                   </h3>
                   <div className="space-y-2 max-h-48 overflow-y-auto">
                     {auditResults.employeesWithoutAssignment.slice(0, 10).map(emp => (
