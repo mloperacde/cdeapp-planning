@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/table";
 import {
   FileSpreadsheet, Download, Filter, RefreshCw, CalendarDays,
-  Users, Clock, TrendingDown, CheckCircle2, XCircle, AlertCircle, Bot,
+  Users, Clock, TrendingDown, CheckCircle2, XCircle, AlertCircle, Bot, Baby, HeartHandshake,
 } from "lucide-react";
 import { format, differenceInCalendarDays, startOfMonth, endOfMonth, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
@@ -40,9 +40,16 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
   const [filterStatus, setFilterStatus] = useState("all");
 
   const { data: absences = [], isLoading } = useQuery({
-    queryKey: ['absences'],
+    queryKey: ['absences-report'],
     queryFn: () => base44.entities.Absence.list('-fecha_inicio', 5000),
     staleTime: 0,
+  });
+
+  // Control de presencia: fuente de verdad para días sin fichaje
+  const { data: attendanceRecords = [] } = useQuery({
+    queryKey: ['attendanceRecords-report'],
+    queryFn: () => base44.entities.AttendanceRecord.list('-record_date', 5000),
+    staleTime: 60 * 1000,
   });
 
   const { data: employees = [] } = useQuery({
@@ -102,6 +109,19 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
     });
     return { globalVacationSet: globalSet, employeeVacationMap: empMap };
   }, [vacations]);
+
+  // Control de presencia: mapa empleado → fechas con fichaje, y set de fechas con datos disponibles
+  const { attendanceByEmp, datesWithData } = useMemo(() => {
+    const byEmp = {};
+    const datesSet = new Set();
+    attendanceRecords.forEach(r => {
+      if (!r.employee_id || !r.record_date) return;
+      if (!byEmp[r.employee_id]) byEmp[r.employee_id] = new Set();
+      byEmp[r.employee_id].add(r.record_date);
+      datesSet.add(r.record_date);
+    });
+    return { attendanceByEmp: byEmp, datesWithData: datesSet };
+  }, [attendanceRecords]);
 
   const getEmp = (id) => employees.find(e => String(e.id) === String(id));
   const getType = (abs) => absenceTypes.find(t => t.id === abs.absence_type_id) || null;
@@ -254,54 +274,138 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
     return Object.entries(map).map(([dept, count]) => ({ dept, count })).sort((a, b) => b.count - a.count);
   }, [filtered, employees]);
 
-  // Resumen por empleado: últimos 12 meses + mes en curso + estado actual + conteo por tipo (dato)
+  // Resumen por empleado: el control de presencia es la fuente de verdad.
+  // Para cada día laborable: si hay datos de fichaje y el empleado no fichó → ausente.
+  // Si no hay datos de fichaje para ese día → se usan los registros formales de ausencia.
+  // Se añade antigüedad, estado del empleado (Alta/Baja/Excedencia) e indicadores de maternidad/matrimonio.
   const employeeSummary = useMemo(() => {
     const now = new Date();
     const win12Start = new Date(now); win12Start.setFullYear(win12Start.getFullYear() - 1); win12Start.setHours(0, 0, 0, 0);
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
     const winEnd = new Date(now); winEnd.setHours(23, 59, 59, 999);
 
-    // Agrupar ausencias por empleado
+    // Agrupar ausencias formales por empleado (no canceladas ni rechazadas)
     const absByEmp = {};
     absences.forEach(a => {
+      if (a.estado_aprobacion === 'Cancelada' || a.estado_aprobacion === 'Rechazada') return;
       const k = String(a.employee_id);
       if (!absByEmp[k]) absByEmp[k] = [];
       absByEmp[k].push(a);
     });
 
+    const fmtDate = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+
+    // ¿Una ausencia formal cubre una fecha concreta?
+    const coversDate = (abs, dateStr) => {
+      if (!abs.fecha_inicio) return false;
+      const start = new Date(abs.fecha_inicio);
+      const end = (abs.fecha_fin_desconocida || !abs.fecha_fin) ? new Date('2099-12-31') : new Date(abs.fecha_fin);
+      const d = new Date(dateStr + 'T12:00:00');
+      return start <= d && d <= end;
+    };
+
+    const isMaternityType = (tipo) => {
+      const t = (tipo || '').toLowerCase();
+      return t.includes('maternidad') || t.includes('paternidad') || t.includes('riesgo durante') || t.includes('lactancia');
+    };
+    const isMarriageType = (tipo) => {
+      const t = (tipo || '').toLowerCase();
+      return t.includes('matrimonio') || t.includes('boda');
+    };
+
+    const computeAntiguedad = (emp) => {
+      if (!emp.fecha_alta) return '—';
+      const fa = new Date(emp.fecha_alta);
+      if (isNaN(fa)) return '—';
+      const years = (now - fa) / (365.25 * 24 * 3600 * 1000);
+      if (years >= 1) return years.toFixed(1) + ' años';
+      return Math.max(0, Math.floor(years * 12)) + ' meses';
+    };
+
+    // Calcula días ausente en una ventana usando control de presencia como fuente de verdad
+    const computeForWindow = (empId, winStart, winEnd) => {
+      const empAbs = absByEmp[empId] || [];
+      const empAtt = attendanceByEmp[empId] || new Set();
+      const empVac = employeeVacationMap[empId] || new Set();
+
+      let daysAbsent = 0;
+      let daysWithoutPresence = 0;
+      let recordCount = 0;
+      let hasMaternity = false;
+      let hasMarriage = false;
+      const typeCounts = {};
+
+      const cur = new Date(winStart);
+      while (cur <= winEnd) {
+        const dow = cur.getDay();
+        const ds = fmtDate(cur);
+        if (dow >= 1 && dow <= 5 && !holidaySet.has(ds) && !globalVacationSet.has(ds) && !empVac.has(ds)) {
+          const hasAttData = datesWithData.has(ds);
+          const clockedIn = empAtt.has(ds);
+
+          if (hasAttData && !clockedIn) {
+            // Control de presencia: no fichó → ausente
+            daysAbsent++;
+            const formalAbs = empAbs.find(a => coversDate(a, ds));
+            if (formalAbs) {
+              recordCount++;
+              const t = formalAbs.tipo || 'Sin especificar';
+              typeCounts[t] = (typeCounts[t] || 0) + 1;
+              if (isMaternityType(formalAbs.tipo)) hasMaternity = true;
+              if (isMarriageType(formalAbs.tipo)) hasMarriage = true;
+            } else {
+              daysWithoutPresence++;
+              typeCounts['Sin registro de presencia'] = (typeCounts['Sin registro de presencia'] || 0) + 1;
+            }
+          } else if (!hasAttData) {
+            // Sin datos de fichaje para ese día → usar registros formales
+            const formalAbs = empAbs.find(a => coversDate(a, ds));
+            if (formalAbs) {
+              daysAbsent++;
+              recordCount++;
+              const t = formalAbs.tipo || 'Sin especificar';
+              typeCounts[t] = (typeCounts[t] || 0) + 1;
+              if (isMaternityType(formalAbs.tipo)) hasMaternity = true;
+              if (isMarriageType(formalAbs.tipo)) hasMarriage = true;
+            }
+          }
+        }
+        cur.setDate(cur.getDate() + 1);
+      }
+      return { daysAbsent, daysWithoutPresence, recordCount, hasMaternity, hasMarriage, typeCounts };
+    };
+
     return employees.map(emp => {
       const empId = String(emp.id);
-      // Ausencias formales activas (entidad Absence)
-      const empAbsences = (absByEmp[empId] || []).filter(a => a.estado_aprobacion !== 'Cancelada' && a.estado_aprobacion !== 'Rechazada');
-      // Últimos 12 meses
-      const active12 = empAbsences.filter(a => clipInterval(a, win12Start, winEnd) !== null);
-      const intervals12 = active12.map(a => clipInterval(a, win12Start, winEnd)).filter(Boolean);
-      const days12 = countWorkingDays(intervals12, empId);
-      const typeCounts = {};
-      active12.forEach(a => {
-        const t = a.tipo || "Sin especificar";
-        typeCounts[t] = (typeCounts[t] || 0) + 1;
-      });
-      // Mes en curso
-      const activeMonth = empAbsences.filter(a => clipInterval(a, monthStart, winEnd) !== null);
-      const intervalsMonth = activeMonth.map(a => clipInterval(a, monthStart, winEnd)).filter(Boolean);
-      const daysMonth = countWorkingDays(intervalsMonth, empId);
+      const isControlled = emp.estado_empleado === 'Alta' && emp.sujeto_a_control_horario !== false;
+      const r12 = isControlled
+        ? computeForWindow(empId, win12Start, winEnd)
+        : { daysAbsent: 0, daysWithoutPresence: 0, recordCount: 0, hasMaternity: false, hasMarriage: false, typeCounts: {} };
+      const rMonth = isControlled
+        ? computeForWindow(empId, monthStart, winEnd)
+        : { daysAbsent: 0, daysWithoutPresence: 0, recordCount: 0, hasMaternity: false, hasMarriage: false, typeCounts: {} };
       return {
         empId,
         nombre: emp.nombre || "Desconocido",
+        codigo_empleado: emp.codigo_empleado || "",
         departamento: emp.departamento || "—",
         puesto: emp.puesto || "—",
-        count12: active12.length,
-        days12,
-        countMonth: activeMonth.length,
-        daysMonth,
+        antiguedad: computeAntiguedad(emp),
+        estado_empleado: emp.estado_empleado || "Alta",
+        count12: r12.recordCount,
+        days12: r12.daysAbsent,
+        daysWithoutPresence12: r12.daysWithoutPresence,
+        countMonth: rMonth.recordCount,
+        daysMonth: rMonth.daysAbsent,
         estado: emp.disponibilidad || "—",
-        typeCounts,
+        typeCounts: r12.typeCounts,
+        hasMaternity: r12.hasMaternity,
+        hasMarriage: r12.hasMarriage,
       };
     })
       .filter(e => filterDept === "all" || e.departamento === filterDept)
       .sort((a, b) => b.days12 - a.days12);
-  }, [employees, absences, filterDept, holidaySet, globalVacationSet, employeeVacationMap]);
+  }, [employees, absences, attendanceByEmp, datesWithData, filterDept, holidaySet, globalVacationSet, employeeVacationMap]);
 
   const deptOptions = useMemo(() => {
     const s = new Set();
@@ -364,10 +468,14 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
       "Empleado": e.nombre,
       "Departamento": e.departamento,
       "Puesto": e.puesto,
-      "Nº ausencias últimos 12 meses": e.count12,
-      "Días ausente últimos 12 meses": e.days12,
-      "Nº ausencias mes en curso": e.countMonth,
+      "Antigüedad": e.antiguedad,
+      "Estado empleado": e.estado_empleado,
+      "Nº ausencias formales 12m": e.count12,
+      "Días sin presencia 12m": e.daysWithoutPresence12 || 0,
+      "Días ausente 12m": e.days12,
       "Días ausencia mes en curso": e.daysMonth,
+      "Maternidad": e.hasMaternity ? "Sí" : "No",
+      "Matrimonio": e.hasMarriage ? "Sí" : "No",
       "Estado actual": e.estado,
       "Desglose por tipos (12m)": Object.entries(e.typeCounts).map(([t, c]) => `${t}: ${c}`).join("; "),
     }));
@@ -538,22 +646,36 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
                     <TableHead className="text-xs">Empleado</TableHead>
                     <TableHead className="text-xs">Departamento</TableHead>
                     <TableHead className="text-xs">Puesto</TableHead>
-                    <TableHead className="text-xs text-center">Ausencias 12m</TableHead>
+                    <TableHead className="text-xs text-center">Antig.</TableHead>
+                    <TableHead className="text-xs text-center">Est. emp.</TableHead>
+                    <TableHead className="text-xs text-center">Aus. formales 12m</TableHead>
+                    <TableHead className="text-xs text-center">Días sin presencia 12m</TableHead>
                     <TableHead className="text-xs text-center">Días ausente 12m</TableHead>
-                    <TableHead className="text-xs text-center">Ausencias mes</TableHead>
                     <TableHead className="text-xs text-center">Días mes</TableHead>
                     <TableHead className="text-xs text-center">Estado</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {employeeSummary.map(e => (
-                    <TableRow key={e.empId}>
-                      <TableCell className="text-xs font-medium">{e.nombre}</TableCell>
+                    <TableRow key={e.empId} className={e.hasMaternity ? "bg-pink-50 dark:bg-pink-950/30" : e.hasMarriage ? "bg-purple-50 dark:bg-purple-950/30" : ""}>
+                      <TableCell className="text-xs font-medium">
+                        <div className="flex items-center gap-1">
+                          {e.hasMaternity && <Baby className="w-3 h-3 text-pink-500 flex-shrink-0" />}
+                          {e.hasMarriage && <HeartHandshake className="w-3 h-3 text-purple-500 flex-shrink-0" />}
+                          {e.nombre}
+                        </div>
+                      </TableCell>
                       <TableCell className="text-xs">{e.departamento}</TableCell>
                       <TableCell className="text-xs">{e.puesto}</TableCell>
+                      <TableCell className="text-xs text-center text-slate-500">{e.antiguedad}</TableCell>
+                      <TableCell className="text-xs text-center">
+                        <Badge className={e.estado_empleado === "Alta" ? "bg-green-100 text-green-700 text-[10px]" : e.estado_empleado === "Baja" ? "bg-red-100 text-red-700 text-[10px]" : "bg-amber-100 text-amber-700 text-[10px]"}>
+                          {e.estado_empleado}
+                        </Badge>
+                      </TableCell>
                       <TableCell className="text-xs text-center">{e.count12}</TableCell>
+                      <TableCell className="text-xs text-center text-amber-600">{e.daysWithoutPresence12 || 0}</TableCell>
                       <TableCell className="text-xs text-center font-semibold">{e.days12}</TableCell>
-                      <TableCell className="text-xs text-center">{e.countMonth}</TableCell>
                       <TableCell className="text-xs text-center font-semibold">{e.daysMonth}</TableCell>
                       <TableCell className="text-xs text-center">
                         <Badge className={e.estado === "Ausente" ? "bg-red-100 text-red-700 text-[10px]" : "bg-green-100 text-green-700 text-[10px]"}>
