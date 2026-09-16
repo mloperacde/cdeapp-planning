@@ -273,12 +273,25 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
 
     return employees.map(emp => {
       const empId = String(emp.id);
-      const empAbsences = absByEmp[empId] || [];
+      // Ausencias formales activas (entidad Absence)
+      const formalAbsences = (absByEmp[empId] || []).filter(a => a.estado_aprobacion !== 'Cancelada' && a.estado_aprobacion !== 'Rechazada');
+      // Ausencia sintética desde la ficha si está marcada Ausente y no hay registro formal que la cubra
+      const allAbsences = [...formalAbsences];
+      if (emp.disponibilidad === "Ausente" && emp.ausencia_inicio) {
+        const synStart = new Date(emp.ausencia_inicio);
+        const synEnd = emp.ausencia_fin ? new Date(emp.ausencia_fin) : winEnd;
+        const covered = formalAbsences.some(a => clipInterval(a, synStart, synEnd) !== null);
+        if (!covered) {
+          allAbsences.push({
+            fecha_inicio: emp.ausencia_inicio,
+            fecha_fin: emp.ausencia_fin || null,
+            fecha_fin_desconocida: !emp.ausencia_fin,
+            tipo: emp.ausencia_motivo || "Ausencia (sin registro formal)",
+          });
+        }
+      }
       // Últimos 12 meses
-      const active12 = empAbsences.filter(a => {
-        if (a.estado_aprobacion === 'Cancelada' || a.estado_aprobacion === 'Rechazada') return false;
-        return clipInterval(a, win12Start, winEnd) !== null;
-      });
+      const active12 = allAbsences.filter(a => clipInterval(a, win12Start, winEnd) !== null);
       const intervals12 = active12.map(a => clipInterval(a, win12Start, winEnd)).filter(Boolean);
       const days12 = countWorkingDays(intervals12, empId);
       const typeCounts = {};
@@ -287,17 +300,11 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
         typeCounts[t] = (typeCounts[t] || 0) + 1;
       });
       // Mes en curso
-      const activeMonth = empAbsences.filter(a => {
-        if (a.estado_aprobacion === 'Cancelada' || a.estado_aprobacion === 'Rechazada') return false;
-        return clipInterval(a, monthStart, winEnd) !== null;
-      });
+      const activeMonth = allAbsences.filter(a => clipInterval(a, monthStart, winEnd) !== null);
       const intervalsMonth = activeMonth.map(a => clipInterval(a, monthStart, winEnd)).filter(Boolean);
       const daysMonth = countWorkingDays(intervalsMonth, empId);
-      // Estado actual derivado de ausencias activas hoy (consistente con los contadores)
-      const isAbsentToday = empAbsences.some(a => {
-        if (a.estado_aprobacion === 'Cancelada' || a.estado_aprobacion === 'Rechazada') return false;
-        return clipInterval(a, todayStart, todayEnd) !== null;
-      });
+      // Estado actual: ausencia activa hoy (formal o sintética de la ficha)
+      const isAbsentToday = allAbsences.some(a => clipInterval(a, todayStart, todayEnd) !== null);
       return {
         empId,
         nombre: emp.nombre || "Desconocido",
