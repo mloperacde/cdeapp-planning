@@ -107,7 +107,25 @@
         }
       ]
     },
-    "read": null,
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "rrhh"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "hr_manager"
+          }
+        }
+      ]
+    },
     "update": {
       "$or": [
         {
