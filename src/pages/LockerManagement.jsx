@@ -1073,13 +1073,27 @@ export default function LockerManagementPage() {
           </TabsContent>
 
           <TabsContent value="sin-taquilla">
-            <div className="space-y-6">
-              <LockerRequirementConfig employees={employees} />
-              <EmployeesWithoutLocker 
-                employees={employees}
-                lockerAssignments={lockerAssignments}
-              />
-            </div>
+            <Tabs defaultValue="sin-taquilla-lista" className="space-y-4">
+              <TabsList className="grid w-full grid-cols-2 max-w-md">
+                <TabsTrigger value="sin-taquilla-lista">
+                  <UserX className="w-4 h-4 mr-2" />
+                  Empleados sin Taquilla
+                </TabsTrigger>
+                <TabsTrigger value="sin-taquilla-config">
+                  <Settings className="w-4 h-4 mr-2" />
+                  Configuración
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="sin-taquilla-lista">
+                <EmployeesWithoutLocker 
+                  employees={employees}
+                  lockerAssignments={lockerAssignments}
+                />
+              </TabsContent>
+              <TabsContent value="sin-taquilla-config">
+                <LockerRequirementConfig employees={employees} />
+              </TabsContent>
+            </Tabs>
           </TabsContent>
 
           <TabsContent value="mapa">
@@ -1509,6 +1523,7 @@ export default function LockerManagementPage() {
             <LockerAudit 
               employees={employees}
               lockerAssignments={lockerAssignments}
+              lockerRoomConfigs={lockerRoomConfigs}
             />
           </TabsContent>
 

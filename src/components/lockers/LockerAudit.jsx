@@ -10,7 +10,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { usePersistentAppConfig } from "@/hooks/usePersistentAppConfig";
 
-export default function LockerAudit({ employees, lockerAssignments }) {
+export default function LockerAudit({ employees, lockerAssignments, lockerRoomConfigs = [] }) {
   const queryClient = useQueryClient();
 
   const { data: config = { mode: "all", departments: {} } } = usePersistentAppConfig(
@@ -109,8 +109,45 @@ export default function LockerAudit({ employees, lockerAssignments }) {
       }
     });
 
+    // Taquillas libres por vestuario (instaladas no asignadas a empleados activos)
+    const VESTUARIOS = [
+      "Vestuario Femenino Planta Baja",
+      "Vestuario Femenino Planta Alta",
+      "Vestuario Masculino Planta Baja"
+    ];
+    results.vestuariosLibres = VESTUARIOS.map(vestuario => {
+      const roomConfig = lockerRoomConfigs.find(c => c.vestuario === vestuario);
+      const identificadores = roomConfig?.identificadores_taquillas || [];
+      const totalInstaladas = roomConfig?.numero_taquillas_instaladas || identificadores.length || 0;
+
+      // Identificadores instalados válidos
+      const instalados = identificadores.length > 0
+        ? identificadores.map(String)
+        : Array.from({ length: totalInstaladas }, (_, i) => String(i + 1));
+
+      // Ocupados por empleados activos con taquilla asignada
+      const ocupados = new Set();
+      lockerAssignments.forEach(la => {
+        if (la.vestuario !== vestuario) return;
+        if (la.requiere_taquilla === false) return;
+        const emp = employees.find(e => String(e.id) === String(la.employee_id));
+        if (!emp || (emp.estado_empleado && emp.estado_empleado !== "Alta")) return;
+        const cn = cleanLockerNumber(la.numero_taquilla_actual);
+        if (cn) ocupados.add(cn);
+      });
+
+      const libres = instalados.filter(id => !ocupados.has(id));
+      return {
+        vestuario,
+        totalInstaladas: instalados.length,
+        ocupadas: ocupados.size,
+        libres,
+        libresCount: libres.length
+      };
+    }).filter(v => v.totalInstaladas > 0);
+
     return results;
-  }, [employees, lockerAssignments, config]);
+  }, [employees, lockerAssignments, config, lockerRoomConfigs]);
 
   const deleteDuplicatesMutation = useMutation({
     mutationFn: async (duplicates) => {
@@ -275,31 +312,56 @@ export default function LockerAudit({ employees, lockerAssignments }) {
             <div className="space-y-4">
               {auditResults.employeesWithoutAssignment.length > 0 && (
                 <div className="border-2 border-amber-300 rounded-lg p-4 bg-amber-50">
-                  <h3 className="font-semibold text-amber-900 mb-3 flex items-center gap-2">
-                    <Users className="w-4 h-4" />
-                    Empleados con derecho a taquilla sin asignar ({auditResults.employeesWithoutAssignment.length})
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-semibold text-amber-900 flex items-center gap-2">
+                      <Users className="w-4 h-4" />
+                      Empleados con derecho a taquilla sin asignar
+                    </h3>
+                    <Badge className="bg-amber-600 text-white">
+                      {auditResults.employeesWithoutAssignment.length}
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-amber-800 mt-2">
+                    Ver detalle en la pestaña <strong>"Sin Taquilla"</strong>.
+                  </p>
+                </div>
+              )}
+
+              {/* Taquillas libres por vestuario */}
+              {auditResults.vestuariosLibres && auditResults.vestuariosLibres.length > 0 && (
+                <div className="border-2 border-blue-300 rounded-lg p-4 bg-blue-50">
+                  <h3 className="font-semibold text-blue-900 mb-3 flex items-center gap-2">
+                    <Database className="w-4 h-4" />
+                    Taquillas libres por vestuario
                   </h3>
-                  <div className="space-y-2 max-h-48 overflow-y-auto">
-                    {auditResults.employeesWithoutAssignment.slice(0, 10).map(emp => (
-                      <div key={emp.id} className="flex items-center justify-between p-2 bg-white rounded border">
-                        <div>
-                          <div className="font-medium text-sm">{emp.nombre}</div>
-                          <div className="text-xs text-slate-600">{emp.departamento}</div>
+                  <div className="space-y-3">
+                    {auditResults.vestuariosLibres.map(v => (
+                      <div key={v.vestuario} className="bg-white rounded-lg border border-blue-200 p-3">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-medium text-sm text-slate-800">{v.vestuario}</span>
+                          <div className="flex gap-2">
+                            <Badge variant="outline" className="bg-slate-50">
+                              {v.ocupadas}/{v.totalInstaladas} ocupadas
+                            </Badge>
+                            <Badge className={v.libresCount > 0 ? "bg-green-600 text-white" : "bg-red-600 text-white"}>
+                              {v.libresCount} libres
+                            </Badge>
+                          </div>
                         </div>
-                        <Link to={createPageUrl(`Employees?id=${emp.id}`)}>
-                          <Button size="sm" variant="outline">
-                            <ExternalLink className="w-3 h-3 mr-1" />
-                            Ver
-                          </Button>
-                        </Link>
+                        {v.libresCount > 0 ? (
+                          <div className="flex flex-wrap gap-1.5">
+                            {v.libres.map(num => (
+                              <span key={num} className="px-2 py-0.5 text-xs font-mono rounded bg-green-100 text-green-800 border border-green-300">
+                                {num}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-xs text-red-700 font-medium">Sin taquillas libres — todas ocupadas</p>
+                        )}
                       </div>
                     ))}
                   </div>
-                  {auditResults.employeesWithoutAssignment.length > 10 && (
-                    <p className="text-xs text-amber-700 mt-2">
-                      ... y {auditResults.employeesWithoutAssignment.length - 10} más
-                    </p>
-                  )}
                 </div>
               )}
 
