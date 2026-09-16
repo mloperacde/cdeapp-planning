@@ -83,6 +83,39 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
     });
   }, [rangeAbsences, employees, filterDept, filterType, filterStatus]);
 
+  // Límites del rango seleccionado
+  const rangeBounds = useMemo(() => ({
+    start: parseISO(dateFrom + "T00:00:00"),
+    end: parseISO(dateTo + "T23:59:59"),
+  }), [dateFrom, dateTo]);
+
+  // Intervalo de una ausencia recortado al rango del informe (null si fuera de rango)
+  const getAbsenceInterval = (abs) => {
+    if (!abs.fecha_inicio) return null;
+    const absStart = new Date(abs.fecha_inicio);
+    const absEnd = (abs.fecha_fin_desconocida || !abs.fecha_fin) ? rangeBounds.end : new Date(abs.fecha_fin);
+    const start = absStart < rangeBounds.start ? rangeBounds.start : absStart;
+    const end = absEnd > rangeBounds.end ? rangeBounds.end : absEnd;
+    if (end < start) return null;
+    return [start, end];
+  };
+
+  // Fusiona intervalos solapados y cuenta días naturales únicos (sin duplicar)
+  const countUniqueDays = (intervals) => {
+    if (!intervals || intervals.length === 0) return 0;
+    const sorted = [...intervals].sort((a, b) => a[0] - b[0]);
+    const merged = [sorted[0]];
+    for (let i = 1; i < sorted.length; i++) {
+      const last = merged[merged.length - 1];
+      if (sorted[i][0] <= last[1]) {
+        last[1] = last[1] > sorted[i][1] ? last[1] : sorted[i][1];
+      } else {
+        merged.push(sorted[i]);
+      }
+    }
+    return merged.reduce((sum, [s, e]) => sum + differenceInCalendarDays(e, s) + 1, 0);
+  };
+
   // KPIs
   const stats = useMemo(() => {
     const total = filtered.length;
@@ -92,15 +125,19 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
     const cancelled = filtered.filter(a => a.estado_aprobacion === 'Cancelada').length;
     const autoPending = filtered.filter(a => isAutoAbsence(a)).length;
 
-    // Días laborables perdidos (aprobadas, no canceladas)
-    let daysLost = 0;
+    // Días perdidos: suma de días únicos por empleado (sin duplicar solapamientos ni exceder el rango)
+    const intervalsByEmp = {};
     for (const abs of filtered) {
       if (abs.estado_aprobacion === 'Cancelada' || abs.estado_aprobacion === 'Rechazada') continue;
-      if (!abs.fecha_inicio) continue;
-      const start = new Date(abs.fecha_inicio);
-      const end = abs.fecha_fin_desconocida ? now : (abs.fecha_fin ? new Date(abs.fecha_fin) : now);
-      const days = differenceInCalendarDays(end, start) + 1;
-      daysLost += Math.max(1, days);
+      const interval = getAbsenceInterval(abs);
+      if (!interval) continue;
+      const key = abs.employee_id || 'unknown';
+      if (!intervalsByEmp[key]) intervalsByEmp[key] = [];
+      intervalsByEmp[key].push(interval);
+    }
+    let daysLost = 0;
+    for (const key of Object.keys(intervalsByEmp)) {
+      daysLost += countUniqueDays(intervalsByEmp[key]);
     }
 
     const remunerated = filtered.filter(a => {
@@ -110,7 +147,7 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
     }).length;
 
     return { total, approved, pending, rejected, cancelled, autoPending, daysLost, remunerated };
-  }, [filtered, absenceTypes, now]);
+  }, [filtered, absenceTypes, rangeBounds]);
 
   // Agrupaciones para gráficos/tablas
   const byType = useMemo(() => {
@@ -136,21 +173,27 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
 
   const byEmployee = useMemo(() => {
     const map = {};
+    const intervalsByName = {};
     for (const abs of filtered) {
       if (abs.estado_aprobacion === 'Cancelada' || abs.estado_aprobacion === 'Rechazada') continue;
       const emp = getEmp(abs.employee_id);
       const name = emp?.nombre || "Desconocido";
       if (!map[name]) map[name] = { count: 0, days: 0, auto: 0 };
       map[name].count++;
-      const start = new Date(abs.fecha_inicio);
-      const end = abs.fecha_fin_desconocida ? now : (abs.fecha_fin ? new Date(abs.fecha_fin) : now);
-      map[name].days += Math.max(1, differenceInCalendarDays(end, start) + 1);
       if (wasAutoDetected(abs)) map[name].auto++;
+      const interval = getAbsenceInterval(abs);
+      if (interval) {
+        if (!intervalsByName[name]) intervalsByName[name] = [];
+        intervalsByName[name].push(interval);
+      }
+    }
+    for (const name of Object.keys(map)) {
+      map[name].days = countUniqueDays(intervalsByName[name] || []);
     }
     return Object.entries(map)
       .map(([name, data]) => ({ name, ...data }))
       .sort((a, b) => b.days - a.days);
-  }, [filtered, employees, now]);
+  }, [filtered, employees, rangeBounds]);
 
   const deptOptions = useMemo(() => {
     const s = new Set();
@@ -205,7 +248,7 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
     { label: "Aprobadas", value: stats.approved, icon: CheckCircle2, color: "text-green-600", bg: "bg-green-50" },
     { label: "Pendientes", value: stats.pending, icon: AlertCircle, color: "text-amber-600", bg: "bg-amber-50" },
     { label: "Rechazadas", value: stats.rejected, icon: XCircle, color: "text-red-600", bg: "bg-red-50" },
-    { label: "Días perdidos", value: stats.daysLost, icon: Clock, color: "text-blue-600", bg: "bg-blue-50" },
+    { label: "Días de ausencia", value: stats.daysLost, icon: Clock, color: "text-blue-600", bg: "bg-blue-50" },
     { label: "Remuneradas", value: stats.remunerated, icon: TrendingDown, color: "text-purple-600", bg: "bg-purple-50" },
   ];
 
@@ -356,7 +399,7 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
                   <TableHead className="text-xs">Empleado</TableHead>
                   <TableHead className="text-xs">Departamento</TableHead>
                   <TableHead className="text-xs text-center">Ausencias</TableHead>
-                  <TableHead className="text-xs text-center">Días</TableHead>
+                  <TableHead className="text-xs text-center">Días (rango)</TableHead>
                   <TableHead className="text-xs text-center">Auto-det.</TableHead>
                 </TableRow>
               </TableHeader>
