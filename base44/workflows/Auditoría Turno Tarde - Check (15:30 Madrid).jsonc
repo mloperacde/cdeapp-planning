@@ -32,7 +32,8 @@
           "with": {
             "function_name": "shiftAudit",
             "args": {
-              "mode": "check_afternoon"
+              "mode": "check_afternoon",
+              "_scheduler_secret": "b44_cde_sched_7f3a9b2e8c1d4a6f5b7c9e1d3a2b4c6"
             }
           },
           "then": "end"

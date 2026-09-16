@@ -586,6 +586,8 @@ export default function MaintenanceWorkOrder({ maintenance, onClose, onUpdate })
     }
   };
 
+  const escapeHtml = (str) => String(str ?? '').replace(/[<>&"']/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[c]));
+
   const handleDownloadPDF = () => {
     const pdfContent = document.getElementById("maintenance-pdf-content");
     if (!pdfContent) return;
@@ -596,7 +598,7 @@ export default function MaintenanceWorkOrder({ maintenance, onClose, onUpdate })
       <html lang="es">
       <head>
         <meta charset="UTF-8" />
-        <title>Orden de Trabajo - ${machine?.nombre || 'Mantenimiento'}</title>
+        <title>Orden de Trabajo - ${escapeHtml(machine?.nombre || 'Mantenimiento')}</title>
         <style>
           *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
           body { font-family: Arial, sans-serif; background: white; color: #1e293b; }

@@ -10,11 +10,15 @@ Deno.serve(async (req) => {
 
   try {
     const base44 = createClientFromRequest(req);
-    // Auth: permitir admin, scheduler (sin user) y llamadas internas de servicio (asServiceRole)
+    // Auth: require admin user or valid scheduler secret
+    const body = await req.json().catch(() => ({}));
+    const SCHEDULER_SECRET = 'b44_cde_sched_7f3a9b2e8c1d4a6f5b7c9e1d3a2b4c6';
+    const isSchedulerCall = body._scheduler_secret === SCHEDULER_SECRET;
     const user = await base44.auth.me().catch(() => null);
-    const userRole = (user?.role || '').trim().toLowerCase();
-    const isServiceCall = !user || !user.email || user.email.includes('service+') || user.email.includes('@no-reply.base44');
-    if (!isServiceCall && userRole !== 'admin') {
+    if (!user && !isSchedulerCall) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    if (user && user.role !== 'admin') {
       return Response.json({ 
         error: 'Solo administradores pueden ejecutar consolidación',
         success: false 

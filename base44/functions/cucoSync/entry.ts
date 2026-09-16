@@ -10,14 +10,19 @@ Deno.serve(async (req) => {
   try {
     const client = createClientFromRequest(req);
 
-    // Auth: allow admin users or scheduled automation calls (no user token)
+    const body = await req.json().catch(() => ({}));
+
+    // Auth: require admin user or valid scheduler secret
+    const SCHEDULER_SECRET = 'b44_cde_sched_7f3a9b2e8c1d4a6f5b7c9e1d3a2b4c6';
+    const isSchedulerCall = body._scheduler_secret === SCHEDULER_SECRET;
     let user = null;
     try { user = await client.auth.me(); } catch (_) {}
+    if (!user && !isSchedulerCall) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+    }
     if (user && user.role !== 'admin') {
       return new Response(JSON.stringify({ error: 'Forbidden: Admin access required' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
     }
-
-    const body = await req.json().catch(() => ({}));
     
     // Minimal "Hello World" to verify deployment
     if (body.debug_mode) {

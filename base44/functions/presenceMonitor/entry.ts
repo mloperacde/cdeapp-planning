@@ -86,9 +86,15 @@ Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
     const svc = base44.asServiceRole;
 
-    // Auth: allow admin users or scheduled automation calls (no user token)
+    // Auth: require admin user or valid scheduler secret
+    const body = await req.json().catch(() => ({}));
+    const SCHEDULER_SECRET = 'b44_cde_sched_7f3a9b2e8c1d4a6f5b7c9e1d3a2b4c6';
+    const isSchedulerCall = body._scheduler_secret === SCHEDULER_SECRET;
     let user = null;
     try { user = await base44.auth.me(); } catch (_) {}
+    if (!user && !isSchedulerCall) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     if (user && user.role !== 'admin') {
       return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
     }

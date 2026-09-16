@@ -7,6 +7,10 @@ function fmt(n) {
   return (n || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+function escapeHtml(str) {
+  return String(str ?? '').replace(/[<>&"']/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
 const PRODUCT_TYPE_LABELS = {
   cosmetico: 'Cosmético',
   perfumeria: 'Perfumería',
@@ -49,10 +53,10 @@ export function downloadQuotePDF(quote) {
   // Generar filas de líneas de servicio
   const serviceRowsHtml = lines.map(line => `
     <tr>
-      <td class="code">${line.code}</td>
+      <td class="code">${escapeHtml(line.code)}</td>
       <td>
-        <strong>${line.concept}</strong><br>
-        <span class="small grey">${line.description}</span>
+        <strong>${escapeHtml(line.concept)}</strong><br>
+        <span class="small grey">${escapeHtml(line.description)}</span>
       </td>
       <td class="right">${line.is_fixed ? 'Fijo' : `€${(line.unit_cost || 0).toFixed(4)}`}</td>
       <td class="right">${line.is_fixed ? '1' : (line.quantity || 0).toLocaleString('es-ES')}</td>
@@ -274,7 +278,7 @@ export function downloadQuotePDF(quote) {
         <li>Merma técnica aceptada: ${cc.waste_percentage || 3}% (el cliente debe enviar excedente)</li>
         <li>Almacenaje gratuito: ${cc.storage_days_free || 15} días tras fin de producción</li>
         ${cc.storage_cost_per_pallet ? `<li>Almacenaje adicional: €${cc.storage_cost_per_pallet}/palet/día</li>` : ''}
-        ${quote.special_requirements ? `<li>Normativa: ${quote.special_requirements}</li>` : ''}
+        ${quote.special_requirements ? `<li>Normativa: ${escapeHtml(quote.special_requirements)}</li>` : ''}
         <li>El suministro del material gráfico (arte final) es responsabilidad del cliente</li>
       </ul>
     </div>
@@ -283,7 +287,7 @@ export function downloadQuotePDF(quote) {
   ${quote.notes ? `
   <div class="notes-box">
     <h4>⚠ Notas y Condiciones Adicionales</h4>
-    <p>${quote.notes}</p>
+    <p>${escapeHtml(quote.notes)}</p>
   </div>
   ` : ''}
 

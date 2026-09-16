@@ -31,7 +31,7 @@
           "call": "invoke_backend_function",
           "with": {
             "function_name": "scheduledOrderSync",
-            "args": {}
+            "args": {"_scheduler_secret": "b44_cde_sched_7f3a9b2e8c1d4a6f5b7c9e1d3a2b4c6"}
           },
           "then": "end"
         }

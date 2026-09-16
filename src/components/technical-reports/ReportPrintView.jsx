@@ -21,6 +21,8 @@ const STATUS_COLORS = {
 export default function ReportPrintView({ data, onBack }) {
   const printRef = useRef();
 
+  const escapeHtml = (str) => String(str ?? '').replace(/[<>&"']/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[c]));
+
   const handlePrint = () => {
     const content = printRef.current.innerHTML;
     const printWindow = window.open('', '_blank');
@@ -29,7 +31,7 @@ export default function ReportPrintView({ data, onBack }) {
       <html lang="es">
       <head>
         <meta charset="UTF-8" />
-        <title>${data.tituloInforme || 'Informe Técnico'}</title>
+        <title>${escapeHtml(data.tituloInforme || 'Informe Técnico')}</title>
         <style>
           * { box-sizing: border-box; margin: 0; padding: 0; }
           body { font-family: 'Arial', sans-serif; font-size: 10pt; color: #1e293b; background: white; }
