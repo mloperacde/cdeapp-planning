@@ -1,0 +1,71 @@
+{
+  "name": "DailyPresence",
+  "type": "object",
+  "row_level_security": [
+    {
+      "operation": "read",
+      "allow": "{{user.role == 'admin' or user.role == 'rrhh' or user.role == 'supervisor'}}"
+    },
+    {
+      "operation": "create",
+      "allow": "{{user.role == 'admin'}}"
+    },
+    {
+      "operation": "update",
+      "allow": "{{user.role == 'admin'}}"
+    },
+    {
+      "operation": "delete",
+      "allow": "{{user.role == 'admin'}}"
+    }
+  ],
+  "properties": {
+    "employee_id": {
+      "type": "string",
+      "description": "ID del empleado en la base maestra"
+    },
+    "employee_name": {
+      "type": "string",
+      "description": "Nombre del empleado (desnormalizado)"
+    },
+    "employee_code": {
+      "type": "string",
+      "description": "C\u00f3digo del empleado en Cuco360 (desnormalizado)"
+    },
+    "record_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha del fichaje (yyyy-MM-dd)"
+    },
+    "present": {
+      "type": "boolean",
+      "default": true,
+      "description": "Si el empleado estuvo presente (tuvo al menos un fichaje en el d\u00eda)"
+    },
+    "shift": {
+      "type": "string",
+      "description": "Turno detectado seg\u00fan hora de primera entrada (Ma\u00f1ana/Tarde)"
+    },
+    "first_entry": {
+      "type": "string",
+      "description": "Hora de primera entrada (HH:MM)"
+    },
+    "last_exit": {
+      "type": "string",
+      "description": "Hora de \u00faltima salida (HH:MM)"
+    },
+    "check_in_count": {
+      "type": "number",
+      "description": "N\u00famero total de fichajes del d\u00eda"
+    },
+    "source": {
+      "type": "string",
+      "default": "cuco360",
+      "description": "Origen de los datos"
+    }
+  },
+  "required": [
+    "employee_id",
+    "record_date"
+  ]
+}

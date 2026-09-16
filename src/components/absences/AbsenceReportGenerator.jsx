@@ -45,10 +45,15 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
     staleTime: 0,
   });
 
-  // Control de presencia: fuente de verdad para días sin fichaje
-  const { data: attendanceRecords = [] } = useQuery({
-    queryKey: ['attendanceRecords-report'],
-    queryFn: () => base44.entities.AttendanceRecord.list('-record_date', 5000),
+  // Informe de ausencias calculado en backend (usa DailyPresence como fuente de verdad)
+  const { data: reportResponse, isLoading: reportLoading } = useQuery({
+    queryKey: ['absenceReport', filterDept],
+    queryFn: async () => {
+      const resp = await base44.functions.invoke('getAbsenceReport', {
+        department: filterDept === 'all' ? null : filterDept,
+      });
+      return resp.data;
+    },
     staleTime: 60 * 1000,
   });
 
@@ -109,19 +114,6 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
     });
     return { globalVacationSet: globalSet, employeeVacationMap: empMap };
   }, [vacations]);
-
-  // Control de presencia: mapa empleado → fechas con fichaje, y set de fechas con datos disponibles
-  const { attendanceByEmp, datesWithData } = useMemo(() => {
-    const byEmp = {};
-    const datesSet = new Set();
-    attendanceRecords.forEach(r => {
-      if (!r.employee_id || !r.record_date) return;
-      if (!byEmp[r.employee_id]) byEmp[r.employee_id] = new Set();
-      byEmp[r.employee_id].add(r.record_date);
-      datesSet.add(r.record_date);
-    });
-    return { attendanceByEmp: byEmp, datesWithData: datesSet };
-  }, [attendanceRecords]);
 
   const getEmp = (id) => employees.find(e => String(e.id) === String(id));
   const getType = (abs) => absenceTypes.find(t => t.id === abs.absence_type_id) || null;
@@ -274,180 +266,10 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
     return Object.entries(map).map(([dept, count]) => ({ dept, count })).sort((a, b) => b.count - a.count);
   }, [filtered, employees]);
 
-  // Resumen por empleado: el control de presencia es la fuente de verdad.
-  // Para cada día laborable: si hay datos de fichaje y el empleado no fichó → ausente.
-  // Si no hay datos de fichaje para ese día → se usan los registros formales de ausencia.
-  // Se añade antigüedad, estado del empleado (Alta/Baja/Excedencia) e indicadores de maternidad/matrimonio.
+  // Resumen por empleado: calculado en backend con DailyPresence como fuente de verdad
   const employeeSummary = useMemo(() => {
-    const now = new Date();
-    const win12Start = new Date(now); win12Start.setFullYear(win12Start.getFullYear() - 1); win12Start.setHours(0, 0, 0, 0);
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
-    const winEnd = new Date(now); winEnd.setHours(23, 59, 59, 999);
-
-    // Agrupar ausencias formales por empleado (no canceladas ni rechazadas)
-    const absByEmp = {};
-    absences.forEach(a => {
-      if (a.estado_aprobacion === 'Cancelada' || a.estado_aprobacion === 'Rechazada') return;
-      const k = String(a.employee_id);
-      if (!absByEmp[k]) absByEmp[k] = [];
-      absByEmp[k].push(a);
-    });
-
-    const fmtDate = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-
-    // ¿Una ausencia formal cubre una fecha concreta?
-    const coversDate = (abs, dateStr) => {
-      if (!abs.fecha_inicio) return false;
-      const start = new Date(abs.fecha_inicio);
-      const end = (abs.fecha_fin_desconocida || !abs.fecha_fin) ? new Date('2099-12-31') : new Date(abs.fecha_fin);
-      const d = new Date(dateStr + 'T12:00:00');
-      return start <= d && d <= end;
-    };
-
-    const isMaternityType = (tipo) => {
-      const t = (tipo || '').toLowerCase();
-      return t.includes('maternidad') || t.includes('paternidad') || t.includes('riesgo durante') || t.includes('lactancia');
-    };
-    const isMarriageType = (tipo) => {
-      const t = (tipo || '').toLowerCase();
-      return t.includes('matrimonio') || t.includes('boda');
-    };
-
-    const computeAntiguedad = (emp) => {
-      if (!emp.fecha_alta) return '—';
-      const fa = new Date(emp.fecha_alta);
-      if (isNaN(fa)) return '—';
-      const years = (now - fa) / (365.25 * 24 * 3600 * 1000);
-      if (years >= 1) return years.toFixed(1) + ' años';
-      return Math.max(0, Math.floor(years * 12)) + ' meses';
-    };
-
-    // Calcula días ausente y episodios (periodos consecutivos) en una ventana.
-    // Un día sin presencia = ausencia. Los días ausente se agrupan en episodios:
-    // dos días ausente pertenecen al mismo episodio si entre ellos solo hay fines
-    // de semana / festivos / vacaciones (sin día laborable presente que los separe).
-    const computeForWindow = (empId, winStart, winEnd) => {
-      const empAbs = absByEmp[empId] || [];
-      const empAtt = attendanceByEmp[empId] || new Set();
-      const empVac = employeeVacationMap[empId] || new Set();
-
-      let daysAbsent = 0;
-      let hasMaternity = false;
-      let hasMarriage = false;
-      const typeCounts = {};
-      const absentDays = []; // fechas (yyyy-MM-dd) de días laborables ausente
-
-      const cur = new Date(winStart);
-      while (cur <= winEnd) {
-        const dow = cur.getDay();
-        const ds = fmtDate(cur);
-        if (dow >= 1 && dow <= 5 && !holidaySet.has(ds) && !globalVacationSet.has(ds) && !empVac.has(ds)) {
-          const hasAttData = datesWithData.has(ds);
-          const clockedIn = empAtt.has(ds);
-          // Solo se aplica el control de presencia si el empleado está registrado en el
-          // sistema de fichaje (tiene al menos un registro). Si no tiene ningún registro,
-          // no se puede determinar presencia → se usan los registros formales.
-          const empTracked = empAtt.size > 0;
-          let isAbsent = false;
-
-          if (hasAttData && empTracked) {
-            // Control de presencia: fuente de verdad
-            isAbsent = !clockedIn;
-          } else {
-            // Sin datos de fichaje o empleado no fichado → usar registro formal
-            isAbsent = empAbs.some(a => coversDate(a, ds));
-          }
-
-          if (isAbsent) {
-            daysAbsent++;
-            absentDays.push(ds);
-            const formalAbs = empAbs.find(a => coversDate(a, ds));
-            if (formalAbs) {
-              const t = formalAbs.tipo || 'Sin especificar';
-              typeCounts[t] = (typeCounts[t] || 0) + 1;
-              if (isMaternityType(formalAbs.tipo)) hasMaternity = true;
-              if (isMarriageType(formalAbs.tipo)) hasMarriage = true;
-            } else {
-              typeCounts['Sin registro de presencia'] = (typeCounts['Sin registro de presencia'] || 0) + 1;
-            }
-          }
-        }
-        cur.setDate(cur.getDate() + 1);
-      }
-
-      // Contar episodios: agrupar días ausente consecutivos
-      let episodes = 0;
-      let longestEpisode = 0;
-      let currentLen = 0;
-      let prevDate = null;
-      for (const ds of absentDays) {
-        if (prevDate === null) {
-          currentLen = 1;
-        } else {
-          // ¿Hay un día laborable entre prevDate y ds? Si sí → nuevo episodio
-          const prev = new Date(prevDate + 'T12:00:00');
-          const curr = new Date(ds + 'T12:00:00');
-          let gap = false;
-          const check = new Date(prev);
-          check.setDate(check.getDate() + 1);
-          while (check < curr) {
-            const cdow = check.getDay();
-            const cds = fmtDate(check);
-            if (cdow >= 1 && cdow <= 5 && !holidaySet.has(cds) && !globalVacationSet.has(cds) && !empVac.has(cds)) {
-              gap = true;
-              break;
-            }
-            check.setDate(check.getDate() + 1);
-          }
-          if (gap) {
-            episodes++;
-            if (currentLen > longestEpisode) longestEpisode = currentLen;
-            currentLen = 1;
-          } else {
-            currentLen++;
-          }
-        }
-        prevDate = ds;
-      }
-      if (currentLen > 0) {
-        episodes++;
-        if (currentLen > longestEpisode) longestEpisode = currentLen;
-      }
-
-      return { daysAbsent, episodes, longestEpisode, hasMaternity, hasMarriage, typeCounts };
-    };
-
-    return employees.map(emp => {
-      const empId = String(emp.id);
-      const isControlled = emp.estado_empleado === 'Alta' && emp.sujeto_a_control_horario !== false;
-      const r12 = isControlled
-        ? computeForWindow(empId, win12Start, winEnd)
-        : { daysAbsent: 0, episodes: 0, longestEpisode: 0, hasMaternity: false, hasMarriage: false, typeCounts: {} };
-      const rMonth = isControlled
-        ? computeForWindow(empId, monthStart, winEnd)
-        : { daysAbsent: 0, episodes: 0, longestEpisode: 0, hasMaternity: false, hasMarriage: false, typeCounts: {} };
-      return {
-        empId,
-        nombre: emp.nombre || "Desconocido",
-        codigo_empleado: emp.codigo_empleado || "",
-        departamento: emp.departamento || "—",
-        puesto: emp.puesto || "—",
-        antiguedad: computeAntiguedad(emp),
-        estado_empleado: emp.estado_empleado || "Alta",
-        days12: r12.daysAbsent,
-        episodes12: r12.episodes,
-        longest12: r12.longestEpisode,
-        daysMonth: rMonth.daysAbsent,
-        episodesMonth: rMonth.episodes,
-        estado: emp.disponibilidad || "—",
-        typeCounts: r12.typeCounts,
-        hasMaternity: r12.hasMaternity,
-        hasMarriage: r12.hasMarriage,
-      };
-    })
-      .filter(e => filterDept === "all" || e.departamento === filterDept)
-      .sort((a, b) => b.days12 - a.days12);
-  }, [employees, absences, attendanceByEmp, datesWithData, filterDept, holidaySet, globalVacationSet, employeeVacationMap]);
+    return reportResponse?.employees || [];
+  }, [reportResponse]);
 
   const deptOptions = useMemo(() => {
     const s = new Set();
@@ -679,7 +501,11 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
           </div>
         </CardHeader>
         <CardContent>
-          {employeeSummary.length === 0 ? (
+          {reportLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <RefreshCw className="w-5 h-5 animate-spin text-slate-400" />
+            </div>
+          ) : employeeSummary.length === 0 ? (
             <p className="text-xs text-slate-400 text-center py-6">Sin datos</p>
           ) : (
             <div className="max-h-[500px] overflow-y-auto">

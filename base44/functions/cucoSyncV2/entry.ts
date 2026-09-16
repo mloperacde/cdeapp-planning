@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
+import { sleep, parseCheckDirection, extractTimeStr, extractDateStr, getCheckEmployeeCode } from '../../shared/cuco360Utils.ts';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Utilidades de tiempo
@@ -55,7 +56,7 @@ function getEmployeeShiftToday(emp, assignedShift) {
   return null;
 }
 
-const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+// sleep importado de shared/cuco360Utils.ts
 
 async function retryOp(fn, retries = 4, baseDelay = 800) {
   for (let i = 0; i < retries; i++) {
@@ -297,19 +298,17 @@ Deno.serve(async (req) => {
     const recordsByEmployee = {};
 
     for (const check of checks) {
-      const externalId = String(check.cod_int_empleado || check.cod_interno || check.cod_empleado || "").trim();
+      const externalId = getCheckEmployeeCode(check);
       const fullDate = check.fec_marcaje || check.fecha;
       if (!externalId || !fullDate) continue;
 
       // Filtrar marcajes sintéticos (cod_marcaje negativo)
       if (check.cod_marcaje !== undefined && Number(check.cod_marcaje) < 0) continue;
 
-      const dateParts = fullDate.split(' ');
-      const dateStr = dateParts[0];
-      const timeStr = (dateParts[1] || '00:00').slice(0, 5);
+      const dateStr = extractDateStr(fullDate);
+      const timeStr = extractTimeStr(fullDate);
       const masterEmp = masterMapByCodigo[externalId];
-      const type = String(check.val_direccion || "").toUpperCase();
-      const direction = (type === "S" || type === "SALIDA" || type === "OUT" || type === "2") ? "S" : "E";
+      const direction = parseCheckDirection(check);
 
       if (!recordsByEmployee[externalId]) recordsByEmployee[externalId] = {};
       if (!recordsByEmployee[externalId][dateStr]) recordsByEmployee[externalId][dateStr] = [];
@@ -429,6 +428,58 @@ Deno.serve(async (req) => {
         }
         if (i + BATCH_SIZE < retryList.length) await sleep(500);
       }
+    }
+
+    // ── PASO 5b: Sincronizar DailyPresence (agregado diario) ────────────
+    // Crea un registro DailyPresence por empleado por día con fichajes.
+    // Esto alimenta el informe de ausencias con datos de presencia fiables.
+    try {
+      const syncDates = [...new Set(Object.values(recordsByEmployee).flatMap(d => Object.keys(d)))];
+      const dpExisting = new Set();
+      for (const dateStr of syncDates) {
+        const existing = await retryOp(() =>
+          serviceClient.entities.DailyPresence.filter({ record_date: dateStr }, undefined, 5000)
+        , 3, 500).catch(() => []);
+        for (const r of (existing || [])) {
+          dpExisting.add(`${r.employee_code}||${dateStr}`);
+        }
+      }
+
+      const dpRecords = [];
+      for (const [empCode, dateMap] of Object.entries(recordsByEmployee)) {
+        const masterEmp = masterMapByCodigo[empCode];
+        for (const [dateStr, records] of Object.entries(dateMap)) {
+          if (dpExisting.has(`${empCode}||${dateStr}`)) continue;
+          const entries = records.filter(r => r.direction === 'E').map(r => r.record_time).sort();
+          const exits = records.filter(r => r.direction === 'S').map(r => r.record_time).sort().reverse();
+          const firstEntry = entries[0] || null;
+          const lastExit = exits[0] || null;
+          const shift = firstEntry ? (parseInt(firstEntry.split(':')[0]) < 12 ? 'Mañana' : 'Tarde') : null;
+          dpRecords.push({
+            employee_id: masterEmp?.id || empCode,
+            employee_name: masterEmp?.nombre || records[0]?.employee_name || `Empleado ${empCode}`,
+            employee_code: empCode,
+            record_date: dateStr,
+            present: true,
+            shift,
+            first_entry: firstEntry,
+            last_exit: lastExit,
+            check_in_count: records.length,
+            source: 'cuco360',
+          });
+        }
+      }
+
+      let dpCreated = 0;
+      for (let i = 0; i < dpRecords.length; i += 500) {
+        const batch = dpRecords.slice(i, i + 500);
+        await retryOp(() => serviceClient.entities.DailyPresence.bulkCreate(batch), 3, 500)
+          .catch(e => console.warn(`[cucoSyncV2] Error DailyPresence bulkCreate:`, e));
+        dpCreated += batch.length;
+      }
+      console.log(`[cucoSyncV2] DailyPresence: ${dpCreated} registros creados`);
+    } catch (dpErr) {
+      console.warn(`[cucoSyncV2] Error sincronizando DailyPresence:`, dpErr);
     }
 
     const syncCompleted = failedEmployees.length === 0;
