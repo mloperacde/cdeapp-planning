@@ -11,6 +11,7 @@ import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import AIDashboardSummary from "../reports/AIDashboardSummary";
 import { useAppData } from "../data/DataProvider";
+import { isAutoAbsence } from "@/utils/absenceUtils";
 
 export default function AbsenceDashboard({ absences: propsAbsences, employees: propsEmployees }) {
   // Usar datos del provider como fuente primaria
@@ -50,10 +51,7 @@ export default function AbsenceDashboard({ absences: propsAbsences, employees: p
     refetchOnWindowFocus: false,
   });
 
-  const isAutoAbs = (abs) =>
-    abs.motivo === 'Ausencia no comunicada - detección automática' ||
-    abs.motivo === 'Ausencia detectada automáticamente por análisis de presencia' ||
-    (abs.notas && (abs.notas.startsWith('[SISTEMA]') || abs.notas.startsWith('[shiftAudit]') || abs.notas.startsWith('Creado automáticamente')));
+  const isAutoAbs = isAutoAbsence;
 
   const yearAbsences = useMemo(() => {
     const now = new Date();

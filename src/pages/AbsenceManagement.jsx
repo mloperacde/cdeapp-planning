@@ -26,6 +26,8 @@ import VacationWorkCompensationManager from "../components/absences/VacationWork
 import AttendanceAnalyzer from "../components/attendance/AttendanceAnalyzer";
 import AbsenceValidationInbox from "../components/absences/AbsenceValidationInbox";
 import FormalAbsenceManager from "../components/absences/FormalAbsenceManager";
+import AbsenceReportGenerator from "../components/absences/AbsenceReportGenerator";
+import { isAutoAbsence } from "@/utils/absenceUtils";
 
 export default function AbsenceManagementPage() {
   const queryClient = useQueryClient();
@@ -157,13 +159,10 @@ export default function AbsenceManagementPage() {
 
     // Set de empleados con ausencia formal aprobada vigente (no deben aparecer en detección)
     const employeesWithApprovedAbsence = new Set();
-    const isAutoAbsence = (abs) =>
-      abs.motivo === 'Ausencia no comunicada - detección automática' ||
-      abs.motivo === 'Ausencia detectada automáticamente por análisis de presencia' ||
-      (abs.notas && (abs.notas.startsWith('[SISTEMA]') || abs.notas.startsWith('[shiftAudit]') || abs.notas.startsWith('Creado automáticamente')));
+    const isAutoAbsenceLocal = isAutoAbsence;
     for (const abs of absences) {
       if (abs.estado_aprobacion !== 'Aprobada') continue;
-      const isAuto = isAutoAbsence(abs);
+      const isAuto = isAutoAbsenceLocal(abs);
       if (isAuto) continue;
       const start = new Date(abs.fecha_inicio);
       const end = abs.fecha_fin_desconocida ? new Date('2099-12-31') : abs.fecha_fin ? new Date(abs.fecha_fin) : new Date('2099-12-31');
@@ -173,7 +172,7 @@ export default function AbsenceManagementPage() {
     // Mapa de ausencias auto pendientes por employee_id (para el contador del badge)
     const autoAbsenceEmpIds = new Set();
     for (const abs of absences) {
-      const isAuto = isAutoAbsence(abs);
+      const isAuto = isAutoAbsenceLocal(abs);
       if (!isAuto || abs.estado_aprobacion !== 'Pendiente') continue;
       const absStart = new Date(abs.fecha_inicio);
       if (absStart > now) continue;
@@ -202,7 +201,7 @@ export default function AbsenceManagementPage() {
     const autoAbsencesPending = { length: autoPendingCount };
 
     const formalActive = absences.filter(abs => {
-      if (isAutoAbsence(abs)) return false;
+      if (isAutoAbsenceLocal(abs)) return false;
       if (abs.estado_aprobacion === 'Rechazada' || abs.estado_aprobacion === 'Cancelada') return false;
       if (ficharonHoyIds.has(abs.employee_id)) return false; // fichó entrada → presente
       const start = new Date(abs.fecha_inicio);
@@ -211,7 +210,7 @@ export default function AbsenceManagementPage() {
     });
 
     const pendingApproval = absences.filter(abs => {
-      return !isAutoAbsence(abs) && abs.estado_aprobacion === 'Pendiente';
+      return !isAutoAbsenceLocal(abs) && abs.estado_aprobacion === 'Pendiente';
     });
 
     return {
@@ -227,6 +226,7 @@ export default function AbsenceManagementPage() {
     { value: "formal", label: "Registro", icon: ClipboardList },
     { value: "approval", label: "Aprobaciones", icon: CheckSquare, count: stats.pendingApproval, countColor: "bg-orange-500" },
     { value: "calendar", label: "Calendario", icon: Calendar },
+    { value: "reports", label: "Informes", icon: FileText },
     { value: "types-config", label: "Tipos", icon: Settings },
     { value: "config", label: "Vacaciones", icon: TrendingDown },
   ];
@@ -415,6 +415,11 @@ export default function AbsenceManagementPage() {
               employees={employees}
               absenceTypes={absenceTypes}
             />
+          </TabsContent>
+
+          {/* Informes */}
+          <TabsContent value="reports">
+            <AbsenceReportGenerator employees={employees} absenceTypes={absenceTypes} />
           </TabsContent>
 
           {/* Tipos de ausencia */}

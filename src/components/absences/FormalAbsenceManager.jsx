@@ -16,6 +16,7 @@ import { es } from "date-fns/locale";
 import { toast } from "sonner";
 import AbsenceForm from "./AbsenceForm";
 import { createAbsence, updateAbsence, deleteAbsence } from "./AbsenceOperations";
+import { isAutoAbsence } from "@/utils/absenceUtils";
 
 const EMPTY = [];
 
@@ -61,14 +62,9 @@ export default function FormalAbsenceManager({ employees = EMPTY, absenceTypes =
 
   const formalAbsences = useMemo(() => {
     return absences.filter(abs => {
-      // Excluir TODAS las ausencias auto-detectadas por el sistema
-      const isAuto =
-        abs.motivo === 'Ausencia no comunicada - detección automática' ||
-        abs.motivo === 'Ausencia detectada automáticamente por análisis de presencia' ||
-        (abs.notas && abs.notas.startsWith('[SISTEMA]')) ||
-        (abs.notas && abs.notas.startsWith('[shiftAudit]')) ||
-        (abs.notas && abs.notas.startsWith('Creado automáticamente'));
-      return !isAuto;
+      // Excluir ausencias auto-detectadas pendientes (sin clasificar por RRHH)
+      // Las justificadas (aprobadas) ya se tratan como formales
+      return !isAutoAbsence(abs);
     });
   }, [absences]);
 

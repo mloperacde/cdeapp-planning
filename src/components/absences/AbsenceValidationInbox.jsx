@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import AbsenceForm from "./AbsenceForm";
+import { isAutoAbsence } from "@/utils/absenceUtils";
 
 const EMPTY = [];
 
@@ -104,10 +105,7 @@ export default function AbsenceValidationInbox({ employees = EMPTY, absenceTypes
     const now = new Date();
     for (const abs of absences) {
       if (abs.estado_aprobacion !== 'Aprobada') continue;
-      const isAuto =
-        abs.motivo === 'Ausencia no comunicada - detección automática' ||
-        abs.motivo === 'Ausencia detectada automáticamente por análisis de presencia' ||
-        (abs.notas && (abs.notas.startsWith('[SISTEMA]') || abs.notas.startsWith('[shiftAudit]') || abs.notas.startsWith('Creado automáticamente')));
+      const isAuto = isAutoAbsence(abs);
       if (isAuto) continue;
       const start = new Date(abs.fecha_inicio);
       const end = abs.fecha_fin_desconocida
@@ -125,10 +123,7 @@ export default function AbsenceValidationInbox({ employees = EMPTY, absenceTypes
     const map = new Map();
     const now = new Date();
     for (const abs of absences) {
-      const isAuto =
-        abs.motivo === 'Ausencia no comunicada - detección automática' ||
-        abs.motivo === 'Ausencia detectada automáticamente por análisis de presencia' ||
-        (abs.notas && (abs.notas.startsWith('[SISTEMA]') || abs.notas.startsWith('[shiftAudit]') || abs.notas.startsWith('Creado automáticamente')));
+      const isAuto = isAutoAbsence(abs);
       if (!isAuto || abs.estado_aprobacion !== 'Pendiente') continue;
       const absStart = new Date(abs.fecha_inicio);
       if (absStart > now) continue;

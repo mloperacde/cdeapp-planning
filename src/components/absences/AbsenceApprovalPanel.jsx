@@ -11,6 +11,7 @@ import { es } from "date-fns/locale";
 import { toast } from "sonner";
 import { notifyAbsenceDecisionAdvanced } from "../notifications/AdvancedNotificationService";
 import PayrollExportButton from "./PayrollExportButton";
+import { isAutoAbsence } from "@/utils/absenceUtils";
 
 export default function AbsenceApprovalPanel({ employees, masterEmployees = [], absenceTypes, currentUser }) {
   const [expandedId, setExpandedId] = useState(null);
@@ -24,15 +25,9 @@ export default function AbsenceApprovalPanel({ employees, masterEmployees = [], 
     refetchOnWindowFocus: true,
   });
 
-  // Solo ausencias manuales pendientes (excluir las auto-detectadas) — misma lógica que el resto del módulo
-  const isAutoAbs = (abs) =>
-    abs.motivo === 'Ausencia no comunicada - detección automática' ||
-    abs.motivo === 'Ausencia detectada automáticamente por análisis de presencia' ||
-    (abs.notas && (
-      abs.notas.startsWith('[SISTEMA]') ||
-      abs.notas.startsWith('[shiftAudit]') ||
-      abs.notas.startsWith('Creado automáticamente')
-    ));
+  // Solo ausencias manuales pendientes (excluir las auto-detectadas pendientes)
+  // Las auto-detectadas ya justificadas (aprobadas) se tratan como formales
+  const isAutoAbs = isAutoAbsence;
 
   // Deduplicar: si un empleado tiene varias ausencias pendientes con el mismo periodo, mostrar solo la más reciente
   const pendingRaw = absences.filter(abs => !isAutoAbs(abs) && abs.estado_aprobacion === "Pendiente");
