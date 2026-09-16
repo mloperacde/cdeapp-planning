@@ -50,6 +50,7 @@ import ThemeToggle from "../components/common/ThemeToggle";
 import { useLockerData } from "@/hooks/useLockerData";
 import { base44 } from "@/api/base44Client";
 import { usePersistentAppConfig } from "@/hooks/usePersistentAppConfig";
+import { exportAssignments, exportKeysRegistry } from "@/utils/lockerExport";
 
 const EMPTY_ARRAY = [];
 
