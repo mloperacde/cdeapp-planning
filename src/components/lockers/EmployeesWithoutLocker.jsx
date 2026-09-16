@@ -22,25 +22,44 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { AlertCircle, ExternalLink, Search, UserX, CheckCircle2 } from "lucide-react";
+import { usePersistentAppConfig } from "@/hooks/usePersistentAppConfig";
 
 export default function EmployeesWithoutLocker({ employees, lockerAssignments, onAssign }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterDepartamento, setFilterDepartamento] = useState("all");
 
+  const { data: config = { mode: "all", departments: {} } } = usePersistentAppConfig(
+    "locker_requirement_config",
+    { mode: "all", departments: {} },
+    "lockerRequirementConfig",
+    false,
+    { enabled: true }
+  );
+
   const employeesWithoutLocker = useMemo(() => {
     return employees.filter(emp => {
+      if ((emp.estado_empleado || "Alta") !== "Alta") return false;
+
+      const requiresLocker = (() => {
+        if (config.mode !== "config") return true;
+        const deptConfig = config.departments?.[emp.departamento];
+        if (!deptConfig || !deptConfig.enabled) return false;
+        if (deptConfig.allPositions) return true;
+        return (deptConfig.positions || []).includes(emp.puesto);
+      })();
+
+      if (!requiresLocker) return false;
+
       const assignment = lockerAssignments.find(la => String(la.employee_id) === String(emp.id));
-      
-      // Sin asignación o sin taquilla asignada
       if (!assignment) return true;
-      if (assignment.requiere_taquilla === false) return false;
-      
-      const tieneTaquilla = assignment.numero_taquilla_actual && 
+      if (assignment.requiere_taquilla === false) return true;
+
+      const tieneTaquilla = assignment.numero_taquilla_actual &&
                            String(assignment.numero_taquilla_actual).replace(/['"''‚„]/g, '').trim() !== "";
-      
+
       return !tieneTaquilla;
     });
-  }, [employees, lockerAssignments]);
+  }, [employees, lockerAssignments, config]);
 
   const departments = useMemo(() => {
     const depts = new Set();
@@ -68,7 +87,12 @@ export default function EmployeesWithoutLocker({ employees, lockerAssignments, o
         <CardContent className="p-8 text-center">
           <CheckCircle2 className="w-16 h-16 text-green-500 mx-auto mb-3" />
           <p className="text-lg font-semibold text-green-900">
-            ✅ Todos los empleados tienen taquilla asignada
+            ✅ Todos los empleados que requieren taquilla tienen una asignada
+          </p>
+          <p className="text-sm text-green-700 mt-1">
+            {config.mode === "config"
+              ? "La lista se filtra según la configuración de departamentos/puestos."
+              : "Modo: todos los empleados activos requieren taquilla."}
           </p>
         </CardContent>
       </Card>

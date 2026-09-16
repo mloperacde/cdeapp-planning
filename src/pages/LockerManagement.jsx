@@ -44,6 +44,7 @@ import LockerRoomMap from "../components/lockers/LockerRoomMap";
 import LockerConfigForm from "../components/lockers/LockerConfigForm";
 import LockerAudit from "../components/lockers/LockerAudit";
 import EmployeesWithoutLocker from "../components/lockers/EmployeesWithoutLocker";
+import LockerRequirementConfig from "../components/lockers/LockerRequirementConfig";
 import AdvancedSearch from "../components/common/AdvancedSearch";
 import ThemeToggle from "../components/common/ThemeToggle";
 import { useLockerData } from "@/hooks/useLockerData";
@@ -1072,10 +1073,13 @@ export default function LockerManagementPage() {
           </TabsContent>
 
           <TabsContent value="sin-taquilla">
-            <EmployeesWithoutLocker 
-              employees={employees}
-              lockerAssignments={lockerAssignments}
-            />
+            <div className="space-y-6">
+              <LockerRequirementConfig employees={employees} />
+              <EmployeesWithoutLocker 
+                employees={employees}
+                lockerAssignments={lockerAssignments}
+              />
+            </div>
           </TabsContent>
 
           <TabsContent value="mapa">
