@@ -10,10 +10,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CheckCircle2, XCircle, Settings, Edit3, Users, Search } from "lucide-react";
+import { CheckCircle2, XCircle, Settings, Edit3, Users, Search, FileSpreadsheet } from "lucide-react";
 import LockerAssignmentDialog from "./LockerAssignmentDialog";
 import { cleanLockerNumber } from "@/utils";
 import { toast } from "sonner";
+import { exportLockerMap } from "@/utils/lockerExport";
 
 export default function LockerRoomMap({ lockerAssignments, employees, lockerRoomConfigs, saveAssignments }) {
   const [selectedVestuario, setSelectedVestuario] = useState("Vestuario Femenino Planta Alta");
@@ -151,6 +152,14 @@ export default function LockerRoomMap({ lockerAssignments, employees, lockerRoom
         </div>
 
         <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => exportLockerMap(selectedVestuario, lockerData)}
+            title="Exportar mapa a Excel"
+          >
+            <FileSpreadsheet className="w-4 h-4 mr-2" />
+            Exportar Excel
+          </Button>
           <Button
             variant={quickEditMode ? "default" : "outline"}
             onClick={() => setQuickEditMode(!quickEditMode)}

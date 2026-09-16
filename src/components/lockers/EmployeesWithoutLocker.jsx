@@ -21,8 +21,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { AlertCircle, ExternalLink, Search, UserX, CheckCircle2 } from "lucide-react";
+import { AlertCircle, ExternalLink, Search, UserX, CheckCircle2, FileSpreadsheet } from "lucide-react";
 import { usePersistentAppConfig } from "@/hooks/usePersistentAppConfig";
+import { exportEmployeesWithoutLocker } from "@/utils/lockerExport";
 
 export default function EmployeesWithoutLocker({ employees, lockerAssignments, onAssign }) {
   const [searchTerm, setSearchTerm] = useState("");
@@ -157,6 +158,17 @@ export default function EmployeesWithoutLocker({ employees, lockerAssignments, o
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          <div className="flex justify-end mb-4">
+            <Button
+              variant="outline"
+              onClick={() => exportEmployeesWithoutLocker(employees, lockerAssignments, config)}
+              title="Exportar lista a Excel"
+            >
+              <FileSpreadsheet className="w-4 h-4 mr-2" />
+              Exportar Excel
+            </Button>
           </div>
 
           <div className="overflow-x-auto">

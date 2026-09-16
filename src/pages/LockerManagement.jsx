@@ -891,14 +891,24 @@ export default function LockerManagementPage() {
                   <p className="text-sm text-slate-600">
                     Cada taquilla debe tener dos llaves: empleado y jefes de turno.
                   </p>
-                  <Button
-                    onClick={() => saveKeysRegistry(localKeysRegistry)}
-                    disabled={savingKeys}
-                    className="bg-blue-600 hover:bg-blue-700"
-                  >
-                    <Save className="w-4 h-4 mr-2" />
-                    {savingKeys ? "Guardando..." : "Guardar registro"}
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => exportKeysRegistry(lockerAssignments, employees, localKeysRegistry)}
+                      title="Exportar registro a Excel"
+                    >
+                      <FileSpreadsheet className="w-4 h-4 mr-2" />
+                      Exportar Excel
+                    </Button>
+                    <Button
+                      onClick={() => saveKeysRegistry(localKeysRegistry)}
+                      disabled={savingKeys}
+                      className="bg-blue-600 hover:bg-blue-700"
+                    >
+                      <Save className="w-4 h-4 mr-2" />
+                      {savingKeys ? "Guardando..." : "Guardar registro"}
+                    </Button>
+                  </div>
                 </div>
                 <div className="overflow-auto rounded-lg border border-slate-200 dark:border-slate-800">
                   <Table>
@@ -1267,6 +1277,17 @@ export default function LockerManagementPage() {
                        </DropdownMenuCheckboxItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
+
+                 <Button
+                   variant="outline"
+                   size="sm"
+                   onClick={() => exportAssignments(filteredAndSortedEmployees, lockerAssignments, editingAssignments)}
+                   className="h-9 px-3 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
+                   title="Exportar lista a Excel"
+                 >
+                   <FileSpreadsheet className="w-4 h-4 mr-2" />
+                   <span className="hidden sm:inline">Exportar Excel</span>
+                 </Button>
 
                  {hasChanges && (
                     <Button
