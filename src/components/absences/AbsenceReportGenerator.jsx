@@ -344,13 +344,17 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
         if (dow >= 1 && dow <= 5 && !holidaySet.has(ds) && !globalVacationSet.has(ds) && !empVac.has(ds)) {
           const hasAttData = datesWithData.has(ds);
           const clockedIn = empAtt.has(ds);
+          // Solo se aplica el control de presencia si el empleado está registrado en el
+          // sistema de fichaje (tiene al menos un registro). Si no tiene ningún registro,
+          // no se puede determinar presencia → se usan los registros formales.
+          const empTracked = empAtt.size > 0;
           let isAbsent = false;
 
-          if (hasAttData) {
+          if (hasAttData && empTracked) {
             // Control de presencia: fuente de verdad
             isAbsent = !clockedIn;
           } else {
-            // Sin datos de fichaje → usar registro formal
+            // Sin datos de fichaje o empleado no fichado → usar registro formal
             isAbsent = empAbs.some(a => coversDate(a, ds));
           }
 
