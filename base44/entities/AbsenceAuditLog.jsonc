@@ -103,5 +103,50 @@
     "action_type",
     "sync_date",
     "origen"
-  ]
+  ],
+  "rls": {
+    "create": null,
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "rrhh"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "rrhh"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "rrhh"
+          }
+        }
+      ]
+    }
+  }
 }

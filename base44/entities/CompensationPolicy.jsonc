@@ -91,5 +91,50 @@
     "policy_name",
     "code",
     "valid_from"
-  ]
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "rrhh"
+          }
+        }
+      ]
+    },
+    "read": null,
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "rrhh"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "rrhh"
+          }
+        }
+      ]
+    }
+  }
 }

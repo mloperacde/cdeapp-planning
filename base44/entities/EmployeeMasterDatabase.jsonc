@@ -348,5 +348,85 @@
   },
   "required": [
     "nombre"
-  ]
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "rrhh"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "hr_manager"
+          }
+        }
+      ]
+    },
+    "read": null,
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "rrhh"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "hr_manager"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "shift_manager_production"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "shift_manager_quality"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "shift_manager_maintenance"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "prod_supervisor"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "rrhh"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "hr_manager"
+          }
+        }
+      ]
+    }
+  }
 }

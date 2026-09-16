@@ -59,5 +59,19 @@
     "action",
     "modified_by",
     "timestamp"
-  ]
+  ],
+  "rls": {
+    "create": null,
+    "read": null,
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
 }

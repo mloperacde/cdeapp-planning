@@ -60,5 +60,19 @@
     "telefono",
     "mensaje",
     "tipo_evento"
-  ]
+  ],
+  "rls": {
+    "create": null,
+    "read": null,
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
 }

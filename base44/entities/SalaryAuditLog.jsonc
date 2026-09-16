@@ -85,5 +85,32 @@
     "action",
     "changed_by",
     "change_date"
-  ]
+  ],
+  "rls": {
+    "create": null,
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "rrhh"
+          }
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
 }

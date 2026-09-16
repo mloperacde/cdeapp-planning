@@ -72,5 +72,19 @@
     "master_employee_id",
     "sync_date",
     "sync_type"
-  ]
+  ],
+  "rls": {
+    "create": null,
+    "read": null,
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
 }

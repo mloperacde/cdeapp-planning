@@ -108,5 +108,65 @@
     "request_type",
     "requested_by",
     "request_date"
-  ]
+  ],
+  "rls": {
+    "create": null,
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "rrhh"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "hr_manager"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "rrhh"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "hr_manager"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "rrhh"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "hr_manager"
+          }
+        }
+      ]
+    }
+  }
 }
