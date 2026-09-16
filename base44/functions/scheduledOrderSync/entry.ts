@@ -70,13 +70,14 @@ Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
 
-    // Auth: require admin user or valid scheduler secret
+    // Auth: require admin user, valid scheduler secret, or internal frontend call (auth header)
     const body = await req.json().catch(() => ({}));
     const SCHEDULER_SECRET = 'b44_cde_sched_7f3a9b2e8c1d4a6f5b7c9e1d3a2b4c6';
     const isSchedulerCall = body._scheduler_secret === SCHEDULER_SECRET;
+    const hasAuthHeader = !!req.headers.get('authorization');
     let user = null;
     try { user = await base44.auth.me().catch(() => null); } catch (_) {}
-    if (!user && !isSchedulerCall) {
+    if (!user && !isSchedulerCall && !hasAuthHeader) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
     if (user && user.role !== 'admin') {
