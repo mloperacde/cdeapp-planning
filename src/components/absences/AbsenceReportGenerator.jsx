@@ -69,6 +69,40 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
     return s;
   }, [holidays]);
 
+  const { data: vacations = [] } = useQuery({
+    queryKey: ['vacations'],
+    queryFn: () => base44.entities.Vacation.list('start_date', 500),
+  });
+
+  // Días de vacaciones: set global (aplica_todos) + map por empleado (vacaciones individuales)
+  const { globalVacationSet, employeeVacationMap } = useMemo(() => {
+    const globalSet = new Set();
+    const empMap = {};
+    const expand = (startStr, endStr) => {
+      const days = [];
+      const cur = new Date(startStr + "T00:00:00");
+      const end = new Date(endStr + "T00:00:00");
+      while (cur <= end) {
+        days.push(format(cur, "yyyy-MM-dd"));
+        cur.setDate(cur.getDate() + 1);
+      }
+      return days;
+    };
+    vacations.forEach(v => {
+      if (!v.start_date || !v.end_date) return;
+      const days = expand(v.start_date, v.end_date);
+      if (v.aplica_todos) {
+        days.forEach(d => globalSet.add(d));
+      } else if (v.employee_ids?.length) {
+        v.employee_ids.forEach(eid => {
+          if (!empMap[eid]) empMap[eid] = new Set();
+          days.forEach(d => empMap[eid].add(d));
+        });
+      }
+    });
+    return { globalVacationSet: globalSet, employeeVacationMap: empMap };
+  }, [vacations]);
+
   const getEmp = (id) => employees.find(e => String(e.id) === String(id));
   const getType = (abs) => absenceTypes.find(t => t.id === abs.absence_type_id) || null;
 
@@ -117,8 +151,8 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
     return [start, end];
   };
 
-  // Fusiona intervalos solapados y cuenta días LABORABLES únicos (L-V, excluyendo festivos)
-  const countWorkingDays = (intervals) => {
+  // Fusiona intervalos solapados y cuenta días LABORABLES únicos (L-V, excluyendo festivos y vacaciones)
+  const countWorkingDays = (intervals, employeeId) => {
     if (!intervals || intervals.length === 0) return 0;
     const sorted = [...intervals].sort((a, b) => a[0] - b[0]);
     const merged = [sorted[0]];
@@ -130,6 +164,7 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
         merged.push(sorted[i]);
       }
     }
+    const empVac = employeeId ? employeeVacationMap[String(employeeId)] : null;
     let count = 0;
     for (const [s, e] of merged) {
       const cur = new Date(s);
@@ -139,7 +174,7 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
       while (cur <= endDay) {
         const dow = cur.getDay();
         const dateStr = format(cur, "yyyy-MM-dd");
-        if (dow >= 1 && dow <= 5 && !holidaySet.has(dateStr)) {
+        if (dow >= 1 && dow <= 5 && !holidaySet.has(dateStr) && !globalVacationSet.has(dateStr) && !(empVac && empVac.has(dateStr))) {
           count++;
         }
         cur.setDate(cur.getDate() + 1);
@@ -169,7 +204,7 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
     }
     let daysLost = 0;
     for (const key of Object.keys(intervalsByEmp)) {
-      daysLost += countWorkingDays(intervalsByEmp[key]);
+      daysLost += countWorkingDays(intervalsByEmp[key], key);
     }
 
     const remunerated = filtered.filter(a => {
@@ -179,18 +214,32 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
     }).length;
 
     return { total, approved, pending, rejected, cancelled, autoPending, daysLost, remunerated };
-  }, [filtered, absenceTypes, rangeBounds, holidaySet]);
+  }, [filtered, absenceTypes, rangeBounds, holidaySet, globalVacationSet, employeeVacationMap]);
 
   // Agrupaciones para gráficos/tablas
+  // Días laborables por tipo (agrupando por empleado para aplicar vacaciones individuales)
   const byType = useMemo(() => {
-    const map = {};
+    const intervalsByEmpType = {};
+    const countByType = {};
     for (const abs of filtered) {
       if (abs.estado_aprobacion === 'Cancelada' || abs.estado_aprobacion === 'Rechazada') continue;
       const tipo = abs.tipo || "Sin especificar";
-      map[tipo] = (map[tipo] || 0) + 1;
+      countByType[tipo] = (countByType[tipo] || 0) + 1;
+      const interval = getAbsenceInterval(abs);
+      if (!interval) continue;
+      const key = `${abs.employee_id || 'unknown'}||${tipo}`;
+      if (!intervalsByEmpType[key]) intervalsByEmpType[key] = [];
+      intervalsByEmpType[key].push(interval);
     }
-    return Object.entries(map).map(([tipo, count]) => ({ tipo, count })).sort((a, b) => b.count - a.count);
-  }, [filtered]);
+    const daysByType = {};
+    for (const key of Object.keys(intervalsByEmpType)) {
+      const [empId, tipo] = key.split('||');
+      daysByType[tipo] = (daysByType[tipo] || 0) + countWorkingDays(intervalsByEmpType[key], empId);
+    }
+    return Object.keys(countByType).map(tipo => ({
+      tipo, count: countByType[tipo], days: daysByType[tipo] || 0,
+    })).sort((a, b) => b.days - a.days);
+  }, [filtered, rangeBounds, holidaySet, globalVacationSet, employeeVacationMap]);
 
   const byDepartment = useMemo(() => {
     const map = {};
@@ -205,27 +254,28 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
 
   const byEmployee = useMemo(() => {
     const map = {};
-    const intervalsByName = {};
+    const intervalsByEmp = {};
     for (const abs of filtered) {
       if (abs.estado_aprobacion === 'Cancelada' || abs.estado_aprobacion === 'Rechazada') continue;
       const emp = getEmp(abs.employee_id);
+      const empId = abs.employee_id || 'unknown';
       const name = emp?.nombre || "Desconocido";
-      if (!map[name]) map[name] = { count: 0, days: 0, auto: 0 };
-      map[name].count++;
-      if (wasAutoDetected(abs)) map[name].auto++;
+      if (!map[empId]) map[empId] = { name, dept: emp?.departamento || "—", count: 0, days: 0, auto: 0 };
+      map[empId].count++;
+      if (wasAutoDetected(abs)) map[empId].auto++;
       const interval = getAbsenceInterval(abs);
       if (interval) {
-        if (!intervalsByName[name]) intervalsByName[name] = [];
-        intervalsByName[name].push(interval);
+        if (!intervalsByEmp[empId]) intervalsByEmp[empId] = [];
+        intervalsByEmp[empId].push(interval);
       }
     }
-    for (const name of Object.keys(map)) {
-      map[name].days = countWorkingDays(intervalsByName[name] || []);
+    for (const empId of Object.keys(map)) {
+      map[empId].days = countWorkingDays(intervalsByEmp[empId] || [], empId);
     }
     return Object.entries(map)
-      .map(([name, data]) => ({ name, ...data }))
+      .map(([empId, data]) => ({ empId, ...data }))
       .sort((a, b) => b.days - a.days);
-  }, [filtered, employees, rangeBounds, holidaySet]);
+  }, [filtered, employees, rangeBounds, holidaySet, globalVacationSet, employeeVacationMap]);
 
   const deptOptions = useMemo(() => {
     const s = new Set();
@@ -251,6 +301,8 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
       const start = new Date(abs.fecha_inicio);
       const end = abs.fecha_fin_desconocida ? null : (abs.fecha_fin ? new Date(abs.fecha_fin) : null);
       const days = end ? differenceInCalendarDays(end, start) + 1 : "Indefinida";
+      const interval = getAbsenceInterval(abs);
+      const workingDays = interval ? countWorkingDays([interval], abs.employee_id) : 0;
       return {
         "Código Empleado": emp?.codigo_empleado || "",
         "Empleado": emp?.nombre || "Desconocido",
@@ -261,7 +313,8 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
         "Motivo": abs.motivo || "",
         "Fecha Inicio": format(start, "dd/MM/yyyy HH:mm"),
         "Fecha Fin": end ? format(end, "dd/MM/yyyy HH:mm") : "Indefinida",
-        "Días": days,
+        "Días naturales": days,
+        "Días laborables": workingDays,
         "Estado": abs.estado_aprobacion || "",
         "Remunerada": (type?.remunerada !== undefined ? type.remunerada : abs.remunerada) ? "Sí" : "No",
         "Origen": wasAutoDetected(abs) ? "Detección automática" : "Manual",
@@ -383,9 +436,10 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
             ) : (
               <div className="space-y-1.5">
                 {byType.map(t => (
-                  <div key={t.tipo} className="flex items-center justify-between text-xs">
+                  <div key={t.tipo} className="flex items-center justify-between text-xs gap-2">
                     <span className="text-slate-600 truncate flex-1">{t.tipo}</span>
-                    <Badge className="bg-blue-100 text-blue-700 ml-2">{t.count}</Badge>
+                    <span className="text-slate-400 text-[10px] whitespace-nowrap">{t.count} regs.</span>
+                    <Badge className="bg-blue-100 text-blue-700 whitespace-nowrap">{t.days} días</Badge>
                   </div>
                 ))}
               </div>
@@ -436,20 +490,17 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {byEmployee.slice(0, 20).map(e => {
-                  const emp = employees.find(x => x.nombre === e.name);
-                  return (
-                    <TableRow key={e.name}>
-                      <TableCell className="text-xs font-medium">{e.name}</TableCell>
-                      <TableCell className="text-xs">{emp?.departamento || "—"}</TableCell>
-                      <TableCell className="text-xs text-center">{e.count}</TableCell>
-                      <TableCell className="text-xs text-center font-semibold">{e.days}</TableCell>
-                      <TableCell className="text-xs text-center">
-                        {e.auto > 0 ? <Badge className="bg-amber-100 text-amber-700 text-[10px]">{e.auto}</Badge> : "—"}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
+                {byEmployee.slice(0, 20).map(e => (
+                   <TableRow key={e.empId}>
+                     <TableCell className="text-xs font-medium">{e.name}</TableCell>
+                     <TableCell className="text-xs">{e.dept}</TableCell>
+                     <TableCell className="text-xs text-center">{e.count}</TableCell>
+                     <TableCell className="text-xs text-center font-semibold">{e.days}</TableCell>
+                     <TableCell className="text-xs text-center">
+                       {e.auto > 0 ? <Badge className="bg-amber-100 text-amber-700 text-[10px]">{e.auto}</Badge> : "—"}
+                     </TableCell>
+                   </TableRow>
+                 ))}
               </TableBody>
             </Table>
           )}
