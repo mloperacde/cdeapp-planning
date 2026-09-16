@@ -322,18 +322,20 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
       return Math.max(0, Math.floor(years * 12)) + ' meses';
     };
 
-    // Calcula días ausente en una ventana usando control de presencia como fuente de verdad
+    // Calcula días ausente y episodios (periodos consecutivos) en una ventana.
+    // Un día sin presencia = ausencia. Los días ausente se agrupan en episodios:
+    // dos días ausente pertenecen al mismo episodio si entre ellos solo hay fines
+    // de semana / festivos / vacaciones (sin día laborable presente que los separe).
     const computeForWindow = (empId, winStart, winEnd) => {
       const empAbs = absByEmp[empId] || [];
       const empAtt = attendanceByEmp[empId] || new Set();
       const empVac = employeeVacationMap[empId] || new Set();
 
       let daysAbsent = 0;
-      let daysWithoutPresence = 0;
-      let recordCount = 0;
       let hasMaternity = false;
       let hasMarriage = false;
       const typeCounts = {};
+      const absentDays = []; // fechas (yyyy-MM-dd) de días laborables ausente
 
       const cur = new Date(winStart);
       while (cur <= winEnd) {
@@ -342,37 +344,73 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
         if (dow >= 1 && dow <= 5 && !holidaySet.has(ds) && !globalVacationSet.has(ds) && !empVac.has(ds)) {
           const hasAttData = datesWithData.has(ds);
           const clockedIn = empAtt.has(ds);
+          let isAbsent = false;
 
-          if (hasAttData && !clockedIn) {
-            // Control de presencia: no fichó → ausente
+          if (hasAttData) {
+            // Control de presencia: fuente de verdad
+            isAbsent = !clockedIn;
+          } else {
+            // Sin datos de fichaje → usar registro formal
+            isAbsent = empAbs.some(a => coversDate(a, ds));
+          }
+
+          if (isAbsent) {
             daysAbsent++;
+            absentDays.push(ds);
             const formalAbs = empAbs.find(a => coversDate(a, ds));
             if (formalAbs) {
-              recordCount++;
               const t = formalAbs.tipo || 'Sin especificar';
               typeCounts[t] = (typeCounts[t] || 0) + 1;
               if (isMaternityType(formalAbs.tipo)) hasMaternity = true;
               if (isMarriageType(formalAbs.tipo)) hasMarriage = true;
             } else {
-              daysWithoutPresence++;
               typeCounts['Sin registro de presencia'] = (typeCounts['Sin registro de presencia'] || 0) + 1;
-            }
-          } else if (!hasAttData) {
-            // Sin datos de fichaje para ese día → usar registros formales
-            const formalAbs = empAbs.find(a => coversDate(a, ds));
-            if (formalAbs) {
-              daysAbsent++;
-              recordCount++;
-              const t = formalAbs.tipo || 'Sin especificar';
-              typeCounts[t] = (typeCounts[t] || 0) + 1;
-              if (isMaternityType(formalAbs.tipo)) hasMaternity = true;
-              if (isMarriageType(formalAbs.tipo)) hasMarriage = true;
             }
           }
         }
         cur.setDate(cur.getDate() + 1);
       }
-      return { daysAbsent, daysWithoutPresence, recordCount, hasMaternity, hasMarriage, typeCounts };
+
+      // Contar episodios: agrupar días ausente consecutivos
+      let episodes = 0;
+      let longestEpisode = 0;
+      let currentLen = 0;
+      let prevDate = null;
+      for (const ds of absentDays) {
+        if (prevDate === null) {
+          currentLen = 1;
+        } else {
+          // ¿Hay un día laborable entre prevDate y ds? Si sí → nuevo episodio
+          const prev = new Date(prevDate + 'T12:00:00');
+          const curr = new Date(ds + 'T12:00:00');
+          let gap = false;
+          const check = new Date(prev);
+          check.setDate(check.getDate() + 1);
+          while (check < curr) {
+            const cdow = check.getDay();
+            const cds = fmtDate(check);
+            if (cdow >= 1 && cdow <= 5 && !holidaySet.has(cds) && !globalVacationSet.has(cds) && !empVac.has(cds)) {
+              gap = true;
+              break;
+            }
+            check.setDate(check.getDate() + 1);
+          }
+          if (gap) {
+            episodes++;
+            if (currentLen > longestEpisode) longestEpisode = currentLen;
+            currentLen = 1;
+          } else {
+            currentLen++;
+          }
+        }
+        prevDate = ds;
+      }
+      if (currentLen > 0) {
+        episodes++;
+        if (currentLen > longestEpisode) longestEpisode = currentLen;
+      }
+
+      return { daysAbsent, episodes, longestEpisode, hasMaternity, hasMarriage, typeCounts };
     };
 
     return employees.map(emp => {
@@ -380,10 +418,10 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
       const isControlled = emp.estado_empleado === 'Alta' && emp.sujeto_a_control_horario !== false;
       const r12 = isControlled
         ? computeForWindow(empId, win12Start, winEnd)
-        : { daysAbsent: 0, daysWithoutPresence: 0, recordCount: 0, hasMaternity: false, hasMarriage: false, typeCounts: {} };
+        : { daysAbsent: 0, episodes: 0, longestEpisode: 0, hasMaternity: false, hasMarriage: false, typeCounts: {} };
       const rMonth = isControlled
         ? computeForWindow(empId, monthStart, winEnd)
-        : { daysAbsent: 0, daysWithoutPresence: 0, recordCount: 0, hasMaternity: false, hasMarriage: false, typeCounts: {} };
+        : { daysAbsent: 0, episodes: 0, longestEpisode: 0, hasMaternity: false, hasMarriage: false, typeCounts: {} };
       return {
         empId,
         nombre: emp.nombre || "Desconocido",
@@ -392,11 +430,11 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
         puesto: emp.puesto || "—",
         antiguedad: computeAntiguedad(emp),
         estado_empleado: emp.estado_empleado || "Alta",
-        count12: r12.recordCount,
         days12: r12.daysAbsent,
-        daysWithoutPresence12: r12.daysWithoutPresence,
-        countMonth: rMonth.recordCount,
+        episodes12: r12.episodes,
+        longest12: r12.longestEpisode,
         daysMonth: rMonth.daysAbsent,
+        episodesMonth: rMonth.episodes,
         estado: emp.disponibilidad || "—",
         typeCounts: r12.typeCounts,
         hasMaternity: r12.hasMaternity,
@@ -470,10 +508,11 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
       "Puesto": e.puesto,
       "Antigüedad": e.antiguedad,
       "Estado empleado": e.estado_empleado,
-      "Nº ausencias formales 12m": e.count12,
-      "Días sin presencia 12m": e.daysWithoutPresence12 || 0,
       "Días ausente 12m": e.days12,
+      "Episodios 12m": e.episodes12 || 0,
+      "Episodio más largo 12m": e.longest12 || 0,
       "Días ausencia mes en curso": e.daysMonth,
+      "Episodios mes en curso": e.episodesMonth || 0,
       "Maternidad": e.hasMaternity ? "Sí" : "No",
       "Matrimonio": e.hasMarriage ? "Sí" : "No",
       "Estado actual": e.estado,
@@ -648,10 +687,11 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
                     <TableHead className="text-xs">Puesto</TableHead>
                     <TableHead className="text-xs text-center">Antig.</TableHead>
                     <TableHead className="text-xs text-center">Est. emp.</TableHead>
-                    <TableHead className="text-xs text-center">Aus. formales 12m</TableHead>
-                    <TableHead className="text-xs text-center">Días sin presencia 12m</TableHead>
                     <TableHead className="text-xs text-center">Días ausente 12m</TableHead>
+                    <TableHead className="text-xs text-center">Episodios 12m</TableHead>
+                    <TableHead className="text-xs text-center">Ep. más largo 12m</TableHead>
                     <TableHead className="text-xs text-center">Días mes</TableHead>
+                    <TableHead className="text-xs text-center">Ep. mes</TableHead>
                     <TableHead className="text-xs text-center">Estado</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -673,10 +713,11 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
                           {e.estado_empleado}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-xs text-center">{e.count12}</TableCell>
-                      <TableCell className="text-xs text-center text-amber-600">{e.daysWithoutPresence12 || 0}</TableCell>
                       <TableCell className="text-xs text-center font-semibold">{e.days12}</TableCell>
+                      <TableCell className="text-xs text-center">{e.episodes12 || 0}</TableCell>
+                      <TableCell className="text-xs text-center text-slate-600">{e.longest12 || 0}</TableCell>
                       <TableCell className="text-xs text-center font-semibold">{e.daysMonth}</TableCell>
+                      <TableCell className="text-xs text-center">{e.episodesMonth || 0}</TableCell>
                       <TableCell className="text-xs text-center">
                         <Badge className={e.estado === "Ausente" ? "bg-red-100 text-red-700 text-[10px]" : "bg-green-100 text-green-700 text-[10px]"}>
                           {e.estado}
