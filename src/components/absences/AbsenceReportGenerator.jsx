@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/table";
 import {
   FileSpreadsheet, Download, Filter, RefreshCw, CalendarDays,
-  Users, Clock, TrendingDown, CheckCircle2, XCircle, AlertCircle, Bot, AlertTriangle,
+  Users, Clock, TrendingDown, CheckCircle2, XCircle, AlertCircle, Bot,
 } from "lucide-react";
 import { format, differenceInCalendarDays, startOfMonth, endOfMonth, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
@@ -41,7 +41,7 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
 
   const { data: absences = [], isLoading } = useQuery({
     queryKey: ['absences'],
-    queryFn: () => base44.entities.Absence.list('-fecha_inicio', 2000),
+    queryFn: () => base44.entities.Absence.list('-fecha_inicio', 5000),
     staleTime: 0,
   });
 
@@ -260,8 +260,6 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
     const win12Start = new Date(now); win12Start.setFullYear(win12Start.getFullYear() - 1); win12Start.setHours(0, 0, 0, 0);
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
     const winEnd = new Date(now); winEnd.setHours(23, 59, 59, 999);
-    const todayStart = new Date(now); todayStart.setHours(0, 0, 0, 0);
-    const todayEnd = new Date(now); todayEnd.setHours(23, 59, 59, 999);
 
     // Agrupar ausencias por empleado
     const absByEmp = {};
@@ -274,24 +272,9 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
     return employees.map(emp => {
       const empId = String(emp.id);
       // Ausencias formales activas (entidad Absence)
-      const formalAbsences = (absByEmp[empId] || []).filter(a => a.estado_aprobacion !== 'Cancelada' && a.estado_aprobacion !== 'Rechazada');
-      // Ausencia sintética desde la ficha si está marcada Ausente y no hay registro formal que la cubra
-      const allAbsences = [...formalAbsences];
-      if (emp.disponibilidad === "Ausente" && emp.ausencia_inicio) {
-        const synStart = new Date(emp.ausencia_inicio);
-        const synEnd = emp.ausencia_fin ? new Date(emp.ausencia_fin) : winEnd;
-        const covered = formalAbsences.some(a => clipInterval(a, synStart, synEnd) !== null);
-        if (!covered) {
-          allAbsences.push({
-            fecha_inicio: emp.ausencia_inicio,
-            fecha_fin: emp.ausencia_fin || null,
-            fecha_fin_desconocida: !emp.ausencia_fin,
-            tipo: emp.ausencia_motivo || "Ausencia (sin registro formal)",
-          });
-        }
-      }
+      const empAbsences = (absByEmp[empId] || []).filter(a => a.estado_aprobacion !== 'Cancelada' && a.estado_aprobacion !== 'Rechazada');
       // Últimos 12 meses
-      const active12 = allAbsences.filter(a => clipInterval(a, win12Start, winEnd) !== null);
+      const active12 = empAbsences.filter(a => clipInterval(a, win12Start, winEnd) !== null);
       const intervals12 = active12.map(a => clipInterval(a, win12Start, winEnd)).filter(Boolean);
       const days12 = countWorkingDays(intervals12, empId);
       const typeCounts = {};
@@ -300,11 +283,9 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
         typeCounts[t] = (typeCounts[t] || 0) + 1;
       });
       // Mes en curso
-      const activeMonth = allAbsences.filter(a => clipInterval(a, monthStart, winEnd) !== null);
+      const activeMonth = empAbsences.filter(a => clipInterval(a, monthStart, winEnd) !== null);
       const intervalsMonth = activeMonth.map(a => clipInterval(a, monthStart, winEnd)).filter(Boolean);
       const daysMonth = countWorkingDays(intervalsMonth, empId);
-      // Estado actual: ausencia activa hoy (formal o sintética de la ficha)
-      const isAbsentToday = allAbsences.some(a => clipInterval(a, todayStart, todayEnd) !== null);
       return {
         empId,
         nombre: emp.nombre || "Desconocido",
@@ -314,8 +295,7 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
         days12,
         countMonth: activeMonth.length,
         daysMonth,
-        estado: isAbsentToday ? "Ausente" : "Disponible",
-        estadoMaster: emp.disponibilidad || "—",
+        estado: emp.disponibilidad || "—",
         typeCounts,
       };
     })
@@ -389,7 +369,6 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
       "Nº ausencias mes en curso": e.countMonth,
       "Días ausencia mes en curso": e.daysMonth,
       "Estado actual": e.estado,
-      "Estado según ficha": e.estadoMaster,
       "Desglose por tipos (12m)": Object.entries(e.typeCounts).map(([t, c]) => `${t}: ${c}`).join("; "),
     }));
     exportToExcel(rows, "resumen_ausencias_empleados", "Resumen");
@@ -577,16 +556,9 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
                       <TableCell className="text-xs text-center">{e.countMonth}</TableCell>
                       <TableCell className="text-xs text-center font-semibold">{e.daysMonth}</TableCell>
                       <TableCell className="text-xs text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          <Badge className={e.estado === "Ausente" ? "bg-red-100 text-red-700 text-[10px]" : "bg-green-100 text-green-700 text-[10px]"}>
-                            {e.estado}
-                          </Badge>
-                          {e.estadoMaster === "Ausente" && e.estado === "Disponible" && (
-                            <span title={`Ficha dice: ${e.estadoMaster} (posible desactualización)`}>
-                              <AlertTriangle className="w-3 h-3 text-amber-500" />
-                            </span>
-                          )}
-                        </div>
+                        <Badge className={e.estado === "Ausente" ? "bg-red-100 text-red-700 text-[10px]" : "bg-green-100 text-green-700 text-[10px]"}>
+                          {e.estado}
+                        </Badge>
                       </TableCell>
                     </TableRow>
                   ))}
