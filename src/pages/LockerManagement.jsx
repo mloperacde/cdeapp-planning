@@ -653,7 +653,7 @@ export default function LockerManagementPage() {
         porcentajeOcupacion: totalInstaladas > 0 ? Math.round((asignadas / totalInstaladas) * 100) : 0
       };
     });
-  }, [lockerRoomConfigs, lockerAssignments]);
+  }, [lockerRoomConfigs, lockerAssignments, employees]);
 
   const SortableHeader = ({ field, label }) => (
     <TableHead 
@@ -728,10 +728,13 @@ export default function LockerManagementPage() {
         {showFilters && (
           <div className="mb-6">
             <AdvancedSearch
-              filters={searchFilters}
-              setFilters={setSearchFilters}
-              options={searchFilterOptions}
-              onClose={() => setShowFilters(false)}
+              data={employees}
+              onFilterChange={setSearchFilters}
+              searchFields={['nombre', 'codigo_empleado', 'departamento', 'puesto']}
+              filterOptions={searchFilterOptions}
+              placeholder="Buscar..."
+              enableSearch={false}
+              currentSearchTerm={searchFilters.searchTerm || ""}
             />
           </div>
         )}
