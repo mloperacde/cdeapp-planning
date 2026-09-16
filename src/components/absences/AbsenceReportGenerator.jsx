@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/table";
 import {
   FileSpreadsheet, Download, Filter, RefreshCw, CalendarDays,
-  Users, Clock, TrendingDown, CheckCircle2, XCircle, AlertCircle, Bot,
+  Users, Clock, TrendingDown, CheckCircle2, XCircle, AlertCircle, Bot, AlertTriangle,
 } from "lucide-react";
 import { format, differenceInCalendarDays, startOfMonth, endOfMonth, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
@@ -260,6 +260,8 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
     const win12Start = new Date(now); win12Start.setFullYear(win12Start.getFullYear() - 1); win12Start.setHours(0, 0, 0, 0);
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
     const winEnd = new Date(now); winEnd.setHours(23, 59, 59, 999);
+    const todayStart = new Date(now); todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date(now); todayEnd.setHours(23, 59, 59, 999);
 
     // Agrupar ausencias por empleado
     const absByEmp = {};
@@ -291,6 +293,11 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
       });
       const intervalsMonth = activeMonth.map(a => clipInterval(a, monthStart, winEnd)).filter(Boolean);
       const daysMonth = countWorkingDays(intervalsMonth, empId);
+      // Estado actual derivado de ausencias activas hoy (consistente con los contadores)
+      const isAbsentToday = empAbsences.some(a => {
+        if (a.estado_aprobacion === 'Cancelada' || a.estado_aprobacion === 'Rechazada') return false;
+        return clipInterval(a, todayStart, todayEnd) !== null;
+      });
       return {
         empId,
         nombre: emp.nombre || "Desconocido",
@@ -300,7 +307,8 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
         days12,
         countMonth: activeMonth.length,
         daysMonth,
-        estado: emp.disponibilidad || "—",
+        estado: isAbsentToday ? "Ausente" : "Disponible",
+        estadoMaster: emp.disponibilidad || "—",
         typeCounts,
       };
     })
@@ -374,6 +382,7 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
       "Nº ausencias mes en curso": e.countMonth,
       "Días ausencia mes en curso": e.daysMonth,
       "Estado actual": e.estado,
+      "Estado según ficha": e.estadoMaster,
       "Desglose por tipos (12m)": Object.entries(e.typeCounts).map(([t, c]) => `${t}: ${c}`).join("; "),
     }));
     exportToExcel(rows, "resumen_ausencias_empleados", "Resumen");
@@ -561,9 +570,16 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
                       <TableCell className="text-xs text-center">{e.countMonth}</TableCell>
                       <TableCell className="text-xs text-center font-semibold">{e.daysMonth}</TableCell>
                       <TableCell className="text-xs text-center">
-                        <Badge className={e.estado === "Ausente" ? "bg-red-100 text-red-700 text-[10px]" : "bg-green-100 text-green-700 text-[10px]"}>
-                          {e.estado}
-                        </Badge>
+                        <div className="flex items-center justify-center gap-1">
+                          <Badge className={e.estado === "Ausente" ? "bg-red-100 text-red-700 text-[10px]" : "bg-green-100 text-green-700 text-[10px]"}>
+                            {e.estado}
+                          </Badge>
+                          {e.estadoMaster === "Ausente" && e.estado === "Disponible" && (
+                            <span title={`Ficha dice: ${e.estadoMaster} (posible desactualización)`}>
+                              <AlertTriangle className="w-3 h-3 text-amber-500" />
+                            </span>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
