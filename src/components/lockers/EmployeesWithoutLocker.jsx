@@ -205,12 +205,14 @@ export default function EmployeesWithoutLocker({ employees, lockerAssignments, o
                         </Badge>
                       </TableCell>
                       <TableCell className="text-center">
-                        <Link to={createPageUrl(`Employees?id=${emp.id}`)}>
-                          <Button size="sm" variant="outline">
-                            <ExternalLink className="w-3 h-3 mr-1" />
-                            Asignar
-                          </Button>
-                        </Link>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => onAssign?.(emp)}
+                        >
+                          <ExternalLink className="w-3 h-3 mr-1" />
+                          Asignar
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))

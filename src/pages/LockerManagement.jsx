@@ -69,6 +69,7 @@ export default function LockerManagementPage() {
   const [importFile, setImportFile] = useState(null);
   const [importing, setImporting] = useState(false);
   const [importPreview, setImportPreview] = useState(null);
+  const [activeTab, setActiveTab] = useState("estadisticas");
 
   const queryClient = useQueryClient();
   
@@ -768,7 +769,7 @@ export default function LockerManagementPage() {
           </Card>
         )}
 
-        <Tabs defaultValue="estadisticas" className="space-y-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid w-full grid-cols-8">
             <TabsTrigger value="estadisticas">
               <BarChart3 className="w-4 h-4 mr-2" />
@@ -1099,6 +1100,7 @@ export default function LockerManagementPage() {
                 <EmployeesWithoutLocker 
                   employees={employees}
                   lockerAssignments={lockerAssignments}
+                  onAssign={() => setActiveTab("asignaciones")}
                 />
               </TabsContent>
               <TabsContent value="sin-taquilla-config">

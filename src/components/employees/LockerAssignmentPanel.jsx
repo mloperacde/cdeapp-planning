@@ -42,14 +42,17 @@ export default function LockerAssignmentPanel({ employee }) {
     initialData: [],
   });
 
-  const assignment = lockerAssignments.find(la => la.employee_id === employee.id);
+  const assignment = lockerAssignments.find(la => String(la.employee_id) === String(employee.id));
 
   useEffect(() => {
     if (assignment) {
       setVestuario(assignment.vestuario || "");
       setNumeroTaquilla((assignment.numero_taquilla_actual || "").replace(/['"]/g, '').trim());
+    } else {
+      setVestuario("");
+      setNumeroTaquilla("");
     }
-  }, [assignment]);
+  }, [assignment?.vestuario, assignment?.numero_taquilla_actual, assignment?.employee_id]);
 
   const updateLockerMutation = useMutation({
     mutationFn: async ({ vestuario, numeroTaquilla }) => {
@@ -59,7 +62,7 @@ export default function LockerAssignmentPanel({ employee }) {
       const duplicado = lockerAssignments.find(la => 
         la.vestuario === vestuario &&
         la.numero_taquilla_actual?.replace(/['"]/g, '').trim() === numeroLimpio &&
-        la.employee_id !== employee.id &&
+        String(la.employee_id) !== String(employee.id) &&
         la.requiere_taquilla !== false
       );
 
