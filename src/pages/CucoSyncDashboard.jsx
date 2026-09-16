@@ -19,6 +19,9 @@ export default function CucoSyncDashboard() {
   const [syncing, setSyncing] = useState(false);
   const [lastSyncResult, setLastSyncResult] = useState(null);
   const [syncError, setSyncError] = useState(null);
+  const [syncingHistorical, setSyncingHistorical] = useState(false);
+  const [historicalResult, setHistoricalResult] = useState(null);
+  const [historicalError, setHistoricalError] = useState(null);
 
   const runCheck = async () => {
     setChecking(true);
@@ -93,6 +96,30 @@ export default function CucoSyncDashboard() {
     }
   };
 
+  const runHistoricalSync = async () => {
+    if (!confirm("Se van a sincronizar 12 meses de histórico desde Cuco360. Esto puede tardar varios minutos. ¿Continuar?")) return;
+    setSyncingHistorical(true);
+    setHistoricalResult(null);
+    setHistoricalError(null);
+    try {
+      toast.info("Iniciando sync histórico de 12 meses... (puede tardar varios minutos)");
+      const res = await base44.functions.invoke("syncCuco360Historical", {});
+      const data = res.data;
+      setHistoricalResult(data);
+      if (data.success) {
+        toast.success(`✅ ${data.totalCreated} registros creados, ${data.totalSkipped} duplicados`);
+      } else {
+        toast.error("Error: " + (data.error || "desconocido"));
+      }
+    } catch (err) {
+      const msg = err.message || "Error desconocido";
+      setHistoricalError(msg);
+      toast.error("Error en sync histórico");
+    } finally {
+      setSyncingHistorical(false);
+    }
+  };
+
   const cr = checkResult;
   const lsr = lastSyncResult;
 
@@ -115,6 +142,10 @@ export default function CucoSyncDashboard() {
           <Button onClick={runDailySync} disabled={syncing} size="sm" variant="outline" className="gap-2 h-8 border-green-300 text-green-700 hover:bg-green-50">
             <CalendarCheck className={`w-4 h-4 ${syncing ? "animate-spin" : ""}`} />
             {syncing ? "Sincronizando..." : "Sync Fichajes Hoy"}
+          </Button>
+          <Button onClick={runHistoricalSync} disabled={syncingHistorical || syncing} size="sm" variant="outline" className="gap-2 h-8 border-purple-300 text-purple-700 hover:bg-purple-50">
+            <Database className={`w-4 h-4 ${syncingHistorical ? "animate-spin" : ""}`} />
+            {syncingHistorical ? "Sincronizando..." : "Sync Histórico 12m"}
           </Button>
           <Button onClick={runCheck} disabled={checking} size="sm" className="bg-blue-600 hover:bg-blue-700 gap-2 h-8">
             <RefreshCw className={`w-4 h-4 ${checking ? "animate-spin" : ""}`} />
@@ -141,6 +172,22 @@ export default function CucoSyncDashboard() {
                   </p>
                 </div>
                 <button onClick={() => setSyncError(null)} className="text-red-400 hover:text-red-600 text-lg leading-none">×</button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Error de sync histórico */}
+        {historicalError && (
+          <Card className="border-2 border-red-400 bg-red-50 dark:bg-red-950/30">
+            <CardContent className="pt-4 pb-4">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 shrink-0" />
+                <div className="flex-1">
+                  <p className="font-semibold text-red-700 text-sm">Error al ejecutar sync histórico</p>
+                  <p className="text-xs text-red-600 mt-1 font-mono break-all">{historicalError}</p>
+                </div>
+                <button onClick={() => setHistoricalError(null)} className="text-red-400 hover:text-red-600 text-lg leading-none">×</button>
               </div>
             </CardContent>
           </Card>
@@ -218,6 +265,45 @@ export default function CucoSyncDashboard() {
                           <span className="text-red-600 ml-1">— {f.errors}</span>
                         </div>
                       </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Resultado del sync histórico */}
+        {historicalResult && (
+          <Card className={`border-2 ${historicalResult.success ? "border-purple-300 bg-purple-50 dark:bg-purple-950/20" : "border-red-300 bg-red-50 dark:bg-red-950/20"}`}>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <Database className="w-5 h-5 text-purple-600" />
+                <span>Resultado del Sync Histórico (12 meses)</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className={`text-sm font-medium ${historicalResult.success ? "text-purple-700" : "text-red-700"}`}>{historicalResult.message}</p>
+              <div className="grid grid-cols-3 gap-2">
+                <div className="bg-white dark:bg-slate-800 rounded-lg p-2 text-center border border-purple-200">
+                  <p className="text-lg font-bold text-purple-600">{historicalResult.totalCreated ?? 0}</p>
+                  <p className="text-[10px] text-slate-500">Registros creados</p>
+                </div>
+                <div className="bg-white dark:bg-slate-800 rounded-lg p-2 text-center border border-slate-200">
+                  <p className="text-lg font-bold text-slate-600">{historicalResult.totalSkipped ?? 0}</p>
+                  <p className="text-[10px] text-slate-500">Duplicados saltados</p>
+                </div>
+                <div className="bg-white dark:bg-slate-800 rounded-lg p-2 text-center border border-slate-200">
+                  <p className="text-lg font-bold text-slate-600">{historicalResult.chunks ?? 0}</p>
+                  <p className="text-[10px] text-slate-500">Bloques procesados</p>
+                </div>
+              </div>
+              {historicalResult.errors?.length > 0 && (
+                <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 rounded-lg p-3">
+                  <p className="text-xs font-semibold text-amber-700 mb-1.5">Errores parciales ({historicalResult.errors.length}):</p>
+                  <div className="space-y-1 max-h-32 overflow-y-auto">
+                    {historicalResult.errors.map((e, i) => (
+                      <div key={i} className="text-xs text-amber-600 font-mono">{e}</div>
                     ))}
                   </div>
                 </div>
