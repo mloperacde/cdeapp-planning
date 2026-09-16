@@ -140,16 +140,18 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
     };
   }, [dateFrom, dateTo]);
 
-  // Intervalo de una ausencia recortado al rango del informe (null si fuera de rango)
-  const getAbsenceInterval = (abs) => {
+  // Recorta una ausencia a una ventana de fechas (null si fuera de rango)
+  const clipInterval = (abs, winStart, winEnd) => {
     if (!abs.fecha_inicio) return null;
     const absStart = new Date(abs.fecha_inicio);
-    const absEnd = (abs.fecha_fin_desconocida || !abs.fecha_fin) ? rangeBounds.end : new Date(abs.fecha_fin);
-    const start = absStart < rangeBounds.start ? rangeBounds.start : absStart;
-    const end = absEnd > rangeBounds.end ? rangeBounds.end : absEnd;
+    const absEnd = (abs.fecha_fin_desconocida || !abs.fecha_fin) ? winEnd : new Date(abs.fecha_fin);
+    const start = absStart < winStart ? winStart : absStart;
+    const end = absEnd > winEnd ? winEnd : absEnd;
     if (end < start) return null;
     return [start, end];
   };
+  // Intervalo de una ausencia recortado al rango del informe (null si fuera de rango)
+  const getAbsenceInterval = (abs) => clipInterval(abs, rangeBounds.start, rangeBounds.end);
 
   // Fusiona intervalos solapados y cuenta días LABORABLES únicos (L-V, excluyendo festivos y vacaciones)
   const countWorkingDays = (intervals, employeeId) => {
@@ -252,30 +254,59 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
     return Object.entries(map).map(([dept, count]) => ({ dept, count })).sort((a, b) => b.count - a.count);
   }, [filtered, employees]);
 
-  const byEmployee = useMemo(() => {
-    const map = {};
-    const intervalsByEmp = {};
-    for (const abs of filtered) {
-      if (abs.estado_aprobacion === 'Cancelada' || abs.estado_aprobacion === 'Rechazada') continue;
-      const emp = getEmp(abs.employee_id);
-      const empId = abs.employee_id || 'unknown';
-      const name = emp?.nombre || "Desconocido";
-      if (!map[empId]) map[empId] = { name, dept: emp?.departamento || "—", count: 0, days: 0, auto: 0 };
-      map[empId].count++;
-      if (wasAutoDetected(abs)) map[empId].auto++;
-      const interval = getAbsenceInterval(abs);
-      if (interval) {
-        if (!intervalsByEmp[empId]) intervalsByEmp[empId] = [];
-        intervalsByEmp[empId].push(interval);
-      }
-    }
-    for (const empId of Object.keys(map)) {
-      map[empId].days = countWorkingDays(intervalsByEmp[empId] || [], empId);
-    }
-    return Object.entries(map)
-      .map(([empId, data]) => ({ empId, ...data }))
-      .sort((a, b) => b.days - a.days);
-  }, [filtered, employees, rangeBounds, holidaySet, globalVacationSet, employeeVacationMap]);
+  // Resumen por empleado: últimos 12 meses + mes en curso + estado actual + conteo por tipo (dato)
+  const employeeSummary = useMemo(() => {
+    const now = new Date();
+    const win12Start = new Date(now); win12Start.setFullYear(win12Start.getFullYear() - 1); win12Start.setHours(0, 0, 0, 0);
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
+    const winEnd = new Date(now); winEnd.setHours(23, 59, 59, 999);
+
+    // Agrupar ausencias por empleado
+    const absByEmp = {};
+    absences.forEach(a => {
+      const k = String(a.employee_id);
+      if (!absByEmp[k]) absByEmp[k] = [];
+      absByEmp[k].push(a);
+    });
+
+    return employees.map(emp => {
+      const empId = String(emp.id);
+      const empAbsences = absByEmp[empId] || [];
+      // Últimos 12 meses
+      const active12 = empAbsences.filter(a => {
+        if (a.estado_aprobacion === 'Cancelada' || a.estado_aprobacion === 'Rechazada') return false;
+        return clipInterval(a, win12Start, winEnd) !== null;
+      });
+      const intervals12 = active12.map(a => clipInterval(a, win12Start, winEnd)).filter(Boolean);
+      const days12 = countWorkingDays(intervals12, empId);
+      const typeCounts = {};
+      active12.forEach(a => {
+        const t = a.tipo || "Sin especificar";
+        typeCounts[t] = (typeCounts[t] || 0) + 1;
+      });
+      // Mes en curso
+      const activeMonth = empAbsences.filter(a => {
+        if (a.estado_aprobacion === 'Cancelada' || a.estado_aprobacion === 'Rechazada') return false;
+        return clipInterval(a, monthStart, winEnd) !== null;
+      });
+      const intervalsMonth = activeMonth.map(a => clipInterval(a, monthStart, winEnd)).filter(Boolean);
+      const daysMonth = countWorkingDays(intervalsMonth, empId);
+      return {
+        empId,
+        nombre: emp.nombre || "Desconocido",
+        departamento: emp.departamento || "—",
+        puesto: emp.puesto || "—",
+        count12: active12.length,
+        days12,
+        countMonth: activeMonth.length,
+        daysMonth,
+        estado: emp.disponibilidad || "—",
+        typeCounts,
+      };
+    })
+      .filter(e => filterDept === "all" || e.departamento === filterDept)
+      .sort((a, b) => b.days12 - a.days12);
+  }, [employees, absences, filterDept, holidaySet, globalVacationSet, employeeVacationMap]);
 
   const deptOptions = useMemo(() => {
     const s = new Set();
@@ -326,6 +357,27 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
     const period = `${dateFrom}_al_${dateTo}`;
     exportToExcel(rows, `informe_ausencias_${period}`, "Ausencias");
     toast.success(`Exportados ${rows.length} registros a Excel`);
+  };
+
+  // Exportar resumen por empleado (incluye desglose por tipo como dato)
+  const handleExportSummary = () => {
+    if (employeeSummary.length === 0) {
+      toast.warning("No hay datos para exportar");
+      return;
+    }
+    const rows = employeeSummary.map(e => ({
+      "Empleado": e.nombre,
+      "Departamento": e.departamento,
+      "Puesto": e.puesto,
+      "Nº ausencias últimos 12 meses": e.count12,
+      "Días ausente últimos 12 meses": e.days12,
+      "Nº ausencias mes en curso": e.countMonth,
+      "Días ausencia mes en curso": e.daysMonth,
+      "Estado actual": e.estado,
+      "Desglose por tipos (12m)": Object.entries(e.typeCounts).map(([t, c]) => `${t}: ${c}`).join("; "),
+    }));
+    exportToExcel(rows, "resumen_ausencias_empleados", "Resumen");
+    toast.success(`Exportados ${rows.length} empleados a Excel`);
   };
 
   const kpis = [
@@ -470,39 +522,54 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
       {/* Detalle por empleado */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <Users className="w-4 h-4 text-slate-500" />
-            Resumen por Empleado ({byEmployee.length})
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Users className="w-4 h-4 text-slate-500" />
+              Resumen por Empleado ({employeeSummary.length})
+            </CardTitle>
+            <Button size="sm" variant="outline" onClick={handleExportSummary} disabled={employeeSummary.length === 0} className="text-xs h-7">
+              <FileSpreadsheet className="w-3.5 h-3.5 mr-1" /> Exportar resumen
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
-          {byEmployee.length === 0 ? (
+          {employeeSummary.length === 0 ? (
             <p className="text-xs text-slate-400 text-center py-6">Sin datos</p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="text-xs">Empleado</TableHead>
-                  <TableHead className="text-xs">Departamento</TableHead>
-                  <TableHead className="text-xs text-center">Ausencias</TableHead>
-                  <TableHead className="text-xs text-center">Días laborables</TableHead>
-                  <TableHead className="text-xs text-center">Auto-det.</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {byEmployee.slice(0, 20).map(e => (
-                   <TableRow key={e.empId}>
-                     <TableCell className="text-xs font-medium">{e.name}</TableCell>
-                     <TableCell className="text-xs">{e.dept}</TableCell>
-                     <TableCell className="text-xs text-center">{e.count}</TableCell>
-                     <TableCell className="text-xs text-center font-semibold">{e.days}</TableCell>
-                     <TableCell className="text-xs text-center">
-                       {e.auto > 0 ? <Badge className="bg-amber-100 text-amber-700 text-[10px]">{e.auto}</Badge> : "—"}
-                     </TableCell>
-                   </TableRow>
-                 ))}
-              </TableBody>
-            </Table>
+            <div className="max-h-[500px] overflow-y-auto">
+              <Table>
+                <TableHeader className="sticky top-0 bg-white dark:bg-slate-800 z-10">
+                  <TableRow>
+                    <TableHead className="text-xs">Empleado</TableHead>
+                    <TableHead className="text-xs">Departamento</TableHead>
+                    <TableHead className="text-xs">Puesto</TableHead>
+                    <TableHead className="text-xs text-center">Ausencias 12m</TableHead>
+                    <TableHead className="text-xs text-center">Días ausente 12m</TableHead>
+                    <TableHead className="text-xs text-center">Ausencias mes</TableHead>
+                    <TableHead className="text-xs text-center">Días mes</TableHead>
+                    <TableHead className="text-xs text-center">Estado</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {employeeSummary.map(e => (
+                    <TableRow key={e.empId}>
+                      <TableCell className="text-xs font-medium">{e.nombre}</TableCell>
+                      <TableCell className="text-xs">{e.departamento}</TableCell>
+                      <TableCell className="text-xs">{e.puesto}</TableCell>
+                      <TableCell className="text-xs text-center">{e.count12}</TableCell>
+                      <TableCell className="text-xs text-center font-semibold">{e.days12}</TableCell>
+                      <TableCell className="text-xs text-center">{e.countMonth}</TableCell>
+                      <TableCell className="text-xs text-center font-semibold">{e.daysMonth}</TableCell>
+                      <TableCell className="text-xs text-center">
+                        <Badge className={e.estado === "Ausente" ? "bg-red-100 text-red-700 text-[10px]" : "bg-green-100 text-green-700 text-[10px]"}>
+                          {e.estado}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>
