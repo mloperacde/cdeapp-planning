@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -94,11 +94,18 @@ export default function LockerManagementPage() {
     setLocalKeysRegistry(keysRegistry || {});
   }, [keysRegistry]);
 
+  // Ref para evitar que el useEffect de sincronización sobrescriba ediciones en curso
+  const hasChangesRef = useRef(false);
+  useEffect(() => { hasChangesRef.current = hasChanges; }, [hasChanges]);
+
   const getAssignment = (employeeId) => {
     return lockerAssignments.find(la => String(la.employee_id) === String(employeeId));
   };
 
   useEffect(() => {
+    // No sobrescribir si hay cambios sin guardar (evita perder ediciones al refrescar datos)
+    if (hasChangesRef.current) return;
+    
     const assignments = {};
     lockerAssignments.forEach(la => {
       const cleanActual = la.numero_taquilla_actual ? la.numero_taquilla_actual.replace(/['"''‚„]/g, '').trim() : '';
@@ -249,6 +256,7 @@ export default function LockerManagementPage() {
     try {
         const count = await saveAssignments(updates);
         setHasChanges(false);
+        hasChangesRef.current = false;
         toast.success(`✅ ${count} cambios guardados correctamente`);
     } catch (error) {
         toast.error(error.message);
@@ -1100,7 +1108,10 @@ export default function LockerManagementPage() {
                 <EmployeesWithoutLocker 
                   employees={employees}
                   lockerAssignments={lockerAssignments}
-                  onAssign={() => setActiveTab("asignaciones")}
+                  onAssign={(emp) => {
+                    setActiveTab("asignaciones");
+                    setSearchFilters(prev => ({ ...prev, searchTerm: emp?.nombre || "" }));
+                  }}
                 />
               </TabsContent>
               <TabsContent value="sin-taquilla-config">
