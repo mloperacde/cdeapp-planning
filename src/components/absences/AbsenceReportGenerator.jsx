@@ -12,14 +12,15 @@ import {
 } from "@/components/ui/table";
 import {
   FileSpreadsheet, Download, Filter, RefreshCw, CalendarDays,
-  Users, Clock, TrendingDown, CheckCircle2, XCircle, AlertCircle, Bot, Baby, HeartHandshake,
+  Users, User, Clock, TrendingDown, CheckCircle2, XCircle, AlertCircle, Bot, Baby, HeartHandshake,
 } from "lucide-react";
 import { format, differenceInCalendarDays, startOfMonth, endOfMonth, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
 import { exportToExcel } from "@/utils/lockerExport";
-import { isAutoAbsence, wasAutoDetected } from "@/utils/absenceUtils";
+import { isAutoAbsence, wasAutoDetected, clipInterval, countWorkingDays } from "@/utils/absenceUtils";
 import PayrollExportButton from "./PayrollExportButton";
+import IndividualAbsenceReport from "./IndividualAbsenceReport";
 
 const STATUS_CONFIG = {
   Pendiente:  { color: "bg-amber-100 text-amber-800", icon: AlertCircle },
@@ -38,6 +39,7 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
   const [filterDept, setFilterDept] = useState("all");
   const [filterType, setFilterType] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [viewMode, setViewMode] = useState('global');
 
   const { data: absences = [], isLoading } = useQuery({
     queryKey: ['absences-report'],
@@ -152,50 +154,8 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
     };
   }, [dateFrom, dateTo]);
 
-  // Recorta una ausencia a una ventana de fechas (null si fuera de rango)
-  const clipInterval = (abs, winStart, winEnd) => {
-    if (!abs.fecha_inicio) return null;
-    const absStart = new Date(abs.fecha_inicio);
-    const absEnd = (abs.fecha_fin_desconocida || !abs.fecha_fin) ? winEnd : new Date(abs.fecha_fin);
-    const start = absStart < winStart ? winStart : absStart;
-    const end = absEnd > winEnd ? winEnd : absEnd;
-    if (end < start) return null;
-    return [start, end];
-  };
   // Intervalo de una ausencia recortado al rango del informe (null si fuera de rango)
   const getAbsenceInterval = (abs) => clipInterval(abs, rangeBounds.start, rangeBounds.end);
-
-  // Fusiona intervalos solapados y cuenta días LABORABLES únicos (L-V, excluyendo festivos y vacaciones)
-  const countWorkingDays = (intervals, employeeId) => {
-    if (!intervals || intervals.length === 0) return 0;
-    const sorted = [...intervals].sort((a, b) => a[0] - b[0]);
-    const merged = [sorted[0]];
-    for (let i = 1; i < sorted.length; i++) {
-      const last = merged[merged.length - 1];
-      if (sorted[i][0] <= last[1]) {
-        last[1] = last[1] > sorted[i][1] ? last[1] : sorted[i][1];
-      } else {
-        merged.push(sorted[i]);
-      }
-    }
-    const empVac = employeeId ? employeeVacationMap[String(employeeId)] : null;
-    let count = 0;
-    for (const [s, e] of merged) {
-      const cur = new Date(s);
-      cur.setHours(0, 0, 0, 0);
-      const endDay = new Date(e);
-      endDay.setHours(0, 0, 0, 0);
-      while (cur <= endDay) {
-        const dow = cur.getDay();
-        const dateStr = format(cur, "yyyy-MM-dd");
-        if (dow >= 1 && dow <= 5 && !holidaySet.has(dateStr) && !globalVacationSet.has(dateStr) && !(empVac && empVac.has(dateStr))) {
-          count++;
-        }
-        cur.setDate(cur.getDate() + 1);
-      }
-    }
-    return count;
-  };
 
   // KPIs
   const stats = useMemo(() => {
@@ -218,7 +178,7 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
     }
     let daysLost = 0;
     for (const key of Object.keys(intervalsByEmp)) {
-      daysLost += countWorkingDays(intervalsByEmp[key], key);
+      daysLost += countWorkingDays(intervalsByEmp[key], key, holidaySet, globalVacationSet, employeeVacationMap);
     }
 
     const remunerated = filtered.filter(a => {
@@ -248,7 +208,7 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
     const daysByType = {};
     for (const key of Object.keys(intervalsByEmpType)) {
       const [empId, tipo] = key.split('||');
-      daysByType[tipo] = (daysByType[tipo] || 0) + countWorkingDays(intervalsByEmpType[key], empId);
+      daysByType[tipo] = (daysByType[tipo] || 0) + countWorkingDays(intervalsByEmpType[key], empId, holidaySet, globalVacationSet, employeeVacationMap);
     }
     return Object.keys(countByType).map(tipo => ({
       tipo, count: countByType[tipo], days: daysByType[tipo] || 0,
@@ -296,7 +256,7 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
       const end = abs.fecha_fin_desconocida ? null : (abs.fecha_fin ? new Date(abs.fecha_fin) : null);
       const days = end ? differenceInCalendarDays(end, start) + 1 : "Indefinida";
       const interval = getAbsenceInterval(abs);
-      const workingDays = interval ? countWorkingDays([interval], abs.employee_id) : 0;
+      const workingDays = interval ? countWorkingDays([interval], abs.employee_id, holidaySet, globalVacationSet, employeeVacationMap) : 0;
       return {
         "Código Empleado": emp?.codigo_empleado || "",
         "Empleado": emp?.nombre || "Desconocido",
@@ -427,6 +387,18 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
         </CardContent>
       </Card>
 
+      {/* Toggle de vista */}
+      <div className="flex gap-2">
+        <Button size="sm" variant={viewMode === 'global' ? 'default' : 'outline'} onClick={() => setViewMode('global')} className="text-xs h-8">
+          <Users className="w-3.5 h-3.5 mr-1" /> Informe Global
+        </Button>
+        <Button size="sm" variant={viewMode === 'individual' ? 'default' : 'outline'} onClick={() => setViewMode('individual')} className="text-xs h-8">
+          <User className="w-3.5 h-3.5 mr-1" /> Informe Individual
+        </Button>
+      </div>
+
+      {viewMode === 'global' && (
+      <>
       {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         {kpis.map(k => (
@@ -561,70 +533,22 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
           )}
         </CardContent>
       </Card>
+      </>
+      )}
 
-      {/* Tabla detallada */}
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-sm">Detalle de Ausencias ({filtered.length})</CardTitle>
-            <Button size="sm" variant="ghost" onClick={handleExportExcel} disabled={filtered.length === 0} className="text-xs h-7">
-              <Download className="w-3.5 h-3.5 mr-1" /> Excel
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <RefreshCw className="w-5 h-5 animate-spin text-slate-400" />
-            </div>
-          ) : filtered.length === 0 ? (
-            <p className="text-xs text-slate-400 text-center py-8">No hay ausencias con los filtros seleccionados</p>
-          ) : (
-            <div className="max-h-[400px] overflow-y-auto">
-              <Table>
-                <TableHeader className="sticky top-0 bg-white dark:bg-slate-800">
-                  <TableRow>
-                    <TableHead className="text-xs">Empleado</TableHead>
-                    <TableHead className="text-xs">Tipo</TableHead>
-                    <TableHead className="text-xs">Inicio</TableHead>
-                    <TableHead className="text-xs">Fin</TableHead>
-                    <TableHead className="text-xs">Estado</TableHead>
-                    <TableHead className="text-xs text-center">Origen</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filtered.map(abs => {
-                    const emp = getEmp(abs.employee_id);
-                    const cfg = STATUS_CONFIG[abs.estado_aprobacion] || STATUS_CONFIG.Pendiente;
-                    const auto = wasAutoDetected(abs);
-                    return (
-                      <TableRow key={abs.id}>
-                        <TableCell className="text-xs font-medium">
-                          <div className="flex items-center gap-1">
-                            {auto && <Bot className="w-3 h-3 text-amber-500 flex-shrink-0" />}
-                            {emp?.nombre || "Desconocido"}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-xs">{abs.tipo || "—"}</TableCell>
-                        <TableCell className="text-xs">{format(new Date(abs.fecha_inicio), "dd/MM/yy", { locale: es })}</TableCell>
-                        <TableCell className="text-xs">
-                          {abs.fecha_fin_desconocida ? "Indef." : format(new Date(abs.fecha_fin), "dd/MM/yy", { locale: es })}
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={`${cfg.color} text-[10px]`}>{abs.estado_aprobacion}</Badge>
-                        </TableCell>
-                        <TableCell className="text-xs text-center">
-                          {auto ? <span className="text-amber-600">Auto</span> : <span className="text-slate-400">Manual</span>}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {viewMode === 'individual' && (
+        <IndividualAbsenceReport
+          employees={employees}
+          filteredAbsences={filtered}
+          absenceTypes={absenceTypes}
+          holidaySet={holidaySet}
+          globalVacationSet={globalVacationSet}
+          employeeVacationMap={employeeVacationMap}
+          rangeBounds={rangeBounds}
+          dateFrom={dateFrom}
+          dateTo={dateTo}
+        />
+      )}
     </div>
   );
 }
