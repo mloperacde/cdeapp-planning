@@ -157,74 +157,50 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
   // Intervalo de una ausencia recortado al rango del informe (null si fuera de rango)
   const getAbsenceInterval = (abs) => clipInterval(abs, rangeBounds.start, rangeBounds.end);
 
-  // KPIs
-  const stats = useMemo(() => {
-    const total = filtered.length;
-    const approved = filtered.filter(a => a.estado_aprobacion === 'Aprobada').length;
-    const pending = filtered.filter(a => a.estado_aprobacion === 'Pendiente').length;
-    const rejected = filtered.filter(a => a.estado_aprobacion === 'Rechazada').length;
-    const cancelled = filtered.filter(a => a.estado_aprobacion === 'Cancelada').length;
-    const autoPending = filtered.filter(a => isAutoAbsence(a)).length;
+  // KPIs agregados desde el informe backend (DailyPresence como fuente de verdad)
+  const globalStats = useMemo(() => {
+    const emps = reportResponse?.employees || [];
+    const total = emps.length;
+    const withAbsences12m = emps.filter(e => e.days12 > 0).length;
+    const totalDays12 = emps.reduce((sum, e) => sum + (e.days12 || 0), 0);
+    const totalDaysMonth = emps.reduce((sum, e) => sum + (e.daysMonth || 0), 0);
+    const absentToday = emps.filter(e => e.estado === 'Ausente').length;
+    const maternityCount = emps.filter(e => e.hasMaternity).length;
+    return { total, withAbsences12m, totalDays12, totalDaysMonth, absentToday, maternityCount };
+  }, [reportResponse]);
 
-    // Días perdidos: suma de días únicos por empleado (sin duplicar solapamientos ni exceder el rango)
-    const intervalsByEmp = {};
-    for (const abs of filtered) {
-      if (abs.estado_aprobacion === 'Cancelada' || abs.estado_aprobacion === 'Rechazada') continue;
-      const interval = getAbsenceInterval(abs);
-      if (!interval) continue;
-      const key = abs.employee_id || 'unknown';
-      if (!intervalsByEmp[key]) intervalsByEmp[key] = [];
-      intervalsByEmp[key].push(interval);
-    }
-    let daysLost = 0;
-    for (const key of Object.keys(intervalsByEmp)) {
-      daysLost += countWorkingDays(intervalsByEmp[key], key, holidaySet, globalVacationSet, employeeVacationMap);
-    }
-
-    const remunerated = filtered.filter(a => {
-      if (a.estado_aprobacion === 'Cancelada' || a.estado_aprobacion === 'Rechazada') return false;
-      const type = getType(a);
-      return type?.remunerada === true || a.remunerada === true;
-    }).length;
-
-    return { total, approved, pending, rejected, cancelled, autoPending, daysLost, remunerated };
-  }, [filtered, absenceTypes, rangeBounds, holidaySet, globalVacationSet, employeeVacationMap]);
-
-  // Agrupaciones para gráficos/tablas
-  // Días laborables por tipo (agrupando por empleado para aplicar vacaciones individuales)
+  // Días ausentes por tipo (agregado desde el informe backend - typeCounts son días reales sin presencia)
   const byType = useMemo(() => {
-    const intervalsByEmpType = {};
-    const countByType = {};
-    for (const abs of filtered) {
-      if (abs.estado_aprobacion === 'Cancelada' || abs.estado_aprobacion === 'Rechazada') continue;
-      const tipo = abs.tipo || "Sin especificar";
-      countByType[tipo] = (countByType[tipo] || 0) + 1;
-      const interval = getAbsenceInterval(abs);
-      if (!interval) continue;
-      const key = `${abs.employee_id || 'unknown'}||${tipo}`;
-      if (!intervalsByEmpType[key]) intervalsByEmpType[key] = [];
-      intervalsByEmpType[key].push(interval);
+    const emps = reportResponse?.employees || [];
+    const typeAgg = {};
+    for (const emp of emps) {
+      if (!emp.typeCounts) continue;
+      for (const [tipo, days] of Object.entries(emp.typeCounts)) {
+        if (!typeAgg[tipo]) typeAgg[tipo] = { days: 0, employees: 0 };
+        typeAgg[tipo].days += days;
+        typeAgg[tipo].employees += 1;
+      }
     }
-    const daysByType = {};
-    for (const key of Object.keys(intervalsByEmpType)) {
-      const [empId, tipo] = key.split('||');
-      daysByType[tipo] = (daysByType[tipo] || 0) + countWorkingDays(intervalsByEmpType[key], empId, holidaySet, globalVacationSet, employeeVacationMap);
-    }
-    return Object.keys(countByType).map(tipo => ({
-      tipo, count: countByType[tipo], days: daysByType[tipo] || 0,
-    })).sort((a, b) => b.days - a.days);
-  }, [filtered, rangeBounds, holidaySet, globalVacationSet, employeeVacationMap]);
+    return Object.entries(typeAgg)
+      .map(([tipo, data]) => ({ tipo, days: data.days, employees: data.employees }))
+      .sort((a, b) => b.days - a.days);
+  }, [reportResponse]);
 
+  // Días ausentes por departamento (agregado desde el informe backend)
   const byDepartment = useMemo(() => {
-    const map = {};
-    for (const abs of filtered) {
-      if (abs.estado_aprobacion === 'Cancelada' || abs.estado_aprobacion === 'Rechazada') continue;
-      const emp = getEmp(abs.employee_id);
-      const dept = emp?.departamento || "Sin departamento";
-      map[dept] = (map[dept] || 0) + 1;
+    const emps = reportResponse?.employees || [];
+    const deptAgg = {};
+    for (const emp of emps) {
+      const dept = emp.departamento || "Sin departamento";
+      if (!deptAgg[dept]) deptAgg[dept] = { employees: 0, withAbsences: 0, days12: 0 };
+      deptAgg[dept].employees += 1;
+      deptAgg[dept].days12 += emp.days12 || 0;
+      if (emp.days12 > 0) deptAgg[dept].withAbsences += 1;
     }
-    return Object.entries(map).map(([dept, count]) => ({ dept, count })).sort((a, b) => b.count - a.count);
-  }, [filtered, employees]);
+    return Object.entries(deptAgg)
+      .map(([dept, data]) => ({ dept, ...data }))
+      .sort((a, b) => b.days12 - a.days12);
+  }, [reportResponse]);
 
   // Resumen por empleado: calculado en backend con DailyPresence como fuente de verdad
   const employeeSummary = useMemo(() => {
@@ -309,12 +285,12 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
   };
 
   const kpis = [
-    { label: "Total ausencias", value: stats.total, icon: CalendarDays, color: "text-slate-700", bg: "bg-slate-50" },
-    { label: "Aprobadas", value: stats.approved, icon: CheckCircle2, color: "text-green-600", bg: "bg-green-50" },
-    { label: "Pendientes", value: stats.pending, icon: AlertCircle, color: "text-amber-600", bg: "bg-amber-50" },
-    { label: "Rechazadas", value: stats.rejected, icon: XCircle, color: "text-red-600", bg: "bg-red-50" },
-    { label: "Días laborables", value: stats.daysLost, icon: Clock, color: "text-blue-600", bg: "bg-blue-50" },
-    { label: "Remuneradas", value: stats.remunerated, icon: TrendingDown, color: "text-purple-600", bg: "bg-purple-50" },
+    { label: "Empleados evaluados", value: globalStats.total, icon: Users, color: "text-slate-700", bg: "bg-slate-50" },
+    { label: "Con ausencias 12m", value: globalStats.withAbsences12m, icon: AlertCircle, color: "text-amber-600", bg: "bg-amber-50" },
+    { label: "Días ausentes 12m", value: globalStats.totalDays12, icon: Clock, color: "text-blue-600", bg: "bg-blue-50" },
+    { label: "Días mes en curso", value: globalStats.totalDaysMonth, icon: CalendarDays, color: "text-purple-600", bg: "bg-purple-50" },
+    { label: "Ausentes hoy", value: globalStats.absentToday, icon: XCircle, color: "text-red-600", bg: "bg-red-50" },
+    { label: "Maternidad/Patern.", value: globalStats.maternityCount, icon: Baby, color: "text-pink-600", bg: "bg-pink-50" },
   ];
 
   return (
@@ -399,7 +375,15 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
 
       {viewMode === 'global' && (
       <>
+      <p className="text-xs text-slate-400 px-1">
+        Datos basados en fichajes reales (DailyPresence) — últimos 12 meses y mes en curso. El filtro de departamento aplica al informe global; los filtros de fecha/tipo/estado aplican al informe individual y a las exportaciones.
+      </p>
       {/* KPIs */}
+      {reportLoading ? (
+        <div className="flex items-center justify-center py-8">
+          <RefreshCw className="w-5 h-5 animate-spin text-slate-400" />
+        </div>
+      ) : (
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         {kpis.map(k => (
           <Card key={k.label} className={`${k.bg} border-0`}>
@@ -415,6 +399,7 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
           </Card>
         ))}
       </div>
+      )}
 
       {/* Resumen por tipo y departamento */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -423,14 +408,18 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
             <CardTitle className="text-sm">Ausencias por Tipo</CardTitle>
           </CardHeader>
           <CardContent>
-            {byType.length === 0 ? (
+            {reportLoading ? (
+              <div className="flex items-center justify-center py-6">
+                <RefreshCw className="w-4 h-4 animate-spin text-slate-400" />
+              </div>
+            ) : byType.length === 0 ? (
               <p className="text-xs text-slate-400 text-center py-6">Sin datos</p>
             ) : (
               <div className="space-y-1.5">
                 {byType.map(t => (
                   <div key={t.tipo} className="flex items-center justify-between text-xs gap-2">
                     <span className="text-slate-600 truncate flex-1">{t.tipo}</span>
-                    <span className="text-slate-400 text-[10px] whitespace-nowrap">{t.count} regs.</span>
+                    <span className="text-slate-400 text-[10px] whitespace-nowrap">{t.employees} emps.</span>
                     <Badge className="bg-blue-100 text-blue-700 whitespace-nowrap">{t.days} días</Badge>
                   </div>
                 ))}
@@ -443,14 +432,19 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
             <CardTitle className="text-sm">Ausencias por Departamento</CardTitle>
           </CardHeader>
           <CardContent>
-            {byDepartment.length === 0 ? (
+            {reportLoading ? (
+              <div className="flex items-center justify-center py-6">
+                <RefreshCw className="w-4 h-4 animate-spin text-slate-400" />
+              </div>
+            ) : byDepartment.length === 0 ? (
               <p className="text-xs text-slate-400 text-center py-6">Sin datos</p>
             ) : (
               <div className="space-y-1.5">
                 {byDepartment.map(d => (
                   <div key={d.dept} className="flex items-center justify-between text-xs">
                     <span className="text-slate-600 truncate flex-1">{d.dept}</span>
-                    <Badge className="bg-green-100 text-green-700 ml-2">{d.count}</Badge>
+                    <span className="text-slate-400 text-[10px] whitespace-nowrap mr-2">{d.withAbsences}/{d.employees}</span>
+                    <Badge className="bg-blue-100 text-blue-700">{d.days12} días</Badge>
                   </div>
                 ))}
               </div>
