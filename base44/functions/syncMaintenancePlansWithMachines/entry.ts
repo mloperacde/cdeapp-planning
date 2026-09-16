@@ -6,6 +6,7 @@ Deno.serve(async (req) => {
     const user = await base44.auth.me();
 
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    if (user.role !== 'admin') return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
 
     // Load all MaintenanceTypes + both machine sources in parallel
     const [maintenanceTypes, legacyMachines, inventoryMachines] = await Promise.all([

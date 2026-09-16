@@ -10,14 +10,11 @@ Deno.serve(async (req) => {
   try {
     const client = createClientFromRequest(req);
 
-    // Auth: allow admins or system/automation calls (no user token)
-    try {
-      const user = await client.auth.me();
-      if (user && user.role !== 'admin') {
-        return new Response(JSON.stringify({ error: 'Forbidden: Admin access required' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
-      }
-    } catch {
-      // No authenticated user — this is a scheduled automation call, allow it
+    // Auth: allow admin users or scheduled automation calls (no user token)
+    let user = null;
+    try { user = await client.auth.me(); } catch (_) {}
+    if (user && user.role !== 'admin') {
+      return new Response(JSON.stringify({ error: 'Forbidden: Admin access required' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
     }
 
     const body = await req.json().catch(() => ({}));

@@ -8,6 +8,7 @@ Deno.serve(async (req) => {
     if (!user) {
       return Response.json({ error: 'No autorizado' }, { status: 401 });
     }
+    if (user.role !== 'admin') return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
 
     const body = await req.json();
     const { intervention, sendEmail, recipients } = body;

@@ -70,15 +70,11 @@ Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
 
-    // Auth: allow admins or system/automation calls (no user token)
-    try {
-      const user = await base44.auth.me().catch(() => null);
-      const userRole = (user?.role || '').toLowerCase();
-      if (user && user.email && userRole !== 'admin') {
-        return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
-      }
-    } catch {
-      // No authenticated user — this is a scheduled automation call, allow it
+    // Auth: allow admin users or scheduled automation calls (no user token)
+    let user = null;
+    try { user = await base44.auth.me().catch(() => null); } catch (_) {}
+    if (user && user.role !== 'admin') {
+      return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
     }
 
     const apiKey = Deno.env.get('CdeApp');

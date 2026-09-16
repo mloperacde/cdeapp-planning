@@ -86,11 +86,11 @@ Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
     const svc = base44.asServiceRole;
 
-    // Autenticación opcional (puede ser llamado por scheduler sin usuario)
+    // Auth: allow admin users or scheduled automation calls (no user token)
     let user = null;
     try { user = await base44.auth.me(); } catch (_) {}
     if (user && user.role !== 'admin') {
-      return Response.json({ error: 'Forbidden' }, { status: 403 });
+      return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
     }
 
     const nowSpain = getNowSpain();
