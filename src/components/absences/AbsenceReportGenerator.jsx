@@ -57,6 +57,18 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
     initialData: propTypes || [],
   });
 
+  const { data: holidays = [] } = useQuery({
+    queryKey: ['holidays'],
+    queryFn: () => base44.entities.Holiday.list('date', 500),
+  });
+
+  // Set de festivos (yyyy-MM-dd) para excluir del cómputo de días laborables
+  const holidaySet = useMemo(() => {
+    const s = new Set();
+    holidays.forEach(h => { if (h.date) s.add(h.date); });
+    return s;
+  }, [holidays]);
+
   const getEmp = (id) => employees.find(e => String(e.id) === String(id));
   const getType = (abs) => absenceTypes.find(t => t.id === abs.absence_type_id) || null;
 
@@ -83,11 +95,16 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
     });
   }, [rangeAbsences, employees, filterDept, filterType, filterStatus]);
 
-  // Límites del rango seleccionado
-  const rangeBounds = useMemo(() => ({
-    start: parseISO(dateFrom + "T00:00:00"),
-    end: parseISO(dateTo + "T23:59:59"),
-  }), [dateFrom, dateTo]);
+  // Límites del rango seleccionado (el fin se acota a hoy: no se cuentan días futuros)
+  const rangeBounds = useMemo(() => {
+    const endOfToday = new Date();
+    endOfToday.setHours(23, 59, 59, 999);
+    const rawEnd = parseISO(dateTo + "T23:59:59");
+    return {
+      start: parseISO(dateFrom + "T00:00:00"),
+      end: rawEnd > endOfToday ? endOfToday : rawEnd,
+    };
+  }, [dateFrom, dateTo]);
 
   // Intervalo de una ausencia recortado al rango del informe (null si fuera de rango)
   const getAbsenceInterval = (abs) => {
@@ -100,8 +117,8 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
     return [start, end];
   };
 
-  // Fusiona intervalos solapados y cuenta días naturales únicos (sin duplicar)
-  const countUniqueDays = (intervals) => {
+  // Fusiona intervalos solapados y cuenta días LABORABLES únicos (L-V, excluyendo festivos)
+  const countWorkingDays = (intervals) => {
     if (!intervals || intervals.length === 0) return 0;
     const sorted = [...intervals].sort((a, b) => a[0] - b[0]);
     const merged = [sorted[0]];
@@ -113,7 +130,22 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
         merged.push(sorted[i]);
       }
     }
-    return merged.reduce((sum, [s, e]) => sum + differenceInCalendarDays(e, s) + 1, 0);
+    let count = 0;
+    for (const [s, e] of merged) {
+      const cur = new Date(s);
+      cur.setHours(0, 0, 0, 0);
+      const endDay = new Date(e);
+      endDay.setHours(0, 0, 0, 0);
+      while (cur <= endDay) {
+        const dow = cur.getDay();
+        const dateStr = format(cur, "yyyy-MM-dd");
+        if (dow >= 1 && dow <= 5 && !holidaySet.has(dateStr)) {
+          count++;
+        }
+        cur.setDate(cur.getDate() + 1);
+      }
+    }
+    return count;
   };
 
   // KPIs
@@ -137,7 +169,7 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
     }
     let daysLost = 0;
     for (const key of Object.keys(intervalsByEmp)) {
-      daysLost += countUniqueDays(intervalsByEmp[key]);
+      daysLost += countWorkingDays(intervalsByEmp[key]);
     }
 
     const remunerated = filtered.filter(a => {
@@ -147,7 +179,7 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
     }).length;
 
     return { total, approved, pending, rejected, cancelled, autoPending, daysLost, remunerated };
-  }, [filtered, absenceTypes, rangeBounds]);
+  }, [filtered, absenceTypes, rangeBounds, holidaySet]);
 
   // Agrupaciones para gráficos/tablas
   const byType = useMemo(() => {
@@ -188,12 +220,12 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
       }
     }
     for (const name of Object.keys(map)) {
-      map[name].days = countUniqueDays(intervalsByName[name] || []);
+      map[name].days = countWorkingDays(intervalsByName[name] || []);
     }
     return Object.entries(map)
       .map(([name, data]) => ({ name, ...data }))
       .sort((a, b) => b.days - a.days);
-  }, [filtered, employees, rangeBounds]);
+  }, [filtered, employees, rangeBounds, holidaySet]);
 
   const deptOptions = useMemo(() => {
     const s = new Set();
@@ -248,7 +280,7 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
     { label: "Aprobadas", value: stats.approved, icon: CheckCircle2, color: "text-green-600", bg: "bg-green-50" },
     { label: "Pendientes", value: stats.pending, icon: AlertCircle, color: "text-amber-600", bg: "bg-amber-50" },
     { label: "Rechazadas", value: stats.rejected, icon: XCircle, color: "text-red-600", bg: "bg-red-50" },
-    { label: "Días de ausencia", value: stats.daysLost, icon: Clock, color: "text-blue-600", bg: "bg-blue-50" },
+    { label: "Días laborables", value: stats.daysLost, icon: Clock, color: "text-blue-600", bg: "bg-blue-50" },
     { label: "Remuneradas", value: stats.remunerated, icon: TrendingDown, color: "text-purple-600", bg: "bg-purple-50" },
   ];
 
@@ -399,7 +431,7 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
                   <TableHead className="text-xs">Empleado</TableHead>
                   <TableHead className="text-xs">Departamento</TableHead>
                   <TableHead className="text-xs text-center">Ausencias</TableHead>
-                  <TableHead className="text-xs text-center">Días (rango)</TableHead>
+                  <TableHead className="text-xs text-center">Días laborables</TableHead>
                   <TableHead className="text-xs text-center">Auto-det.</TableHead>
                 </TableRow>
               </TableHeader>
