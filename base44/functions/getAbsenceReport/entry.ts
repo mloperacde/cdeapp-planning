@@ -13,7 +13,7 @@ const coversDate = (abs: any, dateStr: string): boolean => {
 
 const isMaternityType = (tipo: string): boolean => {
   const t = (tipo || '').toLowerCase();
-  return t.includes('maternidad') || t.includes('paternidad') || t.includes('riesgo durante') || t.includes('lactancia');
+  return t.includes('maternidad') || t.includes('paternidad') || t.includes('riesgo durante') || t.includes('lactancia') || t.includes('nacimiento');
 };
 
 const isMarriageType = (tipo: string): boolean => {
@@ -165,10 +165,12 @@ export default async function(req: Request): Promise<Response> {
     }
 
     // Calcular resumen por empleado
-    const computeForWindow = (empId: string, winStart: Date, winEnd: Date) => {
+    const computeForWindow = (empId: string, winStart: Date, winEnd: Date, fechaAlta?: string) => {
       const empAbs = absByEmp[empId] || [];
       const empAtt = presenceByEmp[empId] || new Set<string>();
       const empVac = employeeVacationMap[empId] || new Set<string>();
+      // Si el empleado se incorporó después del inicio de la ventana, empezar desde su fecha de alta
+      const effectiveStart = fechaAlta ? new Date(fechaAlta + 'T00:00:00') : null;
 
       let daysAbsent = 0;
       let hasMaternity = false;
@@ -178,6 +180,11 @@ export default async function(req: Request): Promise<Response> {
 
       const cur = new Date(winStart);
       while (cur <= winEnd) {
+        // Saltar días anteriores a la fecha de incorporación del empleado
+        if (effectiveStart && cur < effectiveStart) {
+          cur.setDate(cur.getDate() + 1);
+          continue;
+        }
         const dow = cur.getDay();
         const ds = fmtDate(cur);
         if (dow >= 1 && dow <= 5 && !holidaySet.has(ds) && !globalVacationSet.has(ds) && !empVac.has(ds)) {
@@ -221,8 +228,8 @@ export default async function(req: Request): Promise<Response> {
       })
       .map(emp => {
         const empId = String(emp.id);
-        const r12 = computeForWindow(empId, win12Start, winEnd);
-        const rMonth = computeForWindow(empId, monthStart, winEnd);
+        const r12 = computeForWindow(empId, win12Start, winEnd, emp.fecha_alta);
+        const rMonth = computeForWindow(empId, monthStart, winEnd, emp.fecha_alta);
         return {
           empId,
           nombre: emp.nombre || 'Desconocido',
