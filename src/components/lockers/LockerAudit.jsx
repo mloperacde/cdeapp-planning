@@ -17,31 +17,44 @@ export default function LockerAudit({ employees, lockerAssignments }) {
       employeesWithoutAssignment: [],
       assignmentsWithoutEmployee: [],
       duplicateAssignments: [],
-      inconsistencies: []
+      inconsistencies: [],
+      stats: {
+        totalActive: 0,
+        totalInactive: 0,
+        totalAssignments: 0
+      }
     };
 
-    // Empleados sin registro de asignación
-    employees.forEach(emp => {
-      const hasAssignment = lockerAssignments.find(la => la.employee_id === emp.id);
+    const isActive = (emp) => !emp.estado_empleado || emp.estado_empleado === "Alta";
+
+    const activeEmployees = employees.filter(isActive);
+    results.stats.totalActive = activeEmployees.length;
+    results.stats.totalInactive = employees.length - activeEmployees.length;
+    results.stats.totalAssignments = lockerAssignments.length;
+
+    // Empleados activos sin registro de asignación (los inactivos no son problema)
+    activeEmployees.forEach(emp => {
+      const hasAssignment = lockerAssignments.find(la => String(la.employee_id) === String(emp.id));
       if (!hasAssignment) {
         results.employeesWithoutAssignment.push(emp);
       }
     });
 
-    // Asignaciones sin empleado válido
+    // Asignaciones sin empleado válido (o cuyo empleado está inactivo)
     lockerAssignments.forEach(la => {
-      const employee = employees.find(e => e.id === la.employee_id);
+      const employee = employees.find(e => String(e.id) === String(la.employee_id));
       if (!employee) {
         results.assignmentsWithoutEmployee.push(la);
       }
     });
 
-    // Detectar asignaciones duplicadas por vestuario + número
+    // Detectar asignaciones duplicadas por vestuario + número limpio
     const assignmentMap = new Map();
     lockerAssignments.forEach(la => {
-      if (!la.numero_taquilla_actual || la.requiere_taquilla === false) return;
-      
+      if (la.requiere_taquilla === false) return;
       const cleanNum = cleanLockerNumber(la.numero_taquilla_actual);
+      if (!cleanNum) return; // skip vacíos / solo símbolos
+      
       const key = `${la.vestuario}|${cleanNum}`;
       if (!assignmentMap.has(key)) {
         assignmentMap.set(key, []);
@@ -53,7 +66,7 @@ export default function LockerAudit({ employees, lockerAssignments }) {
       if (assignments.length > 1) {
         const [vestuario, numero] = key.split('|');
         const employeeNames = assignments.map(la => {
-          const emp = employees.find(e => e.id === la.employee_id);
+          const emp = employees.find(e => String(e.id) === String(la.employee_id));
           return emp?.nombre || 'Desconocido';
         });
         
@@ -155,7 +168,23 @@ export default function LockerAudit({ employees, lockerAssignments }) {
           </div>
         </CardHeader>
         <CardContent className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+            <div className="p-4 rounded-lg border-2 bg-blue-50 border-blue-200">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-slate-700">Activos</span>
+                <Badge className="bg-blue-600">{auditResults.stats.totalActive}</Badge>
+              </div>
+              <p className="text-xs text-slate-600">Empleados en alta</p>
+            </div>
+
+            <div className="p-4 rounded-lg border-2 bg-slate-50 border-slate-200">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-slate-700">Asignaciones</span>
+                <Badge className="bg-slate-600">{auditResults.stats.totalAssignments}</Badge>
+              </div>
+              <p className="text-xs text-slate-600">Registros en base de datos</p>
+            </div>
+
             <div className={`p-4 rounded-lg border-2 ${
               auditResults.employeesWithoutAssignment.length > 0 
                 ? 'bg-amber-100 border-amber-300' 
@@ -167,7 +196,7 @@ export default function LockerAudit({ employees, lockerAssignments }) {
                   {auditResults.employeesWithoutAssignment.length}
                 </Badge>
               </div>
-              <p className="text-xs text-slate-600">Empleados sin asignación creada</p>
+              <p className="text-xs text-slate-600">Activos sin asignación creada</p>
             </div>
 
             <div className={`p-4 rounded-lg border-2 ${
