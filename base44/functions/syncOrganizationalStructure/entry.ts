@@ -14,7 +14,7 @@ Deno.serve(async (req) => {
     }
 
     // Solo administradores pueden ejecutar sincronización
-    if (user.role !== 'admin') {
+    if (user.role?.toLowerCase() !== 'admin') {
       return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
     }
 

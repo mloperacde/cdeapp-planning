@@ -21,7 +21,7 @@ Deno.serve(async (req) => {
     if (!user && !isSchedulerCall && !hasAuthHeader) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
     }
-    if (user && user.role !== 'admin') {
+    if (user && user.role?.toLowerCase() !== 'admin') {
       return new Response(JSON.stringify({ error: 'Forbidden: Admin access required' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
     }
     

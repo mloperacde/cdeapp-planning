@@ -19,7 +19,7 @@ Deno.serve(async (req) => {
     if (!user && !isSchedulerCall && !hasAuthHeader) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    if (user && user.role !== 'admin') {
+    if (user && user.role?.toLowerCase() !== 'admin') {
       return Response.json({ 
         error: 'Solo administradores pueden ejecutar consolidación',
         success: false 
