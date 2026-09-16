@@ -10,7 +10,7 @@ import { es } from "date-fns/locale";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 
-export default function LongAbsenceAlert({ employees, absences, masterEmployees = [] }) {
+export default function LongAbsenceAlert({ employees, absences, masterEmployees = [], reportEmployees = [] }) {
   const { data: lockerAssignments } = useQuery({
     queryKey: ['lockerAssignments'],
     queryFn: () => base44.entities.LockerAssignment.list(),
@@ -53,26 +53,20 @@ export default function LongAbsenceAlert({ employees, absences, masterEmployees 
       const employee = employees.find(e => e.id === abs.employee_id) || masterEmployees.find(e => e.id === abs.employee_id);
       const locker = lockerAssignments.find(la => la.employee_id === abs.employee_id);
       const hasLocker = locker?.numero_taquilla_actual?.replace(/['"]/g, '').trim();
-      
-      let days = 0;
-      try {
-        const startDate = new Date(abs.fecha_inicio);
-        if (!isNaN(startDate.getTime())) {
-          days = differenceInDays(new Date(), startDate);
-        }
-      } catch {
-        days = 0;
-      }
-      
+
+      // Días laborables ausente (desde el informe backend — DailyPresence)
+      const reportEmp = reportEmployees.find(re => re.empId === abs.employee_id);
+      const workingDays = reportEmp?.days12 || 0;
+
       return {
         absence: abs,
         employee,
         locker,
         hasLocker,
-        daysAbsent: days
+        daysAbsent: workingDays
       };
     }).sort((a, b) => b.daysAbsent - a.daysAbsent);
-  }, [absences, employees, lockerAssignments]);
+  }, [absences, employees, lockerAssignments, reportEmployees]);
 
   if (longAbsences.length === 0) return null;
 
