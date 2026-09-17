@@ -4,19 +4,19 @@
   "row_level_security": [
     {
       "operation": "read",
-      "allow": "{{user.role == 'admin' or user.role == 'rrhh' or (user.role == 'supervisor' and user.department_id == department_id) or user.employee_id == id}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin' or user.role == 'rrhh' or user.role == 'hr_manager' or (user.role == 'supervisor' and user.department_id == department_id) or user.employee_id == id}}"
     },
     {
       "operation": "update",
-      "allow": "{{user.role == 'admin' or user.role == 'rrhh' or (user.employee_id == id and (field == 'email' or field == 'telefono_movil' or field == 'direccion'))}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin' or user.role == 'rrhh' or user.role == 'hr_manager' or user.role == 'shift_manager_production' or user.role == 'shift_manager_quality' or user.role == 'shift_manager_maintenance' or user.role == 'prod_supervisor' or (user.employee_id == id and (field == 'email' or field == 'telefono_movil' or field == 'direccion'))}}"
     },
     {
       "operation": "create",
-      "allow": "{{user.role == 'admin' or user.role == 'rrhh'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin' or user.role == 'rrhh' or user.role == 'hr_manager'}}"
     },
     {
       "operation": "delete",
-      "allow": "{{user.role == 'admin' or user.role == 'rrhh'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin' or user.role == 'rrhh' or user.role == 'hr_manager'}}"
     }
   ],
   "properties": {
@@ -348,85 +348,5 @@
   },
   "required": [
     "nombre"
-  ],
-  "rls": {
-    "create": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "rrhh"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "hr_manager"
-          }
-        }
-      ]
-    },
-    "read": null,
-    "update": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "rrhh"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "hr_manager"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "shift_manager_production"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "shift_manager_quality"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "shift_manager_maintenance"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "prod_supervisor"
-          }
-        }
-      ]
-    },
-    "delete": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "rrhh"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "hr_manager"
-          }
-        }
-      ]
-    }
-  }
+  ]
 }
