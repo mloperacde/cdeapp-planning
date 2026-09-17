@@ -4,19 +4,19 @@
   "row_level_security": [
     {
       "operation": "read",
-      "allow": "{{user.role == 'admin' or user.role == 'rrhh'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin' or user.role == 'rrhh'}}"
     },
     {
       "operation": "create",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     },
     {
       "operation": "update",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     },
     {
       "operation": "delete",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     }
   ],
   "properties": {
@@ -60,7 +60,7 @@
       "enum": [
         "En Proceso",
         "Completada",
-        "Revisi\u00f3n Pendiente"
+        "Revisión Pendiente"
       ],
       "default": "En Proceso"
     },

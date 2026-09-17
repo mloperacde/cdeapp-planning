@@ -8,15 +8,15 @@
     },
     {
       "operation": "create",
-      "allow": "{{user.role == 'admin' or user.role == 'jefe_turno'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin' or user.role == 'jefe_turno'}}"
     },
     {
       "operation": "update",
-      "allow": "{{user.role == 'admin' or user.role == 'jefe_turno'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin' or user.role == 'jefe_turno'}}"
     },
     {
       "operation": "delete",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     }
   ],
   "properties": {

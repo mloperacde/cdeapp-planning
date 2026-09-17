@@ -4,19 +4,19 @@
   "row_level_security": [
     {
       "operation": "read",
-      "allow": "{{user.role == 'admin' or user.role == 'jefe_turno'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin' or user.role == 'jefe_turno'}}"
     },
     {
       "operation": "create",
-      "allow": "{{user.role == 'admin' or user.role == 'jefe_turno'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin' or user.role == 'jefe_turno'}}"
     },
     {
       "operation": "update",
-      "allow": "{{user.role == 'admin' or user.role == 'jefe_turno'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin' or user.role == 'jefe_turno'}}"
     },
     {
       "operation": "delete",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     }
   ],
   "properties": {
@@ -27,7 +27,7 @@
     "turno_saliente": {
       "type": "string",
       "enum": [
-        "Ma\u00f1ana",
+        "Mañana",
         "Tarde",
         "Noche"
       ]
@@ -35,7 +35,7 @@
     "turno_entrante": {
       "type": "string",
       "enum": [
-        "Ma\u00f1ana",
+        "Mañana",
         "Tarde",
         "Noche"
       ]

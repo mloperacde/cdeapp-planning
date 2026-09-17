@@ -8,15 +8,15 @@
     },
     {
       "operation": "create",
-      "allow": "{{user.role == 'admin' or user.role == 'jefe_turno'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin' or user.role == 'jefe_turno'}}"
     },
     {
       "operation": "update",
-      "allow": "{{user.role == 'admin' or user.role == 'jefe_turno' or (user.employee_id == employee_id and estado == 'Programado')}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin' or user.role == 'jefe_turno' or (user.employee_id == employee_id and estado == 'Programado')}}"
     },
     {
       "operation": "delete",
-      "allow": "{{user.role == 'admin' or user.role == 'jefe_turno'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin' or user.role == 'jefe_turno'}}"
     }
   ],
   "properties": {
@@ -30,7 +30,7 @@
     "turno": {
       "type": "string",
       "enum": [
-        "Ma\u00f1ana",
+        "Mañana",
         "Tarde",
         "Noche"
       ]

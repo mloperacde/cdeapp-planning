@@ -4,25 +4,25 @@
   "row_level_security": [
     {
       "operation": "read",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     },
     {
       "operation": "create",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     },
     {
       "operation": "update",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     },
     {
       "operation": "delete",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     }
   ],
   "properties": {
     "nombre_configuracion": {
       "type": "string",
-      "default": "Configuraci\u00f3n General"
+      "default": "Configuración General"
     },
     "tolerancia_entrada_minutos": {
       "type": "number",

@@ -8,15 +8,15 @@
     },
     {
       "operation": "create",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     },
     {
       "operation": "update",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     },
     {
       "operation": "delete",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     }
   ],
   "properties": {
@@ -26,15 +26,15 @@
     },
     "article_cde_id": {
       "type": "integer",
-      "description": "ID del art\u00edculo en CDEApp (article_id de la API)"
+      "description": "ID del artículo en CDEApp (article_id de la API)"
     },
     "article_id": {
       "type": "string",
-      "description": "ID del art\u00edculo en nuestra BD (referencia a Article)"
+      "description": "ID del artículo en nuestra BD (referencia a Article)"
     },
     "code_component": {
       "type": "string",
-      "description": "C\u00f3digo del componente"
+      "description": "Código del componente"
     },
     "name_component": {
       "type": "string",
@@ -51,7 +51,7 @@
     "updated_at_cde": {
       "type": "string",
       "format": "date-time",
-      "description": "Fecha de actualizaci\u00f3n en CDEApp"
+      "description": "Fecha de actualización en CDEApp"
     }
   },
   "required": [

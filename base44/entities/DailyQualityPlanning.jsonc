@@ -8,22 +8,22 @@
     },
     {
       "operation": "create",
-      "allow": "{{user.role == 'admin' or user.role == 'T\u00e9cnico'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin' or user.role == 'Técnico'}}"
     },
     {
       "operation": "update",
-      "allow": "{{user.role == 'admin' or user.role == 'T\u00e9cnico'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin' or user.role == 'Técnico'}}"
     },
     {
       "operation": "delete",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     }
   ],
   "properties": {
     "fecha": {
       "type": "string",
       "format": "date",
-      "description": "Fecha de la planificaci\u00f3n"
+      "description": "Fecha de la planificación"
     },
     "team_key": {
       "type": "string",
@@ -36,7 +36,7 @@
     "turno": {
       "type": "string",
       "enum": [
-        "Ma\u00f1ana",
+        "Mañana",
         "Tarde"
       ],
       "description": "Turno planificado"
@@ -47,26 +47,26 @@
     },
     "funcion_asignada": {
       "type": "string",
-      "description": "Funci\u00f3n o tarea asignada"
+      "description": "Función o tarea asignada"
     },
     "tipo_inspeccion": {
       "type": "string",
       "enum": [
         "Control de Proceso",
-        "Control de Recepci\u00f3n",
+        "Control de Recepción",
         "Control Final",
-        "Auditor\u00eda",
-        "Metrolog\u00eda",
+        "Auditoría",
+        "Metrología",
         "Otro"
       ],
-      "description": "Tipo de inspecci\u00f3n"
+      "description": "Tipo de inspección"
     },
     "lineas_asignadas": {
       "type": "array",
       "items": {
         "type": "string"
       },
-      "description": "IDs de m\u00e1quinas/l\u00edneas asignadas para inspecci\u00f3n"
+      "description": "IDs de máquinas/líneas asignadas para inspección"
     },
     "prioridad": {
       "type": "string",
@@ -77,7 +77,7 @@
         "Urgente"
       ],
       "default": "Media",
-      "description": "Prioridad de la funci\u00f3n"
+      "description": "Prioridad de la función"
     },
     "notas": {
       "type": "string",
@@ -92,7 +92,7 @@
         "Cancelado"
       ],
       "default": "Planificado",
-      "description": "Estado de la planificaci\u00f3n"
+      "description": "Estado de la planificación"
     },
     "hora_inicio": {
       "type": "string",

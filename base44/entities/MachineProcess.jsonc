@@ -8,21 +8,21 @@
     },
     {
       "operation": "create",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     },
     {
       "operation": "update",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     },
     {
       "operation": "delete",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     }
   ],
   "properties": {
     "machine_id": {
       "type": "string",
-      "description": "ID de la m\u00e1quina"
+      "description": "ID de la máquina"
     },
     "process_id": {
       "type": "string",
@@ -31,17 +31,17 @@
     "operadores_requeridos": {
       "type": "number",
       "default": 1,
-      "description": "N\u00famero de operadores requeridos para este proceso en esta m\u00e1quina"
+      "description": "Número de operadores requeridos para este proceso en esta máquina"
     },
     "orden": {
       "type": "number",
       "default": 0,
-      "description": "Orden de visualizaci\u00f3n del proceso en la m\u00e1quina"
+      "description": "Orden de visualización del proceso en la máquina"
     },
     "activo": {
       "type": "boolean",
       "default": true,
-      "description": "Si esta configuraci\u00f3n est\u00e1 activa"
+      "description": "Si esta configuración está activa"
     }
   },
   "required": [

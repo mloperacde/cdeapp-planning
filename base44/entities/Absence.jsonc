@@ -4,19 +4,19 @@
   "row_level_security": [
     {
       "operation": "create",
-      "allow": "{{user.role == 'admin' or user.role == 'rrhh' or user.role == 'supervisor' or user.employee_id == employee_id}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin' or user.role == 'rrhh' or user.role == 'supervisor' or user.employee_id == employee_id}}"
     },
     {
       "operation": "read",
-      "allow": "{{user.role == 'admin' or user.role == 'rrhh' or user.role == 'supervisor' or user.employee_id == employee_id}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin' or user.role == 'rrhh' or user.role == 'supervisor' or user.employee_id == employee_id}}"
     },
     {
       "operation": "update",
-      "allow": "{{(user.role == 'admin' or user.role == 'rrhh' or user.role == 'supervisor') or (user.employee_id == employee_id and estado_aprobacion == 'Pendiente')}}"
+      "allow": "{{(user.role == 'admin' or user.role == 'Admin' or user.role == 'rrhh' or user.role == 'supervisor') or (user.employee_id == employee_id and estado_aprobacion == 'Pendiente')}}"
     },
     {
       "operation": "delete",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     }
   ],
   "properties": {

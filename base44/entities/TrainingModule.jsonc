@@ -8,15 +8,15 @@
     },
     {
       "operation": "create",
-      "allow": "{{user.role == 'admin' or user.role == 'rrhh'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin' or user.role == 'rrhh'}}"
     },
     {
       "operation": "update",
-      "allow": "{{user.role == 'admin' or user.role == 'rrhh'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin' or user.role == 'rrhh'}}"
     },
     {
       "operation": "delete",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     }
   ],
   "properties": {
@@ -33,7 +33,7 @@
         "Documento",
         "Cuestionario",
         "Enlace Externo",
-        "Presentaci\u00f3n"
+        "Presentación"
       ]
     },
     "categoria": {
@@ -44,7 +44,7 @@
         "Procedimientos",
         "Sistemas",
         "Cultura Empresarial",
-        "T\u00e9cnico",
+        "Técnico",
         "Otro"
       ],
       "default": "Otro"

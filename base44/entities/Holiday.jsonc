@@ -8,30 +8,30 @@
     },
     {
       "operation": "create",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     },
     {
       "operation": "update",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     },
     {
       "operation": "delete",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     }
   ],
   "properties": {
     "date": {
       "type": "string",
       "format": "date",
-      "description": "Fecha del d\u00eda festivo"
+      "description": "Fecha del día festivo"
     },
     "name": {
       "type": "string",
-      "description": "Nombre del d\u00eda festivo"
+      "description": "Nombre del día festivo"
     },
     "description": {
       "type": "string",
-      "description": "Descripci\u00f3n opcional del festivo"
+      "description": "Descripción opcional del festivo"
     }
   },
   "required": [

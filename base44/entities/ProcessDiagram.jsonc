@@ -8,15 +8,15 @@
     },
     {
       "operation": "create",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     },
     {
       "operation": "update",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     },
     {
       "operation": "delete",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     }
   ],
   "properties": {
@@ -57,15 +57,15 @@
         "properties": {
           "article_id": {
             "type": "string",
-            "description": "ID del art\u00edculo en la BD"
+            "description": "ID del artículo en la BD"
           },
           "article_code": {
             "type": "string",
-            "description": "C\u00f3digo del art\u00edculo"
+            "description": "Código del artículo"
           },
           "article_description": {
             "type": "string",
-            "description": "Descripci\u00f3n/nombre del art\u00edculo"
+            "description": "Descripción/nombre del artículo"
           },
           "linked_date": {
             "type": "string",
@@ -73,7 +73,7 @@
           }
         }
       },
-      "description": "Art\u00edculos del cat\u00e1logo CDEApp vinculados a este diagrama"
+      "description": "Artículos del catálogo CDEApp vinculados a este diagrama"
     },
     "version": {
       "type": "number",
@@ -83,7 +83,7 @@
       "type": "string",
       "enum": [
         "Borrador",
-        "En Revisi\u00f3n",
+        "En Revisión",
         "Aprobado",
         "Obsoleto"
       ],

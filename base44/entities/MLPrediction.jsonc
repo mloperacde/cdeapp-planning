@@ -4,28 +4,28 @@
   "row_level_security": [
     {
       "operation": "read",
-      "allow": "{{user.role == 'admin' or user.role == 'rrhh' or user.role == 'supervisor'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin' or user.role == 'rrhh' or user.role == 'supervisor'}}"
     },
     {
       "operation": "create",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     },
     {
       "operation": "update",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     },
     {
       "operation": "delete",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     }
   ],
   "properties": {
     "tipo_prediccion": {
       "type": "string",
       "enum": [
-        "Rotaci\u00f3n Empleado",
-        "Optimizaci\u00f3n Turnos",
-        "Cuello Botella M\u00e1quina"
+        "Rotación Empleado",
+        "Optimización Turnos",
+        "Cuello Botella Máquina"
       ]
     },
     "employee_id": {
@@ -49,7 +49,7 @@
         "Bajo",
         "Medio",
         "Alto",
-        "Cr\u00edtico"
+        "Crítico"
       ]
     },
     "factores_contribuyentes": {

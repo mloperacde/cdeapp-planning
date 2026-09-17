@@ -8,15 +8,15 @@
     },
     {
       "operation": "create",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     },
     {
       "operation": "update",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     },
     {
       "operation": "delete",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     }
   ],
   "properties": {
@@ -26,7 +26,7 @@
     },
     "puesto": {
       "type": "string",
-      "description": "Puesto espec\u00edfico dentro del departamento"
+      "description": "Puesto específico dentro del departamento"
     },
     "skill_id": {
       "type": "string",
@@ -37,7 +37,7 @@
       "enum": [
         "Media",
         "Requerida",
-        "Cr\u00edtica"
+        "Crítica"
       ],
       "default": "Media",
       "description": "Nivel de importancia de la habilidad"
@@ -45,23 +45,23 @@
     "nivel_minimo_requerido": {
       "type": "string",
       "enum": [
-        "B\u00e1sico",
+        "Básico",
         "Intermedio",
         "Avanzado",
         "Experto"
       ],
-      "default": "B\u00e1sico",
-      "description": "Nivel m\u00ednimo requerido"
+      "default": "Básico",
+      "description": "Nivel mínimo requerido"
     },
     "nivel_deseable": {
       "type": "string",
       "enum": [
-        "B\u00e1sico",
+        "Básico",
         "Intermedio",
         "Avanzado",
         "Experto"
       ],
-      "description": "Nivel deseable (opcional, superior al m\u00ednimo)"
+      "description": "Nivel deseable (opcional, superior al mínimo)"
     },
     "obligatorio": {
       "type": "boolean",
@@ -70,12 +70,12 @@
     },
     "descripcion": {
       "type": "string",
-      "description": "Descripci\u00f3n o justificaci\u00f3n del requisito"
+      "description": "Descripción o justificación del requisito"
     },
     "activo": {
       "type": "boolean",
       "default": true,
-      "description": "Si el requisito est\u00e1 activo"
+      "description": "Si el requisito está activo"
     }
   },
   "required": [

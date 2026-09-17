@@ -8,22 +8,22 @@
     },
     {
       "operation": "create",
-      "allow": "{{user.role == 'admin' or user.role == 'T\u00e9cnico'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin' or user.role == 'Técnico'}}"
     },
     {
       "operation": "update",
-      "allow": "{{user.role == 'admin' or user.role == 'T\u00e9cnico'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin' or user.role == 'Técnico'}}"
     },
     {
       "operation": "delete",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     }
   ],
   "properties": {
     "fecha": {
       "type": "string",
       "format": "date",
-      "description": "Fecha de la planificaci\u00f3n"
+      "description": "Fecha de la planificación"
     },
     "team_key": {
       "type": "string",
@@ -36,7 +36,7 @@
     "turno": {
       "type": "string",
       "enum": [
-        "Ma\u00f1ana",
+        "Mañana",
         "Tarde"
       ],
       "description": "Turno planificado"
@@ -47,11 +47,11 @@
     },
     "funcion_asignada": {
       "type": "string",
-      "description": "Funci\u00f3n o tarea asignada"
+      "description": "Función o tarea asignada"
     },
     "area_responsabilidad": {
       "type": "string",
-      "description": "\u00c1rea de responsabilidad"
+      "description": "Área de responsabilidad"
     },
     "prioridad": {
       "type": "string",
@@ -62,14 +62,14 @@
         "Urgente"
       ],
       "default": "Media",
-      "description": "Prioridad de la funci\u00f3n"
+      "description": "Prioridad de la función"
     },
     "maquinas_asignadas": {
       "type": "array",
       "items": {
         "type": "string"
       },
-      "description": "IDs de m\u00e1quinas asignadas"
+      "description": "IDs de máquinas asignadas"
     },
     "notas": {
       "type": "string",
@@ -84,7 +84,7 @@
         "Cancelado"
       ],
       "default": "Planificado",
-      "description": "Estado de la planificaci\u00f3n"
+      "description": "Estado de la planificación"
     },
     "hora_inicio": {
       "type": "string",

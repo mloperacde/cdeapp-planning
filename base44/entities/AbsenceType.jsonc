@@ -8,15 +8,15 @@
     },
     {
       "operation": "create",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     },
     {
       "operation": "update",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     },
     {
       "operation": "delete",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     }
   ],
   "properties": {
@@ -38,7 +38,7 @@
       "enum": [
         "Permiso Remunerado",
         "Permiso No Remunerado",
-        "Baja por Enfermedad Com\u00fan",
+        "Baja por Enfermedad Común",
         "Baja por Accidente No Laboral",
         "Baja por Enfermedad Profesional",
         "Baja por Accidente Laboral",

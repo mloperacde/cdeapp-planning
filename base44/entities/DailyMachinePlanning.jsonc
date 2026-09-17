@@ -8,27 +8,27 @@
     },
     {
       "operation": "create",
-      "allow": "{{user.role == 'admin' or user.role == 'jefe_turno'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin' or user.role == 'jefe_turno'}}"
     },
     {
       "operation": "update",
-      "allow": "{{user.role == 'admin' or user.role == 'jefe_turno'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin' or user.role == 'jefe_turno'}}"
     },
     {
       "operation": "delete",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     }
   ],
   "properties": {
     "date": {
       "type": "string",
       "format": "date",
-      "description": "Fecha de la planificaci\u00f3n"
+      "description": "Fecha de la planificación"
     },
     "shift": {
       "type": "string",
       "enum": [
-        "Ma\u00f1ana",
+        "Mañana",
         "Tarde",
         "Noche"
       ],
@@ -36,7 +36,7 @@
     },
     "machine_id": {
       "type": "string",
-      "description": "ID de la m\u00e1quina"
+      "description": "ID de la máquina"
     },
     "team_key": {
       "type": "string",
@@ -49,25 +49,25 @@
     "activa": {
       "type": "boolean",
       "default": true,
-      "description": "Si la m\u00e1quina est\u00e1 activa en el planning"
+      "description": "Si la máquina está activa en el planning"
     },
     "operadores_necesarios": {
       "type": "number",
-      "description": "N\u00famero de operadores necesarios"
+      "description": "Número de operadores necesarios"
     },
     "responsable_linea": {
       "type": "array",
       "items": {
         "type": "string"
       },
-      "description": "IDs de responsables de l\u00ednea"
+      "description": "IDs de responsables de línea"
     },
     "segunda_linea": {
       "type": "array",
       "items": {
         "type": "string"
       },
-      "description": "IDs de segundas de l\u00ednea"
+      "description": "IDs de segundas de línea"
     },
     "operador_1": {
       "type": "string",
@@ -108,11 +108,11 @@
         "Confirmado"
       ],
       "default": "Borrador",
-      "description": "Estado de la planificaci\u00f3n"
+      "description": "Estado de la planificación"
     },
     "notes": {
       "type": "string",
-      "description": "Notas sobre la asignaci\u00f3n"
+      "description": "Notas sobre la asignación"
     },
     "migration_from": {
       "type": "string",
@@ -120,7 +120,7 @@
         "MachinePlanning",
         "DailyMachineStaffing"
       ],
-      "description": "Origen de migraci\u00f3n"
+      "description": "Origen de migración"
     }
   },
   "required": [

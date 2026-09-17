@@ -4,19 +4,19 @@
   "row_level_security": [
     {
       "operation": "read",
-      "allow": "{{user.role == 'admin' or user.role == 'rrhh' or user.role == 'supervisor'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin' or user.role == 'rrhh' or user.role == 'supervisor'}}"
     },
     {
       "operation": "create",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     },
     {
       "operation": "update",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     },
     {
       "operation": "delete",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     }
   ],
   "properties": {
@@ -30,7 +30,7 @@
     },
     "employee_code": {
       "type": "string",
-      "description": "C\u00f3digo del empleado en Cuco360 (desnormalizado)"
+      "description": "Código del empleado en Cuco360 (desnormalizado)"
     },
     "record_date": {
       "type": "string",
@@ -40,11 +40,11 @@
     "present": {
       "type": "boolean",
       "default": true,
-      "description": "Si el empleado estuvo presente (tuvo al menos un fichaje en el d\u00eda)"
+      "description": "Si el empleado estuvo presente (tuvo al menos un fichaje en el día)"
     },
     "shift": {
       "type": "string",
-      "description": "Turno detectado seg\u00fan hora de primera entrada (Ma\u00f1ana/Tarde)"
+      "description": "Turno detectado según hora de primera entrada (Mañana/Tarde)"
     },
     "first_entry": {
       "type": "string",
@@ -52,11 +52,11 @@
     },
     "last_exit": {
       "type": "string",
-      "description": "Hora de \u00faltima salida (HH:MM)"
+      "description": "Hora de última salida (HH:MM)"
     },
     "check_in_count": {
       "type": "number",
-      "description": "N\u00famero total de fichajes del d\u00eda"
+      "description": "Número total de fichajes del día"
     },
     "source": {
       "type": "string",

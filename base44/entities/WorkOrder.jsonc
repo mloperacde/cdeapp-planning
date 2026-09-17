@@ -8,15 +8,15 @@
     },
     {
       "operation": "create",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     },
     {
       "operation": "update",
-      "allow": "{{user.role == 'admin' or user.role == 'jefe_turno'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin' or user.role == 'jefe_turno'}}"
     },
     {
       "operation": "delete",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     }
   ],
   "properties": {
@@ -112,7 +112,7 @@
           },
           "cantidad_operarios": {
             "type": "number",
-            "description": "N\u00famero de operarios necesarios para esta actividad"
+            "description": "Número de operarios necesarios para esta actividad"
           },
           "notas": {
             "type": "string",
@@ -120,7 +120,7 @@
           }
         }
       },
-      "description": "Configuraci\u00f3n de operarios necesarios por orden de trabajo (definida por orden, no por art\u00edculo)"
+      "description": "Configuración de operarios necesarios por orden de trabajo (definida por orden, no por artículo)"
     },
     "operadores_requeridos": {
       "type": "number",

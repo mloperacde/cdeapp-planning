@@ -4,19 +4,19 @@
   "row_level_security": [
     {
       "operation": "read",
-      "allow": "{{user.role == 'admin' or user.role == 'rrhh'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin' or user.role == 'rrhh'}}"
     },
     {
       "operation": "create",
-      "allow": "{{user.role == 'admin' or user.role == 'rrhh'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin' or user.role == 'rrhh'}}"
     },
     {
       "operation": "update",
-      "allow": "{{user.role == 'admin' or user.role == 'rrhh'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin' or user.role == 'rrhh'}}"
     },
     {
       "operation": "delete",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     }
   ],
   "properties": {
@@ -30,14 +30,14 @@
     },
     "puesto": {
       "type": "string",
-      "description": "Puesto espec\u00edfico (opcional, si vac\u00edo aplica a todo el departamento)"
+      "description": "Puesto específico (opcional, si vacío aplica a todo el departamento)"
     },
     "empleados_aplicables": {
       "type": "array",
       "items": {
         "type": "string"
       },
-      "description": "IDs de empleados a los que aplica este plan (vac\u00edo = todos del puesto/departamento)"
+      "description": "IDs de empleados a los que aplica este plan (vacío = todos del puesto/departamento)"
     },
     "objetivos": {
       "type": "array",
@@ -46,7 +46,7 @@
         "properties": {
           "parametro": {
             "type": "string",
-            "description": "Nombre del par\u00e1metro a medir"
+            "description": "Nombre del parámetro a medir"
           },
           "peso_porcentaje": {
             "type": "number",
@@ -58,14 +58,14 @@
           },
           "umbral_minimo": {
             "type": "number",
-            "description": "Umbral m\u00ednimo para considerar cumplimiento"
+            "description": "Umbral mínimo para considerar cumplimiento"
           },
           "descripcion": {
             "type": "string"
           }
         }
       },
-      "description": "Objetivos configurados (m\u00e1ximo 6)"
+      "description": "Objetivos configurados (máximo 6)"
     },
     "incentivo_base": {
       "type": "number",
@@ -76,10 +76,10 @@
       "enum": [
         "Promedio Ponderado",
         "Cumplimiento Total",
-        "M\u00ednimo Requerido"
+        "Mínimo Requerido"
       ],
       "default": "Promedio Ponderado",
-      "description": "F\u00f3rmula para calcular el incentivo"
+      "description": "Fórmula para calcular el incentivo"
     },
     "activo": {
       "type": "boolean",

@@ -4,19 +4,19 @@
   "row_level_security": [
     {
       "operation": "read",
-      "allow": "{{user.role == 'admin' or user.role == 'rrhh'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin' or user.role == 'rrhh'}}"
     },
     {
       "operation": "create",
-      "allow": "{{user.role == 'admin' or user.role == 'rrhh'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin' or user.role == 'rrhh'}}"
     },
     {
       "operation": "update",
-      "allow": "{{user.role == 'admin' or user.role == 'rrhh'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin' or user.role == 'rrhh'}}"
     },
     {
       "operation": "delete",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     }
   ],
   "properties": {
@@ -30,20 +30,20 @@
     },
     "category_id": {
       "type": "string",
-      "description": "ID de la categor\u00eda salarial"
+      "description": "ID de la categoría salarial"
     },
     "category_name": {
       "type": "string",
-      "description": "Nombre de la categor\u00eda"
+      "description": "Nombre de la categoría"
     },
     "category_level": {
       "type": "number",
-      "description": "Nivel de la categor\u00eda"
+      "description": "Nivel de la categoría"
     },
     "assigned_date": {
       "type": "string",
       "format": "date",
-      "description": "Fecha de asignaci\u00f3n"
+      "description": "Fecha de asignación"
     },
     "effective_from": {
       "type": "string",
@@ -53,20 +53,20 @@
     "effective_to": {
       "type": "string",
       "format": "date",
-      "description": "Fecha de fin (para hist\u00f3rico)"
+      "description": "Fecha de fin (para histórico)"
     },
     "is_current": {
       "type": "boolean",
       "default": true,
-      "description": "Si es la categor\u00eda actual"
+      "description": "Si es la categoría actual"
     },
     "reason": {
       "type": "string",
-      "description": "Motivo de la asignaci\u00f3n o cambio"
+      "description": "Motivo de la asignación o cambio"
     },
     "approved_by": {
       "type": "string",
-      "description": "Usuario que aprob\u00f3"
+      "description": "Usuario que aprobó"
     },
     "notes": {
       "type": "string",

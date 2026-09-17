@@ -4,19 +4,19 @@
   "row_level_security": [
     {
       "operation": "read",
-      "allow": "{{user.role == 'admin' or user.role == 'T\u00e9cnico' or user.role == 'supervisor'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin' or user.role == 'Técnico' or user.role == 'supervisor'}}"
     },
     {
       "operation": "create",
-      "allow": "{{user.role == 'admin' or user.role == 'T\u00e9cnico'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin' or user.role == 'Técnico'}}"
     },
     {
       "operation": "update",
-      "allow": "{{user.role == 'admin' or user.role == 'T\u00e9cnico'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin' or user.role == 'Técnico'}}"
     },
     {
       "operation": "delete",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     }
   ],
   "properties": {
@@ -119,7 +119,7 @@
         "Baja",
         "Media",
         "Alta",
-        "Cr\u00edtica"
+        "Crítica"
       ],
       "default": "Media"
     }

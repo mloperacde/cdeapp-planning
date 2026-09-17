@@ -4,19 +4,19 @@
   "row_level_security": [
     {
       "operation": "read",
-      "allow": "{{user.role == 'admin' or user.role == 'rrhh' or user.role == 'supervisor' or user.employee_id == employee_id}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin' or user.role == 'rrhh' or user.role == 'supervisor' or user.employee_id == employee_id}}"
     },
     {
       "operation": "create",
-      "allow": "{{user.role == 'admin' or user.role == 'rrhh'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin' or user.role == 'rrhh'}}"
     },
     {
       "operation": "update",
-      "allow": "{{user.role == 'admin' or user.role == 'rrhh'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin' or user.role == 'rrhh'}}"
     },
     {
       "operation": "delete",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     }
   ],
   "properties": {
@@ -30,7 +30,7 @@
       "type": "string",
       "enum": [
         "Ninguno",
-        "B\u00e1sico",
+        "Básico",
         "Intermedio",
         "Avanzado",
         "Experto"
@@ -40,7 +40,7 @@
     "nivel_objetivo": {
       "type": "string",
       "enum": [
-        "B\u00e1sico",
+        "Básico",
         "Intermedio",
         "Avanzado",
         "Experto"

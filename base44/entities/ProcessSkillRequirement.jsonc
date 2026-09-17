@@ -8,15 +8,15 @@
     },
     {
       "operation": "create",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     },
     {
       "operation": "update",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     },
     {
       "operation": "delete",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     }
   ],
   "properties": {
@@ -29,12 +29,12 @@
     "nivel_minimo_requerido": {
       "type": "string",
       "enum": [
-        "B\u00e1sico",
+        "Básico",
         "Intermedio",
         "Avanzado",
         "Experto"
       ],
-      "default": "B\u00e1sico"
+      "default": "Básico"
     },
     "obligatorio": {
       "type": "boolean",

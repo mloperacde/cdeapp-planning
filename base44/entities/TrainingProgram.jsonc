@@ -8,15 +8,15 @@
     },
     {
       "operation": "create",
-      "allow": "{{user.role == 'admin' or user.role == 'rrhh'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin' or user.role == 'rrhh'}}"
     },
     {
       "operation": "update",
-      "allow": "{{user.role == 'admin' or user.role == 'rrhh'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin' or user.role == 'rrhh'}}"
     },
     {
       "operation": "delete",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     }
   ],
   "properties": {
@@ -35,12 +35,12 @@
     "nivel": {
       "type": "string",
       "enum": [
-        "B\u00e1sico",
+        "Básico",
         "Intermedio",
         "Avanzado",
         "Especialista"
       ],
-      "default": "B\u00e1sico"
+      "default": "Básico"
     },
     "categoria": {
       "type": "string",
@@ -49,12 +49,12 @@
         "Procesos de Envasado",
         "Calidad y GMP",
         "Mantenimiento",
-        "Almac\u00e9n y Log\u00edstica",
-        "Planificaci\u00f3n",
-        "Fabricaci\u00f3n de Cosm\u00e9ticos",
-        "Fabricaci\u00f3n de Sanitarios",
-        "Etiquetado y Codificaci\u00f3n",
-        "Gesti\u00f3n de Equipos",
+        "Almacén y Logística",
+        "Planificación",
+        "Fabricación de Cosméticos",
+        "Fabricación de Sanitarios",
+        "Etiquetado y Codificación",
+        "Gestión de Equipos",
         "Normativa y Cumplimiento",
         "Habilidades Transversales"
       ]
@@ -72,7 +72,7 @@
       "type": "string",
       "enum": [
         "Borrador",
-        "En Revisi\u00f3n",
+        "En Revisión",
         "Publicado",
         "Archivado"
       ],

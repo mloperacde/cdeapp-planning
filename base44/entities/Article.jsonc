@@ -8,25 +8,25 @@
     },
     {
       "operation": "create",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     },
     {
       "operation": "update",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     },
     {
       "operation": "delete",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     }
   ],
   "properties": {
     "code": {
       "type": "string",
-      "description": "C\u00f3digo del art\u00edculo"
+      "description": "Código del artículo"
     },
     "name": {
       "type": "string",
-      "description": "Nombre del art\u00edculo"
+      "description": "Nombre del artículo"
     },
     "description": {
       "type": "string"
@@ -89,7 +89,7 @@
     },
     "cde_id": {
       "type": "integer",
-      "description": "ID del art\u00edculo en CDEApp (para enlazar con ArticleComponent)"
+      "description": "ID del artículo en CDEApp (para enlazar con ArticleComponent)"
     },
     "selected_activities": {
       "type": "array",

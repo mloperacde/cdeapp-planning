@@ -8,22 +8,22 @@
     },
     {
       "operation": "create",
-      "allow": "{{user.role == 'admin' or user.role == 'jefe_turno'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin' or user.role == 'jefe_turno'}}"
     },
     {
       "operation": "update",
-      "allow": "{{user.role == 'admin' or user.role == 'jefe_turno'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin' or user.role == 'jefe_turno'}}"
     },
     {
       "operation": "delete",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     }
   ],
   "properties": {
     "fecha": {
       "type": "string",
       "format": "date",
-      "description": "Fecha de la planificaci\u00f3n"
+      "description": "Fecha de la planificación"
     },
     "team_key": {
       "type": "string",
@@ -36,14 +36,14 @@
     "turno": {
       "type": "string",
       "enum": [
-        "Ma\u00f1ana",
+        "Mañana",
         "Tarde"
       ],
       "description": "Turno planificado"
     },
     "machine_id": {
       "type": "string",
-      "description": "ID de la m\u00e1quina"
+      "description": "ID de la máquina"
     },
     "process_id": {
       "type": "string",
@@ -58,19 +58,19 @@
     },
     "responsable_linea_id": {
       "type": "string",
-      "description": "ID del responsable de l\u00ednea"
+      "description": "ID del responsable de línea"
     },
     "segunda_linea_id": {
       "type": "string",
-      "description": "ID de la segunda de l\u00ednea"
+      "description": "ID de la segunda de línea"
     },
     "articulo": {
       "type": "string",
-      "description": "Art\u00edculo a producir"
+      "description": "Artículo a producir"
     },
     "cantidad_objetivo": {
       "type": "number",
-      "description": "Cantidad objetivo de producci\u00f3n"
+      "description": "Cantidad objetivo de producción"
     },
     "cantidad_real": {
       "type": "number",
@@ -89,7 +89,7 @@
         "Cancelado"
       ],
       "default": "Planificado",
-      "description": "Estado de la planificaci\u00f3n"
+      "description": "Estado de la planificación"
     }
   },
   "required": [

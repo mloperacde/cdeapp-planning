@@ -4,19 +4,19 @@
   "row_level_security": [
     {
       "operation": "read",
-      "allow": "{{user.role == 'admin' or user.role == 'rrhh' or user.role == 'supervisor' or user.employee_id == employee_id}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin' or user.role == 'rrhh' or user.role == 'supervisor' or user.employee_id == employee_id}}"
     },
     {
       "operation": "create",
-      "allow": "{{user.role == 'admin' or user.role == 'rrhh'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin' or user.role == 'rrhh'}}"
     },
     {
       "operation": "update",
-      "allow": "{{user.role == 'admin' or user.role == 'rrhh'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin' or user.role == 'rrhh'}}"
     },
     {
       "operation": "delete",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     }
   ],
   "properties": {
@@ -28,11 +28,11 @@
       "type": "string",
       "enum": [
         "Jefe de Emergencias",
-        "Jefe de Intervenci\u00f3n",
-        "Equipo Primera Intervenci\u00f3n (EPI)",
-        "Equipo Segunda Intervenci\u00f3n (ESI)",
+        "Jefe de Intervención",
+        "Equipo Primera Intervención (EPI)",
+        "Equipo Segunda Intervención (ESI)",
         "Equipo Primeros Auxilios (EPA)",
-        "Equipo Alarma y Evacuaci\u00f3n (EAE)"
+        "Equipo Alarma y Evacuación (EAE)"
       ],
       "description": "Rol en el equipo de emergencia"
     },
@@ -54,7 +54,7 @@
     "activo": {
       "type": "boolean",
       "default": true,
-      "description": "Si est\u00e1 activo"
+      "description": "Si está activo"
     },
     "formacion_recibida": {
       "type": "array",
@@ -87,12 +87,12 @@
           }
         }
       },
-      "description": "Formaci\u00f3n espec\u00edfica recibida para este rol"
+      "description": "Formación específica recibida para este rol"
     },
     "ultima_simulacro": {
       "type": "string",
       "format": "date",
-      "description": "Fecha del \u00faltimo simulacro en el que particip\u00f3"
+      "description": "Fecha del último simulacro en el que participó"
     },
     "zona_asignada": {
       "type": "string",
@@ -100,14 +100,14 @@
     },
     "telefono_emergencia": {
       "type": "string",
-      "description": "Tel\u00e9fono de contacto para emergencias"
+      "description": "Teléfono de contacto para emergencias"
     },
     "equipamiento_asignado": {
       "type": "array",
       "items": {
         "type": "string"
       },
-      "description": "Equipamiento de protecci\u00f3n asignado"
+      "description": "Equipamiento de protección asignado"
     },
     "observaciones": {
       "type": "string",

@@ -4,49 +4,49 @@
   "row_level_security": [
     {
       "operation": "read",
-      "allow": "{{user.role == 'admin' or user.role == 'T\u00e9cnico' or user.role == 'supervisor'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin' or user.role == 'Técnico' or user.role == 'supervisor'}}"
     },
     {
       "operation": "create",
-      "allow": "{{user.role == 'admin' or user.role == 'T\u00e9cnico'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin' or user.role == 'Técnico'}}"
     },
     {
       "operation": "update",
-      "allow": "{{user.role == 'admin' or user.role == 'T\u00e9cnico'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin' or user.role == 'Técnico'}}"
     },
     {
       "operation": "delete",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     }
   ],
   "properties": {
     "titulo": {
       "type": "string",
-      "description": "T\u00edtulo breve de la intervenci\u00f3n"
+      "description": "Título breve de la intervención"
     },
     "tipo": {
       "type": "string",
       "enum": [
-        "Acci\u00f3n",
-        "Modificaci\u00f3n",
+        "Acción",
+        "Modificación",
         "Mejora",
-        "Resoluci\u00f3n de Incidencia",
-        "Mejora de Instalaci\u00f3n",
-        "Mejora de M\u00e1quina",
+        "Resolución de Incidencia",
+        "Mejora de Instalación",
+        "Mejora de Máquina",
         "Otro"
       ],
-      "default": "Acci\u00f3n"
+      "default": "Acción"
     },
     "descripcion": {
       "type": "string",
-      "description": "Descripci\u00f3n detallada de la intervenci\u00f3n o problema a resolver"
+      "description": "Descripción detallada de la intervención o problema a resolver"
     },
     "estado": {
       "type": "string",
       "enum": [
         "Pendiente",
         "En Progreso",
-        "En Revisi\u00f3n",
+        "En Revisión",
         "Completada",
         "Cancelada"
       ],
@@ -58,7 +58,7 @@
         "Baja",
         "Media",
         "Alta",
-        "Cr\u00edtica"
+        "Crítica"
       ],
       "default": "Media"
     },
@@ -92,11 +92,11 @@
       "type": "string",
       "enum": [
         "Global",
-        "\u00c1rea",
+        "Área",
         "Sala",
-        "M\u00e1quina",
-        "Sala-M\u00e1quina",
-        "Instalaci\u00f3n",
+        "Máquina",
+        "Sala-Máquina",
+        "Instalación",
         "Personalizado"
       ],
       "default": "Personalizado"

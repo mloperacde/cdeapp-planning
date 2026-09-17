@@ -8,15 +8,15 @@
     },
     {
       "operation": "create",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     },
     {
       "operation": "update",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     },
     {
       "operation": "delete",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     }
   ],
   "properties": {
@@ -29,7 +29,7 @@
     "categoria": {
       "type": "string",
       "enum": [
-        "T\u00e9cnica",
+        "Técnica",
         "Seguridad",
         "Calidad",
         "Maquinaria",
@@ -38,7 +38,7 @@
         "Idiomas",
         "Otra"
       ],
-      "default": "T\u00e9cnica"
+      "default": "Técnica"
     },
     "descripcion": {
       "type": "string"

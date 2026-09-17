@@ -4,19 +4,19 @@
   "row_level_security": [
     {
       "operation": "read",
-      "allow": "{{es_publico or user.role == 'admin' or user.role in roles_acceso or (departamentos_acceso is empty or user.department_id in departamentos_acceso)}}"
+      "allow": "{{es_publico or user.role == 'admin' or user.role == 'Admin' or user.role in roles_acceso or (departamentos_acceso is empty or user.department_id in departamentos_acceso)}}"
     },
     {
       "operation": "create",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     },
     {
       "operation": "update",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     },
     {
       "operation": "delete",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     }
   ],
   "properties": {
@@ -29,13 +29,13 @@
     "categoria": {
       "type": "string",
       "enum": [
-        "Manual de M\u00e1quina",
-        "Pol\u00edtica PRL",
+        "Manual de Máquina",
+        "Política PRL",
         "Procedimiento de Ausencia",
-        "Pol\u00edtica RRHH",
+        "Política RRHH",
         "Certificado",
         "Contrato",
-        "Formaci\u00f3n",
+        "Formación",
         "Calidad",
         "Otro"
       ]

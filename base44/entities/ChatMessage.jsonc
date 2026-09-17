@@ -4,7 +4,7 @@
   "row_level_security": [
     {
       "operation": "read",
-      "allow": "{{user.role == 'admin' or user.id == sender_id}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin' or user.id == sender_id}}"
     },
     {
       "operation": "create",
@@ -12,11 +12,11 @@
     },
     {
       "operation": "update",
-      "allow": "{{user.role == 'admin' or user.id == sender_id}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin' or user.id == sender_id}}"
     },
     {
       "operation": "delete",
-      "allow": "{{user.role == 'admin' or user.id == sender_id}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin' or user.id == sender_id}}"
     }
   ],
   "properties": {

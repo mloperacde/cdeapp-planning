@@ -4,19 +4,19 @@
   "row_level_security": [
     {
       "operation": "read",
-      "allow": "{{user.role == 'admin' or user.role == 'T\u00e9cnico' or user.role == 'supervisor'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin' or user.role == 'Técnico' or user.role == 'supervisor'}}"
     },
     {
       "operation": "create",
-      "allow": "{{user.role == 'admin' or user.role == 'T\u00e9cnico'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin' or user.role == 'Técnico'}}"
     },
     {
       "operation": "update",
-      "allow": "{{user.role == 'admin' or user.role == 'T\u00e9cnico'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin' or user.role == 'Técnico'}}"
     },
     {
       "operation": "delete",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     }
   ],
   "properties": {
@@ -27,7 +27,7 @@
       "type": "string",
       "enum": [
         "Borrador",
-        "En Revisi\u00f3n",
+        "En Revisión",
         "Pendiente",
         "Validado",
         "Rechazado"
@@ -37,12 +37,12 @@
     "tipoInforme": {
       "type": "string",
       "enum": [
-        "Calificaci\u00f3n de Instalaci\u00f3n (IQ)",
-        "Calificaci\u00f3n Operacional (OQ)",
-        "Calificaci\u00f3n de Funcionamiento (PQ)",
-        "Validaci\u00f3n de Proceso",
-        "Validaci\u00f3n de Limpieza",
-        "Validaci\u00f3n de M\u00e9todo Anal\u00edtico",
+        "Calificación de Instalación (IQ)",
+        "Calificación Operacional (OQ)",
+        "Calificación de Funcionamiento (PQ)",
+        "Validación de Proceso",
+        "Validación de Limpieza",
+        "Validación de Método Analítico",
         "Otro"
       ]
     },

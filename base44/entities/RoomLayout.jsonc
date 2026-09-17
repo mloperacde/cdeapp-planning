@@ -8,15 +8,15 @@
     },
     {
       "operation": "create",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     },
     {
       "operation": "update",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     },
     {
       "operation": "delete",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     }
   ],
   "properties": {
@@ -48,7 +48,7 @@
       "items": {
         "type": "object"
       },
-      "description": "Puntos del pol\u00edgono de la sala"
+      "description": "Puntos del polígono de la sala"
     },
     "floor_color": {
       "type": "string",
@@ -61,12 +61,12 @@
     "scale_cm_to_px": {
       "type": "number",
       "default": 1.31,
-      "description": "Multiplicador de escala para convertir medidas en cm a p\u00edxeles del layout"
+      "description": "Multiplicador de escala para convertir medidas en cm a píxeles del layout"
     },
     "floor_locked": {
       "type": "boolean",
       "default": false,
-      "description": "Si el suelo de la sala est\u00e1 anclado al fondo (no se puede mover accidentalmente)"
+      "description": "Si el suelo de la sala está anclado al fondo (no se puede mover accidentalmente)"
     },
     "status": {
       "type": "string",
@@ -84,15 +84,15 @@
         "properties": {
           "article_id": {
             "type": "string",
-            "description": "ID del art\u00edculo en la BD"
+            "description": "ID del artículo en la BD"
           },
           "article_code": {
             "type": "string",
-            "description": "C\u00f3digo del art\u00edculo"
+            "description": "Código del artículo"
           },
           "article_description": {
             "type": "string",
-            "description": "Descripci\u00f3n/nombre del art\u00edculo"
+            "description": "Descripción/nombre del artículo"
           },
           "linked_date": {
             "type": "string",
@@ -100,7 +100,7 @@
           }
         }
       },
-      "description": "Art\u00edculos vinculados a este layout (var\u00eda seg\u00fan el art\u00edculo a producir)"
+      "description": "Artículos vinculados a este layout (varía según el artículo a producir)"
     },
     "element_inventory": {
       "type": "array",
@@ -130,19 +130,19 @@
           },
           "instance_number": {
             "type": "number",
-            "description": "N\u00famero de instancia dentro del tipo (1, 2, 3...)"
+            "description": "Número de instancia dentro del tipo (1, 2, 3...)"
           },
           "marca": {
             "type": "string",
-            "description": "Marca/n\u00famero de identificaci\u00f3n individual del elemento (ej: MESA-01)"
+            "description": "Marca/número de identificación individual del elemento (ej: MESA-01)"
           },
           "source_element_id": {
             "type": "string",
-            "description": "ID del elemento del layout que origin\u00f3 este item de inventario"
+            "description": "ID del elemento del layout que originó este item de inventario"
           }
         }
       },
-      "description": "Inventario de elementos necesarios seg\u00fan la configuraci\u00f3n del layout"
+      "description": "Inventario de elementos necesarios según la configuración del layout"
     }
   },
   "required": [

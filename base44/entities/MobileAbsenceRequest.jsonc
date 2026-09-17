@@ -4,19 +4,19 @@
   "row_level_security": [
     {
       "operation": "read",
-      "allow": "{{user.role == 'admin' or user.role == 'rrhh' or user.employee_id == employee_id}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin' or user.role == 'rrhh' or user.employee_id == employee_id}}"
     },
     {
       "operation": "create",
-      "allow": "{{user.employee_id == employee_id or user.role == 'admin' or user.role == 'rrhh'}}"
+      "allow": "{{user.employee_id == employee_id or user.role == 'admin' or user.role == 'Admin' or user.role == 'rrhh'}}"
     },
     {
       "operation": "update",
-      "allow": "{{user.role == 'admin' or user.role == 'rrhh' or (user.employee_id == employee_id and estado == 'Pendiente')}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin' or user.role == 'rrhh' or (user.employee_id == employee_id and estado == 'Pendiente')}}"
     },
     {
       "operation": "delete",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     }
   ],
   "properties": {
@@ -38,7 +38,7 @@
       "type": "string",
       "enum": [
         "Vacaciones",
-        "Baja m\u00e9dica",
+        "Baja médica",
         "Permiso",
         "Ausencia justificada",
         "Ausencia injustificada",

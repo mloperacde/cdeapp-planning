@@ -4,19 +4,19 @@
   "row_level_security": [
     {
       "operation": "read",
-      "allow": "{{user.role == 'admin' or user.role == 'supervisor' or user.employee_id == solicitante_id or user.employee_id == receptor_id}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin' or user.role == 'supervisor' or user.employee_id == solicitante_id or user.employee_id == receptor_id}}"
     },
     {
       "operation": "create",
-      "allow": "{{user.employee_id == solicitante_id or user.role == 'admin'}}"
+      "allow": "{{user.employee_id == solicitante_id or user.role == 'admin' or user.role == 'Admin'}}"
     },
     {
       "operation": "update",
-      "allow": "{{user.role == 'admin' or user.role == 'supervisor' or user.employee_id == solicitante_id or user.employee_id == receptor_id}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin' or user.role == 'supervisor' or user.employee_id == solicitante_id or user.employee_id == receptor_id}}"
     },
     {
       "operation": "delete",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     }
   ],
   "properties": {
@@ -36,7 +36,7 @@
     "turno_actual": {
       "type": "string",
       "enum": [
-        "Ma\u00f1ana",
+        "Mañana",
         "Tarde",
         "Noche"
       ]
@@ -44,7 +44,7 @@
     "turno_deseado": {
       "type": "string",
       "enum": [
-        "Ma\u00f1ana",
+        "Mañana",
         "Tarde",
         "Noche"
       ]
@@ -68,7 +68,7 @@
       "type": "string",
       "enum": [
         "Publicado",
-        "Pendiente Aprobaci\u00f3n",
+        "Pendiente Aprobación",
         "Aprobada",
         "Rechazada",
         "Cancelada"
