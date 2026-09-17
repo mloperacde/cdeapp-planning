@@ -4,37 +4,37 @@
   "row_level_security": [
     {
       "operation": "read",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{true}}"
     },
     {
       "operation": "create",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     },
     {
       "operation": "update",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     },
     {
       "operation": "delete",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     }
   ],
   "properties": {
     "config_key": {
       "type": "string",
-      "description": "Clave \u00fanica de configuraci\u00f3n (ej: branding, manufacturing_config, maintenance_config)"
+      "description": "Clave única de configuración (ej: branding, manufacturing_config, maintenance_config)"
     },
     "value": {
       "type": "string",
-      "description": "Valor de configuraci\u00f3n serializado como JSON string (para configuraciones complejas)"
+      "description": "Valor de configuración serializado como JSON string (para configuraciones complejas)"
     },
     "app_name": {
       "type": "string",
-      "description": "Nombre de la aplicaci\u00f3n"
+      "description": "Nombre de la aplicación"
     },
     "app_subtitle": {
       "type": "string",
-      "description": "Subt\u00edtulo de la aplicaci\u00f3n"
+      "description": "Subtítulo de la aplicación"
     },
     "primary_color": {
       "type": "string",
@@ -46,32 +46,14 @@
     },
     "updated_by": {
       "type": "string",
-      "description": "Email del usuario que actualiz\u00f3"
+      "description": "Email del usuario que actualizó"
     },
     "updated_by_name": {
       "type": "string",
-      "description": "Nombre del usuario que actualiz\u00f3"
+      "description": "Nombre del usuario que actualizó"
     }
   },
   "required": [
     "config_key"
-  ],
-  "rls": {
-    "create": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "read": null,
-    "update": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "delete": {
-      "user_condition": {
-        "role": "admin"
-      }
-    }
-  }
+  ]
 }

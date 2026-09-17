@@ -4,19 +4,19 @@
   "row_level_security": [
     {
       "operation": "read",
-      "allow": "{{user.role == 'admin' or user.role == 'rrhh' or user.employee_id == employee_id}}"
+      "allow": "{{true}}"
     },
     {
       "operation": "create",
-      "allow": "{{user.role == 'admin' or user.role == 'rrhh' or user.employee_id == employee_id}}"
+      "allow": "{{true}}"
     },
     {
       "operation": "update",
-      "allow": "{{user.role == 'admin' or user.role == 'rrhh'}}"
+      "allow": "{{true}}"
     },
     {
       "operation": "delete",
-      "allow": "{{user.role == 'admin' or user.role == 'rrhh'}}"
+      "allow": "{{true}}"
     }
   ],
   "properties": {
@@ -26,15 +26,15 @@
     },
     "titulo": {
       "type": "string",
-      "description": "T\u00edtulo del documento"
+      "description": "Título del documento"
     },
     "tipo_documento": {
       "type": "string",
       "enum": [
         "Contrato",
-        "Evaluaci\u00f3n",
+        "Evaluación",
         "Certificado",
-        "Formaci\u00f3n",
+        "Formación",
         "Plan de Mejora",
         "Informe Disciplinario",
         "Otro"
@@ -43,7 +43,7 @@
     },
     "descripcion": {
       "type": "string",
-      "description": "Descripci\u00f3n del documento"
+      "description": "Descripción del documento"
     },
     "file_url": {
       "type": "string",
@@ -73,83 +73,5 @@
     "employee_id",
     "titulo",
     "tipo_documento"
-  ],
-  "rls": {
-    "create": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "rrhh"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "hr_manager"
-          }
-        }
-      ]
-    },
-    "read": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "rrhh"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "hr_manager"
-          }
-        }
-      ]
-    },
-    "update": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "rrhh"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "hr_manager"
-          }
-        }
-      ]
-    },
-    "delete": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "rrhh"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "hr_manager"
-          }
-        }
-      ]
-    }
-  }
+  ]
 }

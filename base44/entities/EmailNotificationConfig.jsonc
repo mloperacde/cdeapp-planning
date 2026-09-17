@@ -4,19 +4,19 @@
   "row_level_security": [
     {
       "operation": "read",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{true}}"
     },
     {
       "operation": "create",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     },
     {
       "operation": "update",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     },
     {
       "operation": "delete",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     }
   ],
   "properties": {
@@ -24,18 +24,18 @@
       "type": "string",
       "enum": [
         "Operadores Insuficientes",
-        "Mantenimiento Pr\u00f3ximo",
+        "Mantenimiento Próximo",
         "Mantenimiento Vencido",
         "Tarea Vencida",
         "Ausencia Solicitada",
         "Ausencia Aprobada",
         "Ausencia Rechazada",
         "Ausencia Finalizada",
-        "Contrato Pr\u00f3ximo Vencer",
-        "M\u00e1quina No Disponible",
+        "Contrato Próximo Vencer",
+        "Máquina No Disponible",
         "Alerta Mantenimiento Predictivo"
       ],
-      "description": "Tipo de notificaci\u00f3n"
+      "description": "Tipo de notificación"
     },
     "enviar_email": {
       "type": "boolean",
@@ -80,11 +80,11 @@
     "activo": {
       "type": "boolean",
       "default": true,
-      "description": "Si la configuraci\u00f3n est\u00e1 activa"
+      "description": "Si la configuración está activa"
     },
     "absence_type_id": {
       "type": "string",
-      "description": "ID del tipo de ausencia (null = configuraci\u00f3n general)"
+      "description": "ID del tipo de ausencia (null = configuración general)"
     },
     "email_en_solicitud": {
       "type": "boolean",
@@ -104,17 +104,17 @@
     "inapp_en_solicitud": {
       "type": "boolean",
       "default": true,
-      "description": "Notificaci\u00f3n in-app al solicitar"
+      "description": "Notificación in-app al solicitar"
     },
     "inapp_en_aprobacion": {
       "type": "boolean",
       "default": true,
-      "description": "Notificaci\u00f3n in-app al aprobar"
+      "description": "Notificación in-app al aprobar"
     },
     "inapp_en_rechazo": {
       "type": "boolean",
       "default": true,
-      "description": "Notificaci\u00f3n in-app al rechazar"
+      "description": "Notificación in-app al rechazar"
     },
     "destinatarios_rol": {
       "type": "string",
@@ -123,23 +123,5 @@
   },
   "required": [
     "tipo_notificacion"
-  ],
-  "rls": {
-    "create": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "read": null,
-    "update": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "delete": {
-      "user_condition": {
-        "role": "admin"
-      }
-    }
-  }
+  ]
 }

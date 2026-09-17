@@ -4,44 +4,44 @@
   "row_level_security": [
     {
       "operation": "read",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{true}}"
     },
     {
       "operation": "create",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{true}}"
     },
     {
       "operation": "update",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     },
     {
       "operation": "delete",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     }
   ],
   "properties": {
     "article_id": {
       "type": "string",
-      "description": "ID del art\u00edculo en nuestra BD"
+      "description": "ID del artículo en nuestra BD"
     },
     "article_code": {
       "type": "string",
-      "description": "C\u00f3digo del art\u00edculo"
+      "description": "Código del artículo"
     },
     "article_name": {
       "type": "string",
-      "description": "Nombre del art\u00edculo"
+      "description": "Nombre del artículo"
     },
     "article_type": {
       "type": "string",
-      "description": "Tipo de art\u00edculo (Frasco, Bote, Estuche...)"
+      "description": "Tipo de artículo (Frasco, Bote, Estuche...)"
     },
     "components_snapshot": {
       "type": "array",
       "items": {
         "type": "object"
       },
-      "description": "Snapshot de los componentes del art\u00edculo en el momento del aprendizaje"
+      "description": "Snapshot de los componentes del artículo en el momento del aprendizaje"
     },
     "suggested_activities": {
       "type": "array",
@@ -55,7 +55,7 @@
       "items": {
         "type": "string"
       },
-      "description": "IDs de actividades finales (despu\u00e9s de correcciones manuales)"
+      "description": "IDs de actividades finales (después de correcciones manuales)"
     },
     "corrections_made": {
       "type": "array",
@@ -69,15 +69,15 @@
       "items": {
         "type": "string"
       },
-      "description": "IDs de art\u00edculos con procesos similares detectados"
+      "description": "IDs de artículos con procesos similares detectados"
     },
     "confidence_score": {
       "type": "number",
-      "description": "Puntuaci\u00f3n de confianza de la detecci\u00f3n autom\u00e1tica (0-1)"
+      "description": "Puntuación de confianza de la detección automática (0-1)"
     },
     "process_code": {
       "type": "string",
-      "description": "C\u00f3digo de proceso asignado (si aplica)"
+      "description": "Código de proceso asignado (si aplica)"
     },
     "total_time_seconds": {
       "type": "number",
@@ -85,7 +85,7 @@
     },
     "reviewed_by": {
       "type": "string",
-      "description": "Usuario que revis\u00f3/corrigi\u00f3"
+      "description": "Usuario que revisó/corrigió"
     },
     "review_date": {
       "type": "string",
@@ -102,25 +102,11 @@
     },
     "learning_notes": {
       "type": "string",
-      "description": "Instrucciones adicionales del operario para que la IA las tenga en cuenta en futuros an\u00e1lisis"
+      "description": "Instrucciones adicionales del operario para que la IA las tenga en cuenta en futuros análisis"
     }
   },
   "required": [
     "article_id",
     "article_code"
-  ],
-  "rls": {
-    "create": null,
-    "read": null,
-    "update": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "delete": {
-      "user_condition": {
-        "role": "admin"
-      }
-    }
-  }
+  ]
 }

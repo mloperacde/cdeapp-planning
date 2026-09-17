@@ -22,11 +22,11 @@
       "type": "string",
       "enum": [
         "Contacto",
-        "Direcci\u00f3n",
+        "Dirección",
         "Emergencia",
         "Bancario"
       ],
-      "description": "Categor\u00eda del cambio solicitado"
+      "description": "Categoría del cambio solicitado"
     },
     "estado": {
       "type": "string",
@@ -50,11 +50,11 @@
     "fecha_respuesta": {
       "type": "string",
       "format": "date-time",
-      "description": "Fecha de aprobaci\u00f3n o rechazo"
+      "description": "Fecha de aprobación o rechazo"
     },
     "aprobado_por": {
       "type": "string",
-      "description": "ID del usuario que aprob\u00f3/rechaz\u00f3"
+      "description": "ID del usuario que aprobó/rechazó"
     },
     "notas": {
       "type": "string",
@@ -67,46 +67,22 @@
     "valor_solicitado",
     "categoria_cambio"
   ],
-  "rls": {
-    "create": null,
-    "read": null,
-    "update": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "rrhh"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "hr_manager"
-          }
-        }
-      ]
+  "row_level_security": [
+    {
+      "operation": "read",
+      "allow": "{{true}}"
     },
-    "delete": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "rrhh"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "hr_manager"
-          }
-        }
-      ]
+    {
+      "operation": "create",
+      "allow": "{{true}}"
+    },
+    {
+      "operation": "update",
+      "allow": "{{true}}"
+    },
+    {
+      "operation": "delete",
+      "allow": "{{true}}"
     }
-  }
+  ]
 }

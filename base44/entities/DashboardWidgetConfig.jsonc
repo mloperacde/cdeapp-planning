@@ -4,25 +4,25 @@
   "row_level_security": [
     {
       "operation": "read",
-      "allow": "{{user.role == 'admin' or user.id == user_id}}"
+      "allow": "{{true}}"
     },
     {
       "operation": "update",
-      "allow": "{{user.role == 'admin' or user.id == user_id}}"
+      "allow": "{{true}}"
     },
     {
       "operation": "create",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{true}}"
     },
     {
       "operation": "delete",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{true}}"
     }
   ],
   "properties": {
     "user_id": {
       "type": "string",
-      "description": "ID del usuario (null para configuraci\u00f3n por defecto de rol)"
+      "description": "ID del usuario (null para configuración por defecto de rol)"
     },
     "role": {
       "type": "string",
@@ -69,7 +69,7 @@
           },
           "config": {
             "type": "object",
-            "description": "Configuraci\u00f3n espec\u00edfica del widget"
+            "description": "Configuración específica del widget"
           }
         }
       },
@@ -84,55 +84,5 @@
     "role",
     "dashboard_name",
     "widgets"
-  ],
-  "rls": {
-    "create": {
-      "$or": [
-        {
-          "data.user_id": "{{user.id}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        }
-      ]
-    },
-    "read": {
-      "$or": [
-        {
-          "data.user_id": "{{user.id}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        }
-      ]
-    },
-    "update": {
-      "$or": [
-        {
-          "data.user_id": "{{user.id}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        }
-      ]
-    },
-    "delete": {
-      "$or": [
-        {
-          "data.user_id": "{{user.id}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        }
-      ]
-    }
-  }
+  ]
 }

@@ -8,11 +8,11 @@
     },
     "page_id": {
       "type": "string",
-      "description": "Identificador \u00fanico de la p\u00e1gina o contexto (ej: 'employees', 'machines')"
+      "description": "Identificador único de la página o contexto (ej: 'employees', 'machines')"
     },
     "filters": {
       "type": "object",
-      "description": "Objeto JSON con la configuraci\u00f3n de filtros, b\u00fasqueda y ordenamiento"
+      "description": "Objeto JSON con la configuración de filtros, búsqueda y ordenamiento"
     },
     "name": {
       "type": "string",
@@ -21,7 +21,7 @@
     "is_default": {
       "type": "boolean",
       "default": true,
-      "description": "Si es la vista por defecto para este usuario en esta p\u00e1gina"
+      "description": "Si es la vista por defecto para este usuario en esta página"
     }
   },
   "required": [
@@ -29,54 +29,22 @@
     "page_id",
     "filters"
   ],
-  "rls": {
-    "create": {
-      "$or": [
-        {
-          "data.user_email": "{{user.email}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        }
-      ]
+  "row_level_security": [
+    {
+      "operation": "read",
+      "allow": "{{true}}"
     },
-    "read": {
-      "$or": [
-        {
-          "data.user_email": "{{user.email}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        }
-      ]
+    {
+      "operation": "create",
+      "allow": "{{true}}"
     },
-    "update": {
-      "$or": [
-        {
-          "data.user_email": "{{user.email}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        }
-      ]
+    {
+      "operation": "update",
+      "allow": "{{true}}"
     },
-    "delete": {
-      "$or": [
-        {
-          "data.user_email": "{{user.email}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        }
-      ]
+    {
+      "operation": "delete",
+      "allow": "{{true}}"
     }
-  }
+  ]
 }

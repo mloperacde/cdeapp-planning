@@ -4,19 +4,19 @@
   "row_level_security": [
     {
       "operation": "read",
-      "allow": "{{user.role == 'admin' or user.role == 'rrhh' or user.role == 'supervisor' or user.employee_id == employee_id}}"
+      "allow": "{{true}}"
     },
     {
       "operation": "create",
-      "allow": "{{user.role == 'admin' or user.role == 'rrhh'}}"
+      "allow": "{{true}}"
     },
     {
       "operation": "update",
-      "allow": "{{user.role == 'admin' or user.role == 'rrhh'}}"
+      "allow": "{{true}}"
     },
     {
       "operation": "delete",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{true}}"
     }
   ],
   "properties": {
@@ -34,7 +34,7 @@
     },
     "periodo_evaluacion": {
       "type": "string",
-      "description": "Per\u00edodo evaluado (ej. 2025-Q1, 2025-01)"
+      "description": "Período evaluado (ej. 2025-Q1, 2025-01)"
     },
     "resultados": {
       "type": "array",
@@ -63,7 +63,7 @@
           }
         }
       },
-      "description": "Resultados de cada par\u00e1metro"
+      "description": "Resultados de cada parámetro"
     },
     "cumplimiento_total": {
       "type": "number",
@@ -77,7 +77,7 @@
       "type": "string",
       "enum": [
         "Pendiente",
-        "En Revisi\u00f3n",
+        "En Revisión",
         "Aprobado",
         "Pagado"
       ],
@@ -99,83 +99,5 @@
     "employee_id",
     "departamento",
     "periodo_evaluacion"
-  ],
-  "rls": {
-    "create": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "rrhh"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "hr_manager"
-          }
-        }
-      ]
-    },
-    "read": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "rrhh"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "hr_manager"
-          }
-        }
-      ]
-    },
-    "update": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "rrhh"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "hr_manager"
-          }
-        }
-      ]
-    },
-    "delete": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "rrhh"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "hr_manager"
-          }
-        }
-      ]
-    }
-  }
+  ]
 }

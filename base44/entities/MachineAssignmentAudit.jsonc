@@ -4,29 +4,29 @@
   "row_level_security": [
     {
       "operation": "read",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{true}}"
     },
     {
       "operation": "create",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{true}}"
     },
     {
       "operation": "update",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     },
     {
       "operation": "delete",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     }
   ],
   "properties": {
     "machine_id": {
       "type": "string",
-      "description": "ID de la m\u00e1quina afectada"
+      "description": "ID de la máquina afectada"
     },
     "machine_name": {
       "type": "string",
-      "description": "Nombre de la m\u00e1quina (para referencia hist\u00f3rica)"
+      "description": "Nombre de la máquina (para referencia histórica)"
     },
     "team_key": {
       "type": "string",
@@ -38,15 +38,15 @@
         "create",
         "update"
       ],
-      "description": "Tipo de acci\u00f3n"
+      "description": "Tipo de acción"
     },
     "changes": {
       "type": "string",
-      "description": "Descripci\u00f3n JSON stringified de los cambios (antiguo -> nuevo)"
+      "description": "Descripción JSON stringified de los cambios (antiguo -> nuevo)"
     },
     "modified_by": {
       "type": "string",
-      "description": "Email del usuario que realiz\u00f3 el cambio"
+      "description": "Email del usuario que realizó el cambio"
     },
     "timestamp": {
       "type": "string",
@@ -59,19 +59,5 @@
     "action",
     "modified_by",
     "timestamp"
-  ],
-  "rls": {
-    "create": null,
-    "read": null,
-    "update": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "delete": {
-      "user_condition": {
-        "role": "admin"
-      }
-    }
-  }
+  ]
 }

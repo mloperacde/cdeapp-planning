@@ -4,19 +4,19 @@
   "row_level_security": [
     {
       "operation": "read",
-      "allow": "{{user.role == 'admin' or user.role == 'rrhh'}}"
+      "allow": "{{true}}"
     },
     {
       "operation": "create",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{true}}"
     },
     {
       "operation": "update",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{true}}"
     },
     {
       "operation": "delete",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{true}}"
     }
   ],
   "properties": {
@@ -31,7 +31,7 @@
       "enum": [
         "Fijo",
         "Variable",
-        "Deducci\u00f3n",
+        "Deducción",
         "Beneficio",
         "Plus",
         "Complemento"
@@ -62,9 +62,9 @@
       "enum": [
         "Fijo",
         "Porcentaje Salario Base",
-        "F\u00f3rmula Personalizada",
+        "Fórmula Personalizada",
         "Por Horas",
-        "Por D\u00edas"
+        "Por Días"
       ],
       "default": "Fijo"
     },
@@ -97,7 +97,7 @@
         "Trimestral",
         "Semestral",
         "Anual",
-        "\u00danica"
+        "Única"
       ],
       "default": "Mensual"
     },
@@ -117,68 +117,5 @@
     "name",
     "code",
     "type"
-  ],
-  "rls": {
-    "create": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "rrhh"
-          }
-        }
-      ]
-    },
-    "read": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "rrhh"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "hr_manager"
-          }
-        }
-      ]
-    },
-    "update": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "rrhh"
-          }
-        }
-      ]
-    },
-    "delete": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "rrhh"
-          }
-        }
-      ]
-    }
-  }
+  ]
 }

@@ -4,19 +4,19 @@
   "row_level_security": [
     {
       "operation": "read",
-      "allow": "{{user.role == 'admin' or user.role == 'rrhh' or user.employee_id == employee_id}}"
+      "allow": "{{true}}"
     },
     {
       "operation": "create",
-      "allow": "{{user.role == 'admin' or user.role == 'rrhh'}}"
+      "allow": "{{true}}"
     },
     {
       "operation": "update",
-      "allow": "{{user.role == 'admin' or user.role == 'rrhh'}}"
+      "allow": "{{true}}"
     },
     {
       "operation": "delete",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{true}}"
     }
   ],
   "properties": {
@@ -30,9 +30,9 @@
       "type": "string",
       "enum": [
         "Nuevo Componente",
-        "Modificaci\u00f3n Componente",
-        "Eliminaci\u00f3n Componente",
-        "Cambio Categor\u00eda",
+        "Modificación Componente",
+        "Eliminación Componente",
+        "Cambio Categoría",
         "Ajuste Salarial"
       ]
     },
@@ -69,7 +69,7 @@
       "type": "string",
       "enum": [
         "Pendiente",
-        "En Revisi\u00f3n",
+        "En Revisión",
         "Aprobada",
         "Rechazada",
         "Aplicada"
@@ -108,65 +108,5 @@
     "request_type",
     "requested_by",
     "request_date"
-  ],
-  "rls": {
-    "create": null,
-    "read": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "rrhh"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "hr_manager"
-          }
-        }
-      ]
-    },
-    "update": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "rrhh"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "hr_manager"
-          }
-        }
-      ]
-    },
-    "delete": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "rrhh"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "hr_manager"
-          }
-        }
-      ]
-    }
-  }
+  ]
 }

@@ -4,7 +4,7 @@
   "properties": {
     "config_name": {
       "type": "string",
-      "description": "Nombre de la configuraci\u00f3n de precios"
+      "description": "Nombre de la configuración de precios"
     },
     "product_type": {
       "type": "string",
@@ -23,7 +23,7 @@
     },
     "hourly_rate": {
       "type": "number",
-      "description": "Tarifa por hora de m\u00e1quina"
+      "description": "Tarifa por hora de máquina"
     },
     "filling_system_multiplier": {
       "type": "object",
@@ -91,7 +91,7 @@
     },
     "minimum_order_volume": {
       "type": "number",
-      "description": "Volumen m\u00ednimo de orden"
+      "description": "Volumen mínimo de orden"
     },
     "volume_discounts": {
       "type": "array",
@@ -114,7 +114,7 @@
     "active": {
       "type": "boolean",
       "default": true,
-      "description": "Si la configuraci\u00f3n est\u00e1 activa"
+      "description": "Si la configuración está activa"
     }
   },
   "required": [
@@ -122,22 +122,22 @@
     "labor_cost_per_unit",
     "hourly_rate"
   ],
-  "rls": {
-    "create": {
-      "user_condition": {
-        "role": "admin"
-      }
+  "row_level_security": [
+    {
+      "operation": "read",
+      "allow": "{{true}}"
     },
-    "read": null,
-    "update": {
-      "user_condition": {
-        "role": "admin"
-      }
+    {
+      "operation": "create",
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     },
-    "delete": {
-      "user_condition": {
-        "role": "admin"
-      }
+    {
+      "operation": "update",
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
+    },
+    {
+      "operation": "delete",
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     }
-  }
+  ]
 }

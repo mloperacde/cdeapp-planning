@@ -4,25 +4,25 @@
   "row_level_security": [
     {
       "operation": "read",
-      "allow": "{{user.role == 'admin' or user.role == role}}"
+      "allow": "{{true}}"
     },
     {
       "operation": "create",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     },
     {
       "operation": "update",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     },
     {
       "operation": "delete",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     }
   ],
   "properties": {
     "role": {
       "type": "string",
-      "description": "Rol al que aplica esta configuraci\u00f3n (admin, user, supervisor)"
+      "description": "Rol al que aplica esta configuración (admin, user, supervisor)"
     },
     "widget_id": {
       "type": "string",
@@ -39,12 +39,12 @@
     "enabled": {
       "type": "boolean",
       "default": true,
-      "description": "Si el widget est\u00e1 habilitado para este rol"
+      "description": "Si el widget está habilitado para este rol"
     },
     "order": {
       "type": "number",
       "default": 0,
-      "description": "Orden de visualizaci\u00f3n"
+      "description": "Orden de visualización"
     },
     "size": {
       "type": "string",
@@ -54,29 +54,11 @@
         "large"
       ],
       "default": "medium",
-      "description": "Tama\u00f1o del widget"
+      "description": "Tamaño del widget"
     }
   },
   "required": [
     "role",
     "widget_id"
-  ],
-  "rls": {
-    "create": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "read": null,
-    "update": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "delete": {
-      "user_condition": {
-        "role": "admin"
-      }
-    }
-  }
+  ]
 }

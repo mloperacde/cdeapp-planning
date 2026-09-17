@@ -4,19 +4,19 @@
   "row_level_security": [
     {
       "operation": "read",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{true}}"
     },
     {
       "operation": "create",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{true}}"
     },
     {
       "operation": "update",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     },
     {
       "operation": "delete",
-      "allow": "{{user.role == 'admin'}}"
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     }
   ],
   "properties": {
@@ -33,12 +33,12 @@
     "sync_type": {
       "type": "string",
       "enum": [
-        "Creaci\u00f3n",
-        "Actualizaci\u00f3n",
-        "Sincronizaci\u00f3n Total",
-        "Sincronizaci\u00f3n Parcial",
-        "Sincronizaci\u00f3n Autom\u00e1tica",
-        "Deshacer Sincronizaci\u00f3n"
+        "Creación",
+        "Actualización",
+        "Sincronización Total",
+        "Sincronización Parcial",
+        "Sincronización Automática",
+        "Deshacer Sincronización"
       ]
     },
     "fields_synced": {
@@ -72,19 +72,5 @@
     "master_employee_id",
     "sync_date",
     "sync_type"
-  ],
-  "rls": {
-    "create": null,
-    "read": null,
-    "update": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "delete": {
-      "user_condition": {
-        "role": "admin"
-      }
-    }
-  }
+  ]
 }

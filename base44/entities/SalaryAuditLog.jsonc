@@ -27,7 +27,7 @@
         "approve",
         "reject"
       ],
-      "description": "Acci\u00f3n realizada"
+      "description": "Acción realizada"
     },
     "employee_id": {
       "type": "string",
@@ -39,7 +39,7 @@
     },
     "field_changed": {
       "type": "string",
-      "description": "Campo espec\u00edfico modificado"
+      "description": "Campo específico modificado"
     },
     "old_value": {
       "type": "string",
@@ -59,7 +59,7 @@
     },
     "changed_by": {
       "type": "string",
-      "description": "Usuario que realiz\u00f3 el cambio"
+      "description": "Usuario que realizó el cambio"
     },
     "changed_by_name": {
       "type": "string",
@@ -72,7 +72,7 @@
     },
     "ip_address": {
       "type": "string",
-      "description": "Direcci\u00f3n IP"
+      "description": "Dirección IP"
     },
     "request_id": {
       "type": "string",
@@ -86,31 +86,22 @@
     "changed_by",
     "change_date"
   ],
-  "rls": {
-    "create": null,
-    "read": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "rrhh"
-          }
-        }
-      ]
+  "row_level_security": [
+    {
+      "operation": "read",
+      "allow": "{{true}}"
     },
-    "update": {
-      "user_condition": {
-        "role": "admin"
-      }
+    {
+      "operation": "create",
+      "allow": "{{true}}"
     },
-    "delete": {
-      "user_condition": {
-        "role": "admin"
-      }
+    {
+      "operation": "update",
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
+    },
+    {
+      "operation": "delete",
+      "allow": "{{user.role == 'admin' or user.role == 'Admin'}}"
     }
-  }
+  ]
 }
