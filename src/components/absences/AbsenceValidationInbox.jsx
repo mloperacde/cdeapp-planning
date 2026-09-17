@@ -99,6 +99,31 @@ export default function AbsenceValidationInbox({ employees = EMPTY, absenceTypes
     refetchOnWindowFocus: true,
   });
 
+  // Cargar fichajes de la fecha de detección para excluir empleados que sí ficharon entrada
+  const detectionDateStr = filterDate || new Date().toISOString().split('T')[0];
+  const { data: detectionDateRecords = EMPTY } = useQuery({
+    queryKey: ['attendanceRecords', detectionDateStr],
+    queryFn: () => base44.entities.AttendanceRecord.filter({ record_date: detectionDateStr }, 'record_time', 2000),
+    staleTime: 60000,
+  });
+
+  // Set de IDs internos de empleados que ficharon entrada en la fecha de detección
+  const checkedInOnDateIds = useMemo(() => {
+    const codigoToId = {};
+    for (const e of employees) {
+      if (e.codigo_empleado) codigoToId[e.codigo_empleado] = e.id;
+      if (e.legacy_employee_id) codigoToId[e.legacy_employee_id] = e.id;
+    }
+    const s = new Set();
+    for (const r of detectionDateRecords) {
+      if (r.direction === 'E') {
+        const empId = codigoToId[r.employee_id];
+        if (empId) s.add(empId);
+      }
+    }
+    return s;
+  }, [detectionDateRecords, employees]);
+
   // Set de employee_ids que ya tienen una ausencia formal aprobada vigente (registrada por RRHH)
   const employeesWithApprovedAbsence = useMemo(() => {
     const set = new Set();
@@ -152,9 +177,11 @@ export default function AbsenceValidationInbox({ employees = EMPTY, absenceTypes
       if (employeesWithApprovedAbsence.has(emp.id)) return false;
       // Solo mostrar si hay una detección automática pendiente activa para este empleado
       if (!autoAbsenceByEmpId.has(emp.id)) return false;
+      // Excluir si el empleado fichó entrada en la fecha de detección (presente real)
+      if (checkedInOnDateIds.has(emp.id)) return false;
       return true;
     });
-  }, [employees, isAfternoonShiftNotStarted, employeesWithApprovedAbsence, autoAbsenceByEmpId]);
+  }, [employees, isAfternoonShiftNotStarted, employeesWithApprovedAbsence, autoAbsenceByEmpId, checkedInOnDateIds]);
 
   const deptOptions = useMemo(() => {
     const s = new Set();

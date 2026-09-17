@@ -185,6 +185,8 @@ export default function AbsenceManagementPage() {
       if (employeesWithApprovedAbsence.has(emp.id)) return false;
       // Solo contar si tiene detección automática pendiente activa
       if (!autoAbsenceEmpIds.has(emp.id)) return false;
+      // Excluir si fichó entrada hoy (presente real)
+      if (ficharonHoyIds.has(emp.id)) return false;
       // Excluir turno tarde no iniciado
       let assignedShift = null;
       if (emp.tipo_turno === 'Fijo Tarde') assignedShift = 'Tarde';
