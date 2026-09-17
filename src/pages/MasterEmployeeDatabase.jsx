@@ -616,11 +616,13 @@ export default function MasterEmployeeDatabasePage() {
       return acc;
     }, {});
 
-    const contractCounts = data.reduce((acc, emp) => {
-      const tipo = emp.tipo_contrato || 'Sin contrato';
-      acc[tipo] = (acc[tipo] || 0) + 1;
-      return acc;
-    }, {});
+    const contractCounts = data
+      .filter(emp => emp.estado_empleado === 'Alta')
+      .reduce((acc, emp) => {
+        const tipo = emp.tipo_contrato || 'Sin contrato';
+        acc[tipo] = (acc[tipo] || 0) + 1;
+        return acc;
+      }, {});
 
     const shiftTypes = Object.entries(shiftCounts)
       .map(([name, count]) => ({ name, count }))
