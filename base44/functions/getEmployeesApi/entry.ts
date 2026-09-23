@@ -5,12 +5,23 @@ Deno.serve(async (req) => {
   const apiKey = req.headers.get('x-api-key');
   const validKey = Deno.env.get('EMPLOYEES_API_KEY');
 
+  const base44 = createClientFromRequest(req);
+
+  // Si no hay API key válida, verificar si es un admin autenticado (para test desde la UI)
   if (!apiKey || !validKey || apiKey !== validKey) {
-    return Response.json({ error: 'No autorizado. Incluye la cabecera x-api-key válida.' }, { status: 401 });
+    try {
+      const user = await base44.auth.me();
+      if (user && (user.role || '').toLowerCase() === 'admin') {
+        // Admin autenticado, permitir acceso para test
+      } else {
+        return Response.json({ error: 'No autorizado. Incluye la cabecera x-api-key válida o inicia sesión como admin.' }, { status: 401 });
+      }
+    } catch {
+      return Response.json({ error: 'No autorizado. Incluye la cabecera x-api-key válida.' }, { status: 401 });
+    }
   }
 
   try {
-    const base44 = createClientFromRequest(req);
 
     // Parámetros opcionales de filtrado
     const url = new URL(req.url);
