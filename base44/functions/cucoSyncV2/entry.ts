@@ -138,12 +138,16 @@ function calculateCompliance(emp, assignedShift, firstEntry, lastExit, isPastDat
   const minutesLate = Math.max(0, entryMin - span.shiftStart);
   const minutesEarly = (exitMin !== null && span.shiftEnd !== null) ? Math.max(0, span.shiftEnd - exitMin) : 0;
   const actualMinutes = exitMin !== null ? Math.max(0, exitMin - entryMin) : 0;
-  const missingMinutes = minutesLate + minutesEarly;
+  // Horas no trabajadas: solo si las horas reales NO cubren la jornada esperada
+  const missingMinutes = Math.max(0, span.expectedMinutes - actualMinutes);
 
   const TOLERANCE_MIN = 5;
   let status = 'Completa';
   if (exitMin === null) {
     status = isPastDate ? 'Sin Salida' : (minutesLate > TOLERANCE_MIN ? 'Retraso' : 'En Curso');
+  } else if (actualMinutes >= span.expectedMinutes - TOLERANCE_MIN) {
+    // Jornada cubierta: aunque los horarios no coincidan con los esperados, no hay horas no trabajadas
+    status = 'Completa';
   } else if (minutesLate > TOLERANCE_MIN && minutesEarly > TOLERANCE_MIN) {
     status = 'Incompleta';
   } else if (minutesLate > TOLERANCE_MIN) {
