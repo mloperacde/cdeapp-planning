@@ -307,6 +307,8 @@ export default function CdeAppSyncPanel() {
   };
 
   return (
+    <div className="space-y-4">
+    <EmployeeExportEndpoint />
     <Card className="w-full">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
@@ -318,150 +320,9 @@ export default function CdeAppSyncPanel() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        
-        {/* API Key Config */}
-        <div className="space-y-2">
-          <Label>API Key</Label>
-          <div className="flex gap-2">
-            <div className="relative flex-1">
-              <Key className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
-              <Input 
-                value={isEnvKey ? "••••••••••••••••" : apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                className="pl-9"
-                type="password"
-                placeholder="Ingrese su CDEApp API Key"
-                disabled={isEnvKey}
-              />
-            </div>
-            {!isEnvKey && (
-              <Button onClick={handleSaveKey} variant="outline">
-                Guardar
-              </Button>
-            )}
-          </div>
-          {isEnvKey ? (
-            <p className="text-xs text-green-600 flex items-center gap-1">
-              <CheckCircle2 className="w-3 h-3" />
-              Configurada mediante Secretos de Base44 (Solo lectura)
-            </p>
-          ) : (
-            <p className="text-xs text-slate-500">
-              La clave se guardará localmente en su navegador.
-            </p>
-          )}
-        </div>
-
-        <Separator />
-
-        {/* Sync Process */}
-        <div className="space-y-4">
-          <h3 className="text-sm font-medium">Proceso de Sincronización</h3>
-          
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-             {/* Step 1: Rooms */}
-             <Card className={`border-l-4 ${step >= 0 ? 'border-l-blue-500' : 'border-l-slate-200'} bg-slate-50`}>
-                 <CardContent className="p-4">
-                     <div className="flex justify-between items-start mb-2">
-                         <span className="font-semibold text-sm">1. Salas</span>
-                         {step > 1 && <CheckCircle2 className="w-4 h-4 text-green-600" />}
-                     </div>
-                     <p className="text-xs text-slate-500 mb-4">Sincroniza ubicaciones y áreas.</p>
-                     <Button 
-                        size="sm" 
-                        className="w-full" 
-                        onClick={syncRooms}
-                        disabled={loading || !apiKey}
-                     >
-                        {loading && step === 1 ? <Loader2 className="w-3 h-3 animate-spin mr-2" /> : null}
-                        Sincronizar Salas
-                     </Button>
-                 </CardContent>
-             </Card>
-
-             {/* Step 2: Machines */}
-             <Card className={`border-l-4 ${step >= 1 ? 'border-l-blue-500' : 'border-l-slate-200'} bg-slate-50`}>
-                 <CardContent className="p-4">
-                     <div className="flex justify-between items-start mb-2">
-                         <span className="font-semibold text-sm">2. Máquinas</span>
-                         {step > 2 && <CheckCircle2 className="w-4 h-4 text-green-600" />}
-                     </div>
-                     <p className="text-xs text-slate-500 mb-4">Actualiza catálogo de máquinas.</p>
-                     <Button 
-                        size="sm" 
-                        className="w-full" 
-                        onClick={syncMachines}
-                        disabled={loading || step < 2 || !apiKey}
-                        variant={step < 2 ? "ghost" : "default"}
-                     >
-                        {loading && step === 2 ? <Loader2 className="w-3 h-3 animate-spin mr-2" /> : null}
-                        Sincronizar Máquinas
-                     </Button>
-                 </CardContent>
-             </Card>
-
-             {/* Step 3: Articles */}
-             <Card className={`border-l-4 ${step >= 2 ? 'border-l-blue-500' : 'border-l-slate-200'} bg-slate-50`}>
-                 <CardContent className="p-4">
-                     <div className="flex justify-between items-start mb-2">
-                         <span className="font-semibold text-sm">3. Artículos</span>
-                         {step > 3 && <CheckCircle2 className="w-4 h-4 text-green-600" />}
-                     </div>
-                     <p className="text-xs text-slate-500 mb-4">Actualiza base de datos de artículos.</p>
-                     <Button 
-                        size="sm" 
-                        className="w-full" 
-                        onClick={syncArticles}
-                        disabled={loading || step < 3 || !apiKey}
-                        variant={step < 3 ? "ghost" : "default"}
-                     >
-                        {loading && step === 3 ? <Loader2 className="w-3 h-3 animate-spin mr-2" /> : null}
-                        Sincronizar Artículos
-                     </Button>
-                 </CardContent>
-             </Card>
-
-             {/* Step 4: Productions */}
-             <Card className={`border-l-4 ${step >= 3 ? 'border-l-blue-500' : 'border-l-slate-200'} bg-slate-50`}>
-                 <CardContent className="p-4">
-                     <div className="flex justify-between items-start mb-2">
-                         <span className="font-semibold text-sm">4. Producciones</span>
-                         {step > 4 && <CheckCircle2 className="w-4 h-4 text-green-600" />}
-                     </div>
-                     <p className="text-xs text-slate-500 mb-4">Importa órdenes de trabajo.</p>
-                     <Button 
-                        size="sm" 
-                        className="w-full" 
-                        onClick={syncProductions}
-                        disabled={loading || step < 4 || !apiKey}
-                        variant={step < 4 ? "ghost" : "default"}
-                     >
-                        {loading && step === 4 ? <Loader2 className="w-3 h-3 animate-spin mr-2" /> : null}
-                        Sincronizar Producciones
-                     </Button>
-                 </CardContent>
-             </Card>
-          </div>
-        </div>
-
-        {/* Logs */}
-        <div className="bg-slate-950 text-slate-200 p-4 rounded-lg text-xs font-mono h-48 overflow-y-auto">
-            {logs.length === 0 ? (
-                <div className="text-slate-600 italic">Esperando inicio de operaciones...</div>
-            ) : (
-                logs.map((log, i) => (
-                    <div key={i} className={`mb-1 ${
-                        log.type === 'error' ? 'text-red-400' : 
-                        log.type === 'success' ? 'text-green-400' : 'text-slate-300'
-                    }`}>
-                        <span className="opacity-50 mr-2">[{format(log.time, 'HH:mm:ss')}]</span>
-                        {log.msg}
-                    </div>
-                ))
-            )}
-        </div>
-
+...
       </CardContent>
     </Card>
+    </div>
   );
 }
