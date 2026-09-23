@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import {
   UserX, CalendarDays, FileText, CheckSquare,
   LayoutDashboard, Settings, AlertTriangle, ClipboardList,
-  Brain, RefreshCw, Trash2, Calendar, TrendingDown
+  Brain, RefreshCw, Trash2, Calendar, TrendingDown, Clock
 } from "lucide-react";
 
 import AbsenceDashboard from "../components/employees/AbsenceDashboard";
@@ -27,6 +27,7 @@ import AttendanceAnalyzer from "../components/attendance/AttendanceAnalyzer";
 import AbsenceValidationInbox from "../components/absences/AbsenceValidationInbox";
 import FormalAbsenceManager from "../components/absences/FormalAbsenceManager";
 import AbsenceReportGenerator from "../components/absences/AbsenceReportGenerator";
+import WorkdayComplianceView from "../components/absences/WorkdayComplianceView";
 import { isAutoAbsence } from "@/utils/absenceUtils";
 
 export default function AbsenceManagementPage() {
@@ -229,6 +230,7 @@ export default function AbsenceManagementPage() {
     { value: "approval", label: "Aprobaciones", icon: CheckSquare, count: stats.pendingApproval, countColor: "bg-orange-500" },
     { value: "calendar", label: "Calendario", icon: Calendar },
     { value: "reports", label: "Informes", icon: FileText },
+    { value: "compliance", label: "Cumplimiento", icon: Clock },
     { value: "types-config", label: "Tipos", icon: Settings },
     { value: "config", label: "Vacaciones", icon: TrendingDown },
   ];
@@ -422,6 +424,11 @@ export default function AbsenceManagementPage() {
           {/* Informes */}
           <TabsContent value="reports">
             <AbsenceReportGenerator employees={employees} absenceTypes={absenceTypes} />
+          </TabsContent>
+
+          {/* Cumplimiento horario */}
+          <TabsContent value="compliance">
+            <WorkdayComplianceView employees={employees} />
           </TabsContent>
 
           {/* Tipos de ausencia */}

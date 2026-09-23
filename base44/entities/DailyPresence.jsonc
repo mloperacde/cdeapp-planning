@@ -30,7 +30,7 @@
     },
     "employee_code": {
       "type": "string",
-      "description": "Código del empleado en Cuco360 (desnormalizado)"
+      "description": "C\u00f3digo del empleado en Cuco360 (desnormalizado)"
     },
     "record_date": {
       "type": "string",
@@ -40,11 +40,11 @@
     "present": {
       "type": "boolean",
       "default": true,
-      "description": "Si el empleado estuvo presente (tuvo al menos un fichaje en el día)"
+      "description": "Si el empleado estuvo presente (tuvo al menos un fichaje en el d\u00eda)"
     },
     "shift": {
       "type": "string",
-      "description": "Turno detectado según hora de primera entrada (Mañana/Tarde)"
+      "description": "Turno detectado seg\u00fan hora de primera entrada (Ma\u00f1ana/Tarde)"
     },
     "first_entry": {
       "type": "string",
@@ -52,16 +52,64 @@
     },
     "last_exit": {
       "type": "string",
-      "description": "Hora de última salida (HH:MM)"
+      "description": "Hora de \u00faltima salida (HH:MM)"
     },
     "check_in_count": {
       "type": "number",
-      "description": "Número total de fichajes del día"
+      "description": "N\u00famero total de fichajes del d\u00eda"
     },
     "source": {
       "type": "string",
       "default": "cuco360",
       "description": "Origen de los datos"
+    },
+    "expected_start": {
+      "type": "string",
+      "description": "Hora de entrada esperada seg\u00fan turno (HH:MM)"
+    },
+    "expected_end": {
+      "type": "string",
+      "description": "Hora de salida esperada seg\u00fan turno (HH:MM)"
+    },
+    "minutes_late": {
+      "type": "number",
+      "default": 0,
+      "description": "Minutos de retraso sobre la entrada esperada"
+    },
+    "minutes_early": {
+      "type": "number",
+      "default": 0,
+      "description": "Minutos de salida anticipada antes de la salida esperada"
+    },
+    "expected_minutes": {
+      "type": "number",
+      "default": 0,
+      "description": "Minutos de jornada esperados seg\u00fan turno"
+    },
+    "actual_minutes": {
+      "type": "number",
+      "default": 0,
+      "description": "Minutos reales trabajados (\u00faltima salida - primera entrada)"
+    },
+    "missing_minutes": {
+      "type": "number",
+      "default": 0,
+      "description": "Minutos no trabajados (retraso + salida anticipada)"
+    },
+    "compliance_status": {
+      "type": "string",
+      "enum": [
+        "Completa",
+        "Retraso",
+        "Salida Anticipada",
+        "Incompleta",
+        "En Curso",
+        "Sin Turno",
+        "Ausente",
+        "Sin Datos"
+      ],
+      "default": "Sin Datos",
+      "description": "Estado de cumplimiento de jornada"
     }
   },
   "required": [

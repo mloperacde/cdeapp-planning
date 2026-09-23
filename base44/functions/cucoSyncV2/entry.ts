@@ -56,6 +56,113 @@ function getEmployeeShiftToday(emp, assignedShift) {
   return null;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Cumplimiento horario: calcula retraso, salida anticipada y horas no trabajadas
+// ─────────────────────────────────────────────────────────────────────────────
+
+function getEmployeeShiftSpan(emp, assignedShift) {
+  if (emp.tipo_turno === 'Turno Partido') {
+    const e1 = timeToMinutes(emp.turno_partido_entrada1);
+    const s1 = timeToMinutes(emp.turno_partido_salida1);
+    const e2 = timeToMinutes(emp.turno_partido_entrada2);
+    const s2 = timeToMinutes(emp.turno_partido_salida2);
+    if (e1 === null) return null;
+    const expectedMinutes = (s1 !== null && e2 !== null && s2 !== null)
+      ? (s1 - e1) + (s2 - e2)
+      : (s1 !== null ? s1 - e1 : 0);
+    return {
+      shiftStart: e1,
+      shiftEnd: s2 !== null ? s2 : (s1 !== null ? s1 : null),
+      expectedMinutes
+    };
+  }
+  if (assignedShift === 'Mañana') {
+    const start = timeToMinutes(emp.horario_manana_inicio);
+    const end = timeToMinutes(emp.horario_manana_fin);
+    if (start === null) return null;
+    return {
+      shiftStart: start,
+      shiftEnd: end,
+      expectedMinutes: end !== null ? end - start : (emp.num_horas_jornada || 8) * 60
+    };
+  }
+  if (assignedShift === 'Tarde') {
+    const start = timeToMinutes(emp.horario_tarde_inicio);
+    const end = timeToMinutes(emp.horario_tarde_fin);
+    if (start === null) return null;
+    return {
+      shiftStart: start,
+      shiftEnd: end,
+      expectedMinutes: end !== null ? end - start : (emp.num_horas_jornada || 8) * 60
+    };
+  }
+  return null;
+}
+
+function calculateCompliance(emp, assignedShift, firstEntry, lastExit) {
+  if (!emp) {
+    return {
+      expected_start: null, expected_end: null,
+      minutes_late: 0, minutes_early: 0,
+      expected_minutes: 0, actual_minutes: 0, missing_minutes: 0,
+      compliance_status: 'Sin Datos',
+    };
+  }
+
+  const span = getEmployeeShiftSpan(emp, assignedShift);
+
+  if (!span) {
+    const actualMin = firstEntry && lastExit ? Math.max(0, timeToMinutes(lastExit) - timeToMinutes(firstEntry)) : 0;
+    return {
+      expected_start: null, expected_end: null,
+      minutes_late: 0, minutes_early: 0,
+      expected_minutes: 0, actual_minutes: actualMin,
+      missing_minutes: 0, compliance_status: 'Sin Turno',
+    };
+  }
+
+  if (!firstEntry) {
+    return {
+      expected_start: minutesToTime(span.shiftStart),
+      expected_end: span.shiftEnd !== null ? minutesToTime(span.shiftEnd) : null,
+      minutes_late: 0, minutes_early: 0,
+      expected_minutes: span.expectedMinutes,
+      actual_minutes: 0, missing_minutes: span.expectedMinutes,
+      compliance_status: 'Ausente',
+    };
+  }
+
+  const entryMin = timeToMinutes(firstEntry);
+  const exitMin = lastExit ? timeToMinutes(lastExit) : null;
+
+  const minutesLate = Math.max(0, entryMin - span.shiftStart);
+  const minutesEarly = (exitMin !== null && span.shiftEnd !== null) ? Math.max(0, span.shiftEnd - exitMin) : 0;
+  const actualMinutes = exitMin !== null ? Math.max(0, exitMin - entryMin) : 0;
+  const missingMinutes = minutesLate + minutesEarly;
+
+  let status = 'Completa';
+  if (exitMin === null) {
+    status = minutesLate > 0 ? 'Retraso' : 'En Curso';
+  } else if (minutesLate > 0 && minutesEarly > 0) {
+    status = 'Incompleta';
+  } else if (minutesLate > 0) {
+    status = 'Retraso';
+  } else if (minutesEarly > 0) {
+    status = 'Salida Anticipada';
+  }
+
+  return {
+    expected_start: minutesToTime(span.shiftStart),
+    expected_end: span.shiftEnd !== null ? minutesToTime(span.shiftEnd) : null,
+    minutes_late: minutesLate,
+    minutes_early: minutesEarly,
+    expected_minutes: span.expectedMinutes,
+    actual_minutes: actualMinutes,
+    missing_minutes: missingMinutes,
+    compliance_status: status,
+  };
+}
+
 // sleep importado de shared/cuco360Utils.ts
 
 async function retryOp(fn, retries = 4, baseDelay = 800) {
@@ -430,32 +537,66 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ── PASO 5b: Sincronizar DailyPresence (agregado diario) ────────────
-    // Crea un registro DailyPresence por empleado por día con fichajes.
-    // Esto alimenta el informe de ausencias con datos de presencia fiables.
+    // ── PASO 5b: Sincronizar DailyPresence (agregado diario + cumplimiento horario) ────
+    // Crea/actualiza un registro DailyPresence por empleado por día con fichajes,
+    // incluyendo cálculo de cumplimiento horario (retraso, salida anticipada, horas no trabajadas).
     try {
       const syncDates = [...new Set(Object.values(recordsByEmployee).flatMap(d => Object.keys(d)))];
-      const dpExisting = new Set();
+
+      // Cargar turnos de equipo para determinar turno asignado de empleados rotativos
+      const mondayOfWeek = (() => {
+        const d = getNowSpain();
+        const day = d.getDay();
+        const diff = (day === 0) ? -6 : 1 - day;
+        d.setDate(d.getDate() + diff);
+        return d.toISOString().split('T')[0];
+      })();
+      const weekSchedules = await retryOp(() =>
+        serviceClient.entities.TeamWeekSchedule.filter({ fecha_inicio_semana: mondayOfWeek })
+      ).catch(() => []);
+      const teamShiftMap = {};
+      for (const ws of weekSchedules) {
+        if (ws.team_key && ws.turno) teamShiftMap[ws.team_key] = ws.turno;
+      }
+
+      // Cargar DailyPresence existentes (mapa para upsert)
+      const dpExistingMap = {};
       for (const dateStr of syncDates) {
         const existing = await retryOp(() =>
           serviceClient.entities.DailyPresence.filter({ record_date: dateStr }, undefined, 5000)
         , 3, 500).catch(() => []);
         for (const r of (existing || [])) {
-          dpExisting.add(`${r.employee_code}||${dateStr}`);
+          dpExistingMap[`${r.employee_code}||${dateStr}`] = r;
         }
       }
 
-      const dpRecords = [];
+      const dpToCreate = [];
+      const dpToUpdate = [];
+
       for (const [empCode, dateMap] of Object.entries(recordsByEmployee)) {
         const masterEmp = masterMapByCodigo[empCode];
         for (const [dateStr, records] of Object.entries(dateMap)) {
-          if (dpExisting.has(`${empCode}||${dateStr}`)) continue;
           const entries = records.filter(r => r.direction === 'E').map(r => r.record_time).sort();
           const exits = records.filter(r => r.direction === 'S').map(r => r.record_time).sort().reverse();
           const firstEntry = entries[0] || null;
           const lastExit = exits[0] || null;
           const shift = firstEntry ? (parseInt(firstEntry.split(':')[0]) < 12 ? 'Mañana' : 'Tarde') : null;
-          dpRecords.push({
+
+          // Determinar turno asignado
+          let assignedShift = null;
+          if (masterEmp) {
+            if (masterEmp.tipo_turno === 'Rotativo' && masterEmp.team_key) {
+              assignedShift = teamShiftMap[masterEmp.team_key] || null;
+            } else if (masterEmp.tipo_turno === 'Fijo Mañana') {
+              assignedShift = 'Mañana';
+            } else if (masterEmp.tipo_turno === 'Fijo Tarde') {
+              assignedShift = 'Tarde';
+            }
+          }
+
+          const compliance = calculateCompliance(masterEmp, assignedShift, firstEntry, lastExit);
+
+          const baseRecord = {
             employee_id: masterEmp?.id || empCode,
             employee_name: masterEmp?.nombre || records[0]?.employee_name || `Empleado ${empCode}`,
             employee_code: empCode,
@@ -466,18 +607,32 @@ Deno.serve(async (req) => {
             last_exit: lastExit,
             check_in_count: records.length,
             source: 'cuco360',
-          });
+            ...compliance,
+          };
+
+          const existingKey = `${empCode}||${dateStr}`;
+          if (dpExistingMap[existingKey]) {
+            dpToUpdate.push({ id: dpExistingMap[existingKey].id, ...baseRecord });
+          } else {
+            dpToCreate.push(baseRecord);
+          }
         }
       }
 
-      let dpCreated = 0;
-      for (let i = 0; i < dpRecords.length; i += 500) {
-        const batch = dpRecords.slice(i, i + 500);
+      let dpCreated = 0, dpUpdated = 0;
+      for (let i = 0; i < dpToCreate.length; i += 500) {
+        const batch = dpToCreate.slice(i, i + 500);
         await retryOp(() => serviceClient.entities.DailyPresence.bulkCreate(batch), 3, 500)
           .catch(e => console.warn(`[cucoSyncV2] Error DailyPresence bulkCreate:`, e));
         dpCreated += batch.length;
       }
-      console.log(`[cucoSyncV2] DailyPresence: ${dpCreated} registros creados`);
+      for (let i = 0; i < dpToUpdate.length; i += 500) {
+        const batch = dpToUpdate.slice(i, i + 500);
+        await retryOp(() => serviceClient.entities.DailyPresence.bulkUpdate(batch), 3, 500)
+          .catch(e => console.warn(`[cucoSyncV2] Error DailyPresence bulkUpdate:`, e));
+        dpUpdated += batch.length;
+      }
+      console.log(`[cucoSyncV2] DailyPresence: ${dpCreated} creados, ${dpUpdated} actualizados (con cumplimiento horario)`);
     } catch (dpErr) {
       console.warn(`[cucoSyncV2] Error sincronizando DailyPresence:`, dpErr);
     }
