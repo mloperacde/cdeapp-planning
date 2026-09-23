@@ -10,6 +10,7 @@ import {
   Timer, LogOut, TrendingDown, Users
 } from "lucide-react";
 import * as XLSX from "xlsx";
+import { toast } from "sonner";
 
 const STATUS_CONFIG = {
   "Completa": { color: "bg-green-100 text-green-700 border-green-300", icon: CheckCircle2 },
@@ -46,12 +47,15 @@ export default function WorkdayComplianceView({ employees = [] }) {
   // Generar lista de fechas en el rango
   const dates = useMemo(() => {
     const result = [];
-    const start = new Date(startDate + "T00:00:00");
-    const end = new Date(endDate + "T00:00:00");
-    for (const d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-      const ds = d.toISOString().split("T")[0];
+    const [sy, sm, sd] = startDate.split("-").map(Number);
+    const [ey, em, ed] = endDate.split("-").map(Number);
+    const d = new Date(sy, sm - 1, sd);
+    const end = new Date(ey, em - 1, ed);
+    while (d <= end) {
+      const ds = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
       const dow = d.getDay();
       if (dow !== 0 && dow !== 6) result.push(ds);
+      d.setDate(d.getDate() + 1);
     }
     return result;
   }, [startDate, endDate]);
@@ -187,14 +191,17 @@ export default function WorkdayComplianceView({ employees = [] }) {
   const handleRecalculate = async () => {
     setRecalculating(true);
     try {
-      await base44.functions.invoke("cucoSyncV2", {
+      const res = await base44.functions.invoke("cucoSyncV2", {
         start_date: startDate,
         end_date: endDate,
+        force: true,
         skip_analysis: true,
       });
       queryClient.invalidateQueries({ queryKey: ["dailyPresence"] });
+      toast.success(`Cumplimiento recalculado: ${res?.count || 0} fichajes procesados`);
     } catch (e) {
       console.error("Error recalculando:", e);
+      toast.error("Error al recalcular: " + (e.message || "desconocido"));
     } finally {
       setRecalculating(false);
     }
