@@ -99,7 +99,7 @@ function getEmployeeShiftSpan(emp, assignedShift) {
   return null;
 }
 
-function calculateCompliance(emp, assignedShift, firstEntry, lastExit) {
+function calculateCompliance(emp, assignedShift, firstEntry, lastExit, isPastDate) {
   if (!emp) {
     return {
       expected_start: null, expected_end: null,
@@ -140,14 +140,15 @@ function calculateCompliance(emp, assignedShift, firstEntry, lastExit) {
   const actualMinutes = exitMin !== null ? Math.max(0, exitMin - entryMin) : 0;
   const missingMinutes = minutesLate + minutesEarly;
 
+  const TOLERANCE_MIN = 5;
   let status = 'Completa';
   if (exitMin === null) {
-    status = minutesLate > 0 ? 'Retraso' : 'En Curso';
-  } else if (minutesLate > 0 && minutesEarly > 0) {
+    status = isPastDate ? 'Sin Salida' : (minutesLate > TOLERANCE_MIN ? 'Retraso' : 'En Curso');
+  } else if (minutesLate > TOLERANCE_MIN && minutesEarly > TOLERANCE_MIN) {
     status = 'Incompleta';
-  } else if (minutesLate > 0) {
+  } else if (minutesLate > TOLERANCE_MIN) {
     status = 'Retraso';
-  } else if (minutesEarly > 0) {
+  } else if (minutesEarly > TOLERANCE_MIN) {
     status = 'Salida Anticipada';
   }
 
@@ -572,14 +573,17 @@ Deno.serve(async (req) => {
 
       const dpToCreate = [];
       const dpToUpdate = [];
+      const todayDateStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' });
 
       for (const [empCode, dateMap] of Object.entries(recordsByEmployee)) {
         const masterEmp = masterMapByCodigo[empCode];
         for (const [dateStr, records] of Object.entries(dateMap)) {
-          const entries = records.filter(r => r.direction === 'E').map(r => r.record_time).sort();
-          const exits = records.filter(r => r.direction === 'S').map(r => r.record_time).sort().reverse();
-          const firstEntry = entries[0] || null;
-          const lastExit = exits[0] || null;
+          const sortedRecords = records.slice().sort((a, b) => a.record_time.localeCompare(b.record_time));
+          const firstEntry = sortedRecords.find(r => r.direction === 'E')?.record_time || null;
+          // Solo usar lastExit si el ÚLTIMO fichaje del día es 'S'
+          // (si el último es 'E', la persona sigue dentro o olvidó fichar la salida)
+          const lastRecord = sortedRecords[sortedRecords.length - 1];
+          const lastExit = (lastRecord && lastRecord.direction === 'S') ? lastRecord.record_time : null;
           const shift = firstEntry ? (parseInt(firstEntry.split(':')[0]) < 12 ? 'Mañana' : 'Tarde') : null;
 
           // Determinar turno asignado
@@ -594,7 +598,8 @@ Deno.serve(async (req) => {
             }
           }
 
-          const compliance = calculateCompliance(masterEmp, assignedShift, firstEntry, lastExit);
+          const isPastDate = dateStr < todayDateStr;
+          const compliance = calculateCompliance(masterEmp, assignedShift, firstEntry, lastExit, isPastDate);
 
           const baseRecord = {
             employee_id: masterEmp?.id || empCode,

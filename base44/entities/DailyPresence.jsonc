@@ -52,7 +52,7 @@
     },
     "last_exit": {
       "type": "string",
-      "description": "Hora de \u00faltima salida (HH:MM)"
+      "description": "Hora de \u00faltima salida (HH:MM) \u2014 solo si el \u00faltimo fichaje del d\u00eda es 'S'"
     },
     "check_in_count": {
       "type": "number",
@@ -106,6 +106,7 @@
         "En Curso",
         "Sin Turno",
         "Ausente",
+        "Sin Salida",
         "Sin Datos"
       ],
       "default": "Sin Datos",

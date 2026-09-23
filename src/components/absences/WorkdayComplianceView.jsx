@@ -20,6 +20,7 @@ const STATUS_CONFIG = {
   "En Curso": { color: "bg-blue-100 text-blue-700 border-blue-300", icon: Clock },
   "Sin Turno": { color: "bg-slate-100 text-slate-500 border-slate-300", icon: Clock },
   "Ausente": { color: "bg-red-100 text-red-700 border-red-300", icon: AlertCircle },
+  "Sin Salida": { color: "bg-purple-100 text-purple-700 border-purple-300", icon: AlertCircle },
   "Sin Datos": { color: "bg-slate-100 text-slate-400 border-slate-300", icon: Clock },
 };
 
@@ -32,11 +33,11 @@ function fmtMinutes(min) {
 
 export default function WorkdayComplianceView({ employees = [] }) {
   const queryClient = useQueryClient();
-  const today = new Date().toISOString().split("T")[0];
+  const today = new Date().toLocaleDateString('en-CA');
   const weekAgo = useMemo(() => {
     const d = new Date();
     d.setDate(d.getDate() - 6);
-    return d.toISOString().split("T")[0];
+    return d.toLocaleDateString('en-CA');
   }, []);
 
   const [startDate, setStartDate] = useState(weekAgo);
