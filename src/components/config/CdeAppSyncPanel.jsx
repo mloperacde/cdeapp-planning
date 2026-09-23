@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { cdeApp } from "@/api/cdeAppClient";
 import { base44 } from "@/api/base44Client";
@@ -14,6 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { CheckCircle2, AlertTriangle, Loader2, Key, RefreshCw, Server } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import EmployeeExportEndpoint from "@/components/config/EmployeeExportEndpoint";
 
 export default function CdeAppSyncPanel() {
   const queryClient = useQueryClient();
