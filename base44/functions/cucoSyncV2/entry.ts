@@ -138,8 +138,9 @@ function calculateCompliance(emp, assignedShift, firstEntry, lastExit, isPastDat
   const minutesLate = Math.max(0, entryMin - span.shiftStart);
   const minutesEarly = (exitMin !== null && span.shiftEnd !== null) ? Math.max(0, span.shiftEnd - exitMin) : 0;
   const actualMinutes = exitMin !== null ? Math.max(0, exitMin - entryMin) : 0;
-  // Horas no trabajadas: solo si las horas reales NO cubren la jornada esperada
-  const missingMinutes = Math.max(0, span.expectedMinutes - actualMinutes);
+  // Horas no trabajadas: solo si hay salida registrada y las horas reales no cubren la jornada
+  // (si no hay salida registrada, no se puede medir → no penalizar)
+  const missingMinutes = exitMin !== null ? Math.max(0, span.expectedMinutes - actualMinutes) : 0;
 
   const TOLERANCE_MIN = 5;
   let status = 'Completa';
