@@ -20,17 +20,20 @@ export default function EmployeeExportEndpoint() {
     setTesting(true);
     setResult(null);
     try {
-      // Obtener la API key de CDEApp (necesita ser admin)
+      // Obtener la API key de CDEApp (necesita ser admin) — POST, no GET
       const keyRes = await fetch("/functions/getCdeApiKey", {
-        headers: { 'Accept': 'application/json' },
+        method: 'POST',
+        headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
       });
       if (!keyRes.ok) {
-        throw new Error("No se pudo obtener la API key de CDEApp (requiere permisos de admin)");
+        const errData = await keyRes.json().catch(() => ({}));
+        throw new Error(errData.error || "No se pudo obtener la API key de CDEApp (requiere permisos de admin)");
       }
       const { apiKey } = await keyRes.json();
 
-      // Llamar al endpoint de exportación
-      const res = await fetch(endpointUrl, {
+      // Llamar al endpoint de exportación con limit=5 para test
+      const res = await fetch(`${endpointUrl}?limit=5`, {
         method: 'GET',
         headers: {
           'X-API-Key': apiKey,
