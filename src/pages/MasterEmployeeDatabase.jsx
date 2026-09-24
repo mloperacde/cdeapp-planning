@@ -187,6 +187,11 @@ export default function MasterEmployeeDatabasePage() {
     ? permissions.canAccessPage('/MasterEmployeeDatabase') 
     : (permissions.role === "hr_manager" || permissions.role === "rrhh" || permissions.isAdmin);
 
+  // Los botones de administración (Verificar, Datos Obligatorios, Sync Cuco360)
+  // solo se muestran cuando se accede desde el módulo de Configuración
+  const urlParams = new URLSearchParams(location.search);
+  const isConfigContext = urlParams.get('context') === 'config';
+
   const handleSyncCuco360 = async (onlyMissing = true) => {
     setSyncingCuco(true);
     toast.promise(
@@ -874,7 +879,7 @@ export default function MasterEmployeeDatabasePage() {
             <span className="hidden sm:inline">Exportar</span>
           </Button>
 
-          {isHrModuleAllowed && (
+          {isConfigContext && isHrModuleAllowed && (
             <Button
               onClick={handleCheckIntegrity}
               size="sm"
@@ -887,7 +892,7 @@ export default function MasterEmployeeDatabasePage() {
             </Button>
           )}
 
-          {permissions.isAdmin && (
+          {isConfigContext && permissions.isAdmin && (
             <Button
               asChild
               size="sm"
@@ -902,7 +907,7 @@ export default function MasterEmployeeDatabasePage() {
             </Button>
           )}
 
-          {permissions.isAdmin && (
+          {isConfigContext && permissions.isAdmin && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button

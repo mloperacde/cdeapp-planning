@@ -96,7 +96,7 @@ export default function ConfigurationPage() {
           title: "Base de Datos Maestra de Empleados",
           description: "Importar, sincronizar y gestionar archivo maestro de empleados",
           icon: Users,
-          url: "/MasterEmployeeDatabase",
+          url: "/MasterEmployeeDatabase?context=config",
           color: "blue"
         },
         {
