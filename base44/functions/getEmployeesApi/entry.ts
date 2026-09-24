@@ -31,12 +31,9 @@ Deno.serve(async (req) => {
     const limit = parseInt(url.searchParams.get('limit') || '2000');
     const offset = parseInt(url.searchParams.get('offset') || '0');
 
-    // Construir filtro
+    // Construir filtro (solo departamento se filtra en BD)
     const query = {};
     if (departamento) query.departamento = departamento;
-    if (activo !== null && activo !== undefined && activo !== '') {
-      query.activo = activo === 'true' || activo === '1';
-    }
 
     // Obtener empleados con service role (ignora RLS, acceso completo)
     let employees = await base44.asServiceRole.entities.EmployeeMasterDatabase.filter(
@@ -44,6 +41,14 @@ Deno.serve(async (req) => {
       '-updated_date',
       limit + offset
     );
+
+    // Filtro por estado (activo/inactivo) en JS — el campo real es estado_empleado
+    if (activo !== null && activo !== undefined && activo !== '') {
+      const soloActivos = activo === 'true' || activo === '1';
+      employees = employees.filter(emp =>
+        soloActivos ? emp.estado_empleado === 'Alta' : (emp.estado_empleado === 'Baja' || emp.estado_empleado === 'Excedencia')
+      );
+    }
 
     // Filtro incremental por fecha de actualización
     if (updated_since) {
