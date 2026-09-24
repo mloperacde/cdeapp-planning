@@ -8,10 +8,11 @@ import { Input } from "@/components/ui/input";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Download, Search, FileWarning, CheckCircle2, Users } from "lucide-react";
+import { Download, Search, FileWarning, CheckCircle2, Users, UserCog } from "lucide-react";
 import * as XLSX from 'xlsx';
 import { format } from 'date-fns';
 import { toast } from "sonner";
+import { Link } from "react-router-dom";
 import { EMPLOYEE_FIELD_GROUPS, FIELD_LABEL_MAP, isEmptyValue } from "./employeeFieldDefinitions";
 
 const CONFIG_KEY = "employee_required_fields";
@@ -259,6 +260,7 @@ export default function MissingDataReport() {
                   <TableHead className="text-[10px] uppercase">Puesto</TableHead>
                   <TableHead className="text-[10px] uppercase text-center">Faltan</TableHead>
                   <TableHead className="text-[10px] uppercase">Campos faltantes</TableHead>
+                  <TableHead className="text-[10px] uppercase text-center">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -293,6 +295,20 @@ export default function MissingDataReport() {
                           </Badge>
                         ))}
                       </div>
+                    </TableCell>
+                    <TableCell className="py-1 text-center">
+                      <Button
+                        asChild
+                        size="sm"
+                        variant="outline"
+                        className="h-7 px-2 bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800"
+                        title="Editar ficha de empleado"
+                      >
+                        <Link to={`/MasterEmployeeDatabase?empleado=${emp.id}&context=config`}>
+                          <UserCog className="w-3.5 h-3.5 mr-1" />
+                          <span className="text-[10px]">Corregir</span>
+                        </Link>
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}
