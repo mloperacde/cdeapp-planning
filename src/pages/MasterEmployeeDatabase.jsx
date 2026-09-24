@@ -51,11 +51,13 @@ import {
   Download,
   ShieldCheck,
   Clock,
-  RefreshCw
+  RefreshCw,
+  FileWarning
 } from "lucide-react";
 import MasterEmployeeEditDialog from "../components/master/MasterEmployeeEditDialog";
 import MasterEmployeeBulkEditDialog from "../components/master/MasterEmployeeBulkEditDialog";
 import AdvancedSearch from "../components/common/AdvancedSearch";
+import { Link } from "react-router-dom";
 import * as XLSX from 'xlsx';
 import { toast } from "sonner";
 
@@ -882,6 +884,21 @@ export default function MasterEmployeeDatabasePage() {
             >
               <ShieldCheck className="w-4 h-4 mr-2" />
               <span className="hidden sm:inline">Verificar</span>
+            </Button>
+          )}
+
+          {permissions.isAdmin && (
+            <Button
+              asChild
+              size="sm"
+              variant="outline"
+              className="bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-200 h-9 px-3"
+              title="Integridad de Datos"
+            >
+              <Link to="/EmployeeDataIntegrity">
+                <FileWarning className="w-4 h-4 mr-2" />
+                <span className="hidden sm:inline">Datos Obligatorios</span>
+              </Link>
             </Button>
           )}
 

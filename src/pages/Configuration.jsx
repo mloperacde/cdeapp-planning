@@ -45,6 +45,13 @@ export default function ConfigurationPage() {
           icon: DollarSign,
           url: "/IncentiveManagement",
           color: "emerald"
+        },
+        {
+          title: "Integridad de Datos",
+          description: "Campos obligatorios y empleados con datos faltantes",
+          icon: Shield,
+          url: "/EmployeeDataIntegrity",
+          color: "indigo"
         }
       ]
     },
