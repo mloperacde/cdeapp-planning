@@ -54,8 +54,15 @@ export default function MissingDataReport() {
       .map(emp => {
         // Para empleados con turno fijo (mañana/tarde), el campo "equipo" no aplica
         const isFixedShift = emp.tipo_turno === 'Fijo Mañana' || emp.tipo_turno === 'Fijo Tarde';
+        // El campo "equipo" solo aplica a Producción, Mantenimiento, Almacén o Control de Calidad
+        const deptLower = (emp.departamento || '').toLowerCase();
+        const isTeamDepartment =
+          deptLower.includes('producc') ||
+          deptLower.includes('mantenim') ||
+          deptLower.includes('almac') ||
+          deptLower.includes('calidad');
         const missing = requiredFields.filter(fieldKey => {
-          if (fieldKey === 'equipo' && isFixedShift) return false;
+          if (fieldKey === 'equipo' && (isFixedShift || !isTeamDepartment)) return false;
           return isEmptyValue(emp[fieldKey]);
         });
         return { ...emp, missingFields: missing };
