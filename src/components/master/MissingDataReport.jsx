@@ -52,7 +52,12 @@ export default function MissingDataReport() {
     return employees
       .filter(emp => onlyActive ? emp.estado_empleado === 'Alta' : true)
       .map(emp => {
-        const missing = requiredFields.filter(fieldKey => isEmptyValue(emp[fieldKey]));
+        // Para empleados con turno fijo (mañana/tarde), el campo "equipo" no aplica
+        const isFixedShift = emp.tipo_turno === 'Fijo Mañana' || emp.tipo_turno === 'Fijo Tarde';
+        const missing = requiredFields.filter(fieldKey => {
+          if (fieldKey === 'equipo' && isFixedShift) return false;
+          return isEmptyValue(emp[fieldKey]);
+        });
         return { ...emp, missingFields: missing };
       })
       .filter(emp => emp.missingFields.length > 0);
