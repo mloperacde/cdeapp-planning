@@ -1,8 +1,9 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
 Deno.serve(async (req) => {
-  // Validar API Key
-  const apiKey = req.headers.get('x-api-key');
+  // Validar API Key — acepta cabecera x-api-key o parámetro de URL x-api-key
+  const url = new URL(req.url);
+  const apiKey = req.headers.get('x-api-key') || url.searchParams.get('x-api-key') || url.searchParams.get('api_key');
   const validKey = Deno.env.get('EMPLOYEES_API_KEY');
 
   const base44 = createClientFromRequest(req);
@@ -24,7 +25,6 @@ Deno.serve(async (req) => {
   try {
 
     // Parámetros opcionales de filtrado (acepta GET query params y POST body JSON)
-    const url = new URL(req.url);
     let body = {};
     try {
       const text = await req.text();

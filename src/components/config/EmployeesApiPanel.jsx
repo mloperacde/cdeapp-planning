@@ -59,15 +59,28 @@ export default function EmployeesApiPanel() {
     },
   ];
 
-  const curlExample = `curl -X GET \\
+  const curlExample = `# Opción A — Cabecera HTTP (recomendada)
+curl -X GET \\
   "https://cdeplanning.base44.app/functions/getEmployeesApi?activo=true" \\
-  -H "x-api-key: [EMPLOYEES_API_KEY]" \\
-  -H "Content-Type: application/json"`;
+  -H "x-api-key: [EMPLOYEES_API_KEY]"
 
-  const phpExample = `$response = Http::withHeaders([
+# Opción B — Parámetro de URL
+curl -X GET \\
+  "https://cdeplanning.base44.app/functions/getEmployeesApi?activo=true&x-api-key=[EMPLOYEES_API_KEY]"`;
+
+  const phpExample = `// Opción A — Cabecera HTTP (recomendada)
+$response = Http::withHeaders([
     'x-api-key' => env('BASE44_EMPLOYEES_KEY'),
 ])->get('https://cdeplanning.base44.app/functions/getEmployeesApi', [
     'activo' => 'true',
+    'updated_since' => now()->subHour()->toISOString(),
+]);
+$employees = $response->json('data');
+
+// Opción B — Parámetro de URL (sin cabeceras)
+$response = Http::get('https://cdeplanning.base44.app/functions/getEmployeesApi', [
+    'activo' => 'true',
+    'x-api-key' => env('BASE44_EMPLOYEES_KEY'),
     'updated_since' => now()->subHour()->toISOString(),
 ]);
 $employees = $response->json('data');`;
@@ -145,13 +158,27 @@ $employees = $response->json('data');`;
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-sm text-slate-600">
-            Todas las peticiones deben incluir la cabecera <code className="bg-slate-100 px-1 rounded text-xs">x-api-key</code> con el valor del secret <strong>EMPLOYEES_API_KEY</strong> configurado en Base44.
+            Puedes autenticar de dos formas:
           </p>
-          <div className="bg-slate-900 rounded-lg p-3 flex items-center justify-between">
-            <code className="text-green-400 text-xs font-mono">x-api-key: [valor de EMPLOYEES_API_KEY en Dashboard → Secrets]</code>
-            <Button size="sm" variant="ghost" className="text-slate-400 hover:text-white h-7" onClick={() => copy('x-api-key', 'header')}>
-              {copied === 'header' ? <CheckCircle className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-            </Button>
+          <div className="space-y-2">
+            <div>
+              <span className="text-xs font-semibold text-slate-500 uppercase">Opción A — Cabecera HTTP (recomendada)</span>
+              <div className="bg-slate-900 rounded-lg p-3 flex items-center justify-between mt-1">
+                <code className="text-green-400 text-xs font-mono">x-api-key: [valor de EMPLOYEES_API_KEY]</code>
+                <Button size="sm" variant="ghost" className="text-slate-400 hover:text-white h-7 flex-shrink-0 ml-2" onClick={() => copy('x-api-key: [VALOR]', 'header')}>
+                  {copied === 'header' ? <CheckCircle className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                </Button>
+              </div>
+            </div>
+            <div>
+              <span className="text-xs font-semibold text-slate-500 uppercase">Opción B — Parámetro de URL</span>
+              <div className="bg-slate-900 rounded-lg p-3 flex items-center justify-between mt-1">
+                <code className="text-green-400 text-xs font-mono break-all">?x-api-key=[valor de EMPLOYEES_API_KEY]</code>
+                <Button size="sm" variant="ghost" className="text-slate-400 hover:text-white h-7 flex-shrink-0 ml-2" onClick={() => copy('?x-api-key=[VALOR]', 'querykey')}>
+                  {copied === 'querykey' ? <CheckCircle className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                </Button>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
