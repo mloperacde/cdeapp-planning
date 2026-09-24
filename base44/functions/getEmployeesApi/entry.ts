@@ -23,23 +23,35 @@ Deno.serve(async (req) => {
 
   try {
 
-    // Parámetros opcionales de filtrado
+    // Parámetros opcionales de filtrado (acepta GET query params y POST body JSON)
     const url = new URL(req.url);
-    const departamento = url.searchParams.get('departamento');
-    const activo = url.searchParams.get('activo');
-    const updated_since = url.searchParams.get('updated_since'); // ISO date para sync incremental
-    const limit = parseInt(url.searchParams.get('limit') || '2000');
-    const offset = parseInt(url.searchParams.get('offset') || '0');
+    let body = {};
+    try {
+      const text = await req.text();
+      if (text) body = JSON.parse(text);
+    } catch { /* no body o no JSON */ }
+    const param = (name, fallback = null) => {
+      const qp = url.searchParams.get(name);
+      if (qp !== null) return qp;
+      if (body && body[name] !== undefined) return String(body[name]);
+      return fallback;
+    };
+    const departamento = param('departamento');
+    const activo = param('activo');
+    const updated_since = param('updated_since'); // ISO date para sync incremental
+    const limit = parseInt(param('limit', '2000') || '2000');
+    const offset = parseInt(param('offset', '0') || '0');
 
     // Construir filtro (solo departamento se filtra en BD)
     const query = {};
     if (departamento) query.departamento = departamento;
 
-    // Obtener empleados con service role (ignora RLS, acceso completo)
+    // Obtener TODOS los empleados con service role (ignora RLS, acceso completo)
+    // Se obtienen todos para filtrar en JS y luego paginar correctamente
     let employees = await base44.asServiceRole.entities.EmployeeMasterDatabase.filter(
       query,
       '-updated_date',
-      limit + offset
+      10000
     );
 
     // Filtro por estado (activo/inactivo) en JS — el campo real es estado_empleado

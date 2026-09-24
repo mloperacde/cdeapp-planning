@@ -10,7 +10,7 @@ export default function EmployeesApiPanel() {
   const [testing, setTesting] = useState(false);
   const [copied, setCopied] = useState('');
 
-  const functionUrl = 'https://app.base44.com/api/functions/getEmployeesApi'; // placeholder
+  const functionUrl = 'https://cdeplanning.base44.app/functions/getEmployeesApi';
 
   const copy = (text, key) => {
     navigator.clipboard.writeText(text);
@@ -60,13 +60,13 @@ export default function EmployeesApiPanel() {
   ];
 
   const curlExample = `curl -X GET \\
-  "https://[TU-APP].base44.app/functions/getEmployeesApi?activo=true" \\
+  "https://cdeplanning.base44.app/functions/getEmployeesApi?activo=true" \\
   -H "x-api-key: [EMPLOYEES_API_KEY]" \\
   -H "Content-Type: application/json"`;
 
   const phpExample = `$response = Http::withHeaders([
     'x-api-key' => env('BASE44_EMPLOYEES_KEY'),
-])->get('https://[TU-APP].base44.app/functions/getEmployeesApi', [
+])->get('https://cdeplanning.base44.app/functions/getEmployeesApi', [
     'activo' => 'true',
     'updated_since' => now()->subHour()->toISOString(),
 ]);
@@ -115,6 +115,26 @@ $employees = $response->json('data');`;
           </CardContent>
         </Card>
       </div>
+
+      {/* URL del endpoint */}
+      <Card className="border-blue-200">
+        <CardHeader>
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Globe className="w-4 h-4" /> URL del endpoint
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="bg-slate-900 rounded-lg p-3 flex items-center justify-between">
+            <code className="text-green-400 text-xs font-mono break-all">{functionUrl}</code>
+            <Button size="sm" variant="ghost" className="text-slate-400 hover:text-white h-7 flex-shrink-0 ml-2" onClick={() => copy(functionUrl, 'url')}>
+              {copied === 'url' ? <CheckCircle className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+            </Button>
+          </div>
+          <p className="text-xs text-slate-500 mt-2">
+            Esta es la URL que debe usar CDEApp en sus llamadas. Reemplaza <code className="bg-slate-100 px-1 rounded">[TU-APP]</code> por <strong>cdeplanning</strong> en cualquier ejemplo.
+          </p>
+        </CardContent>
+      </Card>
 
       {/* Autenticación */}
       <Card>
