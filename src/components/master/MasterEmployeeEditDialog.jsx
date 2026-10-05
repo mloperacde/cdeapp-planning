@@ -420,6 +420,13 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
       if (cleanData.departamento) cleanData.departamento = cleanData.departamento.toUpperCase();
       if (cleanData.puesto) cleanData.puesto = cleanData.puesto.toUpperCase();
 
+      // Coherencia de baja: si el empleado no está en estado "Baja", eliminar
+      // cualquier fecha_baja o motivo_baja residual de contratos anteriores
+      if (cleanData.estado_empleado !== "Baja") {
+        cleanData.fecha_baja = null;
+        cleanData.motivo_baja = null;
+      }
+
       // Auto-sincronizar team_key cuando cambia el equipo
       if (cleanData.equipo) {
         const teamConfigs = await base44.entities.TeamConfig.list();
@@ -746,7 +753,15 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
                   <Label>Estado</Label>
                   <Select
                     value={formData.estado_empleado || "Alta"}
-                    onValueChange={(value) => setFormData({ ...formData, estado_empleado: value })}
+                    onValueChange={(value) => {
+                      // Al recontratar (cambiar a Alta o Excedencia), limpiar la fecha_baja
+                      // y motivo_baja del contrato anterior para evitar incoherencias cronológicas
+                      if (value !== "Baja") {
+                        setFormData({ ...formData, estado_empleado: value, fecha_baja: null, motivo_baja: null });
+                      } else {
+                        setFormData({ ...formData, estado_empleado: value });
+                      }
+                    }}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -757,6 +772,12 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
                       <SelectItem value="Baja">Baja</SelectItem>
                     </SelectContent>
                   </Select>
+                  {formData.estado_empleado !== "Baja" && formData.fecha_baja && (
+                    <p className="text-xs text-amber-600 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" />
+                      Se eliminará la fecha de baja anterior al guardar (el empleado ya no está de baja)
+                    </p>
+                  )}
                 </div>
 
                 {isExcedencia && (
