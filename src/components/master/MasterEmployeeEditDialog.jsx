@@ -532,21 +532,58 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
   const [validationErrors, setValidationErrors] = useState([]);
 
   const validateRequired = () => {
-    if (employee?.id) return []; // Solo validar en creación
     const errors = [];
-    if (!formData.nombre?.trim()) errors.push("Nombre completo");
-    if (!formData.dni?.trim()) errors.push("DNI/NIE");
-    if (!formData.telefono_movil?.trim()) errors.push("Teléfono móvil");
-    if (!formData.department_id && !formData.departamento?.trim()) errors.push("Departamento");
-    if (!formData.puesto?.trim()) errors.push("Puesto");
-    if (!isTurnoFijo && !formData.equipo?.trim()) errors.push("Equipo");
-    if (!formData.pin && formData.pin !== 0) errors.push("PIN Cuco360");
-    if (!formData.numero_tarjeta?.trim()) errors.push("Número de tarjeta Cuco360");
-    if (!formData.tipo_jornada?.trim()) errors.push("Tipo de jornada");
-    if (!formData.tipo_turno?.trim()) errors.push("Tipo de turno");
-    if (!formData.fecha_alta?.trim()) errors.push("Fecha de alta (pestaña Contrato)");
+    if (!employee?.id) {
+      // Validaciones obligatorias solo en creación
+      if (!formData.nombre?.trim()) errors.push("Nombre completo");
+      if (!formData.dni?.trim()) errors.push("DNI/NIE");
+      if (!formData.telefono_movil?.trim()) errors.push("Teléfono móvil");
+      if (!formData.department_id && !formData.departamento?.trim()) errors.push("Departamento");
+      if (!formData.puesto?.trim()) errors.push("Puesto");
+      if (!isTurnoFijo && !formData.equipo?.trim()) errors.push("Equipo");
+      if (!formData.pin && formData.pin !== 0) errors.push("PIN Cuco360");
+      if (!formData.numero_tarjeta?.trim()) errors.push("Número de tarjeta Cuco360");
+      if (!formData.tipo_jornada?.trim()) errors.push("Tipo de jornada");
+      if (!formData.tipo_turno?.trim()) errors.push("Tipo de turno");
+      if (!formData.fecha_alta?.trim()) errors.push("Fecha de alta (pestaña Contrato)");
+    }
+
+    // Validación cronológica (siempre, creación y edición)
+    // La fecha de baja no puede ser anterior a la fecha de alta
+    if (formData.fecha_alta && formData.fecha_baja) {
+      if (new Date(formData.fecha_baja) < new Date(formData.fecha_alta)) {
+        errors.push("La fecha de baja no puede ser anterior a la fecha de alta");
+      }
+    }
+    // La fecha fin de contrato no puede ser anterior a la fecha de alta
+    if (formData.fecha_alta && formData.fecha_fin_contrato) {
+      if (new Date(formData.fecha_fin_contrato) < new Date(formData.fecha_alta)) {
+        errors.push("La fecha fin de contrato no puede ser anterior a la fecha de alta");
+      }
+    }
+    // La fecha fin de excedencia no puede ser anterior a la fecha de inicio
+    if (formData.fecha_inicio_excedencia && formData.fecha_fin_excedencia) {
+      if (new Date(formData.fecha_fin_excedencia) < new Date(formData.fecha_inicio_excedencia)) {
+        errors.push("La fecha fin de excedencia no puede ser anterior a la fecha de inicio");
+      }
+    }
     return errors;
   };
+
+  // Detectar inconsistencias cronológicas para mostrar avisos visuales en tiempo real
+  const dateWarnings = useMemo(() => {
+    const warnings = {};
+    if (formData.fecha_alta && formData.fecha_baja && new Date(formData.fecha_baja) < new Date(formData.fecha_alta)) {
+      warnings.fecha_baja = "La fecha de baja es anterior a la fecha de alta";
+    }
+    if (formData.fecha_alta && formData.fecha_fin_contrato && new Date(formData.fecha_fin_contrato) < new Date(formData.fecha_alta)) {
+      warnings.fecha_fin_contrato = "La fecha fin de contrato es anterior a la fecha de alta";
+    }
+    if (formData.fecha_inicio_excedencia && formData.fecha_fin_excedencia && new Date(formData.fecha_fin_excedencia) < new Date(formData.fecha_inicio_excedencia)) {
+      warnings.fecha_fin_excedencia = "La fecha fin de excedencia es anterior a la fecha de inicio";
+    }
+    return warnings;
+  }, [formData.fecha_alta, formData.fecha_baja, formData.fecha_fin_contrato, formData.fecha_inicio_excedencia, formData.fecha_fin_excedencia]);
 
   // Calcular duración de excedencia automáticamente
   useEffect(() => {
@@ -764,7 +801,14 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
                         type="date"
                         value={formData.fecha_baja || ""}
                         onChange={(e) => setFormData({ ...formData, fecha_baja: e.target.value })}
+                        className={dateWarnings.fecha_baja ? "border-red-500 focus:ring-red-500" : ""}
                       />
+                      {dateWarnings.fecha_baja && (
+                        <p className="text-xs text-red-600 flex items-center gap-1">
+                          <AlertCircle className="w-3 h-3" />
+                          {dateWarnings.fecha_baja}
+                        </p>
+                      )}
                     </div>
                     <div className="space-y-2 md:col-span-2">
                       <Label>Motivo de Baja</Label>
@@ -1333,7 +1377,14 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
                       value={formData.fecha_fin_contrato || ""}
                       onChange={(e) => setFormData({ ...formData, fecha_fin_contrato: e.target.value })}
                       disabled={!permissions.contrato?.editar}
+                      className={dateWarnings.fecha_fin_contrato ? "border-red-500 focus:ring-red-500" : ""}
                     />
+                    {dateWarnings.fecha_fin_contrato && (
+                      <p className="text-xs text-red-600 flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" />
+                        {dateWarnings.fecha_fin_contrato}
+                      </p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
@@ -1656,7 +1707,7 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
               <div className="flex items-start gap-2">
                 <AlertCircle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
                 <div>
-                  <p className="text-sm font-semibold text-red-800 mb-1">Campos obligatorios incompletos para crear el empleado:</p>
+                  <p className="text-sm font-semibold text-red-800 mb-1">No se puede guardar el empleado. Revisa los siguientes errores:</p>
                   <ul className="text-sm text-red-700 list-disc list-inside space-y-0.5">
                     {validationErrors.map((err) => (
                       <li key={err}>{err}</li>

@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ShieldCheck, FileWarning, ArrowLeft } from "lucide-react";
+import { ShieldCheck, FileWarning, ArrowLeft, CalendarClock } from "lucide-react";
 import { Link } from "react-router-dom";
 import RequiredFieldsConfig from "@/components/master/RequiredFieldsConfig";
 import MissingDataReport from "@/components/master/MissingDataReport";
+import ChronologicalDateReport from "@/components/master/ChronologicalDateReport";
 
 export default function EmployeeDataIntegrity() {
   const [activeTab, setActiveTab] = useState("config");
@@ -32,7 +33,7 @@ export default function EmployeeDataIntegrity() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
-        <TabsList className="grid w-full max-w-md grid-cols-2 shrink-0">
+        <TabsList className="grid w-full max-w-2xl grid-cols-3 shrink-0">
           <TabsTrigger value="config" className="text-xs">
             <ShieldCheck className="w-4 h-4 mr-2" />
             Campos Obligatorios
@@ -40,6 +41,10 @@ export default function EmployeeDataIntegrity() {
           <TabsTrigger value="report" className="text-xs">
             <FileWarning className="w-4 h-4 mr-2" />
             Datos Faltantes
+          </TabsTrigger>
+          <TabsTrigger value="chrono" className="text-xs">
+            <CalendarClock className="w-4 h-4 mr-2" />
+            Cronología Fechas
           </TabsTrigger>
         </TabsList>
 
@@ -49,6 +54,10 @@ export default function EmployeeDataIntegrity() {
 
         <TabsContent value="report" className="flex-1 flex flex-col min-h-0 mt-3 overflow-hidden">
           <MissingDataReport />
+        </TabsContent>
+
+        <TabsContent value="chrono" className="flex-1 flex flex-col min-h-0 mt-3 overflow-hidden">
+          <ChronologicalDateReport />
         </TabsContent>
       </Tabs>
     </div>
