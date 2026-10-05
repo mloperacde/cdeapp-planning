@@ -1,0 +1,124 @@
+{
+  "name": "NotificationRule",
+  "type": "object",
+  "rls": {
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  },
+  "properties": {
+    "nombre": {
+      "type": "string",
+      "description": "Nombre descriptivo de la regla"
+    },
+    "descripcion": {
+      "type": "string",
+      "description": "Descripci\u00f3n de qu\u00e9 hace la regla y cu\u00e1ndo se activa"
+    },
+    "categoria": {
+      "type": "string",
+      "description": "Categor\u00eda abierta: Integridad de Datos, Ausencias, Mantenimiento, Contratos, etc."
+    },
+    "tipo_evento": {
+      "type": "string",
+      "description": "Identificador del evento: missing_employee_data, chronological_date_inconsistency, contract_expiring, stale_baja_data, etc."
+    },
+    "condicion": {
+      "type": "object",
+      "description": "Configuraci\u00f3n de la condici\u00f3n espec\u00edfica del evento (umbral, campos, filtros, etc.)"
+    },
+    "canales": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "Email",
+          "InApp"
+        ]
+      },
+      "description": "Canales por los que se env\u00eda la notificaci\u00f3n"
+    },
+    "destinatarios": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "Rol",
+              "Usuario",
+              "Email"
+            ],
+            "description": "Tipo de destinatario"
+          },
+          "valor": {
+            "type": "string",
+            "description": "Rol (admin, rrhh, supervisor), email de usuario, o email directo"
+          }
+        }
+      },
+      "description": "Lista de destinatarios de la notificaci\u00f3n"
+    },
+    "asunto": {
+      "type": "string",
+      "description": "Asunto de la notificaci\u00f3n (admite variables)"
+    },
+    "plantilla_mensaje": {
+      "type": "string",
+      "description": "Plantilla del mensaje (admite variables como {{empleados_afectados}}, {{fecha}}, etc.)"
+    },
+    "enlace": {
+      "type": "string",
+      "description": "Enlace de acci\u00f3n (URL relativa, ej: /EmployeeDataIntegrity)"
+    },
+    "frecuencia": {
+      "type": "string",
+      "enum": [
+        "Inmediato",
+        "Diario",
+        "Semanal",
+        "Bajo Demanda"
+      ],
+      "default": "Diario",
+      "description": "Frecuencia de evaluaci\u00f3n de la regla"
+    },
+    "activo": {
+      "type": "boolean",
+      "default": true,
+      "description": "Si la regla est\u00e1 activa"
+    },
+    "ultima_ejecucion": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Fecha y hora de la \u00faltima ejecuci\u00f3n"
+    },
+    "resultado_ultima_ejecucion": {
+      "type": "object",
+      "description": "Resumen de la \u00faltima ejecuci\u00f3n: triggered, resumen, empleados_afectados, etc."
+    }
+  },
+  "required": [
+    "nombre",
+    "tipo_evento",
+    "canales",
+    "destinatarios"
+  ]
+}

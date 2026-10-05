@@ -85,6 +85,7 @@ import PricingConfiguration from "./PricingConfiguration";
 import ReportingAnalytics from "./ReportingAnalytics";
 import EmployeesApiConfig from "./EmployeesApiConfig";
 import EmployeeDataIntegrity from "./EmployeeDataIntegrity";
+import NotificationRulesConfig from "./NotificationRulesConfig";
 
 import { BrowserRouter, HashRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -136,6 +137,7 @@ const PAGES = {
   MaintenanceInterventions: MaintenanceInterventions,
   MasterEmployeeDatabase: MasterEmployeeDatabase,
   EmployeeDataIntegrity: EmployeeDataIntegrity,
+  NotificationRulesConfig: NotificationRulesConfig,
   PerformanceManagement: PerformanceManagement,
   ProcessConfiguration: ProcessConfiguration,
   ProductionDashboard: ProductionDashboard,
@@ -271,6 +273,7 @@ function PagesContent() {
                 
                 <Route path="/MasterEmployeeDatabase" element={<MasterEmployeeDatabase />} />
                 <Route path="/EmployeeDataIntegrity" element={<EmployeeDataIntegrity />} />
+                <Route path="/NotificationRulesConfig" element={<NotificationRulesConfig />} />
                 <Route path="/CucoSyncDashboard" element={<CucoSyncDashboard />} />
                 
 

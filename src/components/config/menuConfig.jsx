@@ -115,5 +115,6 @@ export const MENU_STRUCTURE = [
   { name: 'Tareas Programadas', path: '/NightlyTasksDashboard', icon: Activity, category: 'Configuración' },
   { name: 'Configuración', path: '/Configuration', icon: Settings, category: 'Configuración' },
   { name: 'EmailNotifications', path: '/EmailNotifications', icon: Bell, category: 'Configuración' },
+  { name: 'Reglas de Notificación', path: '/NotificationRulesConfig', icon: Bell, category: 'Configuración' },
   { name: 'EmployeeAbsenceInfo', path: '/EmployeeAbsenceInfo', icon: FileText, category: 'Configuración' },
 ];
