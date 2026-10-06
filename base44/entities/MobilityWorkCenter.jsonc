@@ -1,0 +1,81 @@
+{
+  "name": "MobilityWorkCenter",
+  "type": "object",
+  "rls": {
+    "read": {},
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  },
+  "properties": {
+    "nombre": {
+      "type": "string",
+      "description": "Nombre del centro de trabajo"
+    },
+    "direccion": {
+      "type": "string",
+      "description": "Direcci\u00f3n postal completa"
+    },
+    "municipio": {
+      "type": "string"
+    },
+    "provincia": {
+      "type": "string"
+    },
+    "codigo_postal": {
+      "type": "string"
+    },
+    "poligono_industrial": {
+      "type": "string"
+    },
+    "latitud": {
+      "type": "number"
+    },
+    "longitud": {
+      "type": "number"
+    },
+    "plantilla_total": {
+      "type": "number",
+      "description": "N\u00ba de personas trabajadoras adscritas al centro"
+    },
+    "num_turnos": {
+      "type": "number"
+    },
+    "trabajadores_por_turno": {
+      "type": "object",
+      "description": "Mapa turno -> n\u00ba de trabajadores"
+    },
+    "horarios": {
+      "type": "string"
+    },
+    "obligado_pmst": {
+      "type": "boolean",
+      "default": false,
+      "description": "Si supera umbrales Ley 9/2025 (>200 o >100 por turno)"
+    },
+    "autoridad_competente": {
+      "type": "string",
+      "description": "Autoridad auton\u00f3mica de movilidad para registro EDIM"
+    },
+    "notas": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "nombre",
+    "direccion",
+    "municipio"
+  ]
+}

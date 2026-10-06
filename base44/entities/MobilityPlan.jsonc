@@ -1,0 +1,229 @@
+{
+  "name": "MobilityPlan",
+  "type": "object",
+  "rls": {
+    "read": {},
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  },
+  "properties": {
+    "work_center_id": {
+      "type": "string",
+      "description": "ID del MobilityWorkCenter"
+    },
+    "work_center_name": {
+      "type": "string",
+      "description": "Nombre del centro (desnormalizado)"
+    },
+    "version": {
+      "type": "string",
+      "default": "1.0"
+    },
+    "fecha_aprobacion": {
+      "type": "string",
+      "format": "date"
+    },
+    "fecha_entrada_vigor": {
+      "type": "string",
+      "format": "date"
+    },
+    "estado": {
+      "type": "string",
+      "enum": [
+        "Borrador",
+        "En Negociaci\u00f3n",
+        "Aprobado",
+        "En Seguimiento",
+        "Revisado"
+      ],
+      "default": "Borrador"
+    },
+    "diagnostico": {
+      "type": "object",
+      "description": "Diagn\u00f3stico inicial: reparto modal, encuesta, accesos, aparcamiento, etc."
+    },
+    "medidas": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "categoria": {
+            "type": "string",
+            "enum": [
+              "Movilidad activa",
+              "Transporte colectivo",
+              "Bajas emisiones",
+              "Compartida/Colaborativa",
+              "Veh\u00edculos cero emisiones",
+              "Teletrabajo",
+              "Seguridad vial",
+              "Formaci\u00f3n",
+              "Otras"
+            ]
+          },
+          "titulo": {
+            "type": "string"
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "responsable": {
+            "type": "string"
+          },
+          "fecha_inicio": {
+            "type": "string",
+            "format": "date"
+          },
+          "fecha_fin_prevista": {
+            "type": "string",
+            "format": "date"
+          },
+          "meta": {
+            "type": "string"
+          },
+          "indicador": {
+            "type": "string"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "Pendiente",
+              "En curso",
+              "Implantada",
+              "Aplazada",
+              "Descartada"
+            ],
+            "default": "Pendiente"
+          },
+          "progreso": {
+            "type": "number",
+            "default": 0
+          }
+        }
+      },
+      "description": "Medidas del plan con responsables, calendario e indicadores"
+    },
+    "negociacion": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "fecha": {
+            "type": "string",
+            "format": "date"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "Reuni\u00f3n",
+              "Acuerdo",
+              "Aportaci\u00f3n",
+              "Consulta"
+            ]
+          },
+          "participantes": {
+            "type": "string"
+          },
+          "resumen": {
+            "type": "string"
+          },
+          "documento_uri": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Actas y acuerdos de negociaci\u00f3n con representaci\u00f3n legal"
+    },
+    "documentos": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string"
+          },
+          "file_uri": {
+            "type": "string"
+          },
+          "tipo": {
+            "type": "string"
+          },
+          "fecha_subida": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    "seguimientos": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "fecha_informe": {
+            "type": "string",
+            "format": "date"
+          },
+          "periodo": {
+            "type": "string"
+          },
+          "indicadores": {
+            "type": "object"
+          },
+          "nivel_implantacion": {
+            "type": "number"
+          },
+          "evidencias": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "conclusiones": {
+            "type": "string"
+          },
+          "elaborado_por": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Informes de seguimiento bienal del nivel de implantaci\u00f3n"
+    },
+    "proximo_seguimiento": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha del pr\u00f3ximo informe bienal obligatorio"
+    },
+    "registrado_edim": {
+      "type": "boolean",
+      "default": false
+    },
+    "fecha_registro_edim": {
+      "type": "string",
+      "format": "date"
+    },
+    "notas": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "work_center_id",
+    "estado"
+  ]
+}

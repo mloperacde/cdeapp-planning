@@ -36,7 +36,8 @@ import {
   FlaskConical,
   GraduationCap,
   ArrowLeftRight,
-  Radio
+  Radio,
+  Leaf
 } from 'lucide-react';
 
 export const MENU_STRUCTURE = [
@@ -58,6 +59,7 @@ export const MENU_STRUCTURE = [
   { name: 'Matriz Habilidades', path: '/SkillMatrix', icon: BarChart3, category: 'Recursos Humanos' },
   { name: 'Gestión Salarial', path: '/SalaryManagement', icon: DollarSign, category: 'Recursos Humanos' },
   { name: 'Plan Incentivos', path: '/IncentiveManagement', icon: Target, category: 'Recursos Humanos' },
+  { name: 'Movilidad Sostenible', path: '/SustainableMobility', icon: Leaf, category: 'Recursos Humanos' },
 
   // Dirección
   { name: 'Dirección - Habilidades', path: '/DireccionSkills', icon: Star, category: 'Dirección' },

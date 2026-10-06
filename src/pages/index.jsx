@@ -86,6 +86,7 @@ import ReportingAnalytics from "./ReportingAnalytics";
 import EmployeesApiConfig from "./EmployeesApiConfig";
 import EmployeeDataIntegrity from "./EmployeeDataIntegrity";
 import NotificationRulesConfig from "./NotificationRulesConfig";
+import SustainableMobility from "./SustainableMobility";
 
 import { BrowserRouter, HashRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -340,6 +341,7 @@ function PagesContent() {
                 <Route path="/PricingConfiguration" element={<PricingConfiguration />} />
                 <Route path="/ReportingAnalytics" element={<ReportingAnalytics />} />
                 <Route path="/EmployeesApiConfig" element={<EmployeesApiConfig />} />
+                <Route path="/SustainableMobility" element={<SustainableMobility />} />
 
                 {/* Rutas faltantes - redirecciones */}
                 <Route path="/Employees" element={<MasterEmployeeDatabase />} />

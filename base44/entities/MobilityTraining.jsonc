@@ -1,0 +1,89 @@
+{
+  "name": "MobilityTraining",
+  "type": "object",
+  "rls": {
+    "read": {},
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  },
+  "properties": {
+    "titulo": {
+      "type": "string"
+    },
+    "descripcion": {
+      "type": "string"
+    },
+    "categoria": {
+      "type": "string",
+      "enum": [
+        "Seguridad vial",
+        "Desplazamiento sostenible",
+        "Conducci\u00f3n eficiente",
+        "Movilidad activa",
+        "Prevenci\u00f3n in itinere",
+        "Otras"
+      ],
+      "default": "Seguridad vial"
+    },
+    "modalidad": {
+      "type": "string",
+      "enum": [
+        "Online",
+        "Presencial",
+        "Mixto"
+      ],
+      "default": "Online"
+    },
+    "duracion_minutos": {
+      "type": "number"
+    },
+    "contenido_uri": {
+      "type": "string",
+      "description": "URI del material (subido a almacenamiento privado)"
+    },
+    "contenido_url": {
+      "type": "string",
+      "description": "URL p\u00fablica del material si aplica"
+    },
+    "obligatorio": {
+      "type": "boolean",
+      "default": false
+    },
+    "work_center_id": {
+      "type": "string",
+      "description": "Centro al que aplica (vac\u00edo = todos)"
+    },
+    "roles_destinatarios": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Roles destinatarios recomendados"
+    },
+    "activo": {
+      "type": "boolean",
+      "default": true
+    },
+    "fecha_publicacion": {
+      "type": "string",
+      "format": "date"
+    }
+  },
+  "required": [
+    "titulo",
+    "categoria"
+  ]
+}

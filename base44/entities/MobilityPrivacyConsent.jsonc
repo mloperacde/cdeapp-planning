@@ -1,0 +1,102 @@
+{
+  "name": "MobilityPrivacyConsent",
+  "type": "object",
+  "rls": {
+    "read": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "create": {},
+    "update": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  },
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "description": "ID del usuario (empleado) que da la acci\u00f3n"
+    },
+    "user_email": {
+      "type": "string"
+    },
+    "work_center_id": {
+      "type": "string"
+    },
+    "aviso_version": {
+      "type": "string",
+      "description": "Versi\u00f3n del aviso de privacidad mostrado"
+    },
+    "aviso_texto_hash": {
+      "type": "string",
+      "description": "Hash del texto del aviso para trazabilidad"
+    },
+    "accion": {
+      "type": "string",
+      "enum": [
+        "informado",
+        "consentimiento_preferencias",
+        "retirada_preferencias",
+        "solicitud_actualizacion",
+        "solicitud_supresion"
+      ],
+      "description": "Tipo de acci\u00f3n registrada"
+    },
+    "base_juridica": {
+      "type": "string",
+      "enum": [
+        "ejecucion_contrato",
+        "obligacion_legal",
+        "consentimiento",
+        "interes_publico"
+      ],
+      "default": "ejecucion_contrato",
+      "description": "Base jur\u00eddica del tratamiento (a validar por DPD)"
+    },
+    "datos_consentidos": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Lista de tratamientos/preferencias consentidos (zona aprox., preferencias de viaje, etc.)"
+    },
+    "fecha_accion": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "ip_hash": {
+      "type": "string",
+      "description": "Hash de IP para trazabilidad sin almacenar IP en claro"
+    },
+    "activo": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "user_id",
+    "accion",
+    "fecha_accion"
+  ]
+}

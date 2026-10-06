@@ -1,0 +1,81 @@
+{
+  "name": "MobilityTrainingCompletion",
+  "type": "object",
+  "rls": {
+    "read": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "create": {},
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  },
+  "properties": {
+    "training_id": {
+      "type": "string",
+      "description": "ID del MobilityTraining"
+    },
+    "training_title": {
+      "type": "string",
+      "description": "T\u00edtulo (desnormalizado)"
+    },
+    "user_id": {
+      "type": "string",
+      "description": "ID del usuario que completa"
+    },
+    "user_email": {
+      "type": "string"
+    },
+    "user_name": {
+      "type": "string"
+    },
+    "work_center_id": {
+      "type": "string"
+    },
+    "fecha_completado": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "tiempo_empleado_minutos": {
+      "type": "number"
+    },
+    "puntuacion": {
+      "type": "number",
+      "description": "Puntuaci\u00f3n de evaluaci\u00f3n si aplica"
+    },
+    "evidencia_uri": {
+      "type": "string",
+      "description": "URI de evidencia (certificado, etc.)"
+    },
+    "estado": {
+      "type": "string",
+      "enum": [
+        "en_curso",
+        "completado",
+        "no_superado"
+      ],
+      "default": "completado"
+    }
+  },
+  "required": [
+    "training_id",
+    "user_id",
+    "fecha_completado"
+  ]
+}

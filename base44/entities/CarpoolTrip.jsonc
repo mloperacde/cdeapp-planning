@@ -1,0 +1,144 @@
+{
+  "name": "CarpoolTrip",
+  "type": "object",
+  "rls": {
+    "read": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.passenger_user_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "create": {},
+    "update": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  },
+  "properties": {
+    "driver_user_id": {
+      "type": "string",
+      "description": "ID del usuario conductor"
+    },
+    "driver_name": {
+      "type": "string",
+      "description": "Nombre del conductor (desnormalizado)"
+    },
+    "passenger_user_id": {
+      "type": "string",
+      "description": "ID del usuario pasajero (si viaje confirmado)"
+    },
+    "passenger_name": {
+      "type": "string"
+    },
+    "work_center_id": {
+      "type": "string"
+    },
+    "work_center_name": {
+      "type": "string"
+    },
+    "tipo": {
+      "type": "string",
+      "enum": [
+        "ida",
+        "vuelta",
+        "ida_vuelta"
+      ],
+      "default": "ida"
+    },
+    "fecha": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha del viaje"
+    },
+    "turno": {
+      "type": "string",
+      "description": "Turno objetivo (Ma\u00f1ana/Tarde)"
+    },
+    "hora_salida": {
+      "type": "string",
+      "description": "HH:MM aproximado"
+    },
+    "zona_origen": {
+      "type": "string",
+      "description": "Zona o c\u00f3digo postal aproximado (NO direcci\u00f3n exacta)"
+    },
+    "punto_encuentro": {
+      "type": "string",
+      "description": "Punto de encuentro acordado (texto libre, sin domicilio)"
+    },
+    "plazas_ofrecidas": {
+      "type": "number",
+      "default": 1
+    },
+    "plazas_ocupadas": {
+      "type": "number",
+      "default": 0
+    },
+    "estado": {
+      "type": "string",
+      "enum": [
+        "disponible",
+        "solicitado",
+        "confirmado",
+        "completado",
+        "cancelado"
+      ],
+      "default": "disponible"
+    },
+    "validado": {
+      "type": "boolean",
+      "default": false,
+      "description": "Si el viaje fue validado por ambos participantes (para c\u00f3mputo de puntos)"
+    },
+    "kilometros_estimados": {
+      "type": "number",
+      "description": "Km estimados del trayecto (para emisiones evitadas)"
+    },
+    "emisiones_evitadas_kgco2": {
+      "type": "number",
+      "description": "Emisiones evitadas estimadas en kg CO2eq"
+    },
+    "notas": {
+      "type": "string"
+    },
+    "fecha_creacion": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "driver_user_id",
+    "work_center_id",
+    "fecha",
+    "zona_origen"
+  ]
+}

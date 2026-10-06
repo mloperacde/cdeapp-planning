@@ -1,0 +1,99 @@
+{
+  "name": "CarpoolRequest",
+  "type": "object",
+  "rls": {
+    "read": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.trip_driver_user_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "create": {},
+    "update": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.trip_driver_user_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  },
+  "properties": {
+    "trip_id": {
+      "type": "string",
+      "description": "ID del CarpoolTrip solicitado"
+    },
+    "trip_driver_user_id": {
+      "type": "string",
+      "description": "ID del conductor del viaje (para RLS)"
+    },
+    "requester_user_id": {
+      "type": "string",
+      "description": "ID del usuario que solicita la plaza"
+    },
+    "requester_name": {
+      "type": "string"
+    },
+    "work_center_id": {
+      "type": "string"
+    },
+    "mensaje": {
+      "type": "string",
+      "description": "Mensaje opcional del solicitante"
+    },
+    "estado": {
+      "type": "string",
+      "enum": [
+        "pendiente",
+        "aceptada",
+        "rechazada",
+        "cancelada"
+      ],
+      "default": "pendiente"
+    },
+    "fecha_solicitud": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "fecha_respuesta": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "respuesta_motivo": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "trip_id",
+    "requester_user_id",
+    "fecha_solicitud"
+  ]
+}
