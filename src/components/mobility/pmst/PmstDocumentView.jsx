@@ -125,7 +125,20 @@ export default function PmstDocumentView({ plan, workCenter }) {
           <p className="text-xs font-semibold mt-2 mb-1">Reparto modal</p>
           <Table head={['Modo de transporte', '%']} rows={(d.reparto_modal || []).map((r) => [r.modo, r.porcentaje != null ? `${r.porcentaje}%` : ''])} />
           <p className="text-xs font-semibold mt-3 mb-1">Zonas de origen</p>
-          <Table head={['Zona', '%']} rows={(d.origen_zonas || []).map((r) => [r.zona, r.porcentaje != null ? `${r.porcentaje}%` : ''])} />
+          {d.zonas_detalle?.length ? (
+            <Table
+              head={['Zona', 'Personas', '%', 'Distancia estimada']}
+              rows={d.zonas_detalle.map((r) => [r.zona, r.personas, r.porcentaje != null ? `${r.porcentaje}%` : '', r.km != null ? `${r.km} km` : ''])}
+            />
+          ) : (
+            <Table head={['Zona', '%']} rows={(d.origen_zonas || []).map((r) => [r.zona, r.porcentaje != null ? `${r.porcentaje}%` : ''])} />
+          )}
+          {d.datos_plantilla && (
+            <p className="text-[11px] muted text-muted-foreground mt-1">
+              Datos de partida: {d.datos_plantilla.total_activos} personas en alta · {d.datos_plantilla.con_domicilio} con domicilio registrado · {d.datos_plantilla.identificados} con municipio de origen identificable en {d.datos_plantilla.municipios_detectados} municipios
+              {d.datos_plantilla.generado_el ? ` · agregado generado el ${new Date(d.datos_plantilla.generado_el).toLocaleDateString('es-ES')}` : ''}.
+            </p>
+          )}
           <KV label="Distancia media" value={d.distancia_media_km ? `${d.distancia_media_km} km` : ''} />
           <KV label="Emisiones estimadas" value={d.emisiones_estimadas_t ? `${d.emisiones_estimadas_t} t CO₂eq/año` : ''} />
           <KV label="Motivos de uso del vehículo" value={d.motivos_uso} />

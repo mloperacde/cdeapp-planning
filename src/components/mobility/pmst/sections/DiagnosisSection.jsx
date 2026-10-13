@@ -4,6 +4,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import PmstSection, { Field } from '@/components/mobility/pmst/PmstSection';
 import SurveyBuilder from '@/components/mobility/pmst/SurveyBuilder';
+import WorkforceDiagnosisCard from '@/components/mobility/pmst/WorkforceDiagnosisCard';
 import { BarChart3, Plus, Trash2 } from 'lucide-react';
 
 export default function DiagnosisSection({ plan, updatePlan, isAdmin, saving, workCenter }) {
@@ -11,11 +12,13 @@ export default function DiagnosisSection({ plan, updatePlan, isAdmin, saving, wo
   const [reparto, setReparto] = useState([]);
   const [zonas, setZonas] = useState([]);
 
+  const diagKey = JSON.stringify(plan?.diagnostico || {});
+
   useEffect(() => {
     setForm({ ...(plan?.diagnostico || {}) });
     setReparto(plan?.diagnostico?.reparto_modal || []);
     setZonas(plan?.diagnostico?.origen_zonas || []);
-  }, [plan?.id]);
+  }, [plan?.id, diagKey]);
 
   const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
   const num = (v) => (v === '' ? undefined : Number(v));
@@ -26,6 +29,8 @@ export default function DiagnosisSection({ plan, updatePlan, isAdmin, saving, wo
 
   return (
     <div className="space-y-4">
+      <WorkforceDiagnosisCard plan={plan} updatePlan={updatePlan} isAdmin={isAdmin} saving={saving} />
+
       <PmstSection
         title="Diagnóstico de movilidad (datos agregados)"
         description="Reparto modal, zonas de origen y conclusiones. Introduce solo datos agregados y anonimizados."

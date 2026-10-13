@@ -245,6 +245,75 @@
             }
           }
         },
+        "zonas_detalle": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "zona": {
+                "type": "string"
+              },
+              "personas": {
+                "type": "number"
+              },
+              "porcentaje": {
+                "type": "number"
+              },
+              "km": {
+                "type": "number"
+              },
+              "cp": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "description": "Detalle real agregado por municipio de origen: personas, porcentaje, distancia estimada al centro y c\u00f3digos postales"
+        },
+        "datos_plantilla": {
+          "type": "object",
+          "description": "Trazabilidad del agregado real de la plantilla usado en el diagn\u00f3stico",
+          "properties": {
+            "generado_el": {
+              "type": "string"
+            },
+            "total_activos": {
+              "type": "number"
+            },
+            "con_domicilio": {
+              "type": "number"
+            },
+            "identificados": {
+              "type": "number"
+            },
+            "sin_identificar": {
+              "type": "number"
+            },
+            "sin_domicilio": {
+              "type": "number"
+            },
+            "cobertura_pct": {
+              "type": "number"
+            },
+            "municipios_detectados": {
+              "type": "number"
+            },
+            "distancia_media_km": {
+              "type": "number"
+            },
+            "distancia_base_domicilios": {
+              "type": "number"
+            },
+            "fuente": {
+              "type": "string"
+            },
+            "metodo": {
+              "type": "string"
+            }
+          }
+        },
         "distancia_media_km": {
           "type": "number"
         },
