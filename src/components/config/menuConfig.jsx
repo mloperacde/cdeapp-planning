@@ -60,6 +60,7 @@ export const MENU_STRUCTURE = [
   { name: 'Gestión Salarial', path: '/SalaryManagement', icon: DollarSign, category: 'Recursos Humanos' },
   { name: 'Plan Incentivos', path: '/IncentiveManagement', icon: Target, category: 'Recursos Humanos' },
   { name: 'Movilidad Sostenible', path: '/SustainableMobility', icon: Leaf, category: 'Recursos Humanos' },
+  { name: 'Constructor PMST', path: '/PmstBuilder', icon: FileCog, category: 'Recursos Humanos' },
 
   // Dirección
   { name: 'Dirección - Habilidades', path: '/DireccionSkills', icon: Star, category: 'Dirección' },

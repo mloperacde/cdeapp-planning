@@ -162,3 +162,18 @@ button:focus-visible {
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
 }
+
+/* ── PMST: impresión del documento formal ── */
+@media print {
+  body * { visibility: hidden; }
+  .pmst-print-area, .pmst-print-area * { visibility: visible; }
+  .pmst-print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+  }
+}

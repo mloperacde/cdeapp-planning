@@ -87,6 +87,8 @@ import EmployeesApiConfig from "./EmployeesApiConfig";
 import EmployeeDataIntegrity from "./EmployeeDataIntegrity";
 import NotificationRulesConfig from "./NotificationRulesConfig";
 import SustainableMobility from "./SustainableMobility";
+import PmstBuilder from "./PmstBuilder";
+import MobilitySurveyResponse from "./MobilitySurveyResponse";
 
 import { BrowserRouter, HashRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -153,6 +155,8 @@ const PAGES = {
   ShiftIncidentManagement: ShiftIncidentManagement,
   SkillMatrix: SkillMatrix,
   SupportManagement1415: SupportManagement1415,
+  PmstBuilder: PmstBuilder,
+  MobilitySurveyResponse: MobilitySurveyResponse,
   SalaryManagement: SalaryManagement,
   SenioritySettings: SenioritySettings,
 
@@ -342,6 +346,8 @@ function PagesContent() {
                 <Route path="/ReportingAnalytics" element={<ReportingAnalytics />} />
                 <Route path="/EmployeesApiConfig" element={<EmployeesApiConfig />} />
                 <Route path="/SustainableMobility" element={<SustainableMobility />} />
+                <Route path="/PmstBuilder" element={<PmstBuilder />} />
+                <Route path="/MobilitySurvey" element={<MobilitySurveyResponse />} />
 
                 {/* Rutas faltantes - redirecciones */}
                 <Route path="/Employees" element={<MasterEmployeeDatabase />} />

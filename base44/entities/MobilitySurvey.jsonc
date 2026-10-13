@@ -1,0 +1,133 @@
+{
+  "name": "MobilitySurvey",
+  "type": "object",
+  "rls": {
+    "read": {},
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        }
+      ]
+    }
+  },
+  "properties": {
+    "work_center_id": {
+      "type": "string"
+    },
+    "plan_id": {
+      "type": "string"
+    },
+    "titulo": {
+      "type": "string"
+    },
+    "descripcion": {
+      "type": "string"
+    },
+    "introduccion": {
+      "type": "string",
+      "description": "Texto informativo sobre anonimato y protecci\u00f3n de datos"
+    },
+    "preguntas": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "texto": {
+            "type": "string"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "opcion_unica",
+              "opcion_multiple",
+              "escala"
+            ]
+          },
+          "opciones": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "description": "Preguntas de la encuesta. No se recogen datos identificativos."
+    },
+    "estado": {
+      "type": "string",
+      "enum": [
+        "Borrador",
+        "Abierta",
+        "Cerrada"
+      ],
+      "default": "Borrador"
+    },
+    "token": {
+      "type": "string",
+      "description": "C\u00f3digo aleatorio que valida el env\u00edo an\u00f3nimo"
+    },
+    "respuestas_totales": {
+      "type": "number",
+      "default": 0
+    },
+    "resultados": {
+      "type": "object",
+      "description": "Recuentos agregados por pregunta. Solo datos agregados, sin respuestas individuales."
+    },
+    "fecha_apertura": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "fecha_cierre": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "notas": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "titulo",
+    "estado",
+    "preguntas"
+  ]
+}

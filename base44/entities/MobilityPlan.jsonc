@@ -4,19 +4,46 @@
   "rls": {
     "read": {},
     "create": {
-      "user_condition": {
-        "role": "admin"
-      }
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        }
+      ]
     },
     "update": {
-      "user_condition": {
-        "role": "admin"
-      }
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        }
+      ]
     },
     "delete": {
-      "user_condition": {
-        "role": "admin"
-      }
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        }
+      ]
     }
   },
   "properties": {
@@ -28,9 +55,17 @@
       "type": "string",
       "description": "Nombre del centro (desnormalizado)"
     },
+    "codigo_documento": {
+      "type": "string",
+      "description": "C\u00f3digo interno del documento PMST (ej: PMST-2026-001)"
+    },
     "version": {
       "type": "string",
       "default": "1.0"
+    },
+    "responsable_plan": {
+      "type": "string",
+      "description": "Persona responsable de la elaboraci\u00f3n del plan"
     },
     "fecha_aprobacion": {
       "type": "string",
@@ -44,6 +79,7 @@
       "type": "string",
       "enum": [
         "Borrador",
+        "En Revisi\u00f3n",
         "En Negociaci\u00f3n",
         "Aprobado",
         "En Seguimiento",
@@ -51,9 +87,193 @@
       ],
       "default": "Borrador"
     },
+    "identificacion": {
+      "type": "object",
+      "description": "Datos identificativos del centro y del documento",
+      "properties": {
+        "razon_social": {
+          "type": "string"
+        },
+        "cif": {
+          "type": "string"
+        },
+        "centro_nombre": {
+          "type": "string"
+        },
+        "direccion": {
+          "type": "string"
+        },
+        "municipio": {
+          "type": "string"
+        },
+        "provincia": {
+          "type": "string"
+        },
+        "codigo_postal": {
+          "type": "string"
+        },
+        "poligono_industrial": {
+          "type": "string"
+        },
+        "persona_responsable": {
+          "type": "string"
+        },
+        "cargo_responsable": {
+          "type": "string"
+        },
+        "email_contacto": {
+          "type": "string"
+        },
+        "telefono": {
+          "type": "string"
+        },
+        "fecha_elaboracion": {
+          "type": "string",
+          "format": "date"
+        },
+        "periodo_vigencia": {
+          "type": "string"
+        },
+        "autoridad_competente": {
+          "type": "string"
+        }
+      }
+    },
+    "alcance": {
+      "type": "object",
+      "description": "Alcance del plan: plantilla afectada, turnos y accesos",
+      "properties": {
+        "plantilla_total": {
+          "type": "number"
+        },
+        "num_turnos": {
+          "type": "number"
+        },
+        "trabajadores_por_turno": {
+          "type": "object"
+        },
+        "horarios": {
+          "type": "string"
+        },
+        "modalidades": {
+          "type": "string",
+          "description": "Presencialidad, teletrabajo, turnos"
+        },
+        "distancias_medias_km": {
+          "type": "number"
+        },
+        "plazas_aparcamiento": {
+          "type": "number"
+        },
+        "accesos_descripcion": {
+          "type": "string"
+        },
+        "transporte_publico": {
+          "type": "string",
+          "description": "Paradas y l\u00edneas cercanas"
+        },
+        "observaciones": {
+          "type": "string"
+        }
+      }
+    },
+    "metodologia": {
+      "type": "object",
+      "description": "Metodolog\u00eda del diagn\u00f3stico",
+      "properties": {
+        "fuentes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "periodo_referencia": {
+          "type": "string"
+        },
+        "tecnica": {
+          "type": "string"
+        },
+        "tamano_muestra": {
+          "type": "number"
+        },
+        "ambito_temporal": {
+          "type": "string"
+        },
+        "tratamiento_datos": {
+          "type": "string"
+        },
+        "responsable_tecnico": {
+          "type": "string"
+        },
+        "fecha_trabajo_campo": {
+          "type": "string"
+        },
+        "observaciones": {
+          "type": "string"
+        }
+      }
+    },
     "diagnostico": {
       "type": "object",
-      "description": "Diagn\u00f3stico inicial: reparto modal, encuesta, accesos, aparcamiento, etc."
+      "description": "Diagn\u00f3stico de movilidad de la plantilla (datos agregados y anonimizados)",
+      "properties": {
+        "reparto_modal": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "modo": {
+                "type": "string"
+              },
+              "porcentaje": {
+                "type": "number"
+              }
+            }
+          }
+        },
+        "origen_zonas": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "zona": {
+                "type": "string"
+              },
+              "porcentaje": {
+                "type": "number"
+              }
+            }
+          }
+        },
+        "distancia_media_km": {
+          "type": "number"
+        },
+        "motivos_uso": {
+          "type": "string"
+        },
+        "barreras": {
+          "type": "string"
+        },
+        "accesibilidad_tp": {
+          "type": "string"
+        },
+        "aparcamiento": {
+          "type": "string"
+        },
+        "emisiones_estimadas_t": {
+          "type": "number"
+        },
+        "conclusiones": {
+          "type": "string"
+        },
+        "fuentes_datos": {
+          "type": "string"
+        },
+        "survey_id": {
+          "type": "string",
+          "description": "ID de la encuesta an\u00f3nima vinculada"
+        }
+      }
     },
     "medidas": {
       "type": "array",
@@ -67,11 +287,13 @@
             "type": "string",
             "enum": [
               "Movilidad activa",
+              "Transporte p\u00fablico",
               "Transporte colectivo",
               "Bajas emisiones",
               "Compartida/Colaborativa",
               "Veh\u00edculos cero emisiones",
               "Teletrabajo",
+              "Flexibilidad horaria",
               "Seguridad vial",
               "Formaci\u00f3n",
               "Otras"
@@ -119,6 +341,36 @@
       },
       "description": "Medidas del plan con responsables, calendario e indicadores"
     },
+    "indicadores": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "unidad": {
+            "type": "string"
+          },
+          "valor_base": {
+            "type": "number"
+          },
+          "valor_actual": {
+            "type": "number"
+          },
+          "meta": {
+            "type": "number"
+          },
+          "frecuencia": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Indicadores de seguimiento del plan"
+    },
     "negociacion": {
       "type": "array",
       "items": {
@@ -141,6 +393,9 @@
             "type": "string"
           },
           "resumen": {
+            "type": "string"
+          },
+          "documento_nombre": {
             "type": "string"
           },
           "documento_uri": {
@@ -209,6 +464,53 @@
       "type": "string",
       "format": "date",
       "description": "Fecha del pr\u00f3ximo informe bienal obligatorio"
+    },
+    "checklist": {
+      "type": "object",
+      "description": "Estado del checklist de integridad y de los requisitos de registro",
+      "properties": {
+        "secciones": {
+          "type": "object"
+        },
+        "requisitos_cam": {
+          "type": "object"
+        },
+        "dpd_validado": {
+          "type": "boolean",
+          "default": false
+        },
+        "fecha_consulta_normativa": {
+          "type": "string"
+        },
+        "notas": {
+          "type": "string"
+        }
+      }
+    },
+    "historial_versiones": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "string"
+          },
+          "fecha": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "autor": {
+            "type": "string"
+          },
+          "resumen": {
+            "type": "string"
+          },
+          "snapshot": {
+            "type": "object"
+          }
+        }
+      },
+      "description": "Versiones guardadas del plan"
     },
     "registrado_edim": {
       "type": "boolean",
