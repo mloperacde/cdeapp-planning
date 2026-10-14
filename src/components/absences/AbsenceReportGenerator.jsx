@@ -23,6 +23,7 @@ import PayrollExportButton from "./PayrollExportButton";
 import IndividualAbsenceReport from "./IndividualAbsenceReport";
 import AbsenceReportHeader from "./AbsenceReportHeader";
 import NoAbsenceAchievers from "./NoAbsenceAchievers";
+import WorkdayComplianceReport from "./WorkdayComplianceReport";
 
 const STATUS_CONFIG = {
   Pendiente:  { color: "bg-amber-100 text-amber-800", icon: AlertCircle },
@@ -448,6 +449,14 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
         >
           <Award className="w-3.5 h-3.5 mr-1" /> Sin ausencias 12m{globalStats.noAbsence12m > 0 ? ` (${globalStats.noAbsence12m})` : ''}
         </Button>
+        <Button
+          size="sm"
+          variant={viewMode === 'compliance' ? 'default' : 'outline'}
+          onClick={() => setViewMode('compliance')}
+          className={`text-xs h-8 ${viewMode === 'compliance' ? 'bg-amber-600 hover:bg-amber-700' : 'text-amber-700 border-amber-200 hover:bg-amber-50'}`}
+        >
+          <Clock className="w-3.5 h-3.5 mr-1" /> Cumplimiento horario
+        </Button>
       </div>
 
       {viewMode === 'global' && (
@@ -611,6 +620,16 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
           rangeBounds={rangeBounds}
           dateFrom={appliedPeriod.from}
           dateTo={appliedPeriod.to}
+        />
+      )}
+
+      {viewMode === 'compliance' && (
+        <WorkdayComplianceReport
+          dateFrom={appliedPeriod.from}
+          dateTo={appliedPeriod.to}
+          periodLabel={periodLabel}
+          department={filterDept}
+          employees={employees}
         />
       )}
     </div>
