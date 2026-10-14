@@ -84,9 +84,12 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
       return payload;
     },
     enabled: periodValid,
-    staleTime: 60 * 1000,
-    retry: 1,
-    retryDelay: 1500,
+    // El cálculo en backend ya reintenta ante límites de lectura del servicio: aquí no se repite
+    // para no duplicar la carga. Si aun así falla, se explica el motivo y queda el botón Reintentar.
+    staleTime: 5 * 60 * 1000,
+    retry: 0,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   // Cálculo en curso: primera carga, recálculo del periodo o periodo aún sin aplicar

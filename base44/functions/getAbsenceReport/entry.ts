@@ -3,23 +3,13 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.53';
 const fmtDate = (d: Date): string =>
   d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 
-// El informe recorre todos los fichajes del periodo, que son decenas de miles de registros.
-// Se guardan en memoria del proceso durante unos minutos para que los informes consecutivos
-// (cambio de periodo, de departamento o reintento) no vuelvan a leerlos: así no se agota el
-// límite de lecturas del servicio.
-const PRESENCE_TTL_MS = 10 * 60 * 1000;
-const presenceCache: {
-  startStr: string;
-  endStr: string;
-  loadedAt: number;
-  presenceByEmp: Record<string, Set<string>>;
-  datesWithData: Set<string>;
-} = { startStr: '', endStr: '', loadedAt: 0, presenceByEmp: {}, datesWithData: new Set() };
+// El informe encadena varias lecturas (fichajes del periodo, ausencias, empleados y calendario).
+// Si alguna coincide con el límite de lecturas del servicio, se reintenta con esperas crecientes
+// en lugar de devolver el informe sin datos.
+const isRateLimitError = (e: any): boolean => /rate limit|too many requests|429/i.test(String(e?.message || e));
 
-const isRateLimitError = (e: any): boolean => /rate limit/i.test(String(e?.message || e));
-
-// Reintento corto ante límites de lectura puntuales del servicio
 const withRetry = async <T,>(fn: () => Promise<T>, attempts = 3): Promise<T> => {
+  const waits = [2000, 10000];
   let lastError: any = null;
   for (let i = 0; i < attempts; i++) {
     try {
@@ -27,18 +17,10 @@ const withRetry = async <T,>(fn: () => Promise<T>, attempts = 3): Promise<T> => 
     } catch (e: any) {
       lastError = e;
       if (!isRateLimitError(e) || i === attempts - 1) throw e;
-      await new Promise((r) => setTimeout(r, 1500 * (i + 1)));
+      await new Promise((r) => setTimeout(r, waits[i] ?? 10000));
     }
   }
   throw lastError;
-};
-
-const coversDate = (abs: any, dateStr: string): boolean => {
-  if (!abs.fecha_inicio) return false;
-  const start = new Date(abs.fecha_inicio);
-  const end = (abs.fecha_fin_desconocida || !abs.fecha_fin) ? new Date('2099-12-31') : new Date(abs.fecha_fin);
-  const d = new Date(dateStr + 'T12:00:00');
-  return start <= d && d <= end;
 };
 
 const isMaternityType = (tipo: string): boolean => {
@@ -136,22 +118,9 @@ export default async function(req: Request): Promise<Response> {
     const winEndStr = fmtDate(winEnd);
 
     // Cargar DailyPresence (paginado). Solo se necesitan empleado y fecha: traer únicamente
-    // esos campos y reutilizar la carga anterior evita agotar el límite de lecturas.
-    const cacheValid = presenceCache.loadedAt > 0
-      && Date.now() - presenceCache.loadedAt < PRESENCE_TTL_MS
-      && presenceCache.startStr <= loadStartStr
-      && presenceCache.endStr >= winEndStr;
-
-    let presenceByEmp: Record<string, Set<string>>;
-    let datesWithData: Set<string>;
-
-    if (cacheValid) {
-      presenceByEmp = presenceCache.presenceByEmp;
-      datesWithData = presenceCache.datesWithData;
-      console.log(`[getAbsenceReport] DailyPresence desde caché: ${Object.keys(presenceByEmp).length} empleados, ${datesWithData.size} fechas`);
-    } else {
-    presenceByEmp = {};
-    datesWithData = new Set<string>();
+    // esos campos reduce el peso de cada lectura.
+    const presenceByEmp: Record<string, Set<string>> = {};
+    const datesWithData = new Set<string>();
     let cursor: string | undefined;
     let cursorDate = loadStartStr;
     let hasMore = true;
@@ -182,30 +151,44 @@ export default async function(req: Request): Promise<Response> {
         hasMore = false;
       }
     }
-    presenceCache.startStr = loadStartStr;
-    presenceCache.endStr = winEndStr;
-    presenceCache.presenceByEmp = presenceByEmp;
-    presenceCache.datesWithData = datesWithData;
-    presenceCache.loadedAt = Date.now();
     console.log(`[getAbsenceReport] DailyPresence: ${Object.keys(presenceByEmp).length} empleados, ${datesWithData.size} fechas con datos`);
-    }
 
-    // Cargar ausencias formales (no canceladas ni rechazadas)
-    const absences = await withRetry(() => base44.asServiceRole.entities.Absence.list('-fecha_inicio', 5000));
-    const absByEmp: Record<string, any[]> = {};
+    // Ausencias vigentes en la ventana analizada y solo con los campos necesarios
+    const absPage: any = await withRetry(() => base44.asServiceRole.entities.Absence.filter(
+      {
+        estado_aprobacion: { $nin: ['Cancelada', 'Rechazada'] },
+        $or: [
+          { fecha_inicio: { $gte: loadStartStr } },
+          { fecha_fin: { $gte: loadStartStr } },
+          { fecha_fin_desconocida: true },
+        ],
+      },
+      {
+        sort: '-fecha_inicio',
+        limit: 5000,
+        fields: ['employee_id', 'fecha_inicio', 'fecha_fin', 'fecha_fin_desconocida', 'tipo'],
+      }
+    ));
+    const absences: any[] = absPage?.items || (Array.isArray(absPage) ? absPage : []);
+
+    // Intervalos de ausencia por empleado, precalculados una sola vez: el cálculo por día
+    // compara marcas de tiempo en lugar de crear fechas para cada ausencia y cada día.
+    const NO_END = new Date('2099-12-31').getTime();
+    const absIntervals: Record<string, Array<{ start: number; end: number; tipo: string }>> = {};
     for (const a of absences) {
-      if (a.estado_aprobacion === 'Cancelada' || a.estado_aprobacion === 'Rechazada') continue;
+      const start = new Date(a.fecha_inicio).getTime();
+      if (isNaN(start)) continue;
+      const end = (a.fecha_fin_desconocida || !a.fecha_fin) ? NO_END : new Date(a.fecha_fin).getTime();
       const k = String(a.employee_id);
-      if (!absByEmp[k]) absByEmp[k] = [];
-      absByEmp[k].push(a);
+      if (!absIntervals[k]) absIntervals[k] = [];
+      absIntervals[k].push({ start, end, tipo: a.tipo || 'Sin especificar' });
     }
 
     // Cargar empleados, festivos, vacaciones
-    const [employees, holidays, vacations] = await withRetry(() => Promise.all([
-      base44.asServiceRole.entities.EmployeeMasterDatabase.list('nombre', 2000),
-      base44.asServiceRole.entities.Holiday.list('date', 500),
-      base44.asServiceRole.entities.Vacation.list('start_date', 500),
-    ]));
+    // Lecturas encadenadas (no simultáneas) para no saturar el servicio
+    const employees = await withRetry(() => base44.asServiceRole.entities.EmployeeMasterDatabase.list('nombre', 2000));
+    const holidays = await withRetry(() => base44.asServiceRole.entities.Holiday.list('date', 500));
+    const vacations = await withRetry(() => base44.asServiceRole.entities.Vacation.list('start_date', 500));
 
     const holidaySet = new Set<string>();
     for (const h of holidays) { if (h.date) holidaySet.add(h.date); }
@@ -233,7 +216,8 @@ export default async function(req: Request): Promise<Response> {
 
     // Calcular resumen por empleado
     const computeForWindow = (empId: string, winStart: Date, winEnd: Date, fechaAlta?: string) => {
-      const empAbs = absByEmp[empId] || [];
+      const empInts = absIntervals[empId] || [];
+      const findAbs = (dMs: number) => empInts.find((x) => x.start <= dMs && dMs <= x.end);
       const empAtt = presenceByEmp[empId] || new Set<string>();
       const empVac = employeeVacationMap[empId] || new Set<string>();
       // Si el empleado se incorporó después del inicio de la ventana, empezar desde su fecha de alta
@@ -264,18 +248,19 @@ export default async function(req: Request): Promise<Response> {
           let isAbsent = false;
 
           if (clockedIn) clockedDays++;
+          const dMs = new Date(ds + 'T12:00:00').getTime();
           if (hasAttData && empTracked) {
             isAbsent = !clockedIn;
           } else {
-            isAbsent = empAbs.some(a => coversDate(a, ds));
+            isAbsent = !!findAbs(dMs);
           }
 
           if (isAbsent) {
             daysAbsent++;
             absentDays.push(ds);
-            const formalAbs = empAbs.find(a => coversDate(a, ds));
+            const formalAbs = findAbs(dMs);
             if (formalAbs) {
-              const t = formalAbs.tipo || 'Sin especificar';
+              const t = formalAbs.tipo;
               typeCounts[t] = (typeCounts[t] || 0) + 1;
               if (isMaternityType(formalAbs.tipo)) hasMaternity = true;
               if (isMarriageType(formalAbs.tipo)) hasMarriage = true;
@@ -344,11 +329,14 @@ export default async function(req: Request): Promise<Response> {
         datesWithData: datesWithData.size,
         employeesWithPresence: Object.keys(presenceByEmp).length,
         totalEmployees: result.length,
-        fromCache: cacheValid,
       },
     });
-  } catch (error) {
-    console.error('[getAbsenceReport] Error:', error);
-    return Response.json({ error: error.message }, { status: 500 });
+  } catch (error: any) {
+    // Se responde con el motivo en el cuerpo para que el informe pueda explicarlo en pantalla
+    const message = isRateLimitError(error)
+      ? 'El sistema está procesando un volumen alto de datos en este momento. Espera unos segundos y vuelve a generar el informe.'
+      : String(error?.message || 'No se ha podido calcular el informe');
+    console.error('[getAbsenceReport] Error:', message);
+    return Response.json({ success: false, error: message });
   }
 }
