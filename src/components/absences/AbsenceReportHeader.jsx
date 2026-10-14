@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   FileBarChart2, Users, UserCheck, AlertCircle, Clock, Repeat, Percent,
-  Gauge, CalendarDays, XCircle, Baby, Award, RefreshCw,
+  Gauge, CalendarDays, XCircle, Baby, Award, RefreshCw, History,
 } from "lucide-react";
 
 /**
@@ -25,6 +25,7 @@ export default function AbsenceReportHeader({
     { label: "Sin ausencias (periodo)", value: stats.withoutAbsences ?? 0, icon: UserCheck, color: "text-green-600", bg: "bg-green-50" },
     { label: "Con ausencias (periodo)", value: stats.withAbsences ?? 0, icon: AlertCircle, color: "text-amber-600", bg: "bg-amber-50" },
     { label: "Días ausentes (periodo)", value: stats.totalDays ?? 0, icon: Clock, color: "text-blue-600", bg: "bg-blue-50" },
+    { label: "Días ausentes (12 meses)", value: stats.totalDays12 ?? 0, icon: History, color: "text-sky-600", bg: "bg-sky-50" },
     { label: "Episodios (periodo)", value: stats.totalEpisodes ?? 0, icon: Repeat, color: "text-indigo-600", bg: "bg-indigo-50" },
     { label: "Tasa de absentismo", value: `${stats.absentismo ?? 0}%`, icon: Percent, color: "text-rose-600", bg: "bg-rose-50" },
     { label: "Media días / empleado", value: stats.avgDaysPerEmployee ?? 0, icon: Gauge, color: "text-teal-600", bg: "bg-teal-50" },

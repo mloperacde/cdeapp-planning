@@ -204,6 +204,8 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
     const total = emps.length;
     const withAbsences = emps.filter(e => (e.daysPeriod || 0) > 0).length;
     const totalDays = emps.reduce((sum, e) => sum + (e.daysPeriod || 0), 0);
+    // Días de ausencia de los últimos 12 meses (ventana móvil que termina en el periodo analizado)
+    const totalDays12 = emps.reduce((sum, e) => sum + (e.days12 || 0), 0);
     const totalEpisodes = emps.reduce((sum, e) => sum + (e.episodesPeriod || 0), 0);
     const totalWorkDays = emps.reduce((sum, e) => sum + (e.workDaysPeriod || 0), 0);
     const totalDaysMonth = emps.reduce((sum, e) => sum + (e.daysMonth || 0), 0);
@@ -229,6 +231,7 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
       complianceRate: evaluatedDays > 0 ? Math.round((completeDays / evaluatedDays) * 100) : 0,
       withoutAbsences: total - withAbsences,
       totalDays,
+      totalDays12,
       totalEpisodes,
       totalWorkDays,
       absentismo: totalWorkDays > 0 ? Math.round((totalDays / totalWorkDays) * 1000) / 10 : 0,
@@ -364,7 +367,8 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
       "Días ausente (periodo)": e.daysPeriod || 0,
       "Episodios (periodo)": e.episodesPeriod || 0,
       "Episodio más largo (periodo)": e.longestPeriod || 0,
-      "Días laborables (periodo)": e.workDaysPeriod || 0,
+      "Jornadas laborables esperadas (periodo)": e.workDaysPeriod || 0,
+      "Días ausente (12 meses)": e.days12 || 0,
       "Días con retraso (periodo)": e.compliancePeriod?.delayDays || 0,
       "Días con salida anticipada (periodo)": e.compliancePeriod?.earlyDays || 0,
       "Días sin cumplir jornada (periodo)": e.compliancePeriod?.daysNotCompliant || 0,
@@ -583,12 +587,13 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
                     <TableHead className="text-xs text-center">Días ausente (periodo)</TableHead>
                     <TableHead className="text-xs text-center">Episodios (periodo)</TableHead>
                     <TableHead className="text-xs text-center">Ep. más largo (periodo)</TableHead>
-                    <TableHead className="text-xs text-center">Días mes</TableHead>
-                    <TableHead className="text-xs text-center">Ep. mes</TableHead>
-                    <TableHead className="text-xs text-center">Días retraso</TableHead>
-                    <TableHead className="text-xs text-center">Días salida ant.</TableHead>
-                    <TableHead className="text-xs text-center">Horas no trabajadas</TableHead>
-                    <TableHead className="text-xs text-center">% cumpl.</TableHead>
+                    <TableHead className="text-xs text-center">Días aus. 12 meses</TableHead>
+                    <TableHead className="text-xs text-center">Días mes en curso</TableHead>
+                    <TableHead className="text-xs text-center">Ep. mes en curso</TableHead>
+                    <TableHead className="text-xs text-center" title="Días del periodo con retraso sobre la entrada de su turno">Retrasos (periodo)</TableHead>
+                    <TableHead className="text-xs text-center" title="Días del periodo con salida antes de la hora de su turno">Salidas ant. (periodo)</TableHead>
+                    <TableHead className="text-xs text-center" title="Horas del periodo no trabajadas (retraso + salida anticipada)">Horas no trab. (periodo)</TableHead>
+                    <TableHead className="text-xs text-center" title="Porcentaje de jornadas laborables del periodo completadas correctamente">% cumpl. (periodo)</TableHead>
                     <TableHead className="text-xs text-center">Estado</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -613,6 +618,7 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
                       <TableCell className="text-xs text-center font-semibold">{e.daysPeriod || 0}</TableCell>
                       <TableCell className="text-xs text-center">{e.episodesPeriod || 0}</TableCell>
                       <TableCell className="text-xs text-center text-slate-600">{e.longestPeriod || 0}</TableCell>
+                      <TableCell className="text-xs text-center font-semibold text-sky-600">{e.days12 || 0}</TableCell>
                       <TableCell className="text-xs text-center font-semibold">{e.daysMonth}</TableCell>
                       <TableCell className="text-xs text-center">{e.episodesMonth || 0}</TableCell>
                       <TableCell className="text-xs text-center text-amber-600">{e.compliancePeriod?.delayDays || 0}</TableCell>

@@ -94,7 +94,7 @@ export default function AbsenceComplianceSummary({ stats, calendar, loading }) {
       {calendar && (
         <p className="text-xs text-slate-500 px-1 flex items-center gap-1.5 flex-wrap">
           <CalendarDays className="w-3.5 h-3.5 text-slate-400" />
-          Calendario laboral aplicado: <strong className="font-semibold text-slate-600 dark:text-slate-300">{calendar.workDaysInPeriod} días laborables</strong> analizados
+          Calendario laboral aplicado: <strong className="font-semibold text-slate-600 dark:text-slate-300">{calendar.workDaysInPeriod} jornadas laborables</strong> por empleado en el periodo
           ({calendar.holidaysLoaded} festivos y {calendar.globalVacationDays} días de vacaciones excluidos, más fines de semana; no se espera presencia en días no laborables).
         </p>
       )}

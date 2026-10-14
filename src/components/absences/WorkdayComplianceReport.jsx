@@ -149,7 +149,7 @@ export default function WorkdayComplianceReport({
                   <TableRow>
                     <TableHead className="text-xs">Empleado</TableHead>
                     <TableHead className="text-xs">Departamento</TableHead>
-                    <TableHead className="text-xs text-center">Días laborables</TableHead>
+                    <TableHead className="text-xs text-center" title="Días del periodo con jornada evaluada: excluye festivos, vacaciones, fines de semana, días sin turno y turnos en curso">Días evaluados</TableHead>
                     <TableHead className="text-xs text-center">Días sin cumplir</TableHead>
                     <TableHead className="text-xs text-center">Retrasos</TableHead>
                     <TableHead className="text-xs text-center">Salidas ant.</TableHead>
