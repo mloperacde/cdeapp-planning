@@ -14,10 +14,12 @@ import {
 import {
   Search, Filter, MapPin, Tag, Calendar, Hash, Building2,
   Wrench, Plus, Eye, ChevronRight, LayoutGrid, List,
-  CheckCircle2, AlertTriangle, Clock, X, Package
+  CheckCircle2, AlertTriangle, Clock, X, Package, FileSpreadsheet
 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { toast } from "sonner";
+import { exportToExcel } from "@/utils/lockerExport";
 import AssignPlanDialog from "@/components/maintenance/AssignPlanDialog";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -31,6 +33,12 @@ const STATUS_COLORS = {
   "con-plan": "bg-green-100 text-green-700 border-green-200",
   "vencido": "bg-red-100 text-red-700 border-red-200",
   "sin-plan": "bg-slate-100 text-slate-500 border-slate-200",
+};
+
+const STATUS_LABELS = {
+  "con-plan": "Con plan activo",
+  "vencido": "Plan vencido",
+  "sin-plan": "Sin plan",
 };
 
 // ─── Equipment Detail Dialog ──────────────────────────────────────────────────
@@ -253,6 +261,39 @@ export default function EquipmentInventory() {
     return { total, conPlan, vencidos, sinPlan };
   }, [equipment, plansByMachine]);
 
+  // Exportar a Excel el inventario que se está viendo (respeta búsqueda y filtros)
+  const handleExportExcel = () => {
+    if (filtered.length === 0) {
+      toast.warning("No hay equipos para exportar con los filtros actuales");
+      return;
+    }
+    const rows = filtered.map(eq => {
+      const mp = plansByMachine.get(eq.id) || [];
+      const proxima = mp
+        .filter(p => p.activo && p.proxima_fecha)
+        .map(p => new Date(p.proxima_fecha))
+        .sort((a, b) => a - b)[0];
+      return {
+        "Código": eq.codigo || "",
+        "Nombre": eq.nombre || "",
+        "Descripción": eq.descripcion || "",
+        "Fabricante": eq.marca || "",
+        "Modelo": eq.modelo || "",
+        "Nº de Serie": eq.numero_serie || "",
+        "Tipo": eq.tipo || "",
+        "Área": parseArea(eq.ubicacion),
+        "Ubicación": eq.ubicacion || "",
+        "Programa de mantenimiento": eq.programa_mantenimiento || "",
+        "Estado del plan": STATUS_LABELS[getStatus(eq.id)],
+        "Nº planes": mp.length,
+        "Próximo mantenimiento": proxima ? format(proxima, "dd/MM/yyyy", { locale: es }) : "",
+        "Fecha de compra": eq.fecha_compra ? format(new Date(eq.fecha_compra), "dd/MM/yyyy", { locale: es }) : "",
+      };
+    });
+    exportToExcel(rows, `inventario_maquinas_${format(new Date(), "yyyy-MM-dd")}`, "Inventario");
+    toast.success(`Exportados ${rows.length} equipos a Excel`);
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -349,6 +390,16 @@ export default function EquipmentInventory() {
               <LayoutGrid className="w-4 h-4" />
             </button>
           </div>
+
+          <Button
+            size="sm"
+            onClick={handleExportExcel}
+            className="h-9 gap-2 bg-green-600 hover:bg-green-700 text-white"
+            title="Exportar el inventario de máquinas a Excel"
+          >
+            <FileSpreadsheet className="w-4 h-4" />
+            <span className="hidden sm:inline">Exportar Excel</span>
+          </Button>
         </div>
       </div>
 
