@@ -12,15 +12,17 @@ import {
 } from "@/components/ui/table";
 import {
   FileSpreadsheet, Download, Filter, RefreshCw, CalendarDays,
-  Users, User, Clock, TrendingDown, CheckCircle2, XCircle, AlertCircle, Bot, Baby, HeartHandshake,
+  Users, User, Clock, TrendingDown, CheckCircle2, XCircle, AlertCircle, Bot, Baby, HeartHandshake, Award,
 } from "lucide-react";
-import { format, differenceInCalendarDays, startOfMonth, endOfMonth, parseISO } from "date-fns";
+import { format, differenceInCalendarDays, subMonths, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
 import { exportToExcel } from "@/utils/lockerExport";
-import { isAutoAbsence, wasAutoDetected, clipInterval, countWorkingDays } from "@/utils/absenceUtils";
+import { isAutoAbsence, wasAutoDetected, clipInterval, countWorkingDays, isNoAbsenceYear } from "@/utils/absenceUtils";
 import PayrollExportButton from "./PayrollExportButton";
 import IndividualAbsenceReport from "./IndividualAbsenceReport";
+import AbsenceReportHeader from "./AbsenceReportHeader";
+import NoAbsenceAchievers from "./NoAbsenceAchievers";
 
 const STATUS_CONFIG = {
   Pendiente:  { color: "bg-amber-100 text-amber-800", icon: AlertCircle },
@@ -31,11 +33,9 @@ const STATUS_CONFIG = {
 
 export default function AbsenceReportGenerator({ employees: propEmployees, absenceTypes: propTypes }) {
   const now = new Date();
-  const firstDay = startOfMonth(now);
-  const lastDay = endOfMonth(now);
-
-  const [dateFrom, setDateFrom] = useState(format(firstDay, "yyyy-MM-dd"));
-  const [dateTo, setDateTo] = useState(format(lastDay, "yyyy-MM-dd"));
+  // Periodo por defecto: últimos 12 meses + mes en curso
+  const [dateFrom, setDateFrom] = useState(format(subMonths(now, 12), "yyyy-MM-dd"));
+  const [dateTo, setDateTo] = useState(format(now, "yyyy-MM-dd"));
   const [filterDept, setFilterDept] = useState("all");
   const [filterType, setFilterType] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
@@ -49,10 +49,12 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
 
   // Informe de ausencias calculado en backend (usa DailyPresence como fuente de verdad)
   const { data: reportResponse, isLoading: reportLoading } = useQuery({
-    queryKey: ['absenceReport', filterDept],
+    queryKey: ['absenceReport', filterDept, dateFrom, dateTo],
     queryFn: async () => {
       const resp = await base44.functions.invoke('getAbsenceReport', {
         department: filterDept === 'all' ? null : filterDept,
+        dateFrom,
+        dateTo,
       });
       return resp.data;
     },
@@ -157,17 +159,43 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
   // Intervalo de una ausencia recortado al rango del informe (null si fuera de rango)
   const getAbsenceInterval = (abs) => clipInterval(abs, rangeBounds.start, rangeBounds.end);
 
-  // KPIs agregados desde el informe backend (DailyPresence como fuente de verdad)
+  // KPIs del periodo seleccionado (DailyPresence como fuente de verdad)
   const globalStats = useMemo(() => {
     const emps = reportResponse?.employees || [];
     const total = emps.length;
-    const withAbsences12m = emps.filter(e => e.days12 > 0).length;
-    const totalDays12 = emps.reduce((sum, e) => sum + (e.days12 || 0), 0);
+    const withAbsences = emps.filter(e => (e.daysPeriod || 0) > 0).length;
+    const totalDays = emps.reduce((sum, e) => sum + (e.daysPeriod || 0), 0);
+    const totalEpisodes = emps.reduce((sum, e) => sum + (e.episodesPeriod || 0), 0);
+    const totalWorkDays = emps.reduce((sum, e) => sum + (e.workDaysPeriod || 0), 0);
     const totalDaysMonth = emps.reduce((sum, e) => sum + (e.daysMonth || 0), 0);
     const absentToday = emps.filter(e => e.estado === 'Ausente').length;
     const maternityCount = emps.filter(e => e.hasMaternity).length;
-    return { total, withAbsences12m, totalDays12, totalDaysMonth, absentToday, maternityCount };
+    const noAbsence12m = emps.filter(isNoAbsenceYear).length;
+    return {
+      total,
+      withAbsences,
+      withoutAbsences: total - withAbsences,
+      totalDays,
+      totalEpisodes,
+      totalWorkDays,
+      absentismo: totalWorkDays > 0 ? Math.round((totalDays / totalWorkDays) * 1000) / 10 : 0,
+      avgDaysPerEmployee: total > 0 ? Math.round((totalDays / total) * 10) / 10 : 0,
+      totalDaysMonth,
+      absentToday,
+      maternityCount,
+      noAbsence12m,
+    };
   }, [reportResponse]);
+
+  // Cabecera del informe: periodo analizado y fecha del análisis
+  const etiquetaFecha = (valor, respaldo) => {
+    const d = valor ? parseISO(valor + "T00:00:00") : null;
+    return format(d && !isNaN(d.getTime()) ? d : respaldo, "dd/MM/yyyy");
+  };
+  const periodLabel = `${etiquetaFecha(dateFrom, subMonths(now, 12))} – ${etiquetaFecha(dateTo, now)}`;
+  const analysisDate = reportResponse?.meta?.generatedAt
+    ? format(new Date(reportResponse.meta.generatedAt), "dd/MM/yyyy HH:mm", { locale: es })
+    : format(new Date(), "dd/MM/yyyy HH:mm", { locale: es });
 
   // Días ausentes por tipo (agregado desde el informe backend - typeCounts son días reales sin presencia)
   const byType = useMemo(() => {
@@ -192,14 +220,14 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
     const deptAgg = {};
     for (const emp of emps) {
       const dept = emp.departamento || "Sin departamento";
-      if (!deptAgg[dept]) deptAgg[dept] = { employees: 0, withAbsences: 0, days12: 0 };
+      if (!deptAgg[dept]) deptAgg[dept] = { employees: 0, withAbsences: 0, daysPeriod: 0 };
       deptAgg[dept].employees += 1;
-      deptAgg[dept].days12 += emp.days12 || 0;
-      if (emp.days12 > 0) deptAgg[dept].withAbsences += 1;
+      deptAgg[dept].daysPeriod += emp.daysPeriod || 0;
+      if ((emp.daysPeriod || 0) > 0) deptAgg[dept].withAbsences += 1;
     }
     return Object.entries(deptAgg)
       .map(([dept, data]) => ({ dept, ...data }))
-      .sort((a, b) => b.days12 - a.days12);
+      .sort((a, b) => b.daysPeriod - a.daysPeriod);
   }, [reportResponse]);
 
   // Resumen por empleado: calculado en backend con DailyPresence como fuente de verdad
@@ -270,28 +298,23 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
       "Puesto": e.puesto,
       "Antigüedad": e.antiguedad,
       "Estado empleado": e.estado_empleado,
-      "Días ausente 12m": e.days12,
-      "Episodios 12m": e.episodes12 || 0,
-      "Episodio más largo 12m": e.longest12 || 0,
+      "Días ausente (periodo)": e.daysPeriod || 0,
+      "Episodios (periodo)": e.episodesPeriod || 0,
+      "Episodio más largo (periodo)": e.longestPeriod || 0,
+      "Días laborables (periodo)": e.workDaysPeriod || 0,
       "Días ausencia mes en curso": e.daysMonth,
       "Episodios mes en curso": e.episodesMonth || 0,
+      "Sin ausencias 12 meses": isNoAbsenceYear(e) ? "Sí" : "No",
       "Maternidad": e.hasMaternity ? "Sí" : "No",
       "Matrimonio": e.hasMarriage ? "Sí" : "No",
       "Estado actual": e.estado,
-      "Desglose por tipos (12m)": Object.entries(e.typeCounts).map(([t, c]) => `${t}: ${c}`).join("; "),
+      "Periodo analizado": periodLabel,
+      "Fecha de análisis": analysisDate,
+      "Desglose por tipos (periodo)": Object.entries(e.typeCounts || {}).map(([t, c]) => `${t}: ${c}`).join("; "),
     }));
-    exportToExcel(rows, "resumen_ausencias_empleados", "Resumen");
+    exportToExcel(rows, `resumen_ausencias_empleados_${dateFrom}_al_${dateTo}`, "Resumen");
     toast.success(`Exportados ${rows.length} empleados a Excel`);
   };
-
-  const kpis = [
-    { label: "Empleados evaluados", value: globalStats.total, icon: Users, color: "text-slate-700", bg: "bg-slate-50" },
-    { label: "Con ausencias 12m", value: globalStats.withAbsences12m, icon: AlertCircle, color: "text-amber-600", bg: "bg-amber-50" },
-    { label: "Días ausentes 12m", value: globalStats.totalDays12, icon: Clock, color: "text-blue-600", bg: "bg-blue-50" },
-    { label: "Días mes en curso", value: globalStats.totalDaysMonth, icon: CalendarDays, color: "text-purple-600", bg: "bg-purple-50" },
-    { label: "Ausentes hoy", value: globalStats.absentToday, icon: XCircle, color: "text-red-600", bg: "bg-red-50" },
-    { label: "Maternidad/Patern.", value: globalStats.maternityCount, icon: Baby, color: "text-pink-600", bg: "bg-pink-50" },
-  ];
 
   return (
     <div className="space-y-5">
@@ -349,11 +372,11 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
           </div>
           <div className="flex flex-wrap gap-2 pt-1">
             <Button size="sm" variant="outline" onClick={() => {
-              setDateFrom(format(startOfMonth(now), "yyyy-MM-dd"));
-              setDateTo(format(endOfMonth(now), "yyyy-MM-dd"));
+              setDateFrom(format(subMonths(now, 12), "yyyy-MM-dd"));
+              setDateTo(format(now, "yyyy-MM-dd"));
               setFilterDept("all"); setFilterType("all"); setFilterStatus("all");
             }} className="text-xs h-8">
-              <RefreshCw className="w-3.5 h-3.5 mr-1" /> Restablecer
+              <RefreshCw className="w-3.5 h-3.5 mr-1" /> Últimos 12 meses
             </Button>
             <Button size="sm" onClick={handleExportExcel} disabled={isLoading || filtered.length === 0} className="text-xs h-8 bg-green-600 hover:bg-green-700">
               <FileSpreadsheet className="w-3.5 h-3.5 mr-1" /> Exportar Excel
@@ -371,35 +394,30 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
         <Button size="sm" variant={viewMode === 'individual' ? 'default' : 'outline'} onClick={() => setViewMode('individual')} className="text-xs h-8">
           <User className="w-3.5 h-3.5 mr-1" /> Informe Individual
         </Button>
+        <Button
+          size="sm"
+          variant={viewMode === 'achievers' ? 'default' : 'outline'}
+          onClick={() => setViewMode('achievers')}
+          className={`text-xs h-8 ${viewMode === 'achievers' ? 'bg-emerald-600 hover:bg-emerald-700' : 'text-emerald-700 border-emerald-200 hover:bg-emerald-50'}`}
+        >
+          <Award className="w-3.5 h-3.5 mr-1" /> Sin ausencias 12m{globalStats.noAbsence12m > 0 ? ` (${globalStats.noAbsence12m})` : ''}
+        </Button>
       </div>
 
       {viewMode === 'global' && (
       <>
+      {/* Cabecera del informe: identificación + panel de KPIs del periodo */}
+      <AbsenceReportHeader
+        periodLabel={periodLabel}
+        analysisDate={analysisDate}
+        scopeLabel={filterDept === 'all' ? 'Todos los departamentos' : filterDept}
+        stats={globalStats}
+        loading={reportLoading}
+        onShowAchievers={() => setViewMode('achievers')}
+      />
       <p className="text-xs text-slate-400 px-1">
-        Datos basados en fichajes reales (DailyPresence) — últimos 12 meses y mes en curso. El filtro de departamento aplica al informe global; los filtros de fecha/tipo/estado aplican al informe individual y a las exportaciones.
+        Datos basados en fichajes reales (DailyPresence). El periodo seleccionado rige el informe global, los indicadores y las exportaciones; el filtro de departamento aplica al informe global y los filtros de tipo y estado, al informe individual y a la exportación de detalle.
       </p>
-      {/* KPIs */}
-      {reportLoading ? (
-        <div className="flex items-center justify-center py-8">
-          <RefreshCw className="w-5 h-5 animate-spin text-slate-400" />
-        </div>
-      ) : (
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        {kpis.map(k => (
-          <Card key={k.label} className={`${k.bg} border-0`}>
-            <CardContent className="p-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-[11px] text-slate-500">{k.label}</p>
-                  <p className={`text-xl font-bold ${k.color}`}>{k.value}</p>
-                </div>
-                <k.icon className={`w-5 h-5 ${k.color} opacity-40`} />
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-      )}
 
       {/* Resumen por tipo y departamento */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -444,7 +462,7 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
                   <div key={d.dept} className="flex items-center justify-between text-xs">
                     <span className="text-slate-600 truncate flex-1">{d.dept}</span>
                     <span className="text-slate-400 text-[10px] whitespace-nowrap mr-2">{d.withAbsences}/{d.employees}</span>
-                    <Badge className="bg-blue-100 text-blue-700">{d.days12} días</Badge>
+                    <Badge className="bg-blue-100 text-blue-700">{d.daysPeriod} días</Badge>
                   </div>
                 ))}
               </div>
@@ -483,9 +501,9 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
                     <TableHead className="text-xs">Puesto</TableHead>
                     <TableHead className="text-xs text-center">Antig.</TableHead>
                     <TableHead className="text-xs text-center">Est. emp.</TableHead>
-                    <TableHead className="text-xs text-center">Días ausente 12m</TableHead>
-                    <TableHead className="text-xs text-center">Episodios 12m</TableHead>
-                    <TableHead className="text-xs text-center">Ep. más largo 12m</TableHead>
+                    <TableHead className="text-xs text-center">Días ausente (periodo)</TableHead>
+                    <TableHead className="text-xs text-center">Episodios (periodo)</TableHead>
+                    <TableHead className="text-xs text-center">Ep. más largo (periodo)</TableHead>
                     <TableHead className="text-xs text-center">Días mes</TableHead>
                     <TableHead className="text-xs text-center">Ep. mes</TableHead>
                     <TableHead className="text-xs text-center">Estado</TableHead>
@@ -509,9 +527,9 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
                           {e.estado_empleado}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-xs text-center font-semibold">{e.days12}</TableCell>
-                      <TableCell className="text-xs text-center">{e.episodes12 || 0}</TableCell>
-                      <TableCell className="text-xs text-center text-slate-600">{e.longest12 || 0}</TableCell>
+                      <TableCell className="text-xs text-center font-semibold">{e.daysPeriod || 0}</TableCell>
+                      <TableCell className="text-xs text-center">{e.episodesPeriod || 0}</TableCell>
+                      <TableCell className="text-xs text-center text-slate-600">{e.longestPeriod || 0}</TableCell>
                       <TableCell className="text-xs text-center font-semibold">{e.daysMonth}</TableCell>
                       <TableCell className="text-xs text-center">{e.episodesMonth || 0}</TableCell>
                       <TableCell className="text-xs text-center">
@@ -528,6 +546,10 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
         </CardContent>
       </Card>
       </>
+      )}
+
+      {viewMode === 'achievers' && (
+        <NoAbsenceAchievers employees={employeeSummary} loading={reportLoading} />
       )}
 
       {viewMode === 'individual' && (

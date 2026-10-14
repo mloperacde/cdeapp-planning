@@ -83,3 +83,31 @@ export const countWorkingDays = (intervals, employeeId, holidaySet, globalVacati
   }
   return count;
 };
+
+/**
+ * Meses completos transcurridos desde una fecha (yyyy-MM-dd o ISO)
+ */
+export const monthsSince = (fechaAlta, reference = new Date()) => {
+  const ds = String(fechaAlta || '').slice(0, 10);
+  if (!ds) return 0;
+  const d = new Date(ds + 'T00:00:00');
+  if (isNaN(d.getTime())) return 0;
+  let months = (reference.getFullYear() - d.getFullYear()) * 12 + (reference.getMonth() - d.getMonth());
+  if (reference.getDate() < d.getDate()) months -= 1;
+  return Math.max(0, months);
+};
+
+/** Antigüedad mínima exigida para el reconocimiento "12 meses sin ausencias" */
+export const MIN_MONTHS_NO_ABSENCE = 12;
+
+/**
+ * Logro: empleado que ha cumplido los últimos 12 meses sin ninguna ausencia
+ * estando de alta durante todo el periodo (antigüedad mínima de 12 meses).
+ */
+export const isNoAbsenceYear = (emp) => {
+  if (!emp) return false;
+  if ((emp.days12 || 0) > 0) return false;
+  // Debe existir actividad real registrada: sin días de presencia no hay logro que reconocer
+  if ((emp.presenceDays12 ?? 0) <= 0) return false;
+  return monthsSince(emp.fecha_alta) >= MIN_MONTHS_NO_ABSENCE;
+};

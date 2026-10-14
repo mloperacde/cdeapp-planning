@@ -87,19 +87,28 @@ export default async function(req: Request): Promise<Response> {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { department } = body;
+    const { department, dateFrom, dateTo } = body;
 
     const now = new Date();
     const win12Start = new Date(now); win12Start.setFullYear(win12Start.getFullYear() - 1); win12Start.setHours(0, 0, 0, 0);
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
     const winEnd = new Date(now); winEnd.setHours(23, 59, 59, 999);
-    const win12StartStr = fmtDate(win12Start);
+
+    // Periodo a analizar (por defecto: últimos 12 meses + mes en curso)
+    const periodStart = dateFrom ? new Date(String(dateFrom).slice(0, 10) + 'T00:00:00') : new Date(win12Start);
+    const rawPeriodEnd = dateTo ? new Date(String(dateTo).slice(0, 10) + 'T23:59:59') : new Date(winEnd);
+    const periodEnd = rawPeriodEnd > winEnd ? new Date(winEnd) : rawPeriodEnd;
+    if (isNaN(periodStart.getTime()) || isNaN(periodEnd.getTime()) || periodStart > periodEnd) {
+      return Response.json({ error: 'Periodo no válido: revisa las fechas del informe' }, { status: 400 });
+    }
+    // Los datos de presencia se cargan desde el inicio más antiguo necesario (periodo o ventana de 12 meses)
+    const loadStartStr = fmtDate(periodStart < win12Start ? periodStart : win12Start);
     const winEndStr = fmtDate(winEnd);
 
     // Cargar DailyPresence (paginado por cursor de fecha)
     const presenceByEmp: Record<string, Set<string>> = {};
     const datesWithData = new Set<string>();
-    let cursorDate = win12StartStr;
+    let cursorDate = loadStartStr;
     let hasMore = true;
     while (hasMore) {
       const batch = await base44.asServiceRole.entities.DailyPresence.filter(
@@ -173,6 +182,8 @@ export default async function(req: Request): Promise<Response> {
       const effectiveStart = fechaAlta ? new Date(fechaAlta + 'T00:00:00') : null;
 
       let daysAbsent = 0;
+      let workDays = 0;
+      let clockedDays = 0;
       let hasMaternity = false;
       let hasMarriage = false;
       const typeCounts: Record<string, number> = {};
@@ -188,11 +199,13 @@ export default async function(req: Request): Promise<Response> {
         const dow = cur.getDay();
         const ds = fmtDate(cur);
         if (dow >= 1 && dow <= 5 && !holidaySet.has(ds) && !globalVacationSet.has(ds) && !empVac.has(ds)) {
+          workDays++;
           const hasAttData = datesWithData.has(ds);
           const clockedIn = empAtt.has(ds);
           const empTracked = empAtt.size > 0;
           let isAbsent = false;
 
+          if (clockedIn) clockedDays++;
           if (hasAttData && empTracked) {
             isAbsent = !clockedIn;
           } else {
@@ -217,7 +230,7 @@ export default async function(req: Request): Promise<Response> {
       }
 
       const { episodes, longest } = countEpisodes(absentDays, holidaySet, globalVacationSet, empVac);
-      return { daysAbsent, episodes, longestEpisode: longest, hasMaternity, hasMarriage, typeCounts };
+      return { daysAbsent, episodes, longestEpisode: longest, workDays, clockedDays, hasMaternity, hasMarriage, typeCounts };
     };
 
     const result = employees
@@ -228,6 +241,7 @@ export default async function(req: Request): Promise<Response> {
       })
       .map(emp => {
         const empId = String(emp.id);
+        const rPeriod = computeForWindow(empId, periodStart, periodEnd, emp.fecha_alta);
         const r12 = computeForWindow(empId, win12Start, winEnd, emp.fecha_alta);
         const rMonth = computeForWindow(empId, monthStart, winEnd, emp.fecha_alta);
         return {
@@ -237,24 +251,36 @@ export default async function(req: Request): Promise<Response> {
           departamento: emp.departamento || '—',
           puesto: emp.puesto || '—',
           antiguedad: computeAntiguedad(emp, now),
+          fecha_alta: emp.fecha_alta || '',
           estado_empleado: emp.estado_empleado || 'Alta',
+          // Métricas del periodo seleccionado
+          daysPeriod: rPeriod.daysAbsent,
+          episodesPeriod: rPeriod.episodes,
+          longestPeriod: rPeriod.longestEpisode,
+          workDaysPeriod: rPeriod.workDays,
+          typeCounts: rPeriod.typeCounts,
+          hasMaternity: rPeriod.hasMaternity,
+          hasMarriage: rPeriod.hasMarriage,
+          // Referencia: últimos 12 meses y mes en curso
           days12: r12.daysAbsent,
           episodes12: r12.episodes,
           longest12: r12.longestEpisode,
+          typeCounts12: r12.typeCounts,
+          hasMaternity12: r12.hasMaternity,
           daysMonth: rMonth.daysAbsent,
           episodesMonth: rMonth.episodes,
           estado: emp.disponibilidad || '—',
-          typeCounts: r12.typeCounts,
-          hasMaternity: r12.hasMaternity,
-          hasMarriage: r12.hasMarriage,
         };
       })
-      .sort((a, b) => b.days12 - a.days12);
+      .sort((a, b) => (b.daysPeriod || 0) - (a.daysPeriod || 0));
 
     return Response.json({
       success: true,
       employees: result,
       meta: {
+        generatedAt: new Date().toISOString(),
+        periodStart: fmtDate(periodStart),
+        periodEnd: fmtDate(periodEnd),
         datesWithData: datesWithData.size,
         employeesWithPresence: Object.keys(presenceByEmp).length,
         totalEmployees: result.length,
