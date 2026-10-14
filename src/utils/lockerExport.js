@@ -5,12 +5,20 @@ import * as XLSX from "xlsx";
  * @param {Array<Object>} rows - Filas a exportar
  * @param {string} filename - Nombre del archivo (sin extensión)
  * @param {string} sheetName - Nombre de la hoja
+ * @param {Array<Array<string>>} headerRows - Cabecera del informe (líneas de título sobre la tabla)
  */
-export function exportToExcel(rows, filename, sheetName = "Datos") {
+export function exportToExcel(rows, filename, sheetName = "Datos", headerRows = []) {
   if (!rows || rows.length === 0) {
     return;
   }
-  const ws = XLSX.utils.json_to_sheet(rows);
+  const titulos = (headerRows || []).filter(Boolean);
+  // Los títulos van arriba y se deja una fila en blanco antes de la tabla
+  const ws = XLSX.utils.json_to_sheet(rows, {
+    origin: `A${titulos.length ? titulos.length + 2 : 1}`,
+  });
+  if (titulos.length) {
+    XLSX.utils.sheet_add_aoa(ws, titulos, { origin: "A1" });
+  }
   // Ajustar ancho de columnas automáticamente
   const cols = Object.keys(rows[0]).map((key) => ({
     wch: Math.max(
@@ -18,6 +26,9 @@ export function exportToExcel(rows, filename, sheetName = "Datos") {
       ...rows.map((r) => String(r[key] ?? "").length)
     ) + 2,
   }));
+  if (titulos.length) {
+    cols[0].wch = Math.max(cols[0].wch, 0, ...titulos.map((r) => String(r[0] ?? "").length + 2));
+  }
   ws["!cols"] = cols;
 
   const wb = XLSX.utils.book_new();

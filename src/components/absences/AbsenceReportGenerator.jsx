@@ -286,6 +286,13 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
     return Array.from(s).sort();
   }, [absences]);
 
+  // Cabecera de los Excel exportados: periodo analizado y fecha de análisis
+  const exportHeader = (titulo) => [
+    [titulo],
+    [`Periodo analizado: ${periodLabel}`],
+    [`Fecha de análisis: ${analysisDate}`],
+  ];
+
   // Exportar a Excel
   const handleExportExcel = () => {
     if (filtered.length === 0) {
@@ -321,7 +328,7 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
       };
     });
     const period = `${appliedPeriod.from}_al_${appliedPeriod.to}`;
-    exportToExcel(rows, `informe_ausencias_${period}`, "Ausencias");
+    exportToExcel(rows, `informe_ausencias_${period}`, "Ausencias", exportHeader("Informe de Ausencias · Detalle de Ausencias"));
     toast.success(`Exportados ${rows.length} registros a Excel`);
   };
 
@@ -351,7 +358,7 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
       "Fecha de análisis": analysisDate,
       "Desglose por tipos (periodo)": Object.entries(e.typeCounts || {}).map(([t, c]) => `${t}: ${c}`).join("; "),
     }));
-    exportToExcel(rows, `resumen_ausencias_empleados_${appliedPeriod.from}_al_${appliedPeriod.to}`, "Resumen");
+    exportToExcel(rows, `resumen_ausencias_empleados_${appliedPeriod.from}_al_${appliedPeriod.to}`, "Resumen", exportHeader("Informe de Ausencias · Resumen por Empleado"));
     toast.success(`Exportados ${rows.length} empleados a Excel`);
   };
 
