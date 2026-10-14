@@ -115,11 +115,15 @@ export default async function(req: Request): Promise<Response> {
     }
     // Los datos de presencia se cargan desde el inicio más antiguo necesario (periodo o ventana de 12 meses)
     const loadStartStr = fmtDate(periodStart < win12Start ? periodStart : win12Start);
+    // El detalle diario de jornada solo se guarda para el periodo analizado (evita retener 12 meses en memoria)
+    const periodStartStr = fmtDate(periodStart);
     const winEndStr = fmtDate(winEnd);
 
     // Cargar DailyPresence (paginado). Solo se necesitan empleado y fecha: traer únicamente
     // esos campos reduce el peso de cada lectura.
     const presenceByEmp: Record<string, Set<string>> = {};
+    // Detalle diario por empleado (estado de jornada del día) para medir el incumplimiento parcial
+    const presenceDetail: Record<string, Record<string, { status: string; late: number; early: number; missing: number }>> = {};
     const datesWithData = new Set<string>();
     let cursor: string | undefined;
     let cursorDate = loadStartStr;
@@ -127,7 +131,7 @@ export default async function(req: Request): Promise<Response> {
     let pages = 0;
     while (hasMore && pages < 200) {
       pages++;
-      const options: any = { sort: 'record_date', limit: 5000, fields: ['employee_id', 'record_date'] };
+      const options: any = { sort: 'record_date', limit: 5000, fields: ['employee_id', 'record_date', 'compliance_status', 'minutes_late', 'minutes_early', 'missing_minutes'] };
       if (cursor) options.cursor = cursor;
       const page: any = await withRetry(() => base44.asServiceRole.entities.DailyPresence.filter(
         { record_date: { $gte: cursorDate, $lte: winEndStr } },
@@ -138,6 +142,15 @@ export default async function(req: Request): Promise<Response> {
         const empId = String(r.employee_id);
         if (!presenceByEmp[empId]) presenceByEmp[empId] = new Set();
         presenceByEmp[empId].add(r.record_date);
+        if (r.record_date >= periodStartStr) {
+          if (!presenceDetail[empId]) presenceDetail[empId] = {};
+          presenceDetail[empId][r.record_date] = {
+            status: r.compliance_status || 'Sin Datos',
+            late: r.minutes_late || 0,
+            early: r.minutes_early || 0,
+            missing: r.missing_minutes || 0,
+          };
+        }
         datesWithData.add(r.record_date);
       }
       if (page?.next_cursor && page?.has_more !== false && batch.length > 0) {
@@ -214,6 +227,20 @@ export default async function(req: Request): Promise<Response> {
       }
     }
 
+    // Días laborables del periodo según el calendario laboral: L-V sin festivos ni vacaciones
+    const countCalendarWorkDays = (start: Date, end: Date): number => {
+      let n = 0;
+      const cur = new Date(start);
+      while (cur <= end) {
+        const dow = cur.getDay();
+        const ds = fmtDate(cur);
+        if (dow >= 1 && dow <= 5 && !holidaySet.has(ds) && !globalVacationSet.has(ds)) n++;
+        cur.setDate(cur.getDate() + 1);
+      }
+      return n;
+    };
+    const workDaysInPeriod = countCalendarWorkDays(periodStart, periodEnd);
+
     // Calcular resumen por empleado
     const computeForWindow = (empId: string, winStart: Date, winEnd: Date, fechaAlta?: string) => {
       const empInts = absIntervals[empId] || [];
@@ -226,6 +253,14 @@ export default async function(req: Request): Promise<Response> {
       let daysAbsent = 0;
       let workDays = 0;
       let clockedDays = 0;
+      // Cumplimiento de jornada en los días laborables (retraso, salida anticipada, jornada incompleta)
+      let evaluatedDays = 0;
+      let completeDays = 0;
+      let delayDays = 0;
+      let earlyDays = 0;
+      let incompleteDays = 0;
+      let noExitDays = 0;
+      let missingMinutes = 0;
       let hasMaternity = false;
       let hasMarriage = false;
       const typeCounts: Record<string, number> = {};
@@ -255,6 +290,24 @@ export default async function(req: Request): Promise<Response> {
             isAbsent = !!findAbs(dMs);
           }
 
+          // El empleado ha acudido: se evalúa si completó la jornada de su turno
+          if (clockedIn && !isAbsent) {
+            const detail = presenceDetail[empId]?.[ds];
+            const st = detail?.status || 'Sin Datos';
+            // Turnos en curso y días sin turno asignado no se evalúan
+            if (st !== 'En Curso' && st !== 'Sin Turno' && st !== 'Sin Datos') {
+              evaluatedDays++;
+              if (st === 'Completa') completeDays++;
+              else if (st === 'Retraso') delayDays++;
+              else if (st === 'Salida Anticipada') earlyDays++;
+              else if (st === 'Incompleta') incompleteDays++;
+              else if (st === 'Sin Salida') noExitDays++;
+              if (st === 'Retraso' || st === 'Salida Anticipada' || st === 'Incompleta' || st === 'Sin Salida') {
+                missingMinutes += detail?.missing || 0;
+              }
+            }
+          }
+
           if (isAbsent) {
             daysAbsent++;
             absentDays.push(ds);
@@ -273,7 +326,21 @@ export default async function(req: Request): Promise<Response> {
       }
 
       const { episodes, longest } = countEpisodes(absentDays, holidaySet, globalVacationSet, empVac);
-      return { daysAbsent, episodes, longestEpisode: longest, workDays, clockedDays, hasMaternity, hasMarriage, typeCounts };
+      const daysNotCompliant = delayDays + earlyDays + incompleteDays + noExitDays;
+      return {
+        daysAbsent, episodes, longestEpisode: longest, workDays, clockedDays, hasMaternity, hasMarriage, typeCounts,
+        compliance: {
+          evaluatedDays,
+          completeDays,
+          delayDays,
+          earlyDays,
+          incompleteDays,
+          noExitDays,
+          daysNotCompliant,
+          missingMinutes,
+          complianceRate: evaluatedDays > 0 ? Math.round((completeDays / evaluatedDays) * 100) : 0,
+        },
+      };
     };
 
     const result = employees
@@ -301,6 +368,8 @@ export default async function(req: Request): Promise<Response> {
           episodesPeriod: rPeriod.episodes,
           longestPeriod: rPeriod.longestEpisode,
           workDaysPeriod: rPeriod.workDays,
+          // Incumplimiento parcial de jornada medido en los mismos días laborables del calendario
+          compliancePeriod: rPeriod.compliance,
           typeCounts: rPeriod.typeCounts,
           hasMaternity: rPeriod.hasMaternity,
           hasMarriage: rPeriod.hasMarriage,
@@ -326,6 +395,10 @@ export default async function(req: Request): Promise<Response> {
         generatedAt: new Date().toISOString(),
         periodStart: fmtDate(periodStart),
         periodEnd: fmtDate(periodEnd),
+        // Calendario laboral aplicado (misma regla para ausencias y para jornada parcial)
+        workDaysInPeriod,
+        holidaysLoaded: holidaySet.size,
+        globalVacationDays: globalVacationSet.size,
         datesWithData: datesWithData.size,
         employeesWithPresence: Object.keys(presenceByEmp).length,
         totalEmployees: result.length,

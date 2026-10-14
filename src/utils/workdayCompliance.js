@@ -1,8 +1,6 @@
 import * as XLSX from "xlsx";
 
-// Estados de jornada que se evalúan (hay turno asignado y fichajes completos).
-export const WORKDAY_EVALUATED_STATUSES = ["Completa", "Retraso", "Salida Anticipada", "Incompleta", "Sin Salida"];
-// Estados que suponen un incumplimiento de la jornada del turno.
+// Estados de jornada que suponen un incumplimiento de la jornada del turno.
 export const WORKDAY_INCIDENT_STATUSES = ["Retraso", "Salida Anticipada", "Incompleta", "Sin Salida"];
 
 export const WORKDAY_STATUS_STYLES = {
@@ -30,52 +28,68 @@ export function fmtHours(minutes) {
   return h > 0 ? `${h} h ${rest} min` : `${rest} min`;
 }
 
-// KPIs de cumplimiento de jornada del periodo (a partir del recuento por estado, calculado en servidor).
-export function buildComplianceStats(statusRows = []) {
-  const rowFor = (status) => statusRows.find((r) => r.compliance_status === status);
-  const countOf = (status) => rowFor(status)?.count || 0;
-  const evaluatedDays = WORKDAY_EVALUATED_STATUSES.reduce((s, st) => s + countOf(st), 0);
-  const completeDays = countOf("Completa");
-  const missingMinutes = WORKDAY_EVALUATED_STATUSES.reduce((s, st) => s + (rowFor(st)?.sum_missing_minutes || 0), 0);
-  return {
-    evaluatedDays,
-    completeDays,
-    delayDays: countOf("Retraso"),
-    earlyDays: countOf("Salida Anticipada"),
-    incompleteDays: countOf("Incompleta"),
-    noExitDays: countOf("Sin Salida"),
-    incidentDays: WORKDAY_INCIDENT_STATUSES.reduce((s, st) => s + countOf(st), 0),
-    missingMinutes,
-    complianceRate: evaluatedDays > 0 ? Math.round((completeDays / evaluatedDays) * 100) : 0,
-  };
+// Día laborable según el calendario laboral: de lunes a viernes, sin festivos ni vacaciones
+// (globales o del propio empleado). Es la misma regla que aplica el informe de ausencias.
+export function isWorkday(dateStr, holidaySet, globalVacationSet, empVacationSet) {
+  if (!dateStr) return false;
+  const dow = new Date(dateStr + "T12:00:00").getDay();
+  if (dow === 0 || dow === 6) return false;
+  if (holidaySet?.has(dateStr)) return false;
+  if (globalVacationSet?.has(dateStr)) return false;
+  if (empVacationSet?.has(dateStr)) return false;
+  return true;
 }
 
-// Resumen por empleado de los días que no cumplen la jornada del turno.
-export function buildEmployeeSummary(incidents = [], empById = {}) {
-  const map = {};
-  for (const r of incidents) {
-    const key = String(r.employee_id || r.employee_name);
-    if (!map[key]) {
-      const emp = empById[String(r.employee_id)];
-      map[key] = {
-        employee_id: r.employee_id,
-        nombre: emp?.nombre || r.employee_name || "—",
-        departamento: emp?.departamento || "",
-        days: 0,
-        delayDays: 0,
-        earlyDays: 0,
-        noExitDays: 0,
-        missingMinutes: 0,
-      };
-    }
-    const e = map[key];
-    e.days++;
-    if (r.compliance_status === "Retraso") e.delayDays++;
-    if (r.compliance_status === "Salida Anticipada") e.earlyDays++;
-    if (r.compliance_status === "Sin Salida") e.noExitDays++;
-    e.missingMinutes += r.missing_minutes || 0;
+// KPIs de jornada del periodo a partir de las filas del informe (mismos días laborables que las ausencias)
+export function buildComplianceStatsFromEmployees(employees = []) {
+  const acc = {
+    employeesTotal: employees.length,
+    employeesNotCompliant: 0,
+    evaluatedDays: 0,
+    completeDays: 0,
+    delayDays: 0,
+    earlyDays: 0,
+    incompleteDays: 0,
+    noExitDays: 0,
+    daysNotCompliant: 0,
+    missingMinutes: 0,
+  };
+  for (const e of employees) {
+    const c = e.compliancePeriod;
+    if (!c) continue;
+    acc.evaluatedDays += c.evaluatedDays || 0;
+    acc.completeDays += c.completeDays || 0;
+    acc.delayDays += c.delayDays || 0;
+    acc.earlyDays += c.earlyDays || 0;
+    acc.incompleteDays += c.incompleteDays || 0;
+    acc.noExitDays += c.noExitDays || 0;
+    acc.daysNotCompliant += c.daysNotCompliant || 0;
+    acc.missingMinutes += c.missingMinutes || 0;
+    if ((c.daysNotCompliant || 0) > 0) acc.employeesNotCompliant++;
   }
-  return Object.values(map).sort((a, b) => b.missingMinutes - a.missingMinutes || b.days - a.days);
+  acc.complianceRate = acc.evaluatedDays > 0 ? Math.round((acc.completeDays / acc.evaluatedDays) * 100) : 0;
+  return acc;
+}
+
+// Empleados con jornada no completada (acudieron pero no cubrieron su turno)
+export function buildEmployeeComplianceRows(employees = []) {
+  return employees
+    .filter(e => (e.compliancePeriod?.daysNotCompliant || 0) > 0)
+    .map(e => ({
+      employee_id: e.empId,
+      nombre: e.nombre,
+      departamento: e.departamento,
+      evaluatedDays: e.compliancePeriod?.evaluatedDays || 0,
+      completeDays: e.compliancePeriod?.completeDays || 0,
+      delayDays: e.compliancePeriod?.delayDays || 0,
+      earlyDays: e.compliancePeriod?.earlyDays || 0,
+      incompleteDays: e.compliancePeriod?.incompleteDays || 0,
+      noExitDays: e.compliancePeriod?.noExitDays || 0,
+      daysNotCompliant: e.compliancePeriod?.daysNotCompliant || 0,
+      missingMinutes: e.compliancePeriod?.missingMinutes || 0,
+      complianceRate: e.compliancePeriod?.complianceRate || 0,
+    }))
+    .sort((a, b) => b.missingMinutes - a.missingMinutes || b.daysNotCompliant - a.daysNotCompliant);
 }
 
 function buildSheet(rows, titleRows) {
@@ -88,25 +102,28 @@ function buildSheet(rows, titleRows) {
   return ws;
 }
 
-// Excel del control horario: resumen por empleado + detalle diario, con el periodo analizado en la cabecera.
-export function exportComplianceExcel({ employeeRows = [], incidents = [], empById = {}, periodLabel = "", dateFrom = "", dateTo = "" }) {
+// Excel de jornada: resumen por empleado + detalle diario, con el periodo analizado en la cabecera
+export function exportComplianceExcel({ employeeRows = [], incidents = [], periodLabel = "", dateFrom = "", dateTo = "" }) {
   const cabecera = (titulo) => [[titulo], [`Periodo analizado: ${periodLabel}`], [`Generado el ${new Date().toLocaleString("es-ES")}`]];
 
   const resumen = employeeRows.map((e) => ({
     "Empleado": e.nombre,
     "Departamento": e.departamento,
-    "Días sin cumplir jornada": e.days,
+    "Días laborables evaluados": e.evaluatedDays,
+    "Días completos": e.completeDays,
+    "Días sin cumplir jornada": e.daysNotCompliant,
     "Días con retraso": e.delayDays,
     "Días con salida anticipada": e.earlyDays,
+    "Días jornada incompleta": e.incompleteDays,
     "Días sin salida registrada": e.noExitDays,
-    "Horas no trabajadas": (Math.round(((e.missingMinutes || 0) / 60) * 100) / 100),
+    "Cumplimiento": `${e.complianceRate}%`,
+    "Horas no trabajadas": Math.round(((e.missingMinutes || 0) / 60) * 100) / 100,
     "Minutos no trabajados": e.missingMinutes || 0,
   }));
 
   const detalle = incidents.map((r) => ({
     "Fecha": r.record_date,
-    "Empleado": empById[String(r.employee_id)]?.nombre || r.employee_name || "—",
-    "Departamento": empById[String(r.employee_id)]?.departamento || "",
+    "Empleado": r.employee_name || "—",
     "Turno": r.shift || "",
     "Entrada esperada": r.expected_start || "",
     "Salida esperada": r.expected_end || "",

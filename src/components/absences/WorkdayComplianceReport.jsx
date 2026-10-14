@@ -9,54 +9,34 @@ import { Clock, LogOut, TrendingDown, CheckCircle2, FileSpreadsheet, RefreshCw, 
 import { toast } from "sonner";
 import {
   WORKDAY_INCIDENT_FIELDS, WORKDAY_INCIDENT_STATUSES, WORKDAY_STATUS_STYLES,
-  buildComplianceStats, buildEmployeeSummary, exportComplianceExcel, fmtHours,
+  buildComplianceStatsFromEmployees, buildEmployeeComplianceRows, exportComplianceExcel, fmtHours, isWorkday,
 } from "@/utils/workdayCompliance";
 
-export default function WorkdayComplianceReport({ dateFrom, dateTo, periodLabel, department = "all", employees = [] }) {
-  const empById = useMemo(() => {
-    const m = {};
-    for (const e of employees) m[String(e.id)] = e;
-    return m;
-  }, [employees]);
+/**
+ * Jornada parcial no cumplida (han acudido pero no completan su turno).
+ * Las cifras provienen del informe de ausencias, de modo que usan exactamente el mismo
+ * calendario laboral que las ausencias; el detalle diario se filtra con esa misma regla.
+ */
+export default function WorkdayComplianceReport({
+  employees = [], holidaySet, globalVacationSet, employeeVacationMap,
+  dateFrom, dateTo, periodLabel, department = "all", loading,
+}) {
+  const stats = useMemo(() => buildComplianceStatsFromEmployees(employees), [employees]);
+  const employeeRows = useMemo(() => buildEmployeeComplianceRows(employees), [employees]);
+  const scopedIds = useMemo(() => employees.map(e => String(e.empId)), [employees]);
+  const enabled = Boolean(dateFrom) && Boolean(dateTo) && scopedIds.length > 0;
 
-  // Empleados del departamento filtrado (el fichaje guarda el id del empleado, no el departamento)
-  const scopedIds = useMemo(() => {
-    if (!department || department === "all") return null;
-    return employees.filter(e => e.departamento === department).map(e => String(e.id));
-  }, [department, employees]);
-
-  const enabled = Boolean(dateFrom) && Boolean(dateTo) && (!scopedIds || scopedIds.length > 0);
-
-  const baseQuery = useMemo(() => {
-    const q = { record_date: { $gte: dateFrom, $lte: dateTo } };
-    if (scopedIds) q.employee_id = { $in: scopedIds };
-    return q;
-  }, [dateFrom, dateTo, scopedIds]);
-
-  // Recuento por estado de jornada (calculado en servidor)
-  const { data: statusRows = [], isLoading: loadingStatus, error: statusError } = useQuery({
-    queryKey: ["workdayComplianceStatus", dateFrom, dateTo, department],
-    queryFn: async () => {
-      const res = await base44.entities.DailyPresence.aggregate({
-        query: baseQuery,
-        groupBy: "compliance_status",
-        sum: ["missing_minutes"],
-        limit: 30,
-      });
-      return res?.rows || [];
-    },
-    enabled,
-    staleTime: 5 * 60 * 1000,
-    retry: 1,
-  });
-
-  // Días que no cumplen la jornada del turno (retraso, salida anticipada, incompleta o sin salida)
-  const { data: incidents = [], isLoading: loadingIncidents } = useQuery({
+  // Detalle diario de los días que no cumplen jornada (solo días laborables del calendario)
+  const { data: rawIncidents = [], isLoading: loadingIncidents, error: detailError } = useQuery({
     queryKey: ["workdayComplianceIncidents", dateFrom, dateTo, department],
     queryFn: async () => {
       const page = await base44.entities.DailyPresence.filter(
-        { ...baseQuery, $or: WORKDAY_INCIDENT_STATUSES.map((s) => ({ compliance_status: s })) },
-        { sort: "-record_date", limit: 5000, fields: WORKDAY_INCIDENT_FIELDS }
+        {
+          record_date: { $gte: dateFrom, $lte: dateTo },
+          employee_id: { $in: scopedIds },
+          $or: WORKDAY_INCIDENT_STATUSES.map((s) => ({ compliance_status: s })),
+        },
+        { sort: "-record_date", limit: 3000, fields: WORKDAY_INCIDENT_FIELDS }
       );
       return page.items || [];
     },
@@ -65,25 +45,28 @@ export default function WorkdayComplianceReport({ dateFrom, dateTo, periodLabel,
     retry: 1,
   });
 
-  const stats = useMemo(() => buildComplianceStats(statusRows), [statusRows]);
-  const employeeRows = useMemo(() => buildEmployeeSummary(incidents, empById), [incidents, empById]);
-  const loading = loadingStatus || loadingIncidents;
+  const incidents = useMemo(() => rawIncidents.filter(r =>
+    isWorkday(r.record_date, holidaySet, globalVacationSet, employeeVacationMap?.[String(r.employee_id)])
+  ), [rawIncidents, holidaySet, globalVacationSet, employeeVacationMap]);
+
+  const busy = loading || loadingIncidents;
 
   const handleExport = () => {
     if (employeeRows.length === 0) {
       toast.warning("No hay desviaciones de jornada para exportar");
       return;
     }
-    exportComplianceExcel({ employeeRows, incidents, empById, periodLabel, dateFrom, dateTo });
+    exportComplianceExcel({ employeeRows, incidents, periodLabel, dateFrom, dateTo });
     toast.success(`Exportados ${employeeRows.length} empleados y ${incidents.length} días`);
   };
 
   return (
     <div className="space-y-4">
-      <p className="text-xs text-slate-400 px-1">
-        Control de jornada sobre los fichajes reales del periodo: compara la entrada y la salida de cada día con el turno
-        asignado y marca los días que no completan la jornada (retraso, salida anticipada o sin salida registrada). Los
-        turnos en curso y los días sin turno asignado no se evalúan.
+      <p className="text-xs text-slate-500 px-1">
+        Empleados que <strong className="font-semibold">sí han acudido</strong> pero no han completado la jornada de su turno
+        (retraso, salida anticipada, jornada incompleta o sin salida registrada). Se calcula sobre los mismos días laborables
+        del calendario laboral que el informe de ausencias: no se evalúan festivos, vacaciones, fines de semana, días sin
+        turno asignado ni turnos en curso.
       </p>
 
       {/* KPIs del periodo */}
@@ -95,7 +78,7 @@ export default function WorkdayComplianceReport({ dateFrom, dateTo, periodLabel,
               <span className="text-xs font-medium text-slate-500">Cumplimiento de jornada</span>
             </div>
             <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">{stats.complianceRate}%</p>
-            <p className="text-xs text-slate-400 mt-0.5">{stats.completeDays} de {stats.evaluatedDays} días evaluados</p>
+            <p className="text-xs text-slate-400 mt-0.5">{stats.completeDays} de {stats.evaluatedDays} días laborables evaluados</p>
           </CardContent>
         </Card>
         <Card>
@@ -125,15 +108,15 @@ export default function WorkdayComplianceReport({ dateFrom, dateTo, periodLabel,
               <span className="text-xs font-medium text-slate-500">Horas no trabajadas</span>
             </div>
             <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">{fmtHours(stats.missingMinutes)}</p>
-            <p className="text-xs text-slate-400 mt-0.5">{stats.incidentDays} días sin cumplir jornada</p>
+            <p className="text-xs text-slate-400 mt-0.5">{stats.daysNotCompliant} días sin cumplir jornada</p>
           </CardContent>
         </Card>
       </div>
 
-      {statusError && (
+      {detailError && (
         <div className="flex items-center gap-2 text-xs text-red-600 px-1">
           <AlertCircle className="w-3.5 h-3.5" />
-          No se ha podido calcular el control de jornada del periodo.
+          No se ha podido cargar el detalle diario de incumplimientos.
         </div>
       )}
 
@@ -151,7 +134,7 @@ export default function WorkdayComplianceReport({ dateFrom, dateTo, periodLabel,
           </div>
         </CardHeader>
         <CardContent>
-          {loading ? (
+          {busy ? (
             <div className="flex items-center justify-center py-8">
               <RefreshCw className="w-5 h-5 animate-spin text-slate-400" />
             </div>
@@ -166,10 +149,12 @@ export default function WorkdayComplianceReport({ dateFrom, dateTo, periodLabel,
                   <TableRow>
                     <TableHead className="text-xs">Empleado</TableHead>
                     <TableHead className="text-xs">Departamento</TableHead>
+                    <TableHead className="text-xs text-center">Días laborables</TableHead>
                     <TableHead className="text-xs text-center">Días sin cumplir</TableHead>
                     <TableHead className="text-xs text-center">Retrasos</TableHead>
                     <TableHead className="text-xs text-center">Salidas ant.</TableHead>
                     <TableHead className="text-xs text-center">Sin salida</TableHead>
+                    <TableHead className="text-xs text-center">Cumplimiento</TableHead>
                     <TableHead className="text-xs text-center">Horas no trabajadas</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -178,10 +163,12 @@ export default function WorkdayComplianceReport({ dateFrom, dateTo, periodLabel,
                     <TableRow key={e.employee_id}>
                       <TableCell className="text-xs font-medium">{e.nombre}</TableCell>
                       <TableCell className="text-xs text-slate-500">{e.departamento || "—"}</TableCell>
-                      <TableCell className="text-xs text-center font-semibold">{e.days}</TableCell>
+                      <TableCell className="text-xs text-center text-slate-500">{e.evaluatedDays}</TableCell>
+                      <TableCell className="text-xs text-center font-semibold">{e.daysNotCompliant}</TableCell>
                       <TableCell className="text-xs text-center text-amber-600">{e.delayDays}</TableCell>
                       <TableCell className="text-xs text-center text-orange-600">{e.earlyDays}</TableCell>
                       <TableCell className="text-xs text-center text-purple-600">{e.noExitDays}</TableCell>
+                      <TableCell className="text-xs text-center">{e.complianceRate}%</TableCell>
                       <TableCell className="text-xs text-center font-semibold text-red-600">{fmtHours(e.missingMinutes)}</TableCell>
                     </TableRow>
                   ))}
@@ -201,7 +188,7 @@ export default function WorkdayComplianceReport({ dateFrom, dateTo, periodLabel,
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {loading ? (
+          {busy ? (
             <div className="flex items-center justify-center py-8">
               <RefreshCw className="w-5 h-5 animate-spin text-slate-400" />
             </div>
@@ -227,9 +214,7 @@ export default function WorkdayComplianceReport({ dateFrom, dateTo, periodLabel,
                   {incidents.map(r => (
                     <TableRow key={r.id}>
                       <TableCell className="text-xs text-slate-600 whitespace-nowrap">{r.record_date}</TableCell>
-                      <TableCell className="text-xs font-medium whitespace-nowrap">
-                        {empById[String(r.employee_id)]?.nombre || r.employee_name || "—"}
-                      </TableCell>
+                      <TableCell className="text-xs font-medium whitespace-nowrap">{r.employee_name || "—"}</TableCell>
                       <TableCell className="text-xs text-slate-500">{r.shift || "—"}</TableCell>
                       <TableCell className="text-xs text-center text-slate-500">
                         {r.expected_start || "—"} / {r.first_entry || "—"}

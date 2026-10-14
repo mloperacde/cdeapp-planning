@@ -24,6 +24,8 @@ import IndividualAbsenceReport from "./IndividualAbsenceReport";
 import AbsenceReportHeader from "./AbsenceReportHeader";
 import NoAbsenceAchievers from "./NoAbsenceAchievers";
 import WorkdayComplianceReport from "./WorkdayComplianceReport";
+import AbsenceComplianceSummary from "./AbsenceComplianceSummary";
+import { fmtHours } from "@/utils/workdayCompliance";
 
 const STATUS_CONFIG = {
   Pendiente:  { color: "bg-amber-100 text-amber-800", icon: AlertCircle },
@@ -208,9 +210,23 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
     const absentToday = emps.filter(e => e.estado === 'Ausente').length;
     const maternityCount = emps.filter(e => e.hasMaternity).length;
     const noAbsence12m = emps.filter(isNoAbsenceYear).length;
+    // Jornada parcial no cumplida (han acudido pero no completan su turno), en los mismos días laborables
+    const sumField = (field) => emps.reduce((s, e) => s + (e.compliancePeriod?.[field] || 0), 0);
+    const evaluatedDays = sumField('evaluatedDays');
+    const completeDays = sumField('completeDays');
     return {
       total,
       withAbsences,
+      evaluatedDays,
+      completeDays,
+      delayDays: sumField('delayDays'),
+      earlyDays: sumField('earlyDays'),
+      incompleteDays: sumField('incompleteDays'),
+      noExitDays: sumField('noExitDays'),
+      daysNotCompliant: sumField('daysNotCompliant'),
+      missingMinutes: sumField('missingMinutes'),
+      employeesNotCompliant: emps.filter(e => (e.compliancePeriod?.daysNotCompliant || 0) > 0).length,
+      complianceRate: evaluatedDays > 0 ? Math.round((completeDays / evaluatedDays) * 100) : 0,
       withoutAbsences: total - withAbsences,
       totalDays,
       totalEpisodes,
@@ -349,6 +365,11 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
       "Episodios (periodo)": e.episodesPeriod || 0,
       "Episodio más largo (periodo)": e.longestPeriod || 0,
       "Días laborables (periodo)": e.workDaysPeriod || 0,
+      "Días con retraso (periodo)": e.compliancePeriod?.delayDays || 0,
+      "Días con salida anticipada (periodo)": e.compliancePeriod?.earlyDays || 0,
+      "Días sin cumplir jornada (periodo)": e.compliancePeriod?.daysNotCompliant || 0,
+      "Cumplimiento de jornada (periodo)": e.compliancePeriod?.evaluatedDays ? `${e.compliancePeriod.complianceRate}%` : "—",
+      "Horas no trabajadas (periodo)": Math.round(((e.compliancePeriod?.missingMinutes || 0) / 60) * 10) / 10,
       "Días ausencia mes en curso": e.daysMonth,
       "Episodios mes en curso": e.episodesMonth || 0,
       "Sin ausencias 12 meses": isNoAbsenceYear(e) ? "Sí" : "No",
@@ -472,8 +493,9 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
         onRetry={refetchReport}
         onShowAchievers={() => setViewMode('achievers')}
       />
+      <AbsenceComplianceSummary stats={globalStats} calendar={reportResponse?.meta} loading={reportBusy} />
       <p className="text-xs text-slate-400 px-1">
-        Datos basados en fichajes reales (DailyPresence). El periodo seleccionado rige el informe global, los indicadores y las exportaciones; el filtro de departamento aplica al informe global y los filtros de tipo y estado, al informe individual y a la exportación de detalle.
+        Datos basados en fichajes reales (DailyPresence) y solo sobre días laborables del calendario laboral: se excluyen fines de semana, festivos y vacaciones, por lo que no se espera presencia en días no laborables. El periodo seleccionado rige el informe global, los indicadores y las exportaciones; el filtro de departamento aplica al informe global y los filtros de tipo y estado, al informe individual y a la exportación de detalle.
       </p>
 
       {/* Resumen por tipo y departamento */}
@@ -563,6 +585,10 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
                     <TableHead className="text-xs text-center">Ep. más largo (periodo)</TableHead>
                     <TableHead className="text-xs text-center">Días mes</TableHead>
                     <TableHead className="text-xs text-center">Ep. mes</TableHead>
+                    <TableHead className="text-xs text-center">Días retraso</TableHead>
+                    <TableHead className="text-xs text-center">Días salida ant.</TableHead>
+                    <TableHead className="text-xs text-center">Horas no trabajadas</TableHead>
+                    <TableHead className="text-xs text-center">% cumpl.</TableHead>
                     <TableHead className="text-xs text-center">Estado</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -589,6 +615,14 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
                       <TableCell className="text-xs text-center text-slate-600">{e.longestPeriod || 0}</TableCell>
                       <TableCell className="text-xs text-center font-semibold">{e.daysMonth}</TableCell>
                       <TableCell className="text-xs text-center">{e.episodesMonth || 0}</TableCell>
+                      <TableCell className="text-xs text-center text-amber-600">{e.compliancePeriod?.delayDays || 0}</TableCell>
+                      <TableCell className="text-xs text-center text-orange-600">{e.compliancePeriod?.earlyDays || 0}</TableCell>
+                      <TableCell className="text-xs text-center text-red-600 font-medium">
+                        {(e.compliancePeriod?.missingMinutes || 0) > 0 ? fmtHours(e.compliancePeriod.missingMinutes) : "—"}
+                      </TableCell>
+                      <TableCell className="text-xs text-center">
+                        {e.compliancePeriod?.evaluatedDays ? `${e.compliancePeriod.complianceRate}%` : "—"}
+                      </TableCell>
                       <TableCell className="text-xs text-center">
                         <Badge className={e.estado === "Ausente" ? "bg-red-100 text-red-700 text-[10px]" : "bg-green-100 text-green-700 text-[10px]"}>
                           {e.estado}
@@ -628,8 +662,12 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
           dateFrom={appliedPeriod.from}
           dateTo={appliedPeriod.to}
           periodLabel={periodLabel}
+          employees={employeeSummary}
           department={filterDept}
-          employees={employees}
+          holidaySet={holidaySet}
+          globalVacationSet={globalVacationSet}
+          employeeVacationMap={employeeVacationMap}
+          loading={reportBusy}
         />
       )}
     </div>
