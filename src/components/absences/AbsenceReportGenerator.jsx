@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/table";
 import {
   FileSpreadsheet, Download, Filter, RefreshCw, CalendarDays,
-  Users, User, Clock, TrendingDown, CheckCircle2, XCircle, AlertCircle, Bot, Baby, HeartHandshake, Award,
+  Users, User, Clock, TrendingDown, CheckCircle2, XCircle, AlertCircle, Bot, Award,
 } from "lucide-react";
 import { format, differenceInCalendarDays, subMonths, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
@@ -25,7 +25,7 @@ import AbsenceReportHeader from "./AbsenceReportHeader";
 import NoAbsenceAchievers from "./NoAbsenceAchievers";
 import WorkdayComplianceReport from "./WorkdayComplianceReport";
 import AbsenceComplianceSummary from "./AbsenceComplianceSummary";
-import { fmtHours } from "@/utils/workdayCompliance";
+import { SUMMARY_VISIBLE_COLUMNS, toSummaryExportRow } from "./employeeSummaryColumns";
 
 const STATUS_CONFIG = {
   Pendiente:  { color: "bg-amber-100 text-amber-800", icon: AlertCircle },
@@ -358,32 +358,8 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
       toast.warning("No hay datos para exportar");
       return;
     }
-    const rows = employeeSummary.map(e => ({
-      "Empleado": e.nombre,
-      "Departamento": e.departamento,
-      "Puesto": e.puesto,
-      "Antigüedad": e.antiguedad,
-      "Estado empleado": e.estado_empleado,
-      "Días ausente (periodo)": e.daysPeriod || 0,
-      "Episodios (periodo)": e.episodesPeriod || 0,
-      "Episodio más largo (periodo)": e.longestPeriod || 0,
-      "Jornadas laborables esperadas (periodo)": e.workDaysPeriod || 0,
-      "Días ausente (12 meses)": e.days12 || 0,
-      "Días con retraso (periodo)": e.compliancePeriod?.delayDays || 0,
-      "Días con salida anticipada (periodo)": e.compliancePeriod?.earlyDays || 0,
-      "Días sin cumplir jornada (periodo)": e.compliancePeriod?.daysNotCompliant || 0,
-      "Cumplimiento de jornada (periodo)": e.compliancePeriod?.evaluatedDays ? `${e.compliancePeriod.complianceRate}%` : "—",
-      "Horas no trabajadas (periodo)": Math.round(((e.compliancePeriod?.missingMinutes || 0) / 60) * 10) / 10,
-      "Días ausencia mes en curso": e.daysMonth,
-      "Episodios mes en curso": e.episodesMonth || 0,
-      "Sin ausencias 12 meses": isNoAbsenceYear(e) ? "Sí" : "No",
-      "Maternidad": e.hasMaternity ? "Sí" : "No",
-      "Matrimonio": e.hasMarriage ? "Sí" : "No",
-      "Estado actual": e.estado,
-      "Periodo analizado": periodLabel,
-      "Fecha de análisis": analysisDate,
-      "Desglose por tipos (periodo)": Object.entries(e.typeCounts || {}).map(([t, c]) => `${t}: ${c}`).join("; "),
-    }));
+    // Mismas columnas y mismo orden que la tabla en pantalla
+    const rows = employeeSummary.map(toSummaryExportRow);
     exportToExcel(rows, `resumen_ausencias_empleados_${appliedPeriod.from}_al_${appliedPeriod.to}`, "Resumen", exportHeader("Informe de Ausencias · Resumen por Empleado"));
     toast.success(`Exportados ${rows.length} empleados a Excel`);
   };
@@ -579,61 +555,19 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
               <Table>
                 <TableHeader className="sticky top-0 bg-white dark:bg-slate-800 z-10">
                   <TableRow>
-                    <TableHead className="text-xs">Empleado</TableHead>
-                    <TableHead className="text-xs">Departamento</TableHead>
-                    <TableHead className="text-xs">Puesto</TableHead>
-                    <TableHead className="text-xs text-center">Antig.</TableHead>
-                    <TableHead className="text-xs text-center">Est. emp.</TableHead>
-                    <TableHead className="text-xs text-center">Días ausente (periodo)</TableHead>
-                    <TableHead className="text-xs text-center">Episodios (periodo)</TableHead>
-                    <TableHead className="text-xs text-center">Ep. más largo (periodo)</TableHead>
-                    <TableHead className="text-xs text-center">Días aus. 12 meses</TableHead>
-                    <TableHead className="text-xs text-center">Días mes en curso</TableHead>
-                    <TableHead className="text-xs text-center">Ep. mes en curso</TableHead>
-                    <TableHead className="text-xs text-center" title="Días del periodo con retraso sobre la entrada de su turno">Retrasos (periodo)</TableHead>
-                    <TableHead className="text-xs text-center" title="Días del periodo con salida antes de la hora de su turno">Salidas ant. (periodo)</TableHead>
-                    <TableHead className="text-xs text-center" title="Horas del periodo no trabajadas (retraso + salida anticipada)">Horas no trab. (periodo)</TableHead>
-                    <TableHead className="text-xs text-center" title="Porcentaje de jornadas laborables del periodo completadas correctamente">% cumpl. (periodo)</TableHead>
-                    <TableHead className="text-xs text-center">Estado</TableHead>
+                    {SUMMARY_VISIBLE_COLUMNS.map(c => (
+                      <TableHead key={c.label} className={c.headClassName} title={c.title}>{c.label}</TableHead>
+                    ))}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {employeeSummary.map(e => (
                     <TableRow key={e.empId} className={e.hasMaternity ? "bg-pink-50 dark:bg-pink-950/30" : e.hasMarriage ? "bg-purple-50 dark:bg-purple-950/30" : ""}>
-                      <TableCell className="text-xs font-medium">
-                        <div className="flex items-center gap-1">
-                          {e.hasMaternity && <Baby className="w-3 h-3 text-pink-500 flex-shrink-0" />}
-                          {e.hasMarriage && <HeartHandshake className="w-3 h-3 text-purple-500 flex-shrink-0" />}
-                          {e.nombre}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-xs">{e.departamento}</TableCell>
-                      <TableCell className="text-xs">{e.puesto}</TableCell>
-                      <TableCell className="text-xs text-center text-slate-500">{e.antiguedad}</TableCell>
-                      <TableCell className="text-xs text-center">
-                        <Badge className={e.estado_empleado === "Alta" ? "bg-green-100 text-green-700 text-[10px]" : e.estado_empleado === "Baja" ? "bg-red-100 text-red-700 text-[10px]" : "bg-amber-100 text-amber-700 text-[10px]"}>
-                          {e.estado_empleado}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-xs text-center font-semibold">{e.daysPeriod || 0}</TableCell>
-                      <TableCell className="text-xs text-center">{e.episodesPeriod || 0}</TableCell>
-                      <TableCell className="text-xs text-center text-slate-600">{e.longestPeriod || 0}</TableCell>
-                      <TableCell className="text-xs text-center font-semibold text-sky-600">{e.days12 || 0}</TableCell>
-                      <TableCell className="text-xs text-center font-semibold">{e.daysMonth}</TableCell>
-                      <TableCell className="text-xs text-center">{e.episodesMonth || 0}</TableCell>
-                      <TableCell className="text-xs text-center text-amber-600">{e.compliancePeriod?.delayDays || 0}</TableCell>
-                      <TableCell className="text-xs text-center text-orange-600">{e.compliancePeriod?.earlyDays || 0}</TableCell>
-                      <TableCell className="text-xs text-center text-red-600 font-medium">
-                        {(e.compliancePeriod?.missingMinutes || 0) > 0 ? fmtHours(e.compliancePeriod.missingMinutes) : "—"}
-                      </TableCell>
-                      <TableCell className="text-xs text-center">
-                        {e.compliancePeriod?.evaluatedDays ? `${e.compliancePeriod.complianceRate}%` : "—"}
-                      </TableCell>
-                      <TableCell className="text-xs text-center">
-                        <Badge className={e.estado === "Ausente" ? "bg-red-100 text-red-700 text-[10px]" : "bg-green-100 text-green-700 text-[10px]"}>
-                          {e.estado}
-                        </Badge>
-                      </TableCell>
+                      {SUMMARY_VISIBLE_COLUMNS.map(c => (
+                        <TableCell key={c.label} className={c.cellClassName}>
+                          {c.render ? c.render(e) : c.get(e)}
+                        </TableCell>
+                      ))}
                     </TableRow>
                   ))}
                 </TableBody>
