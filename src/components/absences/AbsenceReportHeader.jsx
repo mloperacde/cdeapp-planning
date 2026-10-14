@@ -1,5 +1,6 @@
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import {
   FileBarChart2, Users, UserCheck, AlertCircle, Clock, Repeat, Percent,
   Gauge, CalendarDays, XCircle, Baby, Award, RefreshCw,
@@ -15,6 +16,8 @@ export default function AbsenceReportHeader({
   scopeLabel,
   stats = {},
   loading = false,
+  error = null,
+  onRetry,
   onShowAchievers,
 }) {
   const kpis = [
@@ -57,6 +60,23 @@ export default function AbsenceReportHeader({
         {loading ? (
           <div className="flex items-center justify-center py-8">
             <RefreshCw className="w-5 h-5 animate-spin text-slate-400" />
+          </div>
+        ) : error ? (
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 bg-rose-50 border border-rose-200 rounded-lg p-3">
+            <AlertCircle className="w-5 h-5 text-rose-600 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-rose-800">
+                No se ha podido generar el informe para el periodo seleccionado
+              </p>
+              <p className="text-[11px] text-rose-700 break-words">
+                {error.message || 'Error desconocido'}
+              </p>
+            </div>
+            {onRetry && (
+              <Button size="sm" variant="outline" onClick={() => onRetry()} className="text-xs h-8 bg-white">
+                <RefreshCw className="w-3.5 h-3.5 mr-1" /> Reintentar
+              </Button>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -40,6 +40,21 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
   const [filterType, setFilterType] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
   const [viewMode, setViewMode] = useState('global');
+  // Periodo aplicado al informe. El cálculo en backend recorre los fichajes de todo el
+  // periodo, así que se aplica con un breve retardo para no lanzar una ejecución por
+  // cada cambio intermedio de fecha.
+  const [appliedPeriod, setAppliedPeriod] = useState({
+    from: format(subMonths(now, 12), "yyyy-MM-dd"),
+    to: format(now, "yyyy-MM-dd"),
+  });
+  const periodValid = Boolean(dateFrom) && Boolean(dateTo) && dateFrom <= dateTo;
+
+  useEffect(() => {
+    if (!periodValid) return;
+    if (dateFrom === appliedPeriod.from && dateTo === appliedPeriod.to) return;
+    const t = setTimeout(() => setAppliedPeriod({ from: dateFrom, to: dateTo }), 900);
+    return () => clearTimeout(t);
+  }, [dateFrom, dateTo, periodValid, appliedPeriod]);
 
   const { data: absences = [], isLoading } = useQuery({
     queryKey: ['absences-report'],
@@ -48,18 +63,36 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
   });
 
   // Informe de ausencias calculado en backend (usa DailyPresence como fuente de verdad)
-  const { data: reportResponse, isLoading: reportLoading } = useQuery({
-    queryKey: ['absenceReport', filterDept, dateFrom, dateTo],
+  const {
+    data: reportResponse,
+    isLoading: reportLoading,
+    isFetching: reportFetching,
+    error: reportError,
+    refetch: refetchReport,
+  } = useQuery({
+    queryKey: ['absenceReport', filterDept, appliedPeriod.from, appliedPeriod.to],
     queryFn: async () => {
       const resp = await base44.functions.invoke('getAbsenceReport', {
         department: filterDept === 'all' ? null : filterDept,
-        dateFrom,
-        dateTo,
+        dateFrom: appliedPeriod.from,
+        dateTo: appliedPeriod.to,
       });
-      return resp.data;
+      const payload = resp?.data;
+      if (!payload || !Array.isArray(payload.employees)) {
+        throw new Error(payload?.error || 'El informe no ha devuelto datos');
+      }
+      return payload;
     },
+    enabled: periodValid,
     staleTime: 60 * 1000,
+    retry: 1,
+    retryDelay: 1500,
   });
+
+  // Cálculo en curso: primera carga, recálculo del periodo o periodo aún sin aplicar
+  const periodPending = dateFrom !== appliedPeriod.from || dateTo !== appliedPeriod.to;
+  const reportBusy = reportLoading || reportFetching || periodPending;
+  const emptyMessage = reportError ? 'No se ha podido cargar el informe' : 'Sin datos';
 
   const { data: employees = [] } = useQuery({
     queryKey: ['employeeMasterDatabase'],
@@ -124,14 +157,14 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
 
   // Filtrar por rango de fechas (fecha_inicio dentro del rango)
   const rangeAbsences = useMemo(() => {
-    const from = parseISO(dateFrom + "T00:00:00");
-    const to = parseISO(dateTo + "T23:59:59");
+    const from = parseISO(appliedPeriod.from + "T00:00:00");
+    const to = parseISO(appliedPeriod.to + "T23:59:59");
     return absences.filter(abs => {
       if (!abs.fecha_inicio) return false;
       const start = new Date(abs.fecha_inicio);
       return start >= from && start <= to;
     });
-  }, [absences, dateFrom, dateTo]);
+  }, [absences, appliedPeriod]);
 
   // Aplicar filtros adicionales
   const filtered = useMemo(() => {
@@ -149,12 +182,12 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
   const rangeBounds = useMemo(() => {
     const endOfToday = new Date();
     endOfToday.setHours(23, 59, 59, 999);
-    const rawEnd = parseISO(dateTo + "T23:59:59");
+    const rawEnd = parseISO(appliedPeriod.to + "T23:59:59");
     return {
-      start: parseISO(dateFrom + "T00:00:00"),
+      start: parseISO(appliedPeriod.from + "T00:00:00"),
       end: rawEnd > endOfToday ? endOfToday : rawEnd,
     };
-  }, [dateFrom, dateTo]);
+  }, [appliedPeriod]);
 
   // Intervalo de una ausencia recortado al rango del informe (null si fuera de rango)
   const getAbsenceInterval = (abs) => clipInterval(abs, rangeBounds.start, rangeBounds.end);
@@ -192,7 +225,10 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
     const d = valor ? parseISO(valor + "T00:00:00") : null;
     return format(d && !isNaN(d.getTime()) ? d : respaldo, "dd/MM/yyyy");
   };
-  const periodLabel = `${etiquetaFecha(dateFrom, subMonths(now, 12))} – ${etiquetaFecha(dateTo, now)}`;
+  // El periodo mostrado es el confirmado por el backend (el fin se acota a hoy)
+  const periodLabel = reportResponse?.meta?.periodStart && reportResponse?.meta?.periodEnd
+    ? `${format(parseISO(reportResponse.meta.periodStart + "T00:00:00"), "dd/MM/yyyy")} – ${format(parseISO(reportResponse.meta.periodEnd + "T00:00:00"), "dd/MM/yyyy")}`
+    : `${etiquetaFecha(dateFrom, subMonths(now, 12))} – ${etiquetaFecha(dateTo, now)}`;
   const analysisDate = reportResponse?.meta?.generatedAt
     ? format(new Date(reportResponse.meta.generatedAt), "dd/MM/yyyy HH:mm", { locale: es })
     : format(new Date(), "dd/MM/yyyy HH:mm", { locale: es });
@@ -281,7 +317,7 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
         "Notas": abs.notas || "",
       };
     });
-    const period = `${dateFrom}_al_${dateTo}`;
+    const period = `${appliedPeriod.from}_al_${appliedPeriod.to}`;
     exportToExcel(rows, `informe_ausencias_${period}`, "Ausencias");
     toast.success(`Exportados ${rows.length} registros a Excel`);
   };
@@ -312,7 +348,7 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
       "Fecha de análisis": analysisDate,
       "Desglose por tipos (periodo)": Object.entries(e.typeCounts || {}).map(([t, c]) => `${t}: ${c}`).join("; "),
     }));
-    exportToExcel(rows, `resumen_ausencias_empleados_${dateFrom}_al_${dateTo}`, "Resumen");
+    exportToExcel(rows, `resumen_ausencias_empleados_${appliedPeriod.from}_al_${appliedPeriod.to}`, "Resumen");
     toast.success(`Exportados ${rows.length} empleados a Excel`);
   };
 
@@ -412,7 +448,9 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
         analysisDate={analysisDate}
         scopeLabel={filterDept === 'all' ? 'Todos los departamentos' : filterDept}
         stats={globalStats}
-        loading={reportLoading}
+        loading={reportBusy}
+        error={reportError}
+        onRetry={refetchReport}
         onShowAchievers={() => setViewMode('achievers')}
       />
       <p className="text-xs text-slate-400 px-1">
@@ -426,12 +464,12 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
             <CardTitle className="text-sm">Ausencias por Tipo</CardTitle>
           </CardHeader>
           <CardContent>
-            {reportLoading ? (
+            {reportBusy ? (
               <div className="flex items-center justify-center py-6">
                 <RefreshCw className="w-4 h-4 animate-spin text-slate-400" />
               </div>
             ) : byType.length === 0 ? (
-              <p className="text-xs text-slate-400 text-center py-6">Sin datos</p>
+              <p className="text-xs text-slate-400 text-center py-6">{emptyMessage}</p>
             ) : (
               <div className="space-y-1.5">
                 {byType.map(t => (
@@ -450,12 +488,12 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
             <CardTitle className="text-sm">Ausencias por Departamento</CardTitle>
           </CardHeader>
           <CardContent>
-            {reportLoading ? (
+            {reportBusy ? (
               <div className="flex items-center justify-center py-6">
                 <RefreshCw className="w-4 h-4 animate-spin text-slate-400" />
               </div>
             ) : byDepartment.length === 0 ? (
-              <p className="text-xs text-slate-400 text-center py-6">Sin datos</p>
+              <p className="text-xs text-slate-400 text-center py-6">{emptyMessage}</p>
             ) : (
               <div className="space-y-1.5">
                 {byDepartment.map(d => (
@@ -485,12 +523,12 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
           </div>
         </CardHeader>
         <CardContent>
-          {reportLoading ? (
+          {reportBusy ? (
             <div className="flex items-center justify-center py-8">
               <RefreshCw className="w-5 h-5 animate-spin text-slate-400" />
             </div>
           ) : employeeSummary.length === 0 ? (
-            <p className="text-xs text-slate-400 text-center py-6">Sin datos</p>
+            <p className="text-xs text-slate-400 text-center py-6">{emptyMessage}</p>
           ) : (
             <div className="max-h-[500px] overflow-y-auto">
               <Table>
@@ -549,7 +587,7 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
       )}
 
       {viewMode === 'achievers' && (
-        <NoAbsenceAchievers employees={employeeSummary} loading={reportLoading} />
+        <NoAbsenceAchievers employees={employeeSummary} loading={reportBusy} />
       )}
 
       {viewMode === 'individual' && (
@@ -561,8 +599,8 @@ export default function AbsenceReportGenerator({ employees: propEmployees, absen
           globalVacationSet={globalVacationSet}
           employeeVacationMap={employeeVacationMap}
           rangeBounds={rangeBounds}
-          dateFrom={dateFrom}
-          dateTo={dateTo}
+          dateFrom={appliedPeriod.from}
+          dateTo={appliedPeriod.to}
         />
       )}
     </div>
