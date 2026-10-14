@@ -265,6 +265,8 @@ export default async function(req: Request): Promise<Response> {
           days12: r12.daysAbsent,
           episodes12: r12.episodes,
           longest12: r12.longestEpisode,
+          workDays12: r12.workDays,
+          presenceDays12: r12.clockedDays,
           typeCounts12: r12.typeCounts,
           hasMaternity12: r12.hasMaternity,
           daysMonth: rMonth.daysAbsent,
