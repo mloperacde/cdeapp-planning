@@ -1,0 +1,254 @@
+{
+  "name": "ProductionEvaluation",
+  "type": "object",
+  "rls": {
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "rrhh"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "supervisor"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "jefe_turno"
+          }
+        },
+        {
+          "data.employee_id": "{{user.data.employee_id}}"
+        }
+      ]
+    },
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "rrhh"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "supervisor"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "jefe_turno"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "rrhh"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "supervisor"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "jefe_turno"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "Admin"
+          }
+        }
+      ]
+    }
+  },
+  "properties": {
+    "employee_id": {
+      "type": "string",
+      "description": "ID del empleado en la base maestra"
+    },
+    "employee_name": {
+      "type": "string",
+      "description": "Nombre del empleado (desnormalizado)"
+    },
+    "employee_code": {
+      "type": "string",
+      "description": "C\u00f3digo de empleado (desnormalizado)"
+    },
+    "department": {
+      "type": "string",
+      "description": "Departamento del empleado en el momento de la evaluaci\u00f3n"
+    },
+    "puesto": {
+      "type": "string"
+    },
+    "turno": {
+      "type": "string",
+      "description": "Turno o equipo del empleado"
+    },
+    "tipo_contrato": {
+      "type": "string"
+    },
+    "fecha_alta": {
+      "type": "string",
+      "format": "date"
+    },
+    "fecha_fin_contrato": {
+      "type": "string",
+      "format": "date"
+    },
+    "es_temporal": {
+      "type": "boolean",
+      "default": false,
+      "description": "Contrato temporal o con fecha de fin"
+    },
+    "fecha_evaluacion": {
+      "type": "string",
+      "format": "date",
+      "description": "Fecha en la que se realiza la evaluaci\u00f3n"
+    },
+    "evaluador_nombre": {
+      "type": "string"
+    },
+    "evaluador_email": {
+      "type": "string"
+    },
+    "modalidad_tecnica": {
+      "type": "string",
+      "enum": [
+        "Gen\u00e9rica",
+        "Por destrezas"
+      ],
+      "default": "Gen\u00e9rica",
+      "description": "Valoraci\u00f3n t\u00e9cnica global o detallada por destrezas"
+    },
+    "actitud_puntuacion": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 10
+    },
+    "actitud_observaciones": {
+      "type": "string"
+    },
+    "desempeno_puntuacion": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 10
+    },
+    "desempeno_observaciones": {
+      "type": "string"
+    },
+    "tecnica_puntuacion": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 10,
+      "description": "Puntuaci\u00f3n t\u00e9cnica global (modalidad gen\u00e9rica)"
+    },
+    "tecnica_observaciones": {
+      "type": "string"
+    },
+    "destrezas": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "skill_id": {
+            "type": "string"
+          },
+          "skill_nombre": {
+            "type": "string"
+          },
+          "puntuacion": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 10
+          },
+          "observaciones": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Destrezas concretas valoradas (modalidad por destrezas)"
+    },
+    "observaciones": {
+      "type": "string"
+    },
+    "estado": {
+      "type": "string",
+      "enum": [
+        "Borrador",
+        "Registrada"
+      ],
+      "default": "Registrada"
+    },
+    "origen": {
+      "type": "string",
+      "enum": [
+        "Manual",
+        "Excel"
+      ],
+      "default": "Manual"
+    },
+    "sala_produccion": {
+      "type": "string",
+      "description": "Sala o puesto donde prest\u00f3 servicio (columna SALA del archivo)"
+    },
+    "indicador_2a": {
+      "type": "string",
+      "description": "Valor literal de la columna 2\u00aa del archivo, sin interpretar"
+    },
+    "datos_excel": {
+      "type": "object",
+      "description": "Valores originales del archivo importado (SALA, HAB, ACTD., 2\u00aa, turno, contrato)"
+    }
+  },
+  "required": [
+    "employee_id",
+    "fecha_evaluacion"
+  ]
+}

@@ -4,7 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Award, Users, TrendingUp, Target, BookOpen, Settings, Briefcase, ArrowLeft } from "lucide-react";
+import { Award, Users, TrendingUp, Target, BookOpen, Settings, Briefcase, ArrowLeft, ClipboardCheck } from "lucide-react";
+import ProductionEvaluationPanel from "./evaluations/ProductionEvaluationPanel";
 import { useNavigationHistory } from "../utils/useNavigationHistory";
 import SkillManagement from "./SkillManagement";
 import EmployeeSkillsMatrix from "./EmployeeSkillsMatrix";
@@ -27,6 +28,8 @@ export default function DepartmentSkillMatrix({
 }) {
   const [activeTab, setActiveTab] = useState('matrix');
   const { goBack } = useNavigationHistory();
+  // Módulo de evaluaciones: solo para el departamento de producción / fabricación
+  const showEvaluations = normalizeString(department).startsWith('FABRIC');
 
   const { data: employees } = useQuery({
     queryKey: ['employeesMaster'],
@@ -148,7 +151,7 @@ export default function DepartmentSkillMatrix({
       <Card className="flex-1 flex flex-col min-h-0 border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden bg-white dark:bg-slate-900">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
           <div className="px-4 pt-2 border-b border-slate-100 dark:border-slate-800">
-            <TabsList className="grid w-full grid-cols-7 h-9">
+            <TabsList className={`grid w-full ${showEvaluations ? 'grid-cols-8' : 'grid-cols-7'} h-9`}>
               <TabsTrigger value="matrix" className="text-xs">
                 <Users className="w-3.5 h-3.5 mr-2" />
                 Matriz
@@ -177,6 +180,12 @@ export default function DepartmentSkillMatrix({
                 <Settings className="w-3.5 h-3.5 mr-2" />
                 Habilidades
               </TabsTrigger>
+              {showEvaluations && (
+                <TabsTrigger value="evaluations" className="text-xs">
+                  <ClipboardCheck className="w-3.5 h-3.5 mr-2" />
+                  Evaluaciones
+                </TabsTrigger>
+              )}
             </TabsList>
           </div>
 
@@ -216,6 +225,12 @@ export default function DepartmentSkillMatrix({
             <TabsContent value="config" className="mt-0 h-full">
               <SkillManagement />
             </TabsContent>
+
+            {showEvaluations && (
+              <TabsContent value="evaluations" className="mt-0 h-full">
+                <ProductionEvaluationPanel />
+              </TabsContent>
+            )}
           </div>
         </Tabs>
       </Card>
