@@ -14,6 +14,8 @@ import {
 import { Upload, Trash2, Infinity as InfinityIcon, Sparkles, Loader2 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
+import VacationCompensationField from "./VacationCompensationField";
+import { getVacationCompensationSummary } from "@/utils/vacationPendingCompensation";
 
 // Sugerencias de motivos frecuentes por tipo
 const SUGGESTED_REASONS = {
@@ -77,7 +79,8 @@ export default function AbsenceForm({
   onSubmit, 
   onCancel, 
   onDelete,
-  isSubmitting = false 
+  isSubmitting = false,
+  allowVacationCompensation = false,
 }) {
   const [formData, setFormData] = useState({
     employee_id: "",
@@ -98,6 +101,7 @@ export default function AbsenceForm({
   const [searchTerm, setSearchTerm] = useState("");
   const [isGeneratingReasons, setIsGeneratingReasons] = useState(false);
   const [aiReasons, setAiReasons] = useState([]);
+  const [compensarVacaciones, setCompensarVacaciones] = useState(false);
 
   useEffect(() => {
     if (initialData) {
@@ -136,6 +140,7 @@ export default function AbsenceForm({
         fecha_fin: initialData.fecha_fin ? initialData.fecha_fin.substring(0, 16) : ""
       }));
       setUnknownEndDate(initialData.fecha_fin_desconocida || false);
+      setCompensarVacaciones(!!initialData.compensacion_vacaciones_pendientes);
       
       if (initialData.fecha_inicio && initialData.fecha_fin && !initialData.fecha_fin_desconocida) {
         const start = new Date(initialData.fecha_inicio);
@@ -163,6 +168,7 @@ export default function AbsenceForm({
       });
       setFullDay(false);
       setUnknownEndDate(false);
+      setCompensarVacaciones(false);
     }
   }, [initialData, absenceTypes, employees]);
 
@@ -328,6 +334,34 @@ export default function AbsenceForm({
     
     let finalData = { ...formData };
 
+    // Compensación con saldo de vacaciones pendientes: se valida el saldo antes de guardar
+    if (compensarVacaciones) {
+      if (!formData.employee_id) {
+        toast.error("Selecciona un empleado para compensar con vacaciones pendientes");
+        return;
+      }
+      if (unknownEndDate) {
+        toast.error("Indica una fecha de fin conocida para poder compensar con vacaciones pendientes");
+        return;
+      }
+      const resumen = await getVacationCompensationSummary(
+        formData.employee_id,
+        finalData.fecha_inicio,
+        finalData.fecha_fin
+      );
+      if (!resumen.dias_requeridos) {
+        toast.error("El periodo indicado no contiene días laborables que compensar");
+        return;
+      }
+      if (!resumen.suficiente) {
+        toast.error(
+          `Saldo insuficiente: ${resumen.dias_disponibles} día(s) de vacaciones pendientes y se necesitan ${resumen.dias_requeridos}`
+        );
+        return;
+      }
+    }
+    finalData.compensacion_vacaciones_pendientes = compensarVacaciones;
+
     if (unknownEndDate) {
       finalData.fecha_fin_desconocida = true;
       finalData.fecha_fin = new Date('2099-12-31').toISOString();
@@ -470,6 +504,22 @@ export default function AbsenceForm({
           )}
         </div>
       </div>
+
+      {allowVacationCompensation && formData.employee_id && (
+        initialData?.compensacion_vacaciones?.aplicada ? (
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-800">
+            Ausencia compensada con {initialData.dias_vacaciones_compensados || 0} día(s) de vacaciones pendientes de disfrutar.
+          </div>
+        ) : (
+          <VacationCompensationField
+            employeeId={formData.employee_id}
+            fechaInicio={formData.fecha_inicio}
+            fechaFin={unknownEndDate ? null : formData.fecha_fin}
+            checked={compensarVacaciones}
+            onCheckedChange={setCompensarVacaciones}
+          />
+        )
+      )}
 
       <div className="flex items-center space-x-2 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 rounded-lg p-3">
         <Checkbox

@@ -85,6 +85,46 @@
       "items": {
         "type": "object"
       }
+    },
+    "ignore_protection_balance": {
+      "type": "boolean",
+      "default": false,
+      "description": "Excluye la ausencia del c\u00e1lculo de protecci\u00f3n de vacaciones"
+    },
+    "compensacion_vacaciones_pendientes": {
+      "type": "boolean",
+      "default": false,
+      "description": "Ausencia justificada descontando d\u00edas del saldo de vacaciones pendientes de disfrutar"
+    },
+    "dias_vacaciones_compensados": {
+      "type": "number",
+      "description": "D\u00edas descontados del saldo de vacaciones pendientes al justificar la ausencia"
+    },
+    "compensacion_vacaciones": {
+      "type": "object",
+      "description": "Trazabilidad de la compensaci\u00f3n aplicada sobre el saldo de vacaciones pendientes",
+      "properties": {
+        "aplicada": {
+          "type": "boolean",
+          "default": false
+        },
+        "dias_compensados": {
+          "type": "number"
+        },
+        "dias_disponibles_antes": {
+          "type": "number"
+        },
+        "dias_disponibles_despues": {
+          "type": "number"
+        },
+        "fecha_aplicacion": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "aplicado_por": {
+          "type": "string"
+        }
+      }
     }
   },
   "required": [

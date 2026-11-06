@@ -17,6 +17,7 @@ import {
 import { toast } from "sonner";
 import AbsenceForm from "./AbsenceForm";
 import { isAutoAbsence } from "@/utils/absenceUtils";
+import { applyVacationCompensation } from "@/utils/vacationPendingCompensation";
 
 const EMPTY = [];
 
@@ -207,16 +208,15 @@ export default function AbsenceValidationInbox({ employees = EMPTY, absenceTypes
         disponibilidad: 'Ausente',
         potencialmente_ausente_desde: null,
       });
-      if (absId) {
-        return await base44.entities.Absence.update(absId, {
+      const result = absId
+        ? await base44.entities.Absence.update(absId, {
           ...formData,
           estado_aprobacion: 'Aprobada',
           aprobado_por: currentUser?.email,
           fecha_aprobacion: new Date().toISOString(),
           notas: (selectedAbsence.notas || '') + '\n[Validado por RRHH]',
-        });
-      } else {
-        return await base44.entities.Absence.create({
+        })
+        : await base44.entities.Absence.create({
           employee_id: selectedEmployee.id,
           fecha_inicio: selectedEmployee.ausencia_inicio || new Date().toISOString(),
           ...formData,
@@ -226,12 +226,23 @@ export default function AbsenceValidationInbox({ employees = EMPTY, absenceTypes
           solicitado_por: currentUser?.email,
           notas: '[Validado por RRHH desde bandeja de detección]',
         });
+
+      // Compensación con saldo de vacaciones pendientes: descuenta días y recalcula saldo
+      if (formData.compensacion_vacaciones_pendientes && result?.id) {
+        try {
+          await applyVacationCompensation(result, currentUser?.email);
+        } catch (error) {
+          toast.error("No se pudo compensar con vacaciones pendientes: " + error.message);
+        }
       }
+
+      return result;
     },
     onSuccess: async () => {
       try { await base44.functions.invoke('syncEmployeeAvailability'); } catch (_) {}
       queryClient.invalidateQueries({ queryKey: ['absences'] });
       queryClient.invalidateQueries({ queryKey: ['employeeMasterDatabase'] });
+      queryClient.invalidateQueries({ queryKey: ['vacationPendingBalances'] });
       toast.success("Ausencia justificada y clasificada correctamente");
       setShowValidateDialog(false);
       setSelectedEmployee(null);
@@ -564,6 +575,7 @@ export default function AbsenceValidationInbox({ employees = EMPTY, absenceTypes
               }}
               employees={employees}
               absenceTypes={absenceTypes}
+              allowVacationCompensation
               onSubmit={(data) => validateMutation.mutate(data)}
               onCancel={() => { setShowValidateDialog(false); setSelectedEmployee(null); setSelectedAbsence(null); }}
               isSubmitting={validateMutation.isPending}

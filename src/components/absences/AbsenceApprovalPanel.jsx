@@ -11,11 +11,17 @@ import { es } from "date-fns/locale";
 import { toast } from "sonner";
 import { notifyAbsenceDecisionAdvanced } from "../notifications/AdvancedNotificationService";
 import PayrollExportButton from "./PayrollExportButton";
+import VacationCompensationField from "./VacationCompensationField";
 import { isAutoAbsence } from "@/utils/absenceUtils";
+import {
+  applyVacationCompensation,
+  getVacationCompensationSummary,
+} from "@/utils/vacationPendingCompensation";
 
 export default function AbsenceApprovalPanel({ employees, masterEmployees = [], absenceTypes, currentUser }) {
   const [expandedId, setExpandedId] = useState(null);
   const [comentario, setComentario] = useState("");
+  const [compensarVacaciones, setCompensarVacaciones] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: absences = [] } = useQuery({
@@ -40,8 +46,25 @@ export default function AbsenceApprovalPanel({ employees, masterEmployees = [], 
   });
 
   const approvalMutation = useMutation({
-    mutationFn: async ({ absenceId, estado, comentario, employeeId, absenceTypeId }) => {
+    mutationFn: async ({ absenceId, estado, comentario, employeeId, absenceTypeId, compensarVacaciones = false }) => {
       const absence = absences.find(a => a.id === absenceId);
+
+      // Validar saldo de vacaciones pendientes antes de aprobar
+      if (estado === "Aprobada" && compensarVacaciones && absence) {
+        const resumen = await getVacationCompensationSummary(
+          absence.employee_id,
+          absence.fecha_inicio,
+          absence.fecha_fin_desconocida ? null : absence.fecha_fin
+        );
+        if (!resumen.dias_requeridos) {
+          throw new Error("El periodo de la ausencia no contiene días laborables que compensar");
+        }
+        if (!resumen.suficiente) {
+          throw new Error(
+            `Saldo insuficiente: ${resumen.dias_disponibles} día(s) de vacaciones pendientes y se necesitan ${resumen.dias_requeridos}`
+          );
+        }
+      }
 
       const result = await base44.entities.Absence.update(absenceId, {
         estado_aprobacion: estado,
@@ -71,6 +94,11 @@ export default function AbsenceApprovalPanel({ employees, masterEmployees = [], 
         }
       }
 
+      // Compensación con saldo de vacaciones pendientes: descuenta días y recalcula saldo
+      if (estado === "Aprobada" && compensarVacaciones && absence) {
+        await applyVacationCompensation(absence, currentUser?.email);
+      }
+
       const absenceType = absenceTypes.find(t => t.id === absenceTypeId);
       await notifyAbsenceDecisionAdvanced(absenceId, employeeId, estado === "Aprobada", comentario, absenceType);
       return result;
@@ -80,10 +108,13 @@ export default function AbsenceApprovalPanel({ employees, masterEmployees = [], 
       queryClient.invalidateQueries({ queryKey: ['absences'] });
       queryClient.invalidateQueries({ queryKey: ['employees'] });
       queryClient.invalidateQueries({ queryKey: ['employeeMasterDatabase'] });
+      queryClient.invalidateQueries({ queryKey: ['vacationPendingBalances'] });
       toast.success(`Ausencia ${variables.estado === "Aprobada" ? "aprobada ✓" : "rechazada"} correctamente`);
       setExpandedId(null);
       setComentario("");
-    }
+      setCompensarVacaciones(false);
+    },
+    onError: (error) => toast.error(error?.message || "Error al procesar la solicitud")
   });
 
   const deleteMutation = useMutation({
@@ -208,6 +239,7 @@ export default function AbsenceApprovalPanel({ employees, masterEmployees = [], 
                         onClick={() => {
                           setExpandedId(absence.id);
                           setComentario("");
+                          setCompensarVacaciones(false);
                         }}
                       >
                         {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
@@ -242,6 +274,19 @@ export default function AbsenceApprovalPanel({ employees, masterEmployees = [], 
                 {/* Panel expandido */}
                 {isExpanded && (
                   <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700 space-y-3">
+                    {absence.compensacion_vacaciones?.aplicada ? (
+                      <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-800">
+                        Ausencia compensada con {absence.dias_vacaciones_compensados || 0} día(s) de vacaciones pendientes de disfrutar.
+                      </div>
+                    ) : (
+                      <VacationCompensationField
+                        employeeId={absence.employee_id}
+                        fechaInicio={absence.fecha_inicio}
+                        fechaFin={absence.fecha_fin_desconocida ? null : absence.fecha_fin}
+                        checked={compensarVacaciones}
+                        onCheckedChange={setCompensarVacaciones}
+                      />
+                    )}
                     <div>
                       <label className="text-xs font-medium text-slate-600 dark:text-slate-400 block mb-1">
                         Comentario (opcional)
@@ -262,7 +307,8 @@ export default function AbsenceApprovalPanel({ employees, masterEmployees = [], 
                           estado: "Aprobada",
                           comentario,
                           employeeId: absence.employee_id,
-                          absenceTypeId: absence.absence_type_id
+                          absenceTypeId: absence.absence_type_id,
+                          compensarVacaciones
                         })}
                         disabled={approvalMutation.isPending}
                       >
