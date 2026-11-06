@@ -290,6 +290,25 @@ export default function AbsenceForm({
     }
   };
 
+  // Al justificar con vacaciones pendientes se asigna el tipo específico y un motivo por defecto
+  const handleCompensationChange = (value) => {
+    setCompensarVacaciones(value);
+    if (!value) return;
+
+    const vacType = absenceTypes.find(at => at.codigo === "JUST_VAC_PEND");
+    setFormData(prev => ({
+      ...prev,
+      ...(vacType
+        ? {
+            absence_type_id: vacType.id,
+            tipo: vacType.nombre,
+            remunerada: vacType.remunerada || false,
+          }
+        : {}),
+      motivo: prev.motivo || "Justificación de la ausencia con cargo a vacaciones pendientes de disfrutar",
+    }));
+  };
+
   const handleFileUpload = async (e) => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
@@ -516,7 +535,7 @@ export default function AbsenceForm({
             fechaInicio={formData.fecha_inicio}
             fechaFin={unknownEndDate ? null : formData.fecha_fin}
             checked={compensarVacaciones}
-            onCheckedChange={setCompensarVacaciones}
+            onCheckedChange={handleCompensationChange}
           />
         )
       )}

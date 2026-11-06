@@ -49,6 +49,9 @@ export default function VacationCompensationField({
           <p className="text-xs text-emerald-800 dark:text-emerald-300">
             Los días laborables de la ausencia se descuentan del saldo de vacaciones pendientes de disfrutar y el saldo se recalcula automáticamente.
           </p>
+          <p className="text-xs text-emerald-700 dark:text-emerald-400">
+            Al marcarlo se asigna el tipo «Justificación con vacaciones pendientes».
+          </p>
         </div>
       </div>
 
