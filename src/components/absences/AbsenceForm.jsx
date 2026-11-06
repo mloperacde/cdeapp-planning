@@ -359,14 +359,10 @@ export default function AbsenceForm({
         toast.error("Selecciona un empleado para compensar con vacaciones pendientes");
         return;
       }
-      if (unknownEndDate) {
-        toast.error("Indica una fecha de fin conocida para poder compensar con vacaciones pendientes");
-        return;
-      }
       const resumen = await getVacationCompensationSummary(
         formData.employee_id,
         finalData.fecha_inicio,
-        finalData.fecha_fin
+        unknownEndDate ? formData.fecha_inicio : finalData.fecha_fin
       );
       if (!resumen.dias_requeridos) {
         toast.error("El periodo indicado no contiene días laborables que compensar");
@@ -533,7 +529,7 @@ export default function AbsenceForm({
           <VacationCompensationField
             employeeId={formData.employee_id}
             fechaInicio={formData.fecha_inicio}
-            fechaFin={unknownEndDate ? null : formData.fecha_fin}
+            fechaFin={unknownEndDate ? formData.fecha_inicio : formData.fecha_fin}
             checked={compensarVacaciones}
             onCheckedChange={handleCompensationChange}
           />

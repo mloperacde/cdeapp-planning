@@ -69,6 +69,12 @@ export async function getVacationCompensationSummary(employeeId, startValue, end
 export async function applyVacationCompensation(absence, appliedBy) {
   if (!absence?.id || !absence?.employee_id) return null;
 
+  // Si la fecha de fin es desconocida se compensa únicamente el día de inicio
+  const absenceToConsume = {
+    ...absence,
+    fecha_fin: absence.fecha_fin_desconocida ? absence.fecha_inicio : absence.fecha_fin,
+  };
+
   const holidays = await base44.entities.Holiday.list();
 
   // Idempotencia: si ya existía un consumo previo de esta ausencia, se recalcula
@@ -79,7 +85,7 @@ export async function applyVacationCompensation(absence, appliedBy) {
   });
   const disponiblesAntes = sumPendingVacationDays(antes);
 
-  const consumo = await consumeVacationPendingForAbsence(absence, holidays);
+  const consumo = await consumeVacationPendingForAbsence(absenceToConsume, holidays);
   const diasCompensados = consumo?.dias_consumidos || 0;
 
   const despues = await base44.entities.VacationPendingBalance.filter({

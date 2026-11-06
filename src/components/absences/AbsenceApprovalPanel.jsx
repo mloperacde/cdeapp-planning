@@ -54,7 +54,7 @@ export default function AbsenceApprovalPanel({ employees, masterEmployees = [], 
         const resumen = await getVacationCompensationSummary(
           absence.employee_id,
           absence.fecha_inicio,
-          absence.fecha_fin_desconocida ? null : absence.fecha_fin
+          absence.fecha_fin_desconocida ? absence.fecha_inicio : absence.fecha_fin
         );
         if (!resumen.dias_requeridos) {
           throw new Error("El periodo de la ausencia no contiene días laborables que compensar");
@@ -282,7 +282,7 @@ export default function AbsenceApprovalPanel({ employees, masterEmployees = [], 
                       <VacationCompensationField
                         employeeId={absence.employee_id}
                         fechaInicio={absence.fecha_inicio}
-                        fechaFin={absence.fecha_fin_desconocida ? null : absence.fecha_fin}
+                        fechaFin={absence.fecha_fin_desconocida ? absence.fecha_inicio : absence.fecha_fin}
                         checked={compensarVacaciones}
                         onCheckedChange={setCompensarVacaciones}
                       />
