@@ -25,6 +25,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { User, Briefcase, Clock, Home, FileText, Calendar, Wrench, AlertCircle, TrendingDown, ArrowLeft, Flame, Loader2, ChevronDown, X } from "lucide-react";
+import { cleanLockerNumber } from "@/utils";
+import { findLockerConflict, syncLockerAssignment } from "@/utils/lockerSync";
+import EmployeeLockerTab from "./EmployeeLockerTab";
 
 const NACIONALIDADES = [
   "Española","Alemana","Francesa","Italiana","Portuguesa","Rumana","Marroquí","Ecuatoriana",
@@ -436,6 +439,31 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
         }
       }
 
+      // SINCRONIZACIÓN DE TAQUILLA: validar disponibilidad antes de guardar
+      const origen = freshEmployeeData || employee || {};
+      const lockerCambiado = employee?.id
+        ? (origen.taquilla_vestuario || "") !== (cleanData.taquilla_vestuario || "") ||
+          cleanLockerNumber(origen.taquilla_numero) !== cleanLockerNumber(cleanData.taquilla_numero)
+        : Boolean(cleanData.taquilla_vestuario && cleanLockerNumber(cleanData.taquilla_numero));
+
+      if (lockerCambiado && cleanData.taquilla_vestuario && cleanLockerNumber(cleanData.taquilla_numero)) {
+        const asignaciones = await base44.entities.LockerAssignment.list();
+        const conflicto = findLockerConflict(
+          asignaciones,
+          employee?.id,
+          cleanData.taquilla_vestuario,
+          cleanData.taquilla_numero
+        );
+        if (conflicto) {
+          const ocupante = (await base44.entities.EmployeeMasterDatabase.list()).find(
+            e => String(e.id) === String(conflicto.employee_id)
+          );
+          throw new Error(
+            `La taquilla ${cleanLockerNumber(cleanData.taquilla_numero)} de ${cleanData.taquilla_vestuario} ya está asignada a ${ocupante?.nombre || "otro empleado"}`
+          );
+        }
+      }
+
       // VALIDACIÓN DE DUPLICADOS (CÓDIGO DE EMPLEADO)
       if (cleanData.codigo_empleado) {
         // Verificar si existe otro empleado con el mismo código
@@ -476,6 +504,16 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
         savedEmployee = await base44.entities.EmployeeMasterDatabase.update(employee.id, cleanData);
       } else {
         savedEmployee = await base44.entities.EmployeeMasterDatabase.create(cleanData);
+      }
+
+      // Sincronizar la taquilla configurada con el módulo de Vestuarios y Taquillas
+      if (lockerCambiado && savedEmployee?.id) {
+        await syncLockerAssignment({
+          employeeId: savedEmployee.id,
+          vestuario: cleanData.taquilla_vestuario || "",
+          numeroTaquilla: cleanData.taquilla_numero || "",
+          motivo: employee?.id ? "Edición desde ficha de empleado" : "Alta desde ficha de empleado"
+        });
       }
 
       // Sincronizar EmployeeMachineSkill con campos legacy maquina_1...maquina_10
@@ -522,6 +560,7 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
       queryClient.invalidateQueries({ queryKey: ['employeeMachineSkills'] });
       queryClient.invalidateQueries({ queryKey: ['machineAssignments'] });
       queryClient.invalidateQueries({ queryKey: ['lockerAssignments'] });
+      queryClient.invalidateQueries({ queryKey: ['employees'] });
       queryClient.invalidateQueries({ queryKey: ['shiftAssignments'] });
       toast.success("Empleado guardado correctamente. Cambios aplicados en todos los módulos.");
       onClose();
@@ -1315,33 +1354,11 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
 
             {permissions.tabs.taquilla && (
             <TabsContent value="taquilla" className="space-y-4 mt-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Vestuario</Label>
-                  <Select
-                    value={formData.taquilla_vestuario || ""}
-                    onValueChange={(value) => setFormData({ ...formData, taquilla_vestuario: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar vestuario" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Vestuario Femenino Planta Baja">Vestuario Femenino Planta Baja</SelectItem>
-                      <SelectItem value="Vestuario Femenino Planta Alta">Vestuario Femenino Planta Alta</SelectItem>
-                      <SelectItem value="Vestuario Masculino Planta Baja">Vestuario Masculino Planta Baja</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Número Taquilla</Label>
-                  <Input
-                    value={formData.taquilla_numero || ""}
-                    onChange={(e) => setFormData({ ...formData, taquilla_numero: e.target.value })}
-                    placeholder="Ej: 101, A-15, etc."
-                  />
-                </div>
-              </div>
+              <EmployeeLockerTab
+                formData={formData}
+                setFormData={setFormData}
+                employeeId={employee?.id}
+              />
             </TabsContent>
             )}
 
