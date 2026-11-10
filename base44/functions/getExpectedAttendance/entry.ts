@@ -104,6 +104,8 @@ Deno.serve(async (req) => {
               turno: null,
               hora_entrada: null,
               hora_salida: null,
+              puesto: emp.puesto || null,
+              categoria: emp.categoria || null,
               equipo: emp.equipo || teamKey,
               team_key: teamKey,
               semana_inicio: weekStart,
@@ -143,6 +145,8 @@ Deno.serve(async (req) => {
         semana_inicio: weekStart,
         tipo_jornada: emp.tipo_jornada,
         num_horas_jornada: emp.num_horas_jornada,
+        puesto: emp.puesto || null,
+        categoria: emp.categoria || null,
       });
     }
 

@@ -29,16 +29,23 @@ function getShiftLifecycle(timeRange, nowMins) {
 export default function ShiftPanel({ shiftKey, label, timeRange, employees, nowMinutes, isAnalysisDate }) {
   const [expandedDepts, setExpandedDepts] = useState({});
 
-  // Agrupar por departamento
+  // Agrupar por departamento, separando los jefes de turno en su propio apartado
   const byDepartment = useMemo(() => {
     const map = {};
+    const jefes = [];
     for (const emp of employees) {
+      if (/JEFE DE TURNO.*PRODUCCI/i.test(emp.puesto || "")) {
+        jefes.push(emp);
+        continue;
+      }
       const dept = emp.departamento || "Sin Departamento";
       if (!map[dept]) map[dept] = [];
       map[dept].push(emp);
     }
     // Ordenar departamentos alfabéticamente
-    return Object.entries(map).sort(([a], [b]) => a.localeCompare(b, "es"));
+    const groups = Object.entries(map).sort(([a], [b]) => a.localeCompare(b, "es"));
+    if (jefes.length > 0) groups.unshift(["JEFES DE TURNO PRODUCCIÓN", jefes]);
+    return groups;
   }, [employees]);
 
   // Totales del turno — absent_no_record suma como ausente
@@ -124,7 +131,7 @@ export default function ShiftPanel({ shiftKey, label, timeRange, employees, nowM
               const deptTotals = {
                 expected: deptEmployees.length,
                 present: deptEmployees.filter(e => e.presenceStatus === "present" || e.presenceStatus === "late").length,
-                absent: deptEmployees.filter(e => e.presenceStatus === "absent_confirmed").length,
+                absent: deptEmployees.filter(e => e.presenceStatus === "absent_confirmed" || e.presenceStatus === "absent_no_record").length,
                 predicted: deptEmployees.filter(e => e.presenceStatus === "absent_predicted").length,
                 pending: deptEmployees.filter(e => e.presenceStatus === "pending").length,
               };
