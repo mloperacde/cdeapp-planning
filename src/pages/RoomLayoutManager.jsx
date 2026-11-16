@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, LayoutDashboard, GitBranch, Edit, Trash2, Eye, Copy, Package, ClipboardList } from 'lucide-react';
 import RoomLayoutEditor from '@/components/layouts/RoomLayoutEditor';
 import ProcessDiagramEditor from '@/components/layouts/ProcessDiagramEditor';
+import ArticleProcessPlansModule from '@/components/article-process/ArticleProcessPlansModule';
 import { toast } from 'sonner';
 
 const STATUS_COLORS = {
@@ -96,20 +97,22 @@ export default function RoomLayoutManager() {
             Diseña la disposición física de las salas y define los diagramas de proceso con posicionamiento de operarios
           </p>
         </div>
-        <Button
-          onClick={() => activeTab === 'layouts' ? setEditingLayout('new') : setEditingDiagram('new')}
-          className="bg-blue-600 hover:bg-blue-700 text-white gap-2"
-        >
-          <Plus className="w-4 h-4" />
-          {activeTab === 'layouts' ? 'Nuevo Layout' : 'Nuevo Diagrama'}
-        </Button>
+        {activeTab !== 'articulos' && (
+          <Button
+            onClick={() => activeTab === 'layouts' ? setEditingLayout('new') : setEditingDiagram('new')}
+            className="bg-blue-600 hover:bg-blue-700 text-white gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            {activeTab === 'layouts' ? 'Nuevo Layout' : 'Nuevo Diagrama'}
+          </Button>
+        )}
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 border-b border-slate-200 dark:border-border">
+      <div className="flex gap-2 border-b border-slate-200 dark:border-border overflow-x-auto">
         <button
           onClick={() => setActiveTab('layouts')}
-          className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+          className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 whitespace-nowrap transition-colors ${
             activeTab === 'layouts'
               ? 'border-blue-600 text-blue-600'
               : 'border-transparent text-slate-500 hover:text-slate-700'
@@ -128,6 +131,17 @@ export default function RoomLayoutManager() {
         >
           <GitBranch className="w-4 h-4" />
           Diagramas de Proceso ({diagrams.length})
+        </button>
+        <button
+          onClick={() => setActiveTab('articulos')}
+          className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === 'articulos'
+              ? 'border-blue-600 text-blue-600'
+              : 'border-transparent text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          <Package className="w-4 h-4" />
+          Por Artículo
         </button>
       </div>
 
@@ -231,6 +245,9 @@ export default function RoomLayoutManager() {
           })}
         </div>
       )}
+
+      {/* Diagramas de proceso por artículo / familia */}
+      {activeTab === 'articulos' && <ArticleProcessPlansModule layouts={layouts} />}
     </div>
   );
 }
