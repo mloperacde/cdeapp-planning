@@ -307,7 +307,6 @@ export default function ArticleProcessPlansModule({ layouts = [] }) {
         open={orderOpen}
         onOpenChange={setOrderOpen}
         templates={templates}
-        templatesLoading={isLoading}
         onCreate={(form) => createOrderMutation.mutate(form)}
         isPending={createOrderMutation.isPending}
       />

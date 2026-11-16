@@ -49,6 +49,14 @@ export default function PlanningTimeline({
     return Math.round(value);
   });
 
+  const tickLabel = (value) => {
+    if (Math.abs(value) >= 120) {
+      const hours = Math.round(value / 60);
+      return `${hours > 0 ? '+' : ''}${hours} h`;
+    }
+    return formatMinutes(value);
+  };
+
   const renderRow = (activity) => {
     const selected = activity.id === selectedId;
     const end = activity.offset + Math.max(activity.dur, 5);
@@ -134,10 +142,12 @@ export default function PlanningTimeline({
               {ticks.map((tick, i) => (
                 <span
                   key={`${tick}-${i}`}
-                  className="absolute top-0 -translate-x-1/2 text-[9px] text-slate-400 whitespace-nowrap"
+                  className={`absolute top-0 -translate-x-1/2 text-[9px] text-slate-400 whitespace-nowrap ${
+                    i === 1 || i === 3 ? 'hidden sm:block' : ''
+                  }`}
                   style={{ left: `${pct(tick)}%` }}
                 >
-                  {formatMinutes(tick)}
+                  {tickLabel(tick)}
                 </span>
               ))}
             </div>

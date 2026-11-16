@@ -26,6 +26,7 @@ export default function PlannerHeader({
   onExport,
 }) {
   const isOrder = (data.tipo || 'Plantilla') === 'Orden';
+  const gridClass = isOrder ? 'grid-cols-2 lg:grid-cols-4' : 'grid-cols-2 lg:grid-cols-5';
 
   const handleLine = (id) => {
     const layout = layouts.find((l) => l.id === id);
@@ -63,7 +64,7 @@ export default function PlannerHeader({
         </Button>
       </div>
 
-      <div className="px-2 sm:px-3 pb-2 grid grid-cols-2 lg:grid-cols-4 gap-2">
+      <div className={`px-2 sm:px-3 pb-2 grid ${gridClass} gap-2`}>
         {isOrder ? (
           <>
             <div>
@@ -135,6 +136,15 @@ export default function PlannerHeader({
                 value={data.hito_nombre || ''}
                 onChange={(e) => patch({ hito_nombre: e.target.value })}
                 placeholder="Inicio de producción"
+                className={fieldClass}
+              />
+            </div>
+            <div>
+              <Label className="text-[10px] text-slate-500">Fecha del hito (opcional)</Label>
+              <Input
+                type="datetime-local"
+                value={toLocalInputValue(data.hito_fecha)}
+                onChange={(e) => patch({ hito_fecha: e.target.value })}
                 className={fieldClass}
               />
             </div>

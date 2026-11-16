@@ -141,7 +141,7 @@ export default function RoomLayoutManager() {
           }`}
         >
           <Package className="w-4 h-4" />
-          Por Artículo
+          Planificador
         </button>
       </div>
 

@@ -1,6 +1,6 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Copy, Download, Edit, GitBranch, Image, Layers, Trash2 } from 'lucide-react';
+import { Copy, Download, Edit, GitBranch, Layers, Package, Trash2 } from 'lucide-react';
 import { formatMinutes, formatHitoDate } from './plannerTime';
 
 const STATUS_COLORS = {
@@ -33,7 +33,7 @@ export default function ArticleProcessPlanCard({ plan, articleCount, onEdit, onD
 
       {isOrder && (
         <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300 mb-1.5">
-          <Image className="w-3.5 h-3.5 flex-shrink-0 text-slate-400" />
+          <Package className="w-3.5 h-3.5 flex-shrink-0 text-slate-400" />
           <span className="truncate">{plan.product_name || 'Sin producto'}</span>
         </div>
       )}
@@ -63,7 +63,9 @@ export default function ArticleProcessPlanCard({ plan, articleCount, onEdit, onD
       )}
 
       <div className="flex items-center gap-3 text-[11px] text-slate-500 mb-3">
-        <span className="flex items-center gap-1"><GitBranch className="w-3 h-3" />{articleCount} art.</span>
+        {!isOrder && (
+          <span className="flex items-center gap-1"><GitBranch className="w-3 h-3" />{articleCount} art.</span>
+        )}
         <span>{(plan.actividades || []).length} actividades</span>
         <span>{formatMinutes(total)}</span>
       </div>
