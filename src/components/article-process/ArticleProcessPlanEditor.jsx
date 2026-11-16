@@ -2,18 +2,19 @@ import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { ArrowLeft, Download, GitBranch, Layers, ListChecks, Package, Save, Settings2 } from 'lucide-react';
 import { toast } from 'sonner';
+import PlannerHeader from './PlannerHeader';
+import PlanningTimeline from './PlanningTimeline';
+import ActivityInspector from './ActivityInspector';
+import LineStations3D from './LineStations3D';
 import ArticleScopeSelector from './ArticleScopeSelector';
-import ActivitySequenceEditor from './ActivitySequenceEditor';
-import ProcessTimelinePreview from './ProcessTimelinePreview';
-import PlanLinePanel from './PlanLinePanel';
 import PlanSettingsPanel from './PlanSettingsPanel';
 import { useArticlesCatalog, useMachinesCatalog } from './useArticleProcessCatalog';
-import { exportPlanJson } from './exportPlanJson';
+import { exportPlanJson } from './plannerJson';
+import { activityId } from './plannerTime';
 
 const BLANK = {
+  tipo: 'Plantilla',
   nombre: '',
   codigo: '',
   descripcion: '',
@@ -21,6 +22,12 @@ const BLANK = {
   room_layout_name: '',
   process_id: '',
   process_name: '',
+  order_reference: '',
+  product_name: '',
+  quantity: 0,
+  hito_fecha: '',
+  source_plan_id: '',
+  source_plan_name: '',
   familias: [],
   linked_articles: [],
   hito_nombre: 'Inicio de producción',
@@ -30,19 +37,26 @@ const BLANK = {
   notes: '',
 };
 
-const TABS = [
-  { key: 'articulos', label: 'Artículos', icon: Package },
-  { key: 'actividades', label: 'Actividades', icon: ListChecks },
-  { key: 'linea', label: 'Línea de envasado', icon: Layers },
-  { key: 'ajustes', label: 'Configuración', icon: Settings2 },
-];
+const toIso = (value) => {
+  if (!value) return '';
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? '' : d.toISOString();
+};
 
-export default function ArticleProcessPlanEditor({ planId, layouts = [], onBack, onSaved }) {
+export default function ArticleProcessPlanEditor({
+  planId,
+  layouts = [],
+  templates = [],
+  onBack,
+  onSaved,
+}) {
   const isNew = !planId;
   const qc = useQueryClient();
   const [data, setData] = useState(BLANK);
   const [loaded, setLoaded] = useState(isNew);
-  const [tab, setTab] = useState('articulos');
+  const [tab, setTab] = useState('cronograma');
+  const [selectedId, setSelectedId] = useState(null);
+  const [templateId, setTemplateId] = useState('');
 
   const { data: articles = [] } = useArticlesCatalog();
   const { data: machines = [] } = useMachinesCatalog();
@@ -60,25 +74,121 @@ export default function ArticleProcessPlanEditor({ planId, layouts = [], onBack,
     }
   }, [existing, isNew, loaded]);
 
-  const patch = (changes) => setData(d => ({ ...d, ...changes }));
+  const patch = (changes) => setData((d) => ({ ...d, ...changes }));
+
+  const actividades = data.actividades || [];
+  const layout = useMemo(
+    () => layouts.find((l) => l.id === data.room_layout_id),
+    [layouts, data.room_layout_id]
+  );
+  const layoutElements = layout?.layout_elements || [];
+
+  useEffect(() => {
+    if (actividades.length && !actividades.some((a) => a.id === selectedId)) {
+      setSelectedId(actividades[0].id);
+    }
+    if (!actividades.length && selectedId) setSelectedId(null);
+  }, [actividades, selectedId]);
+
+  const selectedIndex = actividades.findIndex((a) => a.id === selectedId);
+  const selected = selectedIndex >= 0 ? actividades[selectedIndex] : null;
+
+  const setActividades = (list) => patch({ actividades: list.map((a, i) => ({ ...a, orden: i + 1 })) });
+
+  const updateActivity = (id, changes) => {
+    setActividades(actividades.map((a) => (a.id === id ? { ...a, ...changes } : a)));
+  };
+
+  const addActivity = () => {
+    const activity = {
+      id: activityId(),
+      orden: actividades.length + 1,
+      nombre: '',
+      tipo: 'Proceso',
+      kind: 'process',
+      fase: 'Producción',
+      unidad: 'Minutos',
+      estacion_element_id: '',
+      estacion_nombre: '',
+      maquina_id: '',
+      maquina_nombre: '',
+      duracion_minutos: 30,
+      offset_minutos: 0,
+      responsable: '',
+      notas: '',
+    };
+    setActividades([...actividades, activity]);
+    setSelectedId(activity.id);
+  };
+
+  const duplicateActivity = (id) => {
+    const index = actividades.findIndex((a) => a.id === id);
+    if (index < 0) return;
+    const copy = { ...actividades[index], id: activityId() };
+    const next = [...actividades];
+    next.splice(index + 1, 0, copy);
+    setActividades(next);
+    setSelectedId(copy.id);
+  };
+
+  const removeActivity = (id) => {
+    const index = actividades.findIndex((a) => a.id === id);
+    if (index < 0) return;
+    const next = actividades.filter((a) => a.id !== id);
+    setActividades(next);
+    setSelectedId(next[Math.min(index, next.length - 1)]?.id || null);
+  };
+
+  const moveActivity = (id, direction) => {
+    const index = actividades.findIndex((a) => a.id === id);
+    const target = index + direction;
+    if (index < 0 || target < 0 || target >= actividades.length) return;
+    const next = [...actividades];
+    const [moved] = next.splice(index, 1);
+    next.splice(target, 0, moved);
+    setActividades(next);
+  };
+
+  const applyTemplate = () => {
+    const template = templates.find((t) => t.id === templateId);
+    if (!template) {
+      toast.error('Selecciona una plantilla');
+      return;
+    }
+    const copied = (template.actividades || []).map((a) => ({ ...a, id: activityId() }));
+    patch({
+      actividades: copied.map((a, i) => ({ ...a, orden: i + 1 })),
+      room_layout_id: data.room_layout_id || template.room_layout_id || '',
+      room_layout_name: data.room_layout_name || template.room_layout_name || '',
+      process_id: data.process_id || template.process_id || '',
+      process_name: data.process_name || template.process_name || '',
+      hito_nombre: template.hito_nombre || data.hito_nombre,
+      source_plan_id: template.id,
+      source_plan_name: template.nombre,
+    });
+    setSelectedId(copied[0]?.id || null);
+    toast.success(`Plantilla «${template.nombre}» aplicada`);
+  };
 
   const saveMutation = useMutation({
-    mutationFn: (payload) => isNew
-      ? base44.entities.ArticleProcessPlan.create(payload)
-      : base44.entities.ArticleProcessPlan.update(planId, payload),
+    mutationFn: (payload) =>
+      isNew
+        ? base44.entities.ArticleProcessPlan.create(payload)
+        : base44.entities.ArticleProcessPlan.update(planId, payload),
     onSuccess: (saved) => {
       qc.invalidateQueries({ queryKey: ['ArticleProcessPlan'] });
-      toast.success('Diagrama guardado');
+      toast.success('Plan guardado');
       if (isNew && saved?.id) onSaved?.(saved.id);
     },
   });
 
   const handleSave = () => {
     if (!data.nombre.trim()) {
-      toast.error('El diagrama necesita un nombre');
+      toast.error(data.tipo === 'Orden' ? 'Indica la referencia de la orden' : 'La plantilla necesita un nombre');
       return;
     }
-    const payload = {
+    saveMutation.mutate({
+      tipo: data.tipo || 'Plantilla',
       nombre: data.nombre,
       codigo: data.codigo || '',
       descripcion: data.descripcion || '',
@@ -86,78 +196,93 @@ export default function ArticleProcessPlanEditor({ planId, layouts = [], onBack,
       room_layout_name: data.room_layout_name || '',
       process_id: data.process_id || '',
       process_name: data.process_name || '',
+      order_reference: data.order_reference || '',
+      product_name: data.product_name || '',
+      quantity: Number(data.quantity) || 0,
+      hito_fecha: toIso(data.hito_fecha),
+      source_plan_id: data.source_plan_id || '',
+      source_plan_name: data.source_plan_name || '',
       familias: data.familias || [],
       linked_articles: data.linked_articles || [],
       hito_nombre: data.hito_nombre || 'Inicio de producción',
-      actividades: data.actividades || [],
+      actividades: actividades.map((a, i) => ({ ...a, orden: i + 1 })),
       status: data.status || 'Borrador',
       version: Number(data.version) || 1,
       notes: data.notes || '',
-    };
-    saveMutation.mutate(payload);
+    });
   };
-
-  const layoutElements = useMemo(
-    () => layouts.find(l => l.id === data.room_layout_id)?.layout_elements || [],
-    [layouts, data.room_layout_id]
-  );
 
   if (!loaded) {
     return (
       <div className="flex items-center justify-center py-24 text-sm text-slate-400">
-        Cargando diagrama...
+        Cargando plan...
       </div>
     );
   }
 
-  return (
-    <div className="flex flex-col h-full min-h-[70vh] bg-slate-50 dark:bg-background rounded-xl border border-slate-200 dark:border-border overflow-hidden">
-      <div className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-card border-b border-slate-200 dark:border-border flex-shrink-0">
-        <Button variant="ghost" size="sm" onClick={onBack} className="gap-1 h-8">
-          <ArrowLeft className="w-4 h-4" /> Volver
-        </Button>
-        <Input
-          value={data.nombre}
-          onChange={e => patch({ nombre: e.target.value })}
-          placeholder="Nombre del diagrama de proceso..."
-          className="h-8 flex-1 font-semibold border-0 bg-transparent shadow-none focus-visible:ring-0 text-base"
+  const plannerColumns = (primary, secondary) => (
+    <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_320px] gap-3 items-start">
+      <div className="space-y-3 min-w-0">
+        {primary}
+        {secondary}
+      </div>
+      <div className="xl:sticky xl:top-0 min-w-0">
+        <ActivityInspector
+          activity={selected}
+          index={selectedIndex}
+          total={actividades.length}
+          hitoFecha={data.hito_fecha}
+          machines={machines}
+          layoutElements={layoutElements}
+          onChange={(changes) => updateActivity(selectedId, changes)}
+          onDuplicate={() => duplicateActivity(selectedId)}
+          onDelete={() => removeActivity(selectedId)}
+          onMove={(dir) => moveActivity(selectedId, dir)}
+          onAdd={addActivity}
         />
-        <span className="text-xs text-slate-400 hidden sm:block">v{data.version || 1}</span>
-        <Button
-          size="sm" variant="outline" className="gap-1 h-8"
-          onClick={() => exportPlanJson(data)}
-        >
-          <Download className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">JSON</span>
-        </Button>
-        <Button
-          size="sm" onClick={handleSave} disabled={saveMutation.isPending}
-          className="gap-1 h-8 bg-blue-600 hover:bg-blue-700 text-white"
-        >
-          <Save className="w-4 h-4" /> {saveMutation.isPending ? 'Guardando...' : 'Guardar'}
-        </Button>
       </div>
+    </div>
+  );
 
-      <div className="flex gap-0 border-b border-slate-200 dark:border-border bg-white dark:bg-card px-3 flex-shrink-0 overflow-x-auto">
-        {TABS.map(t => {
-          const Icon = t.icon;
-          return (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium border-b-2 whitespace-nowrap transition-colors ${
-                tab === t.key
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-slate-500 hover:text-slate-700'
-              }`}
-            >
-              <Icon className="w-3.5 h-3.5" /> {t.label}
-            </button>
-          );
-        })}
-      </div>
+  const timeline = (
+    <PlanningTimeline
+      actividades={actividades}
+      hitoFecha={data.hito_fecha}
+      hitoNombre={data.hito_nombre || 'Inicio de producción'}
+      selectedId={selectedId}
+      onSelect={setSelectedId}
+      onAdd={addActivity}
+    />
+  );
 
-      <div className="flex-1 overflow-auto p-4">
+  const linePanel = (
+    <LineStations3D
+      layout={layout}
+      actividades={actividades}
+      selectedId={selectedId}
+      onSelectActivity={setSelectedId}
+    />
+  );
+
+  return (
+    <div className="flex flex-col rounded-xl border border-slate-200 dark:border-border bg-slate-50 dark:bg-background overflow-hidden">
+      <PlannerHeader
+        data={data}
+        patch={patch}
+        layouts={layouts}
+        tab={tab}
+        setTab={setTab}
+        saving={saveMutation.isPending}
+        onBack={onBack}
+        onSave={handleSave}
+        onExport={() => exportPlanJson({ ...data, actividades })}
+      />
+
+      <div className="p-3">
+        {tab === 'cronograma' && plannerColumns(timeline, linePanel)}
+
+        {tab === 'linea' && plannerColumns(linePanel, timeline)}
+
         {tab === 'articulos' && (
           <ArticleScopeSelector
             articles={articles}
@@ -167,42 +292,44 @@ export default function ArticleProcessPlanEditor({ planId, layouts = [], onBack,
           />
         )}
 
-        {tab === 'actividades' && (
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 items-start">
-            <ActivitySequenceEditor
-              actividades={data.actividades || []}
-              layoutElements={layoutElements}
-              machines={machines}
-              onChange={(actividades) => patch({ actividades })}
-            />
-            <div className="xl:sticky xl:top-0 space-y-3">
-              <ProcessTimelinePreview
-                actividades={data.actividades || []}
-                hitoNombre={data.hito_nombre}
-              />
-              <div className="rounded-xl border border-slate-200 dark:border-border bg-white dark:bg-card p-3">
-                <div className="flex items-center gap-2 text-xs text-slate-500">
-                  <GitBranch className="w-3.5 h-3.5" />
-                  <span>
-                    {(data.actividades || []).length} actividades · línea: {data.room_layout_name || 'sin asignar'}
-                  </span>
-                </div>
-              </div>
+        {tab === 'ajustes' && (
+          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_300px] gap-3 items-start">
+            <div className="rounded-xl border border-slate-200 dark:border-border bg-white dark:bg-card p-3">
+              <PlanSettingsPanel data={data} onChange={patch} />
+            </div>
+            <div className="rounded-xl border border-slate-200 dark:border-border bg-white dark:bg-card p-3 space-y-2">
+              <h3 className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                Aplicar plantilla
+              </h3>
+              <select
+                value={templateId}
+                onChange={(e) => setTemplateId(e.target.value)}
+                className="w-full h-8 text-xs border border-input rounded-md px-2 bg-background text-foreground"
+              >
+                <option value="">Selecciona una plantilla</option>
+                {templates.map((t) => (
+                  <option key={t.id} value={t.id}>{t.nombre}</option>
+                ))}
+              </select>
+              <Button
+                size="sm"
+                variant="outline"
+                className="w-full h-8 text-xs"
+                onClick={applyTemplate}
+                disabled={!templateId}
+              >
+                Copiar actividades
+              </Button>
+              <p className="text-[10px] text-slate-400">
+                Sustituye las actividades actuales por las de la plantilla.
+              </p>
+              {data.source_plan_name && (
+                <p className="text-[10px] text-slate-500">
+                  Origen: {data.source_plan_name}
+                </p>
+              )}
             </div>
           </div>
-        )}
-
-        {tab === 'linea' && (
-          <PlanLinePanel
-            layouts={layouts}
-            roomLayoutId={data.room_layout_id || ''}
-            actividades={data.actividades || []}
-            onChange={patch}
-          />
-        )}
-
-        {tab === 'ajustes' && (
-          <PlanSettingsPanel data={data} onChange={patch} />
         )}
       </div>
     </div>
