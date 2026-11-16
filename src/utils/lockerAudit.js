@@ -73,12 +73,16 @@ export function buildLockerAudit({
       numero = fichaNumero;
     }
 
+    const requiere = requires(emp);
+
     if (source) {
       efectivas.push({
         employeeId: emp.id,
         nombre: emp.nombre || "Sin nombre",
         codigo: emp.codigo_empleado || "",
+        departamento: emp.departamento || "",
         activo: isActive(emp),
+        requiere,
         source,
         vestuario,
         vestuarioCanonico: canonicalVestuario(vestuario),
@@ -89,8 +93,8 @@ export function buildLockerAudit({
       });
     }
 
-    // Desincronización entre ficha y módulo
-    if (fichaNumero || moduloNumero) {
+    // Desincronización entre ficha y módulo (solo para quien requiere taquilla)
+    if (requiere && (fichaNumero || moduloNumero)) {
       const fichaValida = Boolean(fichaNumero);
       const moduloValida = Boolean(moduloNumero);
       const misma =
@@ -115,7 +119,10 @@ export function buildLockerAudit({
     }
   });
 
-  const efectivasActivas = efectivas.filter((e) => e.activo);
+  // Solo cuentan las taquillas de quien, según la configuración de requisito
+  // (pestaña Sin Taquilla > Configuración), necesita taquilla.
+  const efectivasActivas = efectivas.filter((e) => e.activo && e.requiere);
+  const asignadasSinRequisito = efectivas.filter((e) => e.activo && !e.requiere);
 
   const sinTaquilla = employees.filter((emp) => {
     if (!requires(emp)) return false;
@@ -200,12 +207,15 @@ export function buildLockerAudit({
     stats: {
       totalActive: employees.filter(isActive).length,
       totalInactive: employees.length - employees.filter(isActive).length,
-      totalRequireLocker: employees.filter(requires).length,
+      totalRequireLocker: employees.filter((e) => isActive(e) && requires(e)).length,
+      totalNoRequireLocker: employees.filter((e) => isActive(e) && !requires(e)).length,
       totalAssignments: lockerAssignments.length,
-      conTaquillaModulo: efectivas.filter((e) => e.source === "modulo").length,
-      conTaquillaFicha: efectivas.filter((e) => e.source === "ficha").length,
+      conTaquillaModulo: efectivasActivas.filter((e) => e.source === "modulo").length,
+      conTaquillaFicha: efectivasActivas.filter((e) => e.source === "ficha").length,
+      asignadasSinRequisito: asignadasSinRequisito.length,
     },
     efectivas,
+    asignadasSinRequisito,
     sinTaquilla,
     huerfanas,
     duplicadas,

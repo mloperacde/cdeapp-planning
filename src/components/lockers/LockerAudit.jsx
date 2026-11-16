@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { usePersistentAppConfig } from "@/hooks/usePersistentAppConfig";
 import { buildLockerAudit, canonicalVestuario } from "@/utils/lockerAudit";
 import LockerAuditIssues from "./LockerAuditIssues";
+import LockerRequirementSummary from "./LockerRequirementSummary";
 
 function StatCard({ label, hint, value, tone = "slate" }) {
   const tones = {
@@ -239,13 +240,18 @@ export default function LockerAudit({ employees, lockerAssignments, lockerRoomCo
             </div>
           </div>
           <p className="text-xs text-slate-600 mt-1">
-            Revisa módulo de vestuarios y fichas de empleado a la vez: es la única forma de ver la asignación real.
+            Revisa módulo de vestuarios y fichas de empleado a la vez y aplica la configuración de requisito
+            definida en Sin Taquilla &gt; Configuración.
           </p>
         </CardHeader>
         <CardContent className="p-6">
+          <div className="mb-6">
+            <LockerRequirementSummary config={config} employees={employees} stats={audit.stats} />
+          </div>
           <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3 mb-6">
             <StatCard label="Activos" hint="Empleados en alta" value={audit.stats.totalActive} tone="blue" />
-            <StatCard label="Con derecho" hint="Requieren taquilla (según config)" value={audit.stats.totalRequireLocker} tone="indigo" />
+            <StatCard label="Requieren" hint="Según configuración" value={audit.stats.totalRequireLocker} tone="indigo" />
+            <StatCard label="No requieren" hint="Excluidos del análisis" value={audit.stats.totalNoRequireLocker} tone="slate" />
             <StatCard label="Asignaciones" hint="Registros en el módulo" value={audit.stats.totalAssignments} tone="slate" />
             <StatCard label="Solo en ficha" hint="Sin registro en el módulo" value={audit.stats.conTaquillaFicha} tone={audit.stats.conTaquillaFicha > 0 ? "amber" : "green"} />
             <StatCard label="Sin taquilla" hint="Con derecho y sin asignar" value={audit.sinTaquilla.length} tone={audit.sinTaquilla.length > 0 ? "amber" : "green"} />
@@ -285,10 +291,35 @@ export default function LockerAudit({ employees, lockerAssignments, lockerRoomCo
                     <Badge className="bg-amber-600 text-white">{audit.sinTaquilla.length}</Badge>
                   </div>
                   <p className="text-xs text-amber-800 mt-2">
+                    La lista aplica la configuración de requisito (Sin Taquilla &gt; Configuración).
                     Ver detalle en la pestaña <strong>"Sin Taquilla"</strong>.
                   </p>
                 </div>
               )}
+            </div>
+          )}
+
+          {audit.asignadasSinRequisito.length > 0 && (
+            <div className="border-2 border-slate-300 rounded-lg p-4 bg-slate-50 mt-4">
+              <h3 className="font-semibold text-slate-800 flex items-center gap-2">
+                <Database className="w-4 h-4" />
+                Taquillas de empleados que no requieren taquilla ({audit.asignadasSinRequisito.length})
+              </h3>
+              <p className="text-[11px] text-slate-600 mt-1 mb-2">
+                Según la configuración su departamento/puesto no necesita taquilla, pero tienen una registrada en su ficha.
+                No cuentan como duplicado ni como incidencia.
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {audit.asignadasSinRequisito.map((e) => (
+                  <span
+                    key={`${e.employeeId}-${e.source}`}
+                    className="px-2 py-0.5 text-xs rounded border bg-white text-slate-700 border-slate-300"
+                  >
+                    {e.nombre} · {e.vestuario || "Sin vestuario"} · {e.numero}
+                    <span className="ml-1 text-slate-400">({e.departamento || "sin depto"})</span>
+                  </span>
+                ))}
+              </div>
             </div>
           )}
 
