@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { createPageUrl, cleanLockerNumber } from "@/utils";
+import { createPageUrl } from "@/utils";
+import { buildLockerAudit } from "@/utils/lockerAudit";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -38,28 +39,21 @@ export default function EmployeesWithoutLocker({ employees, lockerAssignments, o
   );
 
   const employeesWithoutLocker = useMemo(() => {
-    return employees.filter(emp => {
-      if ((emp.estado_empleado || "Alta") !== "Alta") return false;
-
-      const requiresLocker = (() => {
+    // Mismo criterio que la pestaña de Auditoría: cuenta como asignada la
+    // taquilla configurada en el módulo o en la ficha del empleado.
+    const { sinTaquilla } = buildLockerAudit({
+      employees,
+      lockerAssignments,
+      requiresLocker: (emp) => {
+        if ((emp.estado_empleado || "Alta") !== "Alta") return false;
         if (config.mode !== "config") return true;
         const deptConfig = config.departments?.[emp.departamento];
         if (!deptConfig || !deptConfig.enabled) return false;
         if (deptConfig.allPositions) return true;
         return (deptConfig.positions || []).includes(emp.puesto);
-      })();
-
-      if (!requiresLocker) return false;
-
-      const assignment = lockerAssignments.find(la => String(la.employee_id) === String(emp.id));
-      if (!assignment) return true;
-      if (assignment.requiere_taquilla === false) return true;
-
-      const tieneTaquilla = assignment.numero_taquilla_actual &&
-                           String(assignment.numero_taquilla_actual).replace(/['"''‚„]/g, '').trim() !== "";
-
-      return !tieneTaquilla;
+      },
     });
+    return sinTaquilla;
   }, [employees, lockerAssignments, config]);
 
   const departments = useMemo(() => {

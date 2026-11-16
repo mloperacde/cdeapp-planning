@@ -1,14 +1,43 @@
 import React, { useMemo } from "react";
-import { Link } from "react-router-dom";
-import { createPageUrl, cleanLockerNumber } from "@/utils";
+import { cleanLockerNumber } from "@/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, CheckCircle2, ExternalLink, Users, Database, Trash2 } from "lucide-react";
+import { CheckCircle2, Database, Trash2, RefreshCw, Users } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { usePersistentAppConfig } from "@/hooks/usePersistentAppConfig";
+import { buildLockerAudit, canonicalVestuario } from "@/utils/lockerAudit";
+import LockerAuditIssues from "./LockerAuditIssues";
+
+function StatCard({ label, hint, value, tone = "slate" }) {
+  const tones = {
+    slate: "bg-slate-50 border-slate-200 text-slate-700",
+    blue: "bg-blue-50 border-blue-200 text-blue-700",
+    indigo: "bg-indigo-50 border-indigo-200 text-indigo-700",
+    green: "bg-green-50 border-green-200 text-green-700",
+    amber: "bg-amber-50 border-amber-300 text-amber-800",
+    red: "bg-red-50 border-red-300 text-red-700",
+  };
+  const badgeTones = {
+    slate: "bg-slate-600",
+    blue: "bg-blue-600",
+    indigo: "bg-indigo-600",
+    green: "bg-green-600",
+    amber: "bg-amber-600",
+    red: "bg-red-600",
+  };
+  return (
+    <div className={`p-3 rounded-lg border-2 ${tones[tone]}`}>
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-xs font-medium">{label}</span>
+        <Badge className={badgeTones[tone]}>{value}</Badge>
+      </div>
+      <p className="text-[11px] opacity-80">{hint}</p>
+    </div>
+  );
+}
 
 export default function LockerAudit({ employees, lockerAssignments, lockerRoomConfigs = [] }) {
   const queryClient = useQueryClient();
@@ -21,25 +50,9 @@ export default function LockerAudit({ employees, lockerAssignments, lockerRoomCo
     { enabled: true }
   );
 
-  const auditResults = useMemo(() => {
-    const results = {
-      employeesWithoutAssignment: [],
-      assignmentsWithoutEmployee: [],
-      duplicateAssignments: [],
-      inconsistencies: [],
-      stats: {
-        totalActive: 0,
-        totalInactive: 0,
-        totalAssignments: 0,
-        totalRequireLocker: 0
-      }
-    };
-
-    const isActive = (emp) => (emp.estado_empleado || "Alta") === "Alta";
-
-    // Mismo criterio que la pestaña "Sin Taquilla": derecho según configuración
+  const audit = useMemo(() => {
     const requiresLocker = (emp) => {
-      if (!isActive(emp)) return false;
+      if ((emp.estado_empleado || "Alta") !== "Alta") return false;
       if (config.mode !== "config") return true;
       const deptConfig = config.departments?.[emp.departamento];
       if (!deptConfig || !deptConfig.enabled) return false;
@@ -47,383 +60,270 @@ export default function LockerAudit({ employees, lockerAssignments, lockerRoomCo
       return (deptConfig.positions || []).includes(emp.puesto);
     };
 
-    // Mismo criterio que la pestaña "Sin Taquilla": tiene taquilla realmente asignada
-    const hasAssignedLocker = (emp) => {
-      const assignment = lockerAssignments.find(la => String(la.employee_id) === String(emp.id));
-      if (!assignment) return false;
-      if (assignment.requiere_taquilla === false) return false;
-      return assignment.numero_taquilla_actual && cleanLockerNumber(assignment.numero_taquilla_actual) !== "";
-    };
-
-    const activeEmployees = employees.filter(isActive);
-    results.stats.totalActive = activeEmployees.length;
-    results.stats.totalInactive = employees.length - activeEmployees.length;
-    results.stats.totalAssignments = lockerAssignments.length;
-    results.stats.totalRequireLocker = employees.filter(requiresLocker).length;
-
-    // Empleados con derecho a taquilla pero SIN taquilla asignada (coincide con pestaña Sin Taquilla)
-    employees.forEach(emp => {
-      if (!requiresLocker(emp)) return;
-      if (!hasAssignedLocker(emp)) {
-        results.employeesWithoutAssignment.push(emp);
-      }
+    return buildLockerAudit({
+      employees,
+      lockerAssignments,
+      lockerRoomConfigs,
+      requiresLocker,
     });
+  }, [employees, lockerAssignments, lockerRoomConfigs, config]);
 
-    // Asignaciones sin empleado válido (o cuyo empleado está inactivo)
-    lockerAssignments.forEach(la => {
-      const employee = employees.find(e => String(e.id) === String(la.employee_id));
-      if (!employee) {
-        results.assignmentsWithoutEmployee.push(la);
-      }
-    });
-
-    // Detectar asignaciones duplicadas por vestuario + número limpio
-    const assignmentMap = new Map();
-    lockerAssignments.forEach(la => {
-      if (la.requiere_taquilla === false) return;
-      const cleanNum = cleanLockerNumber(la.numero_taquilla_actual);
-      if (!cleanNum) return; // skip vacíos / solo símbolos
-      
-      const key = `${la.vestuario}|${cleanNum}`;
-      if (!assignmentMap.has(key)) {
-        assignmentMap.set(key, []);
-      }
-      assignmentMap.get(key).push(la);
-    });
-
-    assignmentMap.forEach((assignments, key) => {
-      if (assignments.length > 1) {
-        const [vestuario, numero] = key.split('|');
-        const employeeNames = assignments.map(la => {
-          const emp = employees.find(e => String(e.id) === String(la.employee_id));
-          return emp?.nombre || 'Desconocido';
-        });
-        
-        results.duplicateAssignments.push({
-          vestuario,
-          numero,
-          count: assignments.length,
-          employees: employeeNames,
-          assignments
-        });
-      }
-    });
-
-    // Taquillas libres por vestuario (instaladas no asignadas a empleados activos)
-    const VESTUARIOS = [
-      "Vestuario Femenino Planta Baja",
-      "Vestuario Femenino Planta Alta",
-      "Vestuario Masculino Planta Baja"
-    ];
-    results.vestuariosLibres = VESTUARIOS.map(vestuario => {
-      const roomConfig = lockerRoomConfigs.find(c => c.vestuario === vestuario);
-      const identificadores = roomConfig?.identificadores_taquillas || [];
-      const totalInstaladas = roomConfig?.numero_taquillas_instaladas || identificadores.length || 0;
-
-      // Identificadores instalados válidos
-      const instalados = identificadores.length > 0
-        ? identificadores.map(String)
-        : Array.from({ length: totalInstaladas }, (_, i) => String(i + 1));
-
-      // Ocupados por empleados activos con taquilla asignada
-      const ocupados = new Set();
-      lockerAssignments.forEach(la => {
-        if (la.vestuario !== vestuario) return;
-        if (la.requiere_taquilla === false) return;
-        const emp = employees.find(e => String(e.id) === String(la.employee_id));
-        if (!emp || (emp.estado_empleado && emp.estado_empleado !== "Alta")) return;
-        const cn = cleanLockerNumber(la.numero_taquilla_actual);
-        if (cn) ocupados.add(cn);
-      });
-
-      const libres = instalados.filter(id => !ocupados.has(id));
-      return {
-        vestuario,
-        totalInstaladas: instalados.length,
-        ocupadas: ocupados.size,
-        libres,
-        libresCount: libres.length
-      };
-    }).filter(v => v.totalInstaladas > 0);
-
-    return results;
-  }, [employees, lockerAssignments, config, lockerRoomConfigs]);
+  const sincronizables = audit.desincronizadas.filter(
+    (d) => d.activo && d.fichaNumero && d.tipo !== "solo_modulo"
+  );
+  const sinCoincidencia = audit.desincronizadas.filter((d) => d.tipo !== "solo_modulo");
+  const totalProblemas =
+    audit.sinTaquilla.length +
+    audit.huerfanas.length +
+    audit.duplicadas.length +
+    sinCoincidencia.length +
+    audit.fueraCatalogo.length +
+    audit.vestuariosInvalidos.length;
 
   const deleteDuplicatesMutation = useMutation({
-    mutationFn: async (duplicates) => {
-      const promises = [];
-      
-      duplicates.forEach(dup => {
-        const sortedByDate = [...dup.assignments].sort((a, b) => {
-          try {
-            const dateA = new Date(a.fecha_asignacion || a.created_date);
-            const dateB = new Date(b.fecha_asignacion || b.created_date);
-            if (isNaN(dateA.getTime()) || isNaN(dateB.getTime())) return 0;
-            return dateB - dateA;
-          } catch {
-            return 0;
-          }
+    mutationFn: async (grupos) => {
+      const ids = [];
+      grupos.forEach((grupo) => {
+        const delModulo = grupo.entries.filter((e) => e.source === "modulo" && e.assignment);
+        if (delModulo.length < 2) return;
+        const ordenados = [...delModulo].sort((a, b) => {
+          const da = new Date(a.assignment.fecha_asignacion || a.assignment.created_date || 0).getTime();
+          const db = new Date(b.assignment.fecha_asignacion || b.assignment.created_date || 0).getTime();
+          return db - da;
         });
-        
-        // Keep the most recent assignment, delete the rest
-        const toDelete = sortedByDate.slice(1);
-        toDelete.forEach(la => {
-          // Assuming 'base44' is globally available or passed via context
-          // In a real app, this would be an API call, e.g., api.deleteLockerAssignment(la.id)
-          promises.push(base44.entities.LockerAssignment.delete(la.id)); 
-        });
+        ordenados.slice(1).forEach((e) => ids.push(e.assignment.id));
       });
-      
-      return Promise.all(promises);
+
+      for (const id of ids) {
+        await base44.entities.LockerAssignment.delete(id);
+      }
+      return ids.length;
     },
-    onSuccess: (_, duplicates) => {
-      const totalDeleted = duplicates.reduce((sum, d) => sum + (d.assignments.length - 1), 0);
-      queryClient.invalidateQueries({ queryKey: ['lockerAssignments'] });
-      toast.success(`✅ ${totalDeleted} duplicado(s) eliminado(s). Analizando de nuevo...`);
-      setTimeout(() => {
-        // Invalidate again after a short delay to ensure UI updates after potential re-fetch logic
-        queryClient.invalidateQueries({ queryKey: ['lockerAssignments'] });
-      }, 1000);
+    onSuccess: (borrados) => {
+      queryClient.invalidateQueries({ queryKey: ["lockerAssignments"] });
+      if (borrados > 0) {
+        toast.success(`${borrados} registro(s) duplicado(s) eliminados del módulo`);
+      } else {
+        toast.info("Los duplicados no provienen del módulo: revisa las fichas de empleado");
+      }
     },
-    onError: (error) => {
-      toast.error(`❌ Error al eliminar duplicados: ${error.message}`);
-    }
+    onError: (error) => toast.error(`Error al eliminar duplicados: ${error.message}`),
   });
 
   const deleteOrphanedMutation = useMutation({
-    mutationFn: async (assignments) => {
-      // Assuming 'base44' is globally available or passed via context
-      return Promise.all(assignments.map(la => base44.entities.LockerAssignment.delete(la.id)));
+    mutationFn: async (asignaciones) => {
+      for (const la of asignaciones) {
+        await base44.entities.LockerAssignment.delete(la.id);
+      }
+      return asignaciones.length;
     },
-    onSuccess: (_, assignments) => {
-      queryClient.invalidateQueries({ queryKey: ['lockerAssignments'] });
-      toast.success(`✅ ${assignments.length} asignación(es) huérfana(s) eliminada(s)`);
+    onSuccess: (total) => {
+      queryClient.invalidateQueries({ queryKey: ["lockerAssignments"] });
+      toast.success(`${total} asignación(es) huérfana(s) eliminada(s)`);
     },
-    onError: (error) => {
-      toast.error(`❌ Error al eliminar asignaciones huérfanas: ${error.message}`);
-    }
+    onError: (error) => toast.error(`Error al eliminar huérfanas: ${error.message}`),
   });
 
-  const totalProblems = 
-    auditResults.employeesWithoutAssignment.length +
-    auditResults.assignmentsWithoutEmployee.length +
-    auditResults.duplicateAssignments.length;
+  const syncFromFichaMutation = useMutation({
+    mutationFn: async (filas) => {
+      let creadas = 0;
+      let actualizadas = 0;
+      const omitidas = [];
+
+      for (const fila of filas) {
+        const vestuario = canonicalVestuario(fila.fichaVestuario);
+        const numero = cleanLockerNumber(fila.fichaNumero);
+        if (!vestuario || !numero) {
+          omitidas.push(`${fila.nombre} (vestuario no válido)`);
+          continue;
+        }
+
+        const conflicto = lockerAssignments.find(
+          (la) =>
+            String(la.employee_id) !== String(fila.employeeId) &&
+            la.requiere_taquilla !== false &&
+            canonicalVestuario(la.vestuario) === vestuario &&
+            cleanLockerNumber(la.numero_taquilla_actual) === numero
+        );
+        if (conflicto) {
+          const ocupante = employees.find((e) => String(e.id) === String(conflicto.employee_id));
+          omitidas.push(`${fila.nombre} (taquilla ocupada por ${ocupante?.nombre || "otro empleado"})`);
+          continue;
+        }
+
+        const existente = lockerAssignments.find(
+          (la) => String(la.employee_id) === String(fila.employeeId)
+        );
+        const payload = {
+          employee_id: fila.employeeId,
+          requiere_taquilla: true,
+          vestuario,
+          numero_taquilla_actual: numero,
+          numero_taquilla_nuevo: "",
+        };
+
+        if (existente) {
+          await base44.entities.LockerAssignment.update(existente.id, payload);
+          actualizadas++;
+        } else {
+          await base44.entities.LockerAssignment.create({
+            ...payload,
+            fecha_asignacion: new Date().toISOString(),
+            historial_cambios: [
+              {
+                fecha: new Date().toISOString(),
+                vestuario_anterior: "",
+                taquilla_anterior: "",
+                vestuario_nuevo: vestuario,
+                taquilla_nueva: numero,
+                motivo: "Sincronización desde auditoría",
+              },
+            ],
+          });
+          creadas++;
+        }
+      }
+
+      return { creadas, actualizadas, omitidas };
+    },
+    onSuccess: ({ creadas, actualizadas, omitidas }) => {
+      queryClient.invalidateQueries({ queryKey: ["lockerAssignments"] });
+      queryClient.invalidateQueries({ queryKey: ["employees"] });
+      queryClient.invalidateQueries({ queryKey: ["employeeMasterDatabase"] });
+      if (creadas + actualizadas > 0) {
+        toast.success(`${creadas} creada(s) y ${actualizadas} actualizada(s) en el módulo`);
+      }
+      if (omitidas.length > 0) {
+        toast.warning(`No se pudieron sincronizar: ${omitidas.join(", ")}`, { duration: 8000 });
+      }
+    },
+    onError: (error) => toast.error(`Error al sincronizar: ${error.message}`),
+  });
+
+  const hayDuplicadosModulo = audit.duplicadas.some(
+    (g) => g.entries.filter((e) => e.source === "modulo").length > 1
+  );
 
   return (
     <div className="space-y-6">
-      <Card className={`shadow-lg border-2 ${
-        totalProblems > 0 ? 'bg-amber-50 border-amber-300' : 'bg-green-50 border-green-300'
-      }`}>
+      <Card className={`shadow-lg border-2 ${totalProblemas > 0 ? "bg-amber-50 border-amber-300" : "bg-green-50 border-green-300"}`}>
         <CardHeader className="border-b border-slate-100">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <CardTitle className="flex items-center gap-2">
               <Database className="w-5 h-5" />
-              Auditoría de Datos
+              Auditoría de asignaciones
             </CardTitle>
-            {auditResults.duplicateAssignments.length > 0 && (
-              <Button
-                onClick={() => deleteDuplicatesMutation.mutate(auditResults.duplicateAssignments)}
-                disabled={deleteDuplicatesMutation.isPending}
-                className="bg-red-600 hover:bg-red-700"
-                size="sm"
-              >
-                <Trash2 className="w-4 h-4 mr-2" />
-                {deleteDuplicatesMutation.isPending ? "Eliminando..." : "Eliminar Duplicados"}
-              </Button>
-            )}
+            <div className="flex items-center gap-2">
+              {sincronizables.length > 0 && (
+                <Button
+                  onClick={() => syncFromFichaMutation.mutate(sincronizables)}
+                  disabled={syncFromFichaMutation.isPending}
+                  className="bg-blue-600 hover:bg-blue-700"
+                  size="sm"
+                >
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  {syncFromFichaMutation.isPending ? "Sincronizando..." : "Sincronizar fichas"}
+                </Button>
+              )}
+              {hayDuplicadosModulo && (
+                <Button
+                  onClick={() => deleteDuplicatesMutation.mutate(audit.duplicadas)}
+                  disabled={deleteDuplicatesMutation.isPending}
+                  className="bg-red-600 hover:bg-red-700"
+                  size="sm"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  {deleteDuplicatesMutation.isPending ? "Eliminando..." : "Eliminar duplicados del módulo"}
+                </Button>
+              )}
+            </div>
           </div>
+          <p className="text-xs text-slate-600 mt-1">
+            Revisa módulo de vestuarios y fichas de empleado a la vez: es la única forma de ver la asignación real.
+          </p>
         </CardHeader>
         <CardContent className="p-6">
-          <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6">
-            <div className="p-4 rounded-lg border-2 bg-blue-50 border-blue-200">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-slate-700">Activos</span>
-                <Badge className="bg-blue-600">{auditResults.stats.totalActive}</Badge>
-              </div>
-              <p className="text-xs text-slate-600">Empleados en alta</p>
-            </div>
-
-            <div className="p-4 rounded-lg border-2 bg-indigo-50 border-indigo-200">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-slate-700">Con derecho</span>
-                <Badge className="bg-indigo-600">{auditResults.stats.totalRequireLocker}</Badge>
-              </div>
-              <p className="text-xs text-slate-600">Requieren taquilla (según config)</p>
-            </div>
-
-            <div className="p-4 rounded-lg border-2 bg-slate-50 border-slate-200">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-slate-700">Asignaciones</span>
-                <Badge className="bg-slate-600">{auditResults.stats.totalAssignments}</Badge>
-              </div>
-              <p className="text-xs text-slate-600">Registros en base de datos</p>
-            </div>
-
-            <div className={`p-4 rounded-lg border-2 ${
-              auditResults.employeesWithoutAssignment.length > 0 
-                ? 'bg-amber-100 border-amber-300' 
-                : 'bg-green-100 border-green-300'
-            }`}>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-slate-700">Sin Taquilla</span>
-                <Badge className={auditResults.employeesWithoutAssignment.length > 0 ? 'bg-amber-600' : 'bg-green-600'}>
-                  {auditResults.employeesWithoutAssignment.length}
-                </Badge>
-              </div>
-              <p className="text-xs text-slate-600">Con derecho pero sin taquilla asignada</p>
-            </div>
-
-            <div className={`p-4 rounded-lg border-2 ${
-              auditResults.assignmentsWithoutEmployee.length > 0 
-                ? 'bg-red-100 border-red-300' 
-                : 'bg-green-100 border-green-300'
-            }`}>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-slate-700">Huérfanas</span>
-                <Badge className={auditResults.assignmentsWithoutEmployee.length > 0 ? 'bg-red-600' : 'bg-green-600'}>
-                  {auditResults.assignmentsWithoutEmployee.length}
-                </Badge>
-              </div>
-              <p className="text-xs text-slate-600">Asignaciones sin empleado</p>
-            </div>
-
-            <div className={`p-4 rounded-lg border-2 ${
-              auditResults.duplicateAssignments.length > 0 
-                ? 'bg-red-100 border-red-300' 
-                : 'bg-green-100 border-green-300'
-            }`}>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-slate-700">Duplicadas</span>
-                <Badge className={auditResults.duplicateAssignments.length > 0 ? 'bg-red-600' : 'bg-green-600'}>
-                  {auditResults.duplicateAssignments.length}
-                </Badge>
-              </div>
-              <p className="text-xs text-slate-600">Taquillas con múltiples asignaciones</p>
-            </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3 mb-6">
+            <StatCard label="Activos" hint="Empleados en alta" value={audit.stats.totalActive} tone="blue" />
+            <StatCard label="Con derecho" hint="Requieren taquilla (según config)" value={audit.stats.totalRequireLocker} tone="indigo" />
+            <StatCard label="Asignaciones" hint="Registros en el módulo" value={audit.stats.totalAssignments} tone="slate" />
+            <StatCard label="Solo en ficha" hint="Sin registro en el módulo" value={audit.stats.conTaquillaFicha} tone={audit.stats.conTaquillaFicha > 0 ? "amber" : "green"} />
+            <StatCard label="Sin taquilla" hint="Con derecho y sin asignar" value={audit.sinTaquilla.length} tone={audit.sinTaquilla.length > 0 ? "amber" : "green"} />
+            <StatCard label="Duplicadas" hint="Taquilla con varios empleados" value={audit.duplicadas.length} tone={audit.duplicadas.length > 0 ? "red" : "green"} />
+            <StatCard label="Ficha ≠ módulo" hint="Datos distintos o sin registrar" value={sinCoincidencia.length} tone={sinCoincidencia.length > 0 ? "red" : "green"} />
+            <StatCard label="No válidas" hint="Fuera de catálogo o vestuario" value={audit.fueraCatalogo.length + audit.vestuariosInvalidos.length} tone={audit.fueraCatalogo.length + audit.vestuariosInvalidos.length > 0 ? "amber" : "green"} />
+            <StatCard label="Huérfanas" hint="Asignaciones sin empleado" value={audit.huerfanas.length} tone={audit.huerfanas.length > 0 ? "red" : "green"} />
           </div>
 
-          {totalProblems === 0 ? (
+          {totalProblemas === 0 ? (
             <div className="text-center py-8">
               <CheckCircle2 className="w-16 h-16 text-green-500 mx-auto mb-3" />
-              <p className="text-lg font-semibold text-green-900">✅ Base de datos consistente</p>
-              <p className="text-sm text-slate-600 mt-1">No se detectaron problemas de integridad</p>
+              <p className="text-lg font-semibold text-green-900">Base de datos consistente</p>
+              <p className="text-sm text-slate-600 mt-1">No se detectaron duplicidades ni incoherencias</p>
             </div>
           ) : (
             <div className="space-y-4">
-              {auditResults.employeesWithoutAssignment.length > 0 && (
+              <LockerAuditIssues
+                duplicadas={audit.duplicadas}
+                desincronizadas={audit.desincronizadas}
+                fueraCatalogo={audit.fueraCatalogo}
+                vestuariosInvalidos={audit.vestuariosInvalidos}
+                huerfanas={audit.huerfanas}
+                onSyncFromFicha={(filas) => syncFromFichaMutation.mutate(filas)}
+                onDeleteOrphans={(filas) => deleteOrphanedMutation.mutate(filas)}
+                syncPending={syncFromFichaMutation.isPending}
+                deletePending={deleteOrphanedMutation.isPending}
+              />
+
+              {audit.sinTaquilla.length > 0 && (
                 <div className="border-2 border-amber-300 rounded-lg p-4 bg-amber-50">
                   <div className="flex items-center justify-between">
                     <h3 className="font-semibold text-amber-900 flex items-center gap-2">
                       <Users className="w-4 h-4" />
                       Empleados con derecho a taquilla sin asignar
                     </h3>
-                    <Badge className="bg-amber-600 text-white">
-                      {auditResults.employeesWithoutAssignment.length}
-                    </Badge>
+                    <Badge className="bg-amber-600 text-white">{audit.sinTaquilla.length}</Badge>
                   </div>
                   <p className="text-xs text-amber-800 mt-2">
                     Ver detalle en la pestaña <strong>"Sin Taquilla"</strong>.
                   </p>
                 </div>
               )}
+            </div>
+          )}
 
-              {/* Taquillas libres por vestuario */}
-              {auditResults.vestuariosLibres && auditResults.vestuariosLibres.length > 0 && (
-                <div className="border-2 border-blue-300 rounded-lg p-4 bg-blue-50">
-                  <h3 className="font-semibold text-blue-900 mb-3 flex items-center gap-2">
-                    <Database className="w-4 h-4" />
-                    Taquillas libres por vestuario
-                  </h3>
-                  <div className="space-y-3">
-                    {auditResults.vestuariosLibres.map(v => (
-                      <div key={v.vestuario} className="bg-white rounded-lg border border-blue-200 p-3">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="font-medium text-sm text-slate-800">{v.vestuario}</span>
-                          <div className="flex gap-2">
-                            <Badge variant="outline" className="bg-slate-50">
-                              {v.ocupadas}/{v.totalInstaladas} ocupadas
-                            </Badge>
-                            <Badge className={v.libresCount > 0 ? "bg-green-600 text-white" : "bg-red-600 text-white"}>
-                              {v.libresCount} libres
-                            </Badge>
-                          </div>
-                        </div>
-                        {v.libresCount > 0 ? (
-                          <div className="flex flex-wrap gap-1.5">
-                            {v.libres.map(num => (
-                              <span key={num} className="px-2 py-0.5 text-xs font-mono rounded bg-green-100 text-green-800 border border-green-300">
-                                {num}
-                              </span>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="text-xs text-red-700 font-medium">Sin taquillas libres — todas ocupadas</p>
-                        )}
+          {audit.libres.length > 0 && (
+            <div className="border-2 border-blue-300 rounded-lg p-4 bg-blue-50 mt-4">
+              <h3 className="font-semibold text-blue-900 mb-3 flex items-center gap-2">
+                <Database className="w-4 h-4" />
+                Taquillas libres por vestuario
+              </h3>
+              <div className="space-y-3">
+                {audit.libres.map((v) => (
+                  <div key={v.vestuario} className="bg-white rounded-lg border border-blue-200 p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-medium text-sm text-slate-800">{v.vestuario}</span>
+                      <div className="flex gap-2">
+                        <Badge variant="outline" className="bg-slate-50">{v.ocupadas}/{v.totalInstaladas} ocupadas</Badge>
+                        <Badge className={v.libresCount > 0 ? "bg-green-600 text-white" : "bg-red-600 text-white"}>
+                          {v.libresCount} libres
+                        </Badge>
                       </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {auditResults.duplicateAssignments.length > 0 && (
-                <div className="border-2 border-red-300 rounded-lg p-4 bg-red-50">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-semibold text-red-900 flex items-center gap-2">
-                      <AlertTriangle className="w-4 h-4" />
-                      Taquillas Duplicadas ({auditResults.duplicateAssignments.length})
-                    </h3>
-                    <Button
-                      onClick={() => deleteDuplicatesMutation.mutate(auditResults.duplicateAssignments)}
-                      disabled={deleteDuplicatesMutation.isPending}
-                      className="bg-red-600 hover:bg-red-700"
-                      size="sm"
-                    >
-                      <Trash2 className="w-4 h-4 mr-2" />
-                      {deleteDuplicatesMutation.isPending ? "Eliminando..." : "Limpiar Ahora"}
-                    </Button>
-                  </div>
-                  <div className="space-y-3 max-h-48 overflow-y-auto">
-                    {auditResults.duplicateAssignments.map((dup, idx) => (
-                      <div key={idx} className="p-3 bg-white rounded border-2 border-red-200">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Badge className="bg-red-600 text-white">
-                            Taquilla {dup.numero}
-                          </Badge>
-                          <Badge variant="outline">{dup.vestuario}</Badge>
-                          <Badge className="bg-orange-600 text-white">
-                            {dup.count} empleados
-                          </Badge>
-                        </div>
-                        <div className="text-xs text-slate-700">
-                          <strong>Asignada a:</strong> {dup.employees.join(', ')}
-                        </div>
+                    </div>
+                    {v.libresCount > 0 ? (
+                      <div className="flex flex-wrap gap-1.5">
+                        {v.libres.map((num) => (
+                          <span key={num} className="px-2 py-0.5 text-xs font-mono rounded bg-green-100 text-green-800 border border-green-300">
+                            {num}
+                          </span>
+                        ))}
                       </div>
-                    ))}
+                    ) : (
+                      <p className="text-xs text-red-700 font-medium">Sin taquillas libres — todas ocupadas</p>
+                    )}
                   </div>
-                </div>
-              )}
-
-              {auditResults.assignmentsWithoutEmployee.length > 0 && (
-                <div className="border-2 border-red-300 rounded-lg p-4 bg-red-50">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-semibold text-red-900">
-                      Asignaciones Huérfanas ({auditResults.assignmentsWithoutEmployee.length})
-                    </h3>
-                    <Button
-                      onClick={() => deleteOrphanedMutation.mutate(auditResults.assignmentsWithoutEmployee)}
-                      disabled={deleteOrphanedMutation.isPending}
-                      className="bg-red-600 hover:bg-red-700"
-                      size="sm"
-                    >
-                      <Trash2 className="w-4 h-4 mr-2" />
-                      {deleteOrphanedMutation.isPending ? "Eliminando..." : "Eliminar"}
-                    </Button>
-                  </div>
-                  <p className="text-xs text-red-800">
-                    Hay {auditResults.assignmentsWithoutEmployee.length} asignación(es) sin empleado válido en la base de datos
-                  </p>
-                </div>
-              )}
+                ))}
+              </div>
             </div>
           )}
         </CardContent>
