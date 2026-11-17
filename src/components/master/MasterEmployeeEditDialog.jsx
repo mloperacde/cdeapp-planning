@@ -28,6 +28,9 @@ import {
 import { User, Briefcase, Clock, Home, FileText, Calendar, Wrench, AlertCircle, TrendingDown, ArrowLeft, Flame, Loader2, ChevronDown, X } from "lucide-react";
 import { cleanLockerNumber } from "@/utils";
 import { findLockerConflict, syncLockerAssignment } from "@/utils/lockerSync";
+import { employeeRequiresLocker, suggestLocker } from "@/utils/lockerAutoAssign";
+import { checkSexConsistency } from "@/utils/genderInference";
+import { usePersistentAppConfig } from "@/hooks/usePersistentAppConfig";
 import EmployeeLockerTab from "./EmployeeLockerTab";
 
 const NACIONALIDADES = [
@@ -139,6 +142,13 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
 
   // USAR DATAPROVIDER PARA MÁQUINAS Y EQUIPOS - evita duplicación y problemas de timing
   const { teams = [], machines: sharedMachines = [] } = useAppData();
+
+  // Configuración del colectivo que requiere taquilla (para el alta automática)
+  const { data: lockerConfig } = usePersistentAppConfig(
+    "locker_requirement_config",
+    { mode: "all", departments: {} },
+    "lockerRequirementConfig"
+  );
 
   // Mapear máquinas del DataProvider al formato esperado
   const allMachines = useMemo(() => {
@@ -434,12 +444,48 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
       // Alta efectiva: con fecha de alta futura el estado queda como "Alta Prevista"
       cleanData.estado_empleado = resolveEmployeeStatus(cleanData);
 
+      // BAJA EFECTIVA: al alcanzar la fecha de baja, la taquilla queda libre
+      // (se vacía aquí y la sincronización posterior libera la asignación)
+      if (cleanData.estado_empleado === "Baja") {
+        const hoy = new Date().toISOString().slice(0, 10);
+        const fechaBaja = String(cleanData.fecha_baja || "").slice(0, 10);
+        if (!fechaBaja || fechaBaja <= hoy) {
+          cleanData.taquilla_vestuario = "";
+          cleanData.taquilla_numero = "";
+        }
+      }
+
       // Auto-sincronizar team_key cuando cambia el equipo
       if (cleanData.equipo) {
         const teamConfigs = await base44.entities.TeamConfig.list();
         const matchedTeam = teamConfigs.find(t => t.team_name === cleanData.equipo);
         if (matchedTeam) {
           cleanData.team_key = matchedTeam.team_key;
+        }
+      }
+
+      // ALTA: asignar automáticamente una taquilla libre según el sexo
+      if (!employee?.id && !cleanData.taquilla_numero && cleanData.sexo) {
+        const requiereTaquilla = employeeRequiresLocker(
+          { ...cleanData, estado_empleado: cleanData.estado_empleado || "Alta" },
+          lockerConfig
+        );
+        if (requiereTaquilla) {
+          const [roomConfigs, assignments, allEmployees] = await Promise.all([
+            base44.entities.LockerRoomConfig.list(),
+            base44.entities.LockerAssignment.list(),
+            base44.entities.EmployeeMasterDatabase.list(),
+          ]);
+          const sugerida = suggestLocker({
+            sexo: cleanData.sexo,
+            roomConfigs,
+            employees: allEmployees,
+            assignments,
+          });
+          if (sugerida) {
+            cleanData.taquilla_vestuario = sugerida.vestuario;
+            cleanData.taquilla_numero = sugerida.numero;
+          }
         }
       }
 
@@ -596,6 +642,12 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
       if (!formData.tipo_jornada?.trim()) errors.push("Tipo de jornada");
       if (!formData.tipo_turno?.trim()) errors.push("Tipo de turno");
       if (!formData.fecha_alta?.trim()) errors.push("Fecha de alta (pestaña Contrato)");
+      if (!formData.sexo?.trim()) {
+        errors.push("Sexo (obligatorio: determina el vestuario y la taquilla asignada)");
+      } else {
+        const incoherenciaSexo = checkSexConsistency(formData.nombre, formData.sexo);
+        if (incoherenciaSexo) errors.push(incoherenciaSexo);
+      }
     }
 
     // Validación cronológica (siempre, creación y edición)
@@ -916,13 +968,13 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
                 )}
 
                 <div className="space-y-2">
-                  <Label>Sexo</Label>
+                  <Label>Sexo {!employee && <span className="text-red-500">*</span>}</Label>
                   <Select
                     value={formData.sexo || ""}
                     onValueChange={(value) => setFormData({ ...formData, sexo: value })}
                   >
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue placeholder="Selecciona el sexo..." />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Masculino">Masculino</SelectItem>

@@ -1,0 +1,44 @@
+{
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "liberacion_taquillas_baja",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "liberar_taquillas": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "releaseEndedLockerAssignments"
+          },
+          "then": "end",
+          "x-base44": {
+            "title": "Liberar taquillas por baja",
+            "description": "Deja disponibles las taquillas de los empleados con baja efectiva"
+          }
+        }
+      }
+    ]
+  },
+  "description": "Libera autom\u00e1ticamente la taquilla de los empleados dados de baja en cuanto llega su fecha de baja.",
+  "name": "Liberaci\u00f3n de Taquillas por Baja (00:20)",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "scheduled",
+      "events": [],
+      "schedule_mode": "recurring",
+      "cron_expression": "20 0 * * *",
+      "one_time_date": null,
+      "timezone": "Europe/Madrid",
+      "interval_value": null,
+      "interval_unit": null,
+      "interval_anchor": null,
+      "ends_type": "never",
+      "ends_on_date": null,
+      "ends_after_count": null
+    }
+  }
+}
