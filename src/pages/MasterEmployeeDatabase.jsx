@@ -1053,7 +1053,7 @@ export default function MasterEmployeeDatabasePage() {
                       <TableCell className="py-0.5 px-3">
                         <Badge variant="secondary" className={`
                           h-4 text-[9px] px-1 font-medium rounded-sm
-                          ${emp.estado_empleado === 'Alta' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'}
+                          ${emp.estado_empleado === 'Alta' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : emp.estado_empleado === 'Alta Prevista' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'}
                         `}>
                           {emp.estado_empleado}
                         </Badge>

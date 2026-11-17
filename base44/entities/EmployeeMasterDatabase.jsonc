@@ -32,10 +32,12 @@
       "type": "string",
       "enum": [
         "Alta",
+        "Alta Prevista",
         "Baja",
         "Excedencia"
       ],
-      "default": "Alta"
+      "default": "Alta",
+      "description": "Alta Prevista = contratado con fecha de alta futura; pasa a Alta autom\u00e1ticamente en su fecha"
     },
     "fecha_baja": {
       "type": "string",

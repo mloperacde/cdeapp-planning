@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Upload, Download, CheckCircle2, AlertCircle, Loader2, Database } from "lucide-react";
+import { resolveEmployeeStatus } from "@/utils/employeeActiveStatus";
 
 export default function MasterEmployeeImport() {
   const [file, setFile] = useState(null);
@@ -125,6 +126,8 @@ export default function MasterEmployeeImport() {
 
           employeeData.estado_sincronizacion = 'Sincronizado';
           employeeData.ultimo_sincronizado = new Date().toISOString();
+          // Alta prevista si la fecha de alta es futura
+          employeeData.estado_empleado = resolveEmployeeStatus(employeeData);
 
           if (!employeeData.nombre) {
             errors.push({ fila: i + 1, error: 'Nombre es obligatorio', row });

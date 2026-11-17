@@ -2,7 +2,7 @@ import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
-import { isEmployeeEffectiveOn } from "@/utils/employeeActiveStatus";
+import { isActiveEmployee, isEmployeeEffectiveOn } from "@/utils/employeeActiveStatus";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -176,7 +176,9 @@ export default function EmployeesShiftManagerPage() {
   const effectiveEmployees = useMemo(() => {
     return allEmployees.filter(emp => {
       const d = (emp.departamento || "").toString().trim().toUpperCase();
-      return d === 'PRODUCCIÓN' || d === 'PRODUCCION';
+      if (d !== 'PRODUCCIÓN' && d !== 'PRODUCCION') return false;
+      // Excluir altas previstas (fecha de alta futura): aún no se han incorporado
+      return isActiveEmployee(emp);
     });
   }, [allEmployees]);
 

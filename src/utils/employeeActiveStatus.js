@@ -1,11 +1,13 @@
 /**
- * Regla única de "alta efectiva" de empleados.
+ * Regla única de estado efectivo de empleados.
  *
- * Un empleado registrado en la base maestra con estado "Alta" pero con una
- * fecha de alta futura NO es efectivo hasta esa fecha: no debe aparecer en
- * listados ni contadores de presencia, ausencias, absentismo ni planificación
- * de disponibilidad.
+ * Un empleado con fecha de alta futura NO está de alta todavía: su estado
+ * almacenado es "Alta Prevista" y no debe aparecer en presencia, ausencias,
+ * absentismo, taquillas, planificación ni contadores de operarios.
+ * El paso a "Alta" lo hace syncScheduledHireStatus cada día a las 00:10.
  */
+
+export const UPCOMING_HIRE_STATUS = "Alta Prevista";
 
 export const localDateOnly = (date = new Date()) => {
   const d = new Date(date);
@@ -41,19 +43,30 @@ export const isEmployeeEffectiveOn = (emp, dateISO = localDateOnly()) => {
 };
 
 /**
+ * Estado que debe quedar guardado para el empleado: "Alta" si su fecha de
+ * alta ya ha llegado, "Alta Prevista" si aún no. Baja/Excedencia se respetan.
+ */
+export const resolveEmployeeStatus = (emp, dateISO = localDateOnly()) => {
+  if (!emp) return "";
+  const current = emp.estado_empleado || "Alta";
+  if (current !== "Alta" && current !== UPCOMING_HIRE_STATUS) return current;
+  return isEmployeeEffectiveOn(emp, dateISO) ? "Alta" : UPCOMING_HIRE_STATUS;
+};
+
+/**
+ * Alta prevista: empleado con fecha de incorporación futura.
+ */
+export const isUpcomingHire = (emp, dateISO = localDateOnly()) =>
+  resolveEmployeeStatus(emp, dateISO) === UPCOMING_HIRE_STATUS;
+
+/**
+ * Empleado en alta efectiva (ni baja, ni excedencia, ni alta prevista).
+ */
+export const isActiveEmployee = (emp, dateISO = localDateOnly()) =>
+  resolveEmployeeStatus(emp, dateISO) === "Alta";
+
+/**
  * Devuelve solo los empleados con alta efectiva en la fecha indicada.
  */
 export const filterEffectiveEmployees = (employees = [], dateISO = localDateOnly()) =>
   (employees || []).filter((emp) => isEmployeeEffectiveOn(emp, dateISO));
-
-/**
- * Alta prevista: estado "Alta" pero con fecha de incorporación futura.
- */
-export const isFutureHire = (emp, dateISO = localDateOnly()) => {
-  if (!emp) return false;
-  const hireDate = toDateOnly(emp.fecha_alta);
-  if (!hireDate) return false;
-  const reference = toDateOnly(dateISO);
-  if (!reference) return false;
-  return hireDate > reference && (emp.estado_empleado || "Alta") === "Alta";
-};

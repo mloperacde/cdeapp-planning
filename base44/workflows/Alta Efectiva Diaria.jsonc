@@ -1,0 +1,44 @@
+{
+  "name": "Alta Efectiva Diaria (00:10)",
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "alta_efectiva_diaria",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "sincronizar_estado_alta": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "syncScheduledHireStatus"
+          },
+          "then": "end",
+          "x-base44": {
+            "title": "Sincronizar estados de alta",
+            "description": "Altas previstas y altas efectivas"
+          }
+        }
+      }
+    ]
+  },
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "scheduled",
+      "events": [],
+      "schedule_mode": "recurring",
+      "cron_expression": "10 0 * * *",
+      "one_time_date": null,
+      "timezone": "Europe/Madrid",
+      "interval_value": null,
+      "interval_unit": null,
+      "interval_anchor": null,
+      "ends_type": "never",
+      "ends_on_date": null,
+      "ends_after_count": null
+    }
+  },
+  "description": "Pasa a 'Alta' los empleados cuya fecha de alta ya ha llegado y a 'Alta Prevista' los que a\u00fan no se han incorporado."
+}

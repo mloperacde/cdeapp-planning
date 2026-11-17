@@ -17,6 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { resolveEmployeeStatus } from "@/utils/employeeActiveStatus";
 import {
   Select,
   SelectContent,
@@ -430,6 +431,9 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
         cleanData.motivo_baja = null;
       }
 
+      // Alta efectiva: con fecha de alta futura el estado queda como "Alta Prevista"
+      cleanData.estado_empleado = resolveEmployeeStatus(cleanData);
+
       // Auto-sincronizar team_key cuando cambia el equipo
       if (cleanData.equipo) {
         const teamConfigs = await base44.entities.TeamConfig.list();
@@ -807,6 +811,7 @@ export default function MasterEmployeeEditDialog({ employee, open, onClose, perm
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Alta">Alta</SelectItem>
+                      <SelectItem value="Alta Prevista" disabled>Alta prevista (aún no incorporado)</SelectItem>
                       <SelectItem value="Excedencia">Excedencia</SelectItem>
                       <SelectItem value="Baja">Baja</SelectItem>
                     </SelectContent>
