@@ -1,6 +1,7 @@
 import React, { createContext, useContext } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
+import { isEmployeeEffectiveOn } from "@/utils/employeeActiveStatus";
 const getMachineAlias = (m) => m?.nombre || m?.codigo_maquina || m?.codigo || m?.id || "Máquina";
 import { toast } from "sonner";
 
@@ -318,6 +319,8 @@ export function DataProvider({ children }) {
     
     // Datos maestros - EMPLEADOS
     employees: employeesQuery.data || [],
+    // Empleados con alta efectiva a día de hoy (excluye altas con fecha futura)
+    activeEmployees: (employeesQuery.data || []).filter((emp) => isEmployeeEffectiveOn(emp)),
     masterEmployees: employeesQuery.data || [], // Alias para compatibilidad
     employeesLoading: employeesQuery.isLoading,
     

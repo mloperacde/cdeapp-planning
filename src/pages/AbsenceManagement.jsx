@@ -37,6 +37,7 @@ export default function AbsenceManagementPage() {
     user: currentUser,
     absences = [],
     employees = [],
+    activeEmployees = [],
     absenceTypes = [],
     isAdmin = false
   } = useAppData();
@@ -180,7 +181,7 @@ export default function AbsenceManagementPage() {
       autoAbsenceEmpIds.add(abs.employee_id);
     }
 
-    const autoPendingCount = employees.filter(emp => {
+    const autoPendingCount = activeEmployees.filter(emp => {
       if (emp.estado_empleado !== 'Alta' || emp.sujeto_a_control_horario === false) return false;
       if (!absentStates.has(emp.estado_presencia)) return false;
       if (employeesWithApprovedAbsence.has(emp.id)) return false;
@@ -221,7 +222,7 @@ export default function AbsenceManagementPage() {
       formalActive: formalActive.length,
       pendingApproval: pendingApproval.length,
     };
-  }, [absences, employees, teamShiftMap, ficharonHoyIds]);
+  }, [absences, activeEmployees, employees, teamShiftMap, ficharonHoyIds]);
 
   const tabs = [
     { value: "dashboard", label: "Resumen", icon: LayoutDashboard },
@@ -348,7 +349,7 @@ export default function AbsenceManagementPage() {
 
           {/* Dashboard */}
           <TabsContent value="dashboard">
-            <AbsenceDashboard absences={absences} employees={employees} />
+            <AbsenceDashboard absences={absences} employees={activeEmployees} />
           </TabsContent>
 
           {/* Bandeja de detección */}
@@ -389,14 +390,14 @@ export default function AbsenceManagementPage() {
                   </div>
                 </div>
               )}
-              <AbsenceValidationInbox employees={employees} absenceTypes={absenceTypes} filterDate={detectionDate} />
+              <AbsenceValidationInbox employees={activeEmployees} absenceTypes={absenceTypes} filterDate={detectionDate} />
             </div>
           </TabsContent>
 
           {/* Registro formal */}
           <TabsContent value="formal">
             <FormalAbsenceManager
-              employees={employees}
+              employees={activeEmployees}
               absenceTypes={absenceTypes}
               initialEmployeeId={initialAbsenceEmployeeId}
               initialEmployeeName={initialAbsenceEmployeeName}
@@ -406,7 +407,7 @@ export default function AbsenceManagementPage() {
           {/* Aprobaciones */}
           <TabsContent value="approval">
             <AbsenceApprovalPanel
-              employees={employees}
+              employees={activeEmployees}
               absenceTypes={absenceTypes}
               currentUser={currentUser}
             />
@@ -416,19 +417,19 @@ export default function AbsenceManagementPage() {
           <TabsContent value="calendar">
             <AbsenceCalendar
               absences={absences}
-              employees={employees}
+              employees={activeEmployees}
               absenceTypes={absenceTypes}
             />
           </TabsContent>
 
           {/* Informes */}
           <TabsContent value="reports">
-            <AbsenceReportGenerator employees={employees} absenceTypes={absenceTypes} />
+            <AbsenceReportGenerator employees={activeEmployees} absenceTypes={absenceTypes} />
           </TabsContent>
 
           {/* Cumplimiento horario */}
           <TabsContent value="compliance">
-            <WorkdayComplianceView employees={employees} />
+            <WorkdayComplianceView employees={activeEmployees} />
           </TabsContent>
 
           {/* Tipos de ausencia */}
@@ -452,10 +453,10 @@ export default function AbsenceManagementPage() {
           {/* Vacaciones */}
           <TabsContent value="config">
             <div className="space-y-6">
-              <VacationPendingBalancePanel employees={employees} />
-              <VacationWorkCompensationManager employees={employees} />
-              <VacationPendingConsumptionManager employees={employees} />
-              <UnpaidLeaveTracker employees={employees} />
+              <VacationPendingBalancePanel employees={activeEmployees} />
+              <VacationWorkCompensationManager employees={activeEmployees} />
+              <VacationPendingConsumptionManager employees={activeEmployees} />
+              <UnpaidLeaveTracker employees={activeEmployees} />
             </div>
           </TabsContent>
         </Tabs>

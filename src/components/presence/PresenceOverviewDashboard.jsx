@@ -11,6 +11,7 @@ import {
   Timer
 } from "lucide-react";
 import { format } from "date-fns";
+import { isEmployeeEffectiveOn } from "@/utils/employeeActiveStatus";
 import { es } from "date-fns/locale";
 
 const STATUS_CONFIG = {
@@ -74,7 +75,7 @@ export default function PresenceOverviewDashboard({ onNavigate }) {
   });
 
   const activeEmployees = useMemo(() =>
-    employees.filter(e => e.estado_empleado === "Alta" && e.sujeto_a_control_horario !== false),
+    employees.filter(e => e.estado_empleado === "Alta" && e.sujeto_a_control_horario !== false && isEmployeeEffectiveOn(e)),
     [employees]
   );
 

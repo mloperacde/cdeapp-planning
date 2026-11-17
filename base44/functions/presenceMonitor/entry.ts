@@ -7,6 +7,7 @@
  * Esto evita duplicación de ausencias cuando ambos sistemas corren simultáneamente.
  */
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
+import { isEmployeeEffectiveOn } from '../../shared/employeeEffectiveDate.ts';
 
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
@@ -125,10 +126,13 @@ Deno.serve(async (req) => {
     }
 
     // Empleados activos sujetos a control
-    const employees = await svc.entities.EmployeeMasterDatabase.filter({
+    const allEmployees = await svc.entities.EmployeeMasterDatabase.filter({
       estado_empleado: 'Alta',
       sujeto_a_control_horario: true,
     }, undefined, 2000);
+
+    // Altas con fecha futura: no son efectivas hasta su fecha de incorporación
+    const employees = (allEmployees || []).filter((emp) => isEmployeeEffectiveOn(emp, today));
 
     if (!employees || employees.length === 0) {
       return Response.json({ processed: 0 });

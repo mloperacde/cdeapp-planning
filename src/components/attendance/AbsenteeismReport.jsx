@@ -9,6 +9,7 @@ import {
   RefreshCw, Download, Users, AlertCircle, UserX, Clock, CalendarRange, ChevronDown, ChevronUp, LayoutList, Table2
 } from "lucide-react";
 import { toast } from "sonner";
+import { isEmployeeEffectiveOn } from "@/utils/employeeActiveStatus";
 import * as XLSX from "xlsx";
 import { format, eachDayOfInterval, parseISO, isWeekend } from "date-fns";
 import { es } from "date-fns/locale";
@@ -61,7 +62,7 @@ export default function AbsenteeismReport() {
 
   // Empleados activos (Alta) para cruzar
   const activeEmployees = useMemo(
-    () => employees.filter(e => e.estado_empleado === "Alta" && e.incluir_en_planning !== false),
+    () => employees.filter(e => e.estado_empleado === "Alta" && e.incluir_en_planning !== false && isEmployeeEffectiveOn(e)),
     [employees]
   );
 

@@ -9,6 +9,7 @@ import {
 import { Link, useSearchParams } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { useAppData } from "../components/data/DataProvider";
+import { isEmployeeEffectiveOn } from "@/utils/employeeActiveStatus";
 import NotificationCenter from "../components/notifications/NotificationCenter";
 import AnnouncementBoard from "@/components/dashboard/AnnouncementBoard";
 import CalendarDetails from "@/components/dashboard/CalendarDetails";
@@ -70,7 +71,7 @@ export default function Dashboard() {
 
   const stats = useMemo(() => {
     const now = new Date();
-    const activeEmployeeIds = new Set(employees.filter(e => e.estado_empleado === 'Alta').map(e => e.id));
+    const activeEmployeeIds = new Set(employees.filter(e => e.estado_empleado === 'Alta' && isEmployeeEffectiveOn(e)).map(e => e.id));
 
     // Si ya tenemos datos de presencia del backend, calculamos exactamente igual que Control de Presencia
     let activeAbsences;

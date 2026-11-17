@@ -7,6 +7,7 @@ import { useLocation } from "react-router-dom";
 import { useAppData } from "../components/data/DataProvider";
 import { useQueryClient } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
+import { isEmployeeEffectiveOn } from "@/utils/employeeActiveStatus";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { Dialog, DialogContent, DialogTrigger } from "../components/ui/dialog";
@@ -239,7 +240,7 @@ export default function PresenceAbsenceHub() {
   );
 
   const activeEmployees = useMemo(() =>
-    employees.filter(e => e.estado_empleado === "Alta"),
+    employees.filter(e => e.estado_empleado === "Alta" && isEmployeeEffectiveOn(e)),
     [employees]
   );
 
@@ -376,13 +377,13 @@ export default function PresenceAbsenceHub() {
               <UnifiedAbsenceManager
                 sourceContext="absence_page"
                 initialAbsences={absences}
-                initialEmployees={employees}
+                initialEmployees={activeEmployees}
               />
             )}
             {currentSub === "approval" && (
               <AbsenceApprovalPanel
                 absences={absences}
-                employees={employees}
+                employees={activeEmployees}
                 absenceTypes={absenceTypes}
                 currentUser={currentUser}
               />
@@ -390,12 +391,12 @@ export default function PresenceAbsenceHub() {
             {currentSub === "calendar" && (
               <AbsenceCalendar
                 absences={absences}
-                employees={employees}
+                employees={activeEmployees}
                 absenceTypes={absenceTypes}
               />
             )}
             {currentSub === "history" && (
-              <AbsenceHistoryView employees={employees} absences={absences} />
+              <AbsenceHistoryView employees={activeEmployees} absences={absences} />
             )}
           </div>
         )}
@@ -429,10 +430,10 @@ export default function PresenceAbsenceHub() {
               </div>
             )}
             {currentSub === "vacation" && (
-              <VacationPendingBalancePanel employees={employees} />
+              <VacationPendingBalancePanel employees={activeEmployees} />
             )}
             {currentSub === "unpaid" && (
-              <UnpaidLeaveTracker employees={employees} />
+              <UnpaidLeaveTracker employees={activeEmployees} />
             )}
           </div>
         )}

@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.53';
+import { isEmployeeEffectiveOn } from '../../shared/employeeEffectiveDate.ts';
 
 const fmtDate = (d: Date): string =>
   d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
@@ -346,6 +347,8 @@ export default async function(req: Request): Promise<Response> {
     const result = employees
       .filter(emp => {
         if (emp.estado_empleado !== 'Alta' || emp.sujeto_a_control_horario === false) return false;
+        // Altas con fecha futura: aún no son efectivas a cierre del periodo analizado
+        if (!isEmployeeEffectiveOn(emp, winEnd)) return false;
         if (department && emp.departamento !== department) return false;
         return true;
       })

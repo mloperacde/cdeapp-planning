@@ -2,6 +2,7 @@ import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
+import { isEmployeeEffectiveOn } from "@/utils/employeeActiveStatus";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -288,8 +289,8 @@ export default function EmployeesShiftManagerPage() {
     });
 
     const total = base.length;
-    const activos = base.filter(e => e.estado_empleado === 'Alta').length;
-    const disponibles = base.filter(e => e.estado_empleado === 'Alta' && e.disponibilidad === 'Disponible').length;
+    const activos = base.filter(e => e.estado_empleado === 'Alta' && isEmployeeEffectiveOn(e)).length;
+    const disponibles = base.filter(e => e.estado_empleado === 'Alta' && isEmployeeEffectiveOn(e) && e.disponibilidad === 'Disponible').length;
     const now = new Date();
     
     // Contract Expirations (Next 30 days)

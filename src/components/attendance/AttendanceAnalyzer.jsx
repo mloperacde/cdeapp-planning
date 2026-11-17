@@ -2,6 +2,7 @@ import React, { useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAppData } from "@/components/data/DataProvider";
+import { isEmployeeEffectiveOn } from "@/utils/employeeActiveStatus";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -313,6 +314,8 @@ export default function AttendanceAnalyzer() {
     const expectedEmployees = employees.filter(emp => {
       const code = emp.codigo_empleado ? String(emp.codigo_empleado) : "";
       if (code === "999" || code === "998" || code === "997") return false;
+      // Altas con fecha futura: todavía no son efectivas
+      if (!isEmployeeEffectiveOn(emp)) return false;
       // Relaxed check: Include everyone unless explicitly excluded, even if shift is unknown
       return emp.incluir_en_planning !== false;
     });

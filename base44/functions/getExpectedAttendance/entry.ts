@@ -8,6 +8,7 @@
  * Respuesta: { date, employees: [{ employee_id, nombre, departamento, turno, hora_entrada, hora_salida, tipo_turno, equipo }] }
  */
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
+import { isEmployeeEffectiveOn } from '../../shared/employeeEffectiveDate.ts';
 
 // Calcula el número de semana ISO para una fecha
 function getISOWeekStart(dateStr) {
@@ -40,6 +41,9 @@ Deno.serve(async (req) => {
       sujeto_a_control_horario: true
     });
 
+    // Altas con fecha futura: no cuentan hasta su fecha efectiva de incorporación
+    const effectiveEmployees = allEmployees.filter((emp) => isEmployeeEffectiveOn(emp, targetDate));
+
     // Cargar el calendario de rotación de equipos
     const teamSchedules = await base44.asServiceRole.entities.TeamWeekSchedule.list("-fecha_inicio_semana", 1000);
 
@@ -52,7 +56,7 @@ Deno.serve(async (req) => {
 
     const result = [];
 
-    for (const emp of allEmployees) {
+    for (const emp of effectiveEmployees) {
       // Solo empleados con control horario activo (incluir_en_planning es para planificación de producción, no para presencia)
 
       const tipoTurno = emp.tipo_turno;
